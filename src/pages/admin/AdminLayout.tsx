@@ -1,6 +1,7 @@
-import React from 'react';
-import { Home, School, FileText, Users, Settings, Bell, User, LogOut, GraduationCap } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Home, School, FileText, Users, Settings, Bell, LogOut, GraduationCap } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/services/auth/useAuth';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -8,6 +9,16 @@ export function AdminLayout({
   children
 }: AdminLayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login', { replace: true });
+    } catch (err) {
+      console.error('Error during logout', err);
+    }
+  };
   const currentPath = location.pathname;
   const navigationItems = [{
     icon: <Home className="w-5 h-5" />,
@@ -58,7 +69,7 @@ export function AdminLayout({
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors">
+          <div onClick={handleLogout} className="flex items-center space-x-3 px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-md cursor-pointer transition-colors">
             <LogOut className="w-5 h-5" />
             <span>Logout</span>
           </div>

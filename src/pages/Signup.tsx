@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Shield, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
+import { useAuth } from '@/services/auth/useAuth';
 export function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -15,14 +16,26 @@ export function Signup() {
     confirmPassword: '',
     agreeToTerms: false
   });
-  const handleSubmit = (e: React.FormEvent) => {
+  const { signUpWithPassword } = useAuth();
+  const navigate = useNavigate();
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
     if (formData.password !== formData.confirmPassword) {
       alert('Passwords do not match');
       return;
     }
-    console.log('Signup attempt:', formData);
+    try {
+      const result = await signUpWithPassword(formData.email, formData.password);
+      if (result?.needsConfirmation) {
+        alert('Please confirm your email to continue.');
+        navigate('/login', { replace: true });
+        return;
+      }
+      navigate('/', { replace: true });
+    } catch (err) {
+      console.error('Signup error:', err);
+      alert((err as Error).message);
+    }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const {
