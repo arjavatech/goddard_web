@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { env } from '@/config/env';
+import { env } from '../../config/env';
 
 // Debug logging
 console.log('Supabase Config:', {
@@ -10,11 +10,7 @@ console.log('Supabase Config:', {
 });
 
 // Only create client if we have non-empty values
-const hasValidConfig = env.VITE_SUPABASE_URL &&
-                       env.VITE_SUPABASE_ANON_KEY &&
-                       env.VITE_SUPABASE_URL.length > 0 &&
-                       env.VITE_SUPABASE_ANON_KEY.length > 0;
-
+const hasValidConfig = env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY && env.VITE_SUPABASE_URL.length > 0 && env.VITE_SUPABASE_ANON_KEY.length > 0;
 export const supabase = hasValidConfig ? createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,

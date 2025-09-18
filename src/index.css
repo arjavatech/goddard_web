@@ -25,6 +25,9 @@
     --destructive-foreground: 210 40% 98%;
     --ring: 215 20.2% 65.1%;
     --radius: 0.5rem;
+    /* Custom Amazon colors */
+    --amazon-teal: #0891b2;
+    --amazon-orange: #f97316;
   }
 
   .dark {
@@ -86,7 +89,66 @@
     animation: fadeIn 0.6s ease-out forwards;
   }
   .two-tone-icon {
-    @apply text-amazon-teal;
-    filter: drop-shadow(1px 1px 0px theme('colors.amazon.orange'));
+    color: var(--amazon-teal);
+    filter: drop-shadow(1px 1px 0px var(--amazon-orange));
+  }
+}
+
+@layer utilities {
+  /* Amazon Teal utilities */
+  .text-amazon-teal {
+    color: var(--amazon-teal);
+  }
+  .bg-amazon-teal {
+    background-color: var(--amazon-teal);
+  }
+  .border-amazon-teal {
+    border-color: var(--amazon-teal);
+  }
+  .hover\:bg-amazon-teal\/90:hover {
+    background-color: color-mix(in srgb, var(--amazon-teal) 90%, transparent);
+  }
+  .hover\:bg-amazon-teal\/5:hover {
+    background-color: color-mix(in srgb, var(--amazon-teal) 5%, transparent);
+  }
+  .hover\:text-amazon-teal\/80:hover {
+    color: color-mix(in srgb, var(--amazon-teal) 80%, transparent);
+  }
+  .from-amazon-teal {
+    --tw-gradient-from: var(--amazon-teal) var(--tw-gradient-from-position);
+    --tw-gradient-to: color-mix(in srgb, var(--amazon-teal) 0%, transparent) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+  .focus\:ring-amazon-teal:focus {
+    --tw-ring-color: var(--amazon-teal);
+  }
+
+  /* Amazon Orange utilities */
+  .text-amazon-orange {
+    color: var(--amazon-orange);
+  }
+  .bg-amazon-orange {
+    background-color: var(--amazon-orange);
+  }
+  .border-amazon-orange {
+    border-color: var(--amazon-orange);
+  }
+  .to-amazon-orange {
+    --tw-gradient-to: var(--amazon-orange) var(--tw-gradient-to-position);
+  }
+  .from-amazon-orange {
+    --tw-gradient-from: var(--amazon-orange) var(--tw-gradient-from-position);
+    --tw-gradient-to: color-mix(in srgb, var(--amazon-orange) 0%, transparent) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+
+  /* Opacity variations */
+  .from-amazon-teal\/5 {
+    --tw-gradient-from: color-mix(in srgb, var(--amazon-teal) 5%, transparent) var(--tw-gradient-from-position);
+    --tw-gradient-to: color-mix(in srgb, var(--amazon-teal) 0%, transparent) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+  }
+  .to-amazon-orange\/5 {
+    --tw-gradient-to: color-mix(in srgb, var(--amazon-orange) 5%, transparent) var(--tw-gradient-to-position);
   }
 }
