@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react';
+import React from 'react';
 import { Home, School, FileText, Users, Settings, Bell, LogOut, GraduationCap } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/services/auth/useAuth';
+import { useAuth } from '../../services/auth/useAuth';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -10,11 +10,15 @@ export function AdminLayout({
 }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const {
+    signOut
+  } = useAuth();
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/login', { replace: true });
+      navigate('/login', {
+        replace: true
+      });
     } catch (err) {
       console.error('Error during logout', err);
     }

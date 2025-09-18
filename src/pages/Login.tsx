@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { useAuth } from '@/services/auth/useAuth';
+import { useAuth } from '../services/auth/useAuth';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -11,7 +11,9 @@ export function Login() {
     password: '',
     rememberMe: false
   });
-  const { signInWithPassword } = useAuth();
+  const {
+    signInWithPassword
+  } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const handleSubmit = async (e: React.FormEvent) => {
@@ -19,7 +21,9 @@ export function Login() {
     try {
       await signInWithPassword(formData.email, formData.password);
       const redirectTo = (location.state as any)?.from?.pathname || '/';
-      navigate(redirectTo, { replace: true });
+      navigate(redirectTo, {
+        replace: true
+      });
     } catch (err) {
       console.error('Login error:', err);
       alert((err as Error).message);

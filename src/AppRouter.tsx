@@ -12,15 +12,19 @@ import { ClassroomFormAssignment } from './pages/admin/ClassroomFormAssignment';
 import { ParentManagement } from './pages/admin/ParentManagement';
 import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
-import ProtectedRoute from '@/routes/security/ProtectedRoute';
+import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
   return <BrowserRouter>
       <Routes>
-        <Route path="/" element={<ProtectedRoute><App /></ProtectedRoute>} />
+        <Route path="/" element={<ProtectedRoute>
+              <App />
+            </ProtectedRoute>} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         {/* Admin Routes (protected parent) */}
-        <Route element={<ProtectedRoute><Outlet /></ProtectedRoute>}>
+        <Route element={<ProtectedRoute>
+              <Outlet />
+            </ProtectedRoute>}>
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/classrooms" element={<ClassroomManagement />} />
           <Route path="/admin/classrooms/:classroomId" element={<ClassroomDetails />} />

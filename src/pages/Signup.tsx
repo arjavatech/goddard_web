@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Shield, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { useAuth } from '@/services/auth/useAuth';
+import { useAuth } from '../services/auth/useAuth';
 export function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -16,7 +16,9 @@ export function Signup() {
     confirmPassword: '',
     agreeToTerms: false
   });
-  const { signUpWithPassword } = useAuth();
+  const {
+    signUpWithPassword
+  } = useAuth();
   const navigate = useNavigate();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,10 +30,14 @@ export function Signup() {
       const result = await signUpWithPassword(formData.email, formData.password);
       if (result?.needsConfirmation) {
         alert('Please confirm your email to continue.');
-        navigate('/login', { replace: true });
+        navigate('/login', {
+          replace: true
+        });
         return;
       }
-      navigate('/', { replace: true });
+      navigate('/', {
+        replace: true
+      });
     } catch (err) {
       console.error('Signup error:', err);
       alert((err as Error).message);
