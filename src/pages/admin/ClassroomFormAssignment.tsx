@@ -9,6 +9,9 @@ import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Checkbox } from '../../components/ui/checkbox';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { fetchUserContext } from '../../services/api/user';
+import { fetchClassrooms, fetchClassEnrollmentStats } from '../../services/api/admin';
+import { fetchFormTemplates } from '../../services/api/dashboard';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -20,44 +23,40 @@ interface Classroom {
   name: string;
   assignedForms: Form[];
 }
-export function ClassroomFormAssignment() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const queryParams = new URLSearchParams(location.search);
-  const classroomIdFromQuery = queryParams.get('classroom');
-  const [allForms, setAllForms] = useState<Form[]>([{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Active'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Active'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Active'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Active'
-  }, {
-    id: '5',
-    name: 'Field Trip Permission',
-    status: 'Inactive'
-  }, {
-    id: '6',
-    name: 'Parent Handbook Acknowledgment',
-    status: 'Default'
-  }, {
-    id: '7',
-    name: 'Meal Program Enrollment',
-    status: 'Archive'
-  }]);
-  const [classrooms, setClassrooms] = useState<Classroom[]>([{
-    id: '1',
-    name: 'Sunshine Room',
-    assignedForms: [{
+const DEFAULT_FORMS: Form[] = [{
+  id: '1',
+  name: 'Admission Form',
+  status: 'Active'
+}, {
+  id: '2',
+  name: 'Medical Authorization',
+  status: 'Active'
+}, {
+  id: '3',
+  name: 'Emergency Contact Form',
+  status: 'Active'
+}, {
+  id: '4',
+  name: 'Photo Release Form',
+  status: 'Active'
+}, {
+  id: '5',
+  name: 'Field Trip Permission',
+  status: 'Inactive'
+}, {
+  id: '6',
+  name: 'Parent Handbook Acknowledgment',
+  status: 'Default'
+}, {
+  id: '7',
+  name: 'Meal Program Enrollment',
+  status: 'Archive'
+}];
+
+const DEFAULT_CLASSROOMS: Classroom[] = [{
+  id: '1',
+  name: 'Sunshine Room',
+  assignedForms: [{
       id: '1',
       name: 'Admission Form',
       status: 'Active'
@@ -146,8 +145,92 @@ export function ClassroomFormAssignment() {
       name: 'Medical Authorization',
       status: 'Active'
     }]
-  }]);
-  const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || classrooms[0]?.id || '');
+  }];
+
+const formStatusFromTemplate = (status: string | null | undefined): FormStatus => {
+  const value = (status ?? '').toLowerCase();
+  if (value.includes('default')) return 'Default';
+  if (value.includes('inactive')) return 'Inactive';
+  if (value.includes('archive')) return 'Archive';
+  return 'Active';
+};
+
+const formsFromRecord = (record: Record<string, string> | undefined): Form[] => {
+  if (!record) return [];
+  return Object.entries(record).map(([id, status]) => ({
+    id,
+    name: id.replace(/[-_]/g, ' '),
+    status: formStatusFromTemplate(status)
+  }));
+};
+
+export function ClassroomFormAssignment() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryParams = new URLSearchParams(location.search);
+  const classroomIdFromQuery = queryParams.get('classroom');
+  const [allForms, setAllForms] = useState<Form[]>(DEFAULT_FORMS);
+  const [classrooms, setClassrooms] = useState<Classroom[]>(DEFAULT_CLASSROOMS);
+  const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || DEFAULT_CLASSROOMS[0]?.id || '');
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+
+        const [templates, classStats, classroomList] = await Promise.all([
+          fetchFormTemplates(user.schoolId).catch(() => []),
+          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
+          fetchClassrooms(user.schoolId).catch(() => [])
+        ]);
+
+        if (!isMounted) return;
+
+        if (templates.length > 0) {
+          const mappedForms = templates.map(template => ({
+            id: template.id,
+            name: template.formName || template.id,
+            status: formStatusFromTemplate(template.status)
+          }));
+          setAllForms(mappedForms);
+        }
+
+        if (classroomList.length > 0) {
+          const statsById = new Map<string, Record<string, string>>();
+          const statsByName = new Map<string, Record<string, string>>();
+          classStats.forEach(stat => {
+            statsById.set(stat.classId, stat.forms);
+            statsByName.set(stat.className, stat.forms);
+          });
+
+          const mappedClassrooms = classroomList.map(cls => {
+            const formsRecord = statsById.get(cls.id) ?? statsByName.get(cls.name) ?? {};
+            const assignedForms = formsFromRecord(formsRecord);
+            return {
+              id: cls.id,
+              name: cls.name,
+              assignedForms: assignedForms.length > 0 ? assignedForms : []
+            } satisfies Classroom;
+          });
+
+          const finalClassrooms = mappedClassrooms.length > 0 ? mappedClassrooms : DEFAULT_CLASSROOMS;
+          setClassrooms(finalClassrooms);
+
+          const preferredId = classroomIdFromQuery && finalClassrooms.some(cls => cls.id === classroomIdFromQuery) ? classroomIdFromQuery : finalClassrooms[0]?.id;
+          if (preferredId) {
+            setSelectedClassroomId(preferredId);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load classroom form assignments', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, [classroomIdFromQuery]);
   useEffect(() => {
     if (classroomIdFromQuery) {
       setSelectedClassroomId(classroomIdFromQuery);
@@ -159,33 +242,7 @@ export function ClassroomFormAssignment() {
   const selectedClassroom = classrooms.find(c => c.id === selectedClassroomId) || classrooms[0];
   // Filter forms that are not already assigned to the selected classroom
   const availableForms = allForms.filter(form => !selectedClassroom?.assignedForms.some(f => f.id === form.id)).filter(form => form.name.toLowerCase().includes(formSearchQuery.toLowerCase()));
-  const handleAssignForms = () => {
-    if (selectedFormIds.length === 0) return;
-    const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id));
-    setClassrooms(classrooms.map(classroom => {
-      if (classroom.id === selectedClassroomId) {
-        return {
-          ...classroom,
-          assignedForms: [...classroom.assignedForms, ...formsToAssign]
-        };
-      }
-      return classroom;
-    }));
-    setSelectedFormIds([]);
-    setIsAssignDialogOpen(false);
-  };
-  const handleRemoveForm = (formId: string) => {
-    setClassrooms(classrooms.map(classroom => {
-      if (classroom.id === selectedClassroomId) {
-        return {
-          ...classroom,
-          assignedForms: classroom.assignedForms.filter(form => form.id !== formId)
-        };
-      }
-      return classroom;
-    }));
-  };
-  const getStatusBadgeVariant = (status: FormStatus) => {
+  const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
       case 'Active':
         return 'success';
@@ -195,26 +252,83 @@ export function ClassroomFormAssignment() {
         return 'secondary';
       case 'Archive':
         return 'outline';
+      default:
+        return 'default';
     }
   };
-  // Update the URL when the selected classroom changes
-  useEffect(() => {
-    if (selectedClassroomId) {
-      navigate(`/admin/form-assignments?classroom=${selectedClassroomId}`, {
-        replace: true
-      });
+  const handleAssignForms = () => {
+    if (selectedClassroom && selectedFormIds.length > 0) {
+      const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id));
+      setClassrooms(classrooms.map(classroom => {
+        if (classroom.id === selectedClassroom.id) {
+          return {
+            ...classroom,
+            assignedForms: [...classroom.assignedForms, ...formsToAssign]
+          };
+        }
+        return classroom;
+      }));
+      setSelectedFormIds([]);
+      setIsAssignDialogOpen(false);
     }
-  }, [selectedClassroomId, navigate]);
+  };
+  const handleRemoveForm = (formId: string) => {
+    if (selectedClassroom) {
+      setClassrooms(classrooms.map(classroom => {
+        if (classroom.id === selectedClassroom.id) {
+          return {
+            ...classroom,
+            assignedForms: classroom.assignedForms.filter(form => form.id !== formId)
+          };
+        }
+        return classroom;
+      }));
+    }
+  };
+  const tabs = [{
+    id: 'all',
+    label: 'All Forms'
+  }, {
+    id: 'active',
+    label: 'Active'
+  }, {
+    id: 'default',
+    label: 'Default'
+  }, {
+    id: 'inactive',
+    label: 'Inactive'
+  }, {
+    id: 'archive',
+    label: 'Archive'
+  }];
+  const [activeTab, setActiveTab] = useState('all');
+  const filteredForms = selectedClassroom ? selectedClassroom.assignedForms.filter(form => activeTab === 'all' || form.status.toLowerCase() === activeTab) : [];
   return <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-foreground">
-            Classroom Form Assignment
-          </h1>
+        <div className="flex items-center justify-between">
           <Button variant="outline" onClick={() => navigate('/admin/classrooms')} className="flex items-center">
             <ChevronLeft className="h-4 w-4 mr-1" />
             Back to Classrooms
           </Button>
+          <div className="flex items-center space-x-3">
+            <Select value={selectedClassroomId} onValueChange={setSelectedClassroomId}>
+              <SelectTrigger className="w-[220px]">
+                <SelectValue placeholder="Select classroom" />
+              </SelectTrigger>
+              <SelectContent>
+                {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
+                    {classroom.name}
+                  </SelectItem>)}
+              </SelectContent>
+            </Select>
+            <div className="relative w-64">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input placeholder="Search forms..." className="pl-9 bg-white" value={formSearchQuery} onChange={e => setFormSearchQuery(e.target.value)} />
+            </div>
+            <Button onClick={() => setIsAssignDialogOpen(true)} className="bg-amazon-teal hover:bg-amazon-teal/90">
+              <Plus className="h-4 w-4 mr-2" /> Assign Forms
+            </Button>
+          </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-1">
@@ -247,6 +361,11 @@ export function ClassroomFormAssignment() {
                 </Button>
               </CardHeader>
               <CardContent>
+                <div className="flex space-x-2 mb-4 overflow-x-auto">
+                  {tabs.map(tab => <Button key={tab.id} variant={activeTab === tab.id ? 'default' : 'outline'} size="sm" onClick={() => setActiveTab(tab.id)}>
+                      {tab.label}
+                    </Button>)}
+                </div>
                 {selectedClassroom?.assignedForms.length === 0 ? <div className="text-center py-8 text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>No forms have been assigned to this classroom yet.</p>
@@ -254,12 +373,12 @@ export function ClassroomFormAssignment() {
                       Assign Forms
                     </Button>
                   </div> : <div className="space-y-3">
-                    {selectedClassroom?.assignedForms.map(form => <div key={form.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
+                    {filteredForms.map(form => <div key={form.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors">
                         <div className="flex items-center">
                           <FileText className="h-5 w-5 mr-3 text-amazon-teal" />
                           <div>
                             <div className="font-medium">{form.name}</div>
-                            <Badge variant={getStatusBadgeVariant(form.status) as any} className="mt-1">
+                            <Badge variant={getStatusBadgeVariant(form.status)} className="mt-1">
                               {form.status}
                             </Badge>
                           </div>
@@ -309,7 +428,7 @@ export function ClassroomFormAssignment() {
                           <label htmlFor={`form-${form.id}`} className="font-medium cursor-pointer">
                             {form.name}
                           </label>
-                          <Badge variant={getStatusBadgeVariant(form.status) as any} className="mt-1">
+                          <Badge variant={getStatusBadgeVariant(form.status)} className="mt-1">
                             {form.status}
                           </Badge>
                         </div>

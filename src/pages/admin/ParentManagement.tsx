@@ -1,14 +1,18 @@
-import React, { useState, Children } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, School, Calendar, Users } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Calendar, Users, Clock } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Link } from 'react-router-dom';
+import { fetchUserContext } from '../../services/api/user';
+import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Complete' | 'Pending' | 'Invited';
 interface Child {
@@ -30,116 +34,97 @@ interface Parent {
   status: ParentStatus;
   signupStatus: SignupStatus;
 }
-export function ParentManagement() {
-  const [parents, setParents] = useState<Parent[]>([{
+
+const DEFAULT_CLASSROOMS = [{ id: '1', name: 'Sunshine Room' }, { id: '2', name: 'Rainbow Room' }, { id: '3', name: 'Stars Room' }, { id: '4', name: 'Moon Room' }, { id: '5', name: 'Ocean Room' }];
+const DEFAULT_PARENTS: Parent[] = [{
+  id: '1',
+  firstName: 'Sarah',
+  lastName: 'Johnson',
+  email: 'sarah.johnson@example.com',
+  children: [{
     id: '1',
-    firstName: 'Sarah',
+    firstName: 'Emma',
     lastName: 'Johnson',
-    email: 'sarah.johnson@example.com',
-    children: [{
-      id: '1',
-      firstName: 'Emma',
-      lastName: 'Johnson',
-      dob: '05/12/2019',
-      classroom: {
-        id: '1',
-        name: 'Sunshine Room'
-      }
-    }],
-    status: 'Active',
-    signupStatus: 'Complete'
-  }, {
+    dob: '05/12/2019',
+    classroom: { id: '1', name: 'Sunshine Room' }
+  }],
+  status: 'Active',
+  signupStatus: 'Complete'
+}, {
+  id: '2',
+  firstName: 'Michael',
+  lastName: 'Smith',
+  email: 'michael.smith@example.com',
+  children: [{
     id: '2',
-    firstName: 'Michael',
+    firstName: 'Noah',
     lastName: 'Smith',
-    email: 'michael.smith@example.com',
-    children: [{
-      id: '2',
-      firstName: 'Noah',
-      lastName: 'Smith',
-      dob: '03/15/2020',
-      classroom: {
-        id: '2',
-        name: 'Rainbow Room'
-      }
-    }, {
-      id: '3',
-      firstName: 'Ava',
-      lastName: 'Smith',
-      dob: '06/22/2018',
-      classroom: {
-        id: '1',
-        name: 'Sunshine Room'
-      }
-    }],
-    status: 'Active',
-    signupStatus: 'Complete'
+    dob: '03/15/2020',
+    classroom: { id: '2', name: 'Rainbow Room' }
   }, {
     id: '3',
-    firstName: 'Jennifer',
+    firstName: 'Ava',
+    lastName: 'Smith',
+    dob: '06/22/2018',
+    classroom: { id: '1', name: 'Sunshine Room' }
+  }],
+  status: 'Active',
+  signupStatus: 'Complete'
+}, {
+  id: '3',
+  firstName: 'Jennifer',
+  lastName: 'Brown',
+  email: 'jennifer.brown@example.com',
+  children: [{
+    id: '4',
+    firstName: 'Sophia',
     lastName: 'Brown',
-    email: 'jennifer.brown@example.com',
-    children: [{
-      id: '4',
-      firstName: 'Sophia',
-      lastName: 'Brown',
-      dob: '11/03/2019',
-      classroom: {
-        id: '3',
-        name: 'Stars Room'
-      }
-    }],
-    status: 'Active',
-    signupStatus: 'Pending'
-  }, {
-    id: '4',
-    firstName: 'David',
+    dob: '11/03/2019',
+    classroom: { id: '3', name: 'Stars Room' }
+  }],
+  status: 'Active',
+  signupStatus: 'Pending'
+}, {
+  id: '4',
+  firstName: 'David',
+  lastName: 'Wilson',
+  email: 'david.wilson@example.com',
+  children: [{
+    id: '5',
+    firstName: 'Olivia',
     lastName: 'Wilson',
-    email: 'david.wilson@example.com',
-    children: [{
-      id: '5',
-      firstName: 'Olivia',
-      lastName: 'Wilson',
-      dob: '02/18/2020',
-      classroom: {
-        id: '2',
-        name: 'Rainbow Room'
-      }
-    }],
-    status: 'Archive',
-    signupStatus: 'Complete'
-  }, {
-    id: '5',
-    firstName: 'Jessica',
-    lastName: 'Martinez',
-    email: 'jessica.martinez@example.com',
-    children: [],
-    status: 'Active',
-    signupStatus: 'Invited'
-  }]);
-  const [classrooms, setClassrooms] = useState([{
-    id: '1',
-    name: 'Sunshine Room'
-  }, {
-    id: '2',
-    name: 'Rainbow Room'
-  }, {
-    id: '3',
-    name: 'Stars Room'
-  }, {
-    id: '4',
-    name: 'Moon Room'
-  }, {
-    id: '5',
-    name: 'Ocean Room'
-  }]);
+    dob: '02/18/2020',
+    classroom: { id: '2', name: 'Rainbow Room' }
+  }],
+  status: 'Archive',
+  signupStatus: 'Complete'
+}, {
+  id: '5',
+  firstName: 'Jessica',
+  lastName: 'Martinez',
+  email: 'jessica.martinez@example.com',
+  children: [],
+  status: 'Active',
+  signupStatus: 'Invited'
+}];
+
+const friendlyNameFromEmail = (email: string): { first: string; last: string } => {
+  const local = email.split('@')[0] ?? 'guardian';
+  const parts = local.replace(/[._]/g, ' ').split(' ').filter(Boolean);
+  const first = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Guardian';
+  const last = parts.slice(1).map(part => part[0].toUpperCase() + part.slice(1)).join(' ') || 'Family';
+  return { first, last };
+};
+
+export function ParentManagement() {
+  const [parents, setParents] = useState<Parent[]>(DEFAULT_PARENTS);
+  const [classrooms, setClassrooms] = useState(DEFAULT_CLASSROOMS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signupFilter, setSignupFilter] = useState<string>('all');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddChildDialogOpen, setIsAddChildDialogOpen] = useState(false);
   const [selectedParent, setSelectedParent] = useState<Parent | null>(null);
-  // New parent invitation form state
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
@@ -147,23 +132,93 @@ export function ParentManagement() {
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
-  // Add child form state
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildDob, setNewChildDob] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
-  const filteredParents = parents.filter(parent => {
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        const [parentDetails, enrollments, classroomList] = await Promise.all([
+          fetchParentDetails(user.schoolId).catch(() => []),
+          fetchSchoolEnrollments(user.schoolId).catch(() => []),
+          fetchClassrooms(user.schoolId).catch(() => [])
+        ]);
+        if (!isMounted) return;
+
+        if (classroomList.length > 0) {
+          setClassrooms(classroomList.map(cls => ({ id: cls.id, name: cls.name })));
+        }
+
+        if (parentDetails.length > 0) {
+          const classroomByName = new Map(classroomList.map(cls => [cls.name.toLowerCase(), cls.id]));
+          const childrenByEmail = new Map<string, Child[]>();
+
+          enrollments.forEach(child => {
+            const emailKeys = [child.primaryEmail, child.additionalParentEmail].filter(Boolean) as string[];
+            const classroomName = child.className ?? 'Unassigned';
+            const classroomId = classroomByName.get(classroomName.toLowerCase()) || classroomName;
+            const childEntry: Child = {
+              id: child.childId,
+              firstName: child.firstName,
+              lastName: child.lastName,
+              dob: '—',
+              classroom: { id: classroomId, name: classroomName }
+            };
+            emailKeys.forEach(email => {
+              const key = email.toLowerCase();
+              const list = childrenByEmail.get(key) ?? [];
+              list.push(childEntry);
+              childrenByEmail.set(key, list);
+            });
+          });
+
+          const mappedParents: Parent[] = parentDetails.map(detail => {
+            const email = detail.email;
+            const friendly = friendlyNameFromEmail(email);
+            const children = childrenByEmail.get(email.toLowerCase()) ?? [];
+            const hasCompletion = children.some(child => COMPLETION_STATUSES.has(normalizeFormStatus(enrollments.find(e => e.childId === child.id)?.formStatus)));
+            return {
+              id: detail.parentId,
+              firstName: friendly.first,
+              lastName: friendly.last,
+              email,
+              children,
+              status: detail.isSigned || hasCompletion ? 'Active' : 'Archive',
+              signupStatus: detail.isSigned ? 'Complete' : 'Invited'
+            } satisfies Parent;
+          });
+
+          if (mappedParents.length > 0) {
+            setParents(mappedParents);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load parent management data', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredParents = useMemo(() => parents.filter(parent => {
     const fullName = `${parent.firstName} ${parent.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || parent.email.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || parent.status === statusFilter;
     const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
     return matchesSearch && matchesStatus && matchesSignup;
-  });
+  }), [parents, searchQuery, statusFilter, signupFilter]);
+
   const handleInviteParent = () => {
     if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childClassroom) {
       const classroom = classrooms.find(c => c.id === childClassroom);
       const newParent: Parent = {
-        id: (parents.length + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         firstName: parentFirstName,
         lastName: parentLastName,
         email: parentEmail,
@@ -174,7 +229,7 @@ export function ParentManagement() {
           dob: childDob,
           classroom: {
             id: childClassroom,
-            name: classroom?.name || ''
+            name: classroom?.name || 'Unassigned'
           }
         }],
         status: 'Active',
@@ -185,6 +240,7 @@ export function ParentManagement() {
       setIsInviteDialogOpen(false);
     }
   };
+
   const handleAddChild = () => {
     if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildClassroom) {
       const classroom = classrooms.find(c => c.id === newChildClassroom);
@@ -195,7 +251,7 @@ export function ParentManagement() {
         dob: newChildDob,
         classroom: {
           id: newChildClassroom,
-          name: classroom?.name || ''
+          name: classroom?.name || 'Unassigned'
         }
       };
       setParents(parents.map(parent => parent.id === selectedParent.id ? {
@@ -206,6 +262,7 @@ export function ParentManagement() {
       setIsAddChildDialogOpen(false);
     }
   };
+
   const resetInviteForm = () => {
     setParentFirstName('');
     setParentLastName('');
@@ -215,23 +272,27 @@ export function ParentManagement() {
     setChildDob('');
     setChildClassroom('');
   };
+
   const resetAddChildForm = () => {
     setNewChildFirstName('');
     setNewChildLastName('');
     setNewChildDob('');
     setNewChildClassroom('');
   };
-  const openAddChildDialog = (parent: Parent) => {
-    setSelectedParent(parent);
-    setNewChildLastName(parent.lastName); // Pre-fill last name
-    setIsAddChildDialogOpen(true);
+
+  const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
+    switch (status) {
+      case 'Complete':
+        return 'success';
+      case 'Pending':
+        return 'secondary';
+      case 'Invited':
+        return 'outline';
+      default:
+        return 'default';
+    }
   };
-  const toggleParentStatus = (parent: Parent) => {
-    setParents(parents.map(p => p.id === parent.id ? {
-      ...p,
-      status: p.status === 'Active' ? 'Archive' : 'Active'
-    } : p));
-  };
+
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -247,36 +308,32 @@ export function ParentManagement() {
         </div>
         <Card className="glass-card">
           <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-6">
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-3 space-y-3 md:space-y-0 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input placeholder="Search parents..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-              <div className="w-full md:w-48">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Archive">Archive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-full md:w-48">
-                <Select value={signupFilter} onValueChange={setSignupFilter}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Filter by signup" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Signup Statuses</SelectItem>
-                    <SelectItem value="Complete">Complete</SelectItem>
-                    <SelectItem value="Pending">Pending</SelectItem>
-                    <SelectItem value="Invited">Invited</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full md:w-44">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Archive">Archive</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={signupFilter} onValueChange={setSignupFilter}>
+                <SelectTrigger className="w-full md:w-44">
+                  <SelectValue placeholder="Signup status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Signup Statuses</SelectItem>
+                  <SelectItem value="Complete">Complete</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Invited">Invited</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -291,11 +348,8 @@ export function ParentManagement() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">
                       Children
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Status
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Signup
+                    <th className="text-center py-3 px-4 font-medium text-gray-600">
+                      Signup Status
                     </th>
                     <th className="text-right py-3 px-4 font-medium text-gray-600">
                       Actions
@@ -310,76 +364,74 @@ export function ParentManagement() {
                               {parent.firstName.charAt(0)}
                               {parent.lastName.charAt(0)}
                             </div>
-                            <span className="font-medium">
-                              {parent.firstName} {parent.lastName}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <Mail className="h-4 w-4 mr-2 text-gray-500" />
-                            <span>{parent.email}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          {parent.children.length > 0 ? <div className="flex items-center">
-                              <Users className="h-4 w-4 mr-2 text-gray-500" />
-                              <div>
-                                {parent.children.map((child, index) => <div key={child.id} className="text-sm">
-                                    {child.firstName} {child.lastName}
-                                    {index < parent.children.length - 1 ? ', ' : ''}
-                                  </div>)}
+                            <div>
+                              <div className="font-medium">
+                                {parent.firstName} {parent.lastName}
                               </div>
-                            </div> : <span className="text-gray-400 text-sm">
-                              No children
-                            </span>}
+                              <div className={`text-xs ${parent.status === 'Active' ? 'text-green-600' : 'text-gray-500'}`}>
+                                {parent.status === 'Active' ? 'Verified' : 'Archived'}
+                              </div>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3 px-4">
-                          <Badge variant={parent.status === 'Active' ? 'success' : 'outline'}>
-                            {parent.status}
-                          </Badge>
+                          <div className="flex items-center text-gray-700">
+                            <Mail className="h-4 w-4 mr-2" />
+                            {parent.email}
+                          </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <Badge variant={parent.signupStatus === 'Complete' ? 'success' : parent.signupStatus === 'Pending' ? 'secondary' : 'default'}>
+                        <td className="py-3 px-4 text-sm text-gray-600">
+                          {parent.children.length === 0 ? <span>No children linked yet</span> : <div className="space-y-1">
+                              {parent.children.map(child => <div key={child.id} className="flex items-center gap-2">
+                                  <Users className="h-4 w-4 text-gray-400" />
+                                  <span>
+                                    {child.firstName} {child.lastName}
+                                  </span>
+                                  <Badge variant="secondary" className="text-xs">
+                                    {child.classroom.name}
+                                  </Badge>
+                                </div>)}
+                            </div>}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto">
+                            {parent.signupStatus === 'Complete' && <CheckCircle className="h-4 w-4 mr-1" />}
+                            {parent.signupStatus === 'Invited' && <Calendar className="h-4 w-4 mr-1" />}
+                            {parent.signupStatus === 'Pending' && <Clock className="h-4 w-4 mr-1" />}
                             {parent.signupStatus}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Link to={`/admin/parents/${parent.id}`}>
-                              <Button variant="outline" size="sm" className="flex items-center">
-                                <Eye className="h-4 w-4 mr-1" />
-                                View
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
                               </Button>
-                            </Link>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openAddChildDialog(parent)}>
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Add Child
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => toggleParentStatus(parent)}>
-                                  {parent.status === 'Active' ? <>
-                                      <XCircle className="h-4 w-4 mr-2" />
-                                      Archive Parent
-                                    </> : <>
-                                      <CheckCircle className="h-4 w-4 mr-2" />
-                                      Activate Parent
-                                    </>}
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem asChild>
+                                <Link to={`/admin/parents/${parent.id}`}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                              setSelectedParent(parent);
+                              setIsAddChildDialogOpen(true);
+                            }}>
+                                <UserCircle className="h-4 w-4 mr-2" />
+                                Add Child
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Deactivate
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>) : <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500">
-                        No parents found. Try a different search or invite a new
-                        parent.
+                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                        No parents match the current filters.
                       </td>
                     </tr>}
                 </tbody>
@@ -390,12 +442,12 @@ export function ParentManagement() {
       </div>
       {/* Invite Parent Dialog */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Invite New Parent</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="py-4 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-lg font-medium mb-4">Parent Information</h3>
                 <div className="space-y-4">
@@ -474,10 +526,7 @@ export function ParentManagement() {
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
-              Add Child to {selectedParent?.firstName}{' '}
-              {selectedParent?.lastName}
-            </DialogTitle>
+            <DialogTitle>Add Child to {selectedParent?.firstName} {selectedParent?.lastName}</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>

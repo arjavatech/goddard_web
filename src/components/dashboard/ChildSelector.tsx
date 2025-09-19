@@ -23,6 +23,14 @@ export function ChildSelector({
   onSelectChild
 }: ChildSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  if (children.length === 0) {
+    return <div className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Parent Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-2">
+          No enrolled children were found for this account.
+        </p>
+      </div>;
+  }
   const selectedChild = children.find(child => child.id === selectedChildId) || children[0];
   return <div className="mb-6">
       <div className="flex items-center gap-2">

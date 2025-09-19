@@ -1,4 +1,4 @@
-import React, { Children } from 'react';
+import React from 'react';
 import { ChevronRight, User } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Progress } from '../ui/progress';
@@ -22,6 +22,18 @@ export function ChildrenOverview({
   selectedChildId,
   onSelectChild
 }: ChildrenOverviewProps) {
+  if (children.length === 0) {
+    return <Card className="glass-card">
+        <CardContent className="p-6">
+          <h2 className="text-xl font-semibold text-foreground">
+            Children Overview
+          </h2>
+          <p className="text-sm text-muted-foreground mt-2">
+            We could not load any children for this account.
+          </p>
+        </CardContent>
+      </Card>;
+  }
   return <Card className="glass-card">
       <CardContent className="p-6">
         <div className="flex justify-between items-center mb-4">

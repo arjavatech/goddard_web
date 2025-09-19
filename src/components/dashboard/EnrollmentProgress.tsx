@@ -30,7 +30,7 @@ export function EnrollmentProgress({
     name: 'Complete',
     completed: false
   }];
-  const progressPercentage = Math.round(completedSteps / totalSteps * 100);
+  const progressPercentage = totalSteps > 0 ? Math.round(completedSteps / totalSteps * 100) : 0;
   return <div className="glass-card bg-gradient-to-br from-blue-50 to-blue-100 text-foreground rounded-lg p-8 border-blue-200">
       <h2 className="text-2xl font-semibold mb-2">
         Let's complete {childName}'s enrollment

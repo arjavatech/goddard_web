@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Eye, Filter, X } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { fetchUserContext } from '../../services/api/user';
+import { fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { fetchFormTemplates } from '../../services/api/dashboard';
+import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
+
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 interface Student {
   id: string;
@@ -32,370 +37,269 @@ interface Student {
     status: string;
   }[];
 }
-export function StudentManagement() {
-  // Mock student data combined from all classrooms
-  const [students, setStudents] = useState<Student[]>([{
+
+const DEFAULT_STUDENTS: Student[] = [{
+  id: '1',
+  firstName: 'Emma',
+  lastName: 'Johnson',
+  enrollmentProgress: 85,
+  enrollmentStatus: 'In Progress',
+  formsCompleted: 3,
+  totalForms: 4,
+  classroom: {
     id: '1',
-    firstName: 'Emma',
-    lastName: 'Johnson',
-    enrollmentProgress: 85,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 3,
-    totalForms: 4,
-    classroom: {
-      id: '1',
-      name: 'Sunshine Room'
-    },
-    parent: {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Completed'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'In Progress'
-    }]
+    name: 'Sunshine Room'
+  },
+  parent: {
+    id: '1',
+    name: 'Sarah Johnson',
+    email: 'sarah.johnson@example.com'
+  },
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Completed'
   }, {
     id: '2',
-    firstName: 'Noah',
-    lastName: 'Smith',
-    enrollmentProgress: 100,
-    enrollmentStatus: 'Complete',
-    formsCompleted: 4,
-    totalForms: 4,
-    classroom: {
-      id: '2',
-      name: 'Rainbow Room'
-    },
-    parent: {
-      id: '2',
-      name: 'Michael Smith',
-      email: 'michael.smith@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Completed'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Completed'
-    }]
+    name: 'Medical Authorization',
+    status: 'Completed'
   }, {
     id: '3',
-    firstName: 'Olivia',
-    lastName: 'Wilson',
-    enrollmentProgress: 50,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 2,
-    totalForms: 4,
-    classroom: {
-      id: '3',
-      name: 'Stars Room'
-    },
-    parent: {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david.wilson@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
+    name: 'Emergency Contact Form',
+    status: 'Completed'
   }, {
     id: '4',
-    firstName: 'Sophia',
-    lastName: 'Brown',
-    enrollmentProgress: 25,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 1,
-    totalForms: 4,
-    classroom: {
-      id: '4',
-      name: 'Moon Room'
-    },
-    parent: {
-      id: '3',
-      name: 'Jennifer Brown',
-      email: 'jennifer.brown@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Not Started'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
+    name: 'Photo Release Form',
+    status: 'In Progress'
+  }]
+}, {
+  id: '2',
+  firstName: 'Noah',
+  lastName: 'Smith',
+  enrollmentProgress: 100,
+  enrollmentStatus: 'Complete',
+  formsCompleted: 4,
+  totalForms: 4,
+  classroom: {
+    id: '2',
+    name: 'Rainbow Room'
+  },
+  parent: {
+    id: '2',
+    name: 'Michael Smith',
+    email: 'michael.smith@example.com'
+  },
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Completed'
   }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Completed'
+  }, {
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Completed'
+  }, {
+    id: '4',
+    name: 'Photo Release Form',
+    status: 'Completed'
+  }]
+}, {
+  id: '3',
+  firstName: 'Olivia',
+  lastName: 'Wilson',
+  enrollmentProgress: 50,
+  enrollmentStatus: 'In Progress',
+  formsCompleted: 2,
+  totalForms: 4,
+  classroom: {
+    id: '3',
+    name: 'Stars Room'
+  },
+  parent: {
+    id: '4',
+    name: 'David Wilson',
+    email: 'david.wilson@example.com'
+  },
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Completed'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Completed'
+  }, {
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Not Started'
+  }, {
+    id: '4',
+    name: 'Photo Release Form',
+    status: 'Not Started'
+  }]
+}, {
+  id: '4',
+  firstName: 'Sophia',
+  lastName: 'Brown',
+  enrollmentProgress: 25,
+  enrollmentStatus: 'In Progress',
+  formsCompleted: 1,
+  totalForms: 4,
+  classroom: {
+    id: '4',
+    name: 'Moon Room'
+  },
+  parent: {
+    id: '3',
+    name: 'Jennifer Brown',
+    email: 'jennifer.brown@example.com'
+  },
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Completed'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Not Started'
+  }, {
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Not Started'
+  }, {
+    id: '4',
+    name: 'Photo Release Form',
+    status: 'Not Started'
+  }]
+}, {
+  id: '5',
+  firstName: 'Liam',
+  lastName: 'Davis',
+  enrollmentProgress: 0,
+  enrollmentStatus: 'Not Started',
+  formsCompleted: 0,
+  totalForms: 4,
+  classroom: {
     id: '5',
-    firstName: 'Liam',
-    lastName: 'Davis',
-    enrollmentProgress: 0,
-    enrollmentStatus: 'Not Started',
-    formsCompleted: 0,
-    totalForms: 4,
-    classroom: {
-      id: '5',
-      name: 'Ocean Room'
-    },
-    parent: {
-      id: '5',
-      name: 'Robert Davis',
-      email: 'robert.davis@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Not Started'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Not Started'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
+    name: 'Ocean Room'
+  },
+  parent: {
+    id: '5',
+    name: 'Robert Davis',
+    email: 'robert.davis@example.com'
+  },
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Not Started'
   }, {
-    id: '6',
-    firstName: 'Ava',
-    lastName: 'Smith',
-    enrollmentProgress: 75,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 3,
-    totalForms: 4,
-    classroom: {
-      id: '1',
-      name: 'Sunshine Room'
-    },
-    parent: {
-      id: '2',
-      name: 'Michael Smith',
-      email: 'michael.smith@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Completed'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Not Started'
   }, {
-    id: '7',
-    firstName: 'James',
-    lastName: 'Miller',
-    enrollmentProgress: 100,
-    enrollmentStatus: 'Complete',
-    formsCompleted: 4,
-    totalForms: 4,
-    classroom: {
-      id: '2',
-      name: 'Rainbow Room'
-    },
-    parent: {
-      id: '6',
-      name: 'Patricia Miller',
-      email: 'patricia.miller@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Completed'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Completed'
-    }]
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Not Started'
   }, {
-    id: '8',
-    firstName: 'Charlotte',
-    lastName: 'Taylor',
-    enrollmentProgress: 50,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 2,
-    totalForms: 4,
-    classroom: {
-      id: '3',
-      name: 'Stars Room'
-    },
-    parent: {
-      id: '7',
-      name: 'Thomas Taylor',
-      email: 'thomas.taylor@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Completed'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
-  }, {
-    id: '9',
-    firstName: 'Benjamin',
-    lastName: 'Anderson',
-    enrollmentProgress: 25,
-    enrollmentStatus: 'In Progress',
-    formsCompleted: 1,
-    totalForms: 4,
-    classroom: {
-      id: '4',
-      name: 'Moon Room'
-    },
-    parent: {
-      id: '8',
-      name: 'Jessica Anderson',
-      email: 'jessica.anderson@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Completed'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Not Started'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
-  }, {
-    id: '10',
-    firstName: 'Mia',
-    lastName: 'Thomas',
-    enrollmentProgress: 0,
-    enrollmentStatus: 'Not Started',
-    formsCompleted: 0,
-    totalForms: 4,
-    classroom: {
-      id: '5',
-      name: 'Ocean Room'
-    },
-    parent: {
-      id: '9',
-      name: 'Daniel Thomas',
-      email: 'daniel.thomas@example.com'
-    },
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Not Started'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Not Started'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Not Started'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Not Started'
-    }]
-  }]);
+    id: '4',
+    name: 'Photo Release Form',
+    status: 'Not Started'
+  }]
+}];
+
+const statusFromProgress = (progress: number): EnrollmentStatus => {
+  if (progress === 100) return 'Complete';
+  if (progress > 0) return 'In Progress';
+  return 'Not Started';
+};
+
+export function StudentManagement() {
+  const [students, setStudents] = useState<Student[]>(DEFAULT_STUDENTS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-  // Filter students based on search query and status filter
-  const filteredStudents = students.filter(student => {
-    const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-    const parentName = student.parent.name.toLowerCase();
-    const classroomName = student.classroom.name.toLowerCase();
-    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || parentName.includes(searchQuery.toLowerCase()) || classroomName.includes(searchQuery.toLowerCase());
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+
+        const [enrollments, classrooms, templates] = await Promise.all([
+          fetchSchoolEnrollments(user.schoolId).catch(() => []),
+          fetchClassrooms(user.schoolId).catch(() => []),
+          fetchFormTemplates(user.schoolId).catch(() => [])
+        ]);
+
+        if (!isMounted || enrollments.length === 0) return;
+
+        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), cls.id]));
+        const templateById = new Map(templates.map(template => [template.id, template]));
+
+        const mappedStudents: Student[] = enrollments.map(child => {
+          const formsArray = Object.entries(child.forms).map(([id, status]) => {
+            const template = templateById.get(id);
+            return {
+              id,
+              name: template?.formName ?? id,
+              status: status || template?.status || 'Unknown'
+            };
+          });
+          const completed = formsArray.filter(form => COMPLETION_STATUSES.has(normalizeFormStatus(form.status))).length;
+          const total = formsArray.length;
+          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+          const classroomId = child.className ? classroomByName.get(child.className.toLowerCase()) : undefined;
+          const parentName = child.primaryEmail ? child.primaryEmail.split('@')[0].replace(/[._]/g, ' ') : 'Guardian';
+          return {
+            id: child.childId,
+            firstName: child.firstName,
+            lastName: child.lastName,
+            enrollmentProgress: progress,
+            enrollmentStatus: statusFromProgress(progress),
+            formsCompleted: completed,
+            totalForms: total,
+            classroom: {
+              id: classroomId ?? child.className ?? 'unassigned',
+              name: child.className ?? 'Unassigned'
+            },
+            parent: {
+              id: child.primaryEmail ?? child.additionalParentEmail ?? child.childId,
+              name: parentName.replace(/\b\w/g, char => char.toUpperCase()),
+              email: child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com'
+            },
+            assignedForms: formsArray
+          } satisfies Student;
+        });
+
+        if (mappedStudents.length > 0) {
+          setStudents(mappedStudents);
+        }
+      } catch (error) {
+        console.warn('Failed to load student management data', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredStudents = useMemo(() => students.filter(student => {
+    const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || student.enrollmentStatus === statusFilter;
     return matchesSearch && matchesStatus;
-  });
-  // Calculate enrollment statistics
-  const enrollmentStats = {
-    complete: students.filter(s => s.enrollmentStatus === 'Complete').length,
-    inProgress: students.filter(s => s.enrollmentStatus === 'In Progress').length,
-    notStarted: students.filter(s => s.enrollmentStatus === 'Not Started').length,
-    totalStudents: students.length
-  };
-  // Get status badge variant
-  const getStatusBadgeVariant = (status: EnrollmentStatus) => {
+  }), [students, searchQuery, statusFilter]);
+
+  const completionRate = useMemo(() => {
+    if (students.length === 0) return 0;
+    const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
+    return Math.round((complete / students.length) * 100);
+  }, [students]);
+
+  const getStatusBadgeVariant = (status: EnrollmentStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Complete':
         return 'success';
@@ -407,7 +311,7 @@ export function StudentManagement() {
         return 'default';
     }
   };
-  // Get status icon
+
   const getStatusIcon = (status: EnrollmentStatus) => {
     switch (status) {
       case 'Complete':
@@ -420,80 +324,54 @@ export function StudentManagement() {
         return null;
     }
   };
+
+  const toggleFilters = () => setShowFilters(prev => !prev);
+
   return <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
+        <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-foreground">
             Student Management
           </h1>
-          <Button variant="outline" className="flex items-center" onClick={() => setShowFilters(!showFilters)}>
-            {showFilters ? <X className="h-4 w-4 mr-2" /> : <Filter className="h-4 w-4 mr-2" />}
-            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          <Button variant="outline" onClick={toggleFilters} className="flex items-center">
+            {showFilters ? <>
+                <X className="h-4 w-4 mr-2" /> Hide Filters
+              </> : <>
+                <Filter className="h-4 w-4 mr-2" /> Show Filters
+              </>}
           </Button>
         </div>
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <GraduationCap className="h-12 w-12 text-amazon-teal mr-4" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Total Students
-                  </p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {enrollmentStats.totalStudents}
-                  </h3>
-                </div>
-                <div className="p-3 bg-gray-50 rounded-full">
-                  <GraduationCap className="h-5 w-5 text-amazon-teal" />
+                  <p className="text-sm text-muted-foreground">Total Students</p>
+                  <p className="text-3xl font-bold">{students.length}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <Users className="h-12 w-12 text-amazon-teal mr-4" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Complete
-                  </p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {enrollmentStats.complete}
-                  </h3>
-                </div>
-                <div className="p-3 bg-green-50 rounded-full">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
+                  <p className="text-sm text-muted-foreground">Completion Rate</p>
+                  <p className="text-3xl font-bold">{completionRate}%</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    In Progress
+                  <p className="text-sm text-muted-foreground">Forms Pending</p>
+                  <p className="text-3xl font-bold">
+                    {students.filter(student => student.enrollmentStatus !== 'Complete').length}
                   </p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {enrollmentStats.inProgress}
-                  </h3>
-                </div>
-                <div className="p-3 bg-amber-50 rounded-full">
-                  <Clock className="h-5 w-5 text-amber-500" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Not Started
-                  </p>
-                  <h3 className="text-2xl font-bold mt-1">
-                    {enrollmentStats.notStarted}
-                  </h3>
                 </div>
                 <div className="p-3 bg-gray-100 rounded-full">
                   <AlertCircle className="h-5 w-5 text-gray-400" />
@@ -502,7 +380,6 @@ export function StudentManagement() {
             </CardContent>
           </Card>
         </div>
-        {/* Student List */}
         <Card className="glass-card">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-6">
@@ -576,7 +453,7 @@ export function StudentManagement() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Badge variant={getStatusBadgeVariant(student.enrollmentStatus) as any} className="flex items-center w-fit mx-auto">
+                          <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
                             {getStatusIcon(student.enrollmentStatus)}
                             <span className="ml-1">
                               {student.enrollmentStatus}

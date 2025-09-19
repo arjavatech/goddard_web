@@ -114,8 +114,10 @@ export function FormsDocuments({
             {tab.name}
           </button>)}
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredForms.map((form, index) => <FormCard key={index} title={form.title} description={form.description} lastUpdated={form.lastUpdated} status={form.status} childName={form.childName} />)}
-      </div>
+      {filteredForms.length === 0 ? <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+          No forms available yet. This section will populate once assignments are available from the backend service.
+        </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredForms.map((form, index) => <FormCard key={index} title={form.title} description={form.description} lastUpdated={form.lastUpdated} status={form.status} childName={form.childName} />)}
+        </div>}
     </div>;
 }

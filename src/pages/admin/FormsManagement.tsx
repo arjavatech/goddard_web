@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, ExternalLink, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { fetchUserContext } from '../../services/api/user';
+import { fetchFormTemplates } from '../../services/api/dashboard';
+import { fetchClassEnrollmentStats } from '../../services/api/admin';
+
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -16,50 +20,62 @@ interface Form {
   status: FormStatus;
   classroomsCount: number;
 }
+
+const DEFAULT_FORMS: Form[] = [{
+  id: '1',
+  name: 'Admission Form',
+  link: 'https://goddard.fillout.com/t/tdKTQWnb3Wus',
+  status: 'Active',
+  classroomsCount: 6
+}, {
+  id: '2',
+  name: 'Medical Authorization',
+  link: 'https://goddard.fillout.com/t/med-auth',
+  status: 'Active',
+  classroomsCount: 6
+}, {
+  id: '3',
+  name: 'Emergency Contact Form',
+  link: 'https://goddard.fillout.com/t/emergency',
+  status: 'Active',
+  classroomsCount: 6
+}, {
+  id: '4',
+  name: 'Photo Release Form',
+  link: 'https://goddard.fillout.com/t/photo-release',
+  status: 'Active',
+  classroomsCount: 5
+}, {
+  id: '5',
+  name: 'Field Trip Permission',
+  link: 'https://goddard.fillout.com/t/field-trip',
+  status: 'Inactive',
+  classroomsCount: 3
+}, {
+  id: '6',
+  name: 'Parent Handbook Acknowledgment',
+  link: 'https://goddard.fillout.com/t/handbook',
+  status: 'Default',
+  classroomsCount: 6
+}, {
+  id: '7',
+  name: 'Meal Program Enrollment',
+  link: 'https://goddard.fillout.com/t/meal-program',
+  status: 'Archive',
+  classroomsCount: 0
+}];
+
+const mapStatus = (status: string | null | undefined): FormStatus => {
+  const value = (status ?? '').toLowerCase();
+  if (value.includes('default')) return 'Default';
+  if (value.includes('inactive')) return 'Inactive';
+  if (value.includes('archive')) return 'Archive';
+  if (value.includes('active')) return 'Active';
+  return 'Active';
+};
+
 export function FormsManagement() {
-  const [forms, setForms] = useState<Form[]>([{
-    id: '1',
-    name: 'Admission Form',
-    link: 'https://goddard.fillout.com/t/tdKTQWnb3Wus',
-    status: 'Active',
-    classroomsCount: 6
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    link: 'https://goddard.fillout.com/t/med-auth',
-    status: 'Active',
-    classroomsCount: 6
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    link: 'https://goddard.fillout.com/t/emergency',
-    status: 'Active',
-    classroomsCount: 6
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    link: 'https://goddard.fillout.com/t/photo-release',
-    status: 'Active',
-    classroomsCount: 5
-  }, {
-    id: '5',
-    name: 'Field Trip Permission',
-    link: 'https://goddard.fillout.com/t/field-trip',
-    status: 'Inactive',
-    classroomsCount: 3
-  }, {
-    id: '6',
-    name: 'Parent Handbook Acknowledgment',
-    link: 'https://goddard.fillout.com/t/handbook',
-    status: 'Default',
-    classroomsCount: 6
-  }, {
-    id: '7',
-    name: 'Meal Program Enrollment',
-    link: 'https://goddard.fillout.com/t/meal-program',
-    status: 'Archive',
-    classroomsCount: 0
-  }]);
+  const [forms, setForms] = useState<Form[]>(DEFAULT_FORMS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -69,11 +85,50 @@ export function FormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
-  const filteredForms = forms.filter(form => {
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        const [templates, classStats] = await Promise.all([
+          fetchFormTemplates(user.schoolId).catch(() => []),
+          fetchClassEnrollmentStats(user.schoolId).catch(() => [])
+        ]);
+        if (!isMounted) return;
+        if (templates.length === 0) return;
+
+        const classCounts = new Map<string, number>();
+        classStats.forEach(stat => {
+          Object.keys(stat.forms).forEach(formId => {
+            classCounts.set(formId, (classCounts.get(formId) ?? 0) + 1);
+          });
+        });
+
+        const mappedForms: Form[] = templates.map(template => ({
+          id: template.id,
+          name: template.formName,
+          link: template.filloutFormUrl ?? '#',
+          status: mapStatus(template.status),
+          classroomsCount: classCounts.get(template.id) ?? 0
+        }));
+        setForms(mappedForms);
+      } catch (error) {
+        console.warn('Failed to load forms', error);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredForms = useMemo(() => forms.filter(form => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
     return matchesSearch && matchesStatus;
-  });
+  }), [forms, searchQuery, statusFilter]);
+
   const handleAddForm = () => {
     if (formName.trim() && formLink.trim()) {
       const newForm: Form = {
@@ -122,7 +177,7 @@ export function FormsManagement() {
     setSelectedForm(form);
     setIsDeleteDialogOpen(true);
   };
-  const getStatusBadgeVariant = (status: FormStatus) => {
+  const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
       case 'Active':
         return 'success';
@@ -132,8 +187,15 @@ export function FormsManagement() {
         return 'secondary';
       case 'Archive':
         return 'outline';
+      default:
+        return 'default';
     }
   };
+  const statuses = useMemo(() => {
+    const unique = new Set<FormStatus>();
+    forms.forEach(form => unique.add(form.status));
+    return Array.from(unique);
+  }, [forms]);
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -161,10 +223,9 @@ export function FormsManagement() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Statuses</SelectItem>
-                    <SelectItem value="Default">Default</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Archive">Archive</SelectItem>
+                    {statuses.map(status => <SelectItem key={status} value={status}>
+                        {status}
+                      </SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -194,28 +255,23 @@ export function FormsManagement() {
                   {filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">{form.name}</td>
                         <td className="py-3 px-4">
-                          <Badge variant={getStatusBadgeVariant(form.status) as any}>
+                          <Badge variant={getStatusBadgeVariant(form.status)}>
                             {form.status}
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <LinkIcon className="h-4 w-4 mr-2 text-gray-500" />
-                            <a href={form.link} target="_blank" rel="noopener noreferrer" className="text-amazon-teal hover:underline truncate max-w-xs">
-                              {form.link.replace(/^https?:\/\//, '')}
-                            </a>
+                          <div className="flex items-center space-x-2 text-amazon-teal">
+                            <LinkIcon className="h-4 w-4" />
+                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline">
+                                {form.link}
+                              </a> : <span className="text-gray-400">Not provided</span>}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-center">
-                          {form.classroomsCount > 0 ? <div className="flex items-center justify-center">
-                              <School className="h-4 w-4 mr-1 text-gray-500" />
-                              <span>
-                                {form.classroomsCount} classroom
-                                {form.classroomsCount !== 1 ? 's' : ''}
-                              </span>
-                            </div> : <span className="text-gray-400 text-sm">
-                              Not assigned
-                            </span>}
+                        <td className="py-3 px-4 text-center text-sm text-gray-500">
+                          <div className="flex items-center justify-center gap-1">
+                            <School className="h-4 w-4 text-gray-400" />
+                            {form.classroomsCount}
+                          </div>
                         </td>
                         <td className="py-3 px-4 text-right">
                           <DropdownMenu>
@@ -227,11 +283,7 @@ export function FormsManagement() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem onClick={() => openEditDialog(form)}>
                                 <Edit className="h-4 w-4 mr-2" />
-                                Edit Form
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
-                                <ExternalLink className="h-4 w-4 mr-2" />
-                                Open Form
+                                Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
                                 <Trash2 className="h-4 w-4 mr-2" />
@@ -242,8 +294,7 @@ export function FormsManagement() {
                         </td>
                       </tr>) : <tr>
                       <td colSpan={5} className="py-8 text-center text-gray-500">
-                        No forms found. Try a different search or add a new
-                        form.
+                        No forms match the current filters.
                       </td>
                     </tr>}
                 </tbody>

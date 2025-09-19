@@ -1,13 +1,16 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, X, Check, AlertCircle, Eye, Link as LinkIcon } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
+import { fetchUserContext } from '../../services/api/user';
+import { fetchClassEnrollmentStats, fetchClassrooms } from '../../services/api/admin';
+
 interface Form {
   id: string;
   name: string;
@@ -20,123 +23,122 @@ interface Classroom {
   formsCount: number;
   assignedForms: Form[];
 }
+
+const DEFAULT_CLASSROOMS: Classroom[] = [{
+  id: '1',
+  name: 'Sunshine Room',
+  studentsCount: 18,
+  formsCount: 8,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }, { id: '3', name: 'Emergency Contact Form', status: 'Active' }, { id: '4', name: 'Photo Release Form', status: 'Active' }]
+}, {
+  id: '2',
+  name: 'Rainbow Room',
+  studentsCount: 15,
+  formsCount: 7,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }, { id: '3', name: 'Emergency Contact Form', status: 'Active' }]
+}, {
+  id: '3',
+  name: 'Stars Room',
+  studentsCount: 12,
+  formsCount: 6,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }]
+}, {
+  id: '4',
+  name: 'Moon Room',
+  studentsCount: 14,
+  formsCount: 8,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }, { id: '5', name: 'Field Trip Permission', status: 'Inactive' }]
+}, {
+  id: '5',
+  name: 'Ocean Room',
+  studentsCount: 16,
+  formsCount: 7,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }, { id: '6', name: 'Parent Handbook Acknowledgment', status: 'Default' }]
+}, {
+  id: '6',
+  name: 'Mountain Room',
+  studentsCount: 10,
+  formsCount: 6,
+  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }]
+}];
+
+function deriveFormsFromRecord(record: Record<string, string>): Form[] {
+  return Object.entries(record).map(([key, value]) => {
+    const status = value.toLowerCase();
+    let normalized: Form['status'] = 'Active';
+    if (status.includes('default')) normalized = 'Default';
+    else if (status.includes('inactive')) normalized = 'Inactive';
+    else if (status.includes('archive')) normalized = 'Archive';
+    return {
+      id: key,
+      name: key.replace(/[-_]/g, ' '),
+      status: normalized
+    } satisfies Form;
+  });
+}
+
 export function ClassroomManagement() {
-  const [classrooms, setClassrooms] = useState<Classroom[]>([{
-    id: '1',
-    name: 'Sunshine Room',
-    studentsCount: 18,
-    formsCount: 8,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Active'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Active'
-    }]
-  }, {
-    id: '2',
-    name: 'Rainbow Room',
-    studentsCount: 15,
-    formsCount: 7,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Active'
-    }]
-  }, {
-    id: '3',
-    name: 'Stars Room',
-    studentsCount: 12,
-    formsCount: 6,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }]
-  }, {
-    id: '4',
-    name: 'Moon Room',
-    studentsCount: 14,
-    formsCount: 8,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '5',
-      name: 'Field Trip Permission',
-      status: 'Inactive'
-    }]
-  }, {
-    id: '5',
-    name: 'Ocean Room',
-    studentsCount: 16,
-    formsCount: 7,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '6',
-      name: 'Parent Handbook Acknowledgment',
-      status: 'Default'
-    }]
-  }, {
-    id: '6',
-    name: 'Mountain Room',
-    studentsCount: 10,
-    formsCount: 6,
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }]
-  }]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>(DEFAULT_CLASSROOMS);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
-  const filteredClassrooms = classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) {
+          throw new Error('Unable to determine school context for this admin.');
+        }
+        const [rawClassrooms, enrollmentStats] = await Promise.all([
+          fetchClassrooms(user.schoolId).catch(() => []),
+          fetchClassEnrollmentStats(user.schoolId).catch(() => [])
+        ]);
+
+        if (!isMounted) return;
+        if (rawClassrooms.length === 0 && enrollmentStats.length === 0) {
+          return;
+        }
+        const statsByName = new Map<string, { students: number; forms: Record<string, string> }>();
+        enrollmentStats.forEach(stat => {
+          statsByName.set(stat.className, {
+            students: stat.studentCount,
+            forms: stat.forms ?? {}
+          });
+        });
+        const mapped: Classroom[] = rawClassrooms.map(classroom => {
+          const stat = statsByName.get(classroom.name);
+          const forms = stat ? deriveFormsFromRecord(stat.forms) : [];
+          return {
+            id: classroom.id,
+            name: classroom.name,
+            studentsCount: stat ? stat.students : 0,
+            formsCount: forms.length,
+            assignedForms: forms
+          } satisfies Classroom;
+        });
+        setClassrooms(mapped.length > 0 ? mapped : DEFAULT_CLASSROOMS);
+      } catch (err) {
+        console.warn('Failed to load classroom data', err);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const filteredClassrooms = useMemo(() => {
+    return classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [classrooms, searchQuery]);
+
   const handleAddClassroom = () => {
     if (newClassroomName.trim()) {
       const newClassroom: Classroom = {
-        id: (classrooms.length + 1).toString(),
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         name: newClassroomName.trim(),
         studentsCount: 0,
         formsCount: 0,
@@ -147,6 +149,7 @@ export function ClassroomManagement() {
       setIsAddDialogOpen(false);
     }
   };
+
   const handleEditClassroom = () => {
     if (selectedClassroom && newClassroomName.trim()) {
       setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
@@ -157,21 +160,25 @@ export function ClassroomManagement() {
       setIsEditDialogOpen(false);
     }
   };
+
   const handleDeleteClassroom = () => {
     if (selectedClassroom) {
       setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
       setIsDeleteDialogOpen(false);
     }
   };
+
   const openEditDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
     setNewClassroomName(classroom.name);
     setIsEditDialogOpen(true);
   };
+
   const openDeleteDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
     setIsDeleteDialogOpen(true);
   };
+
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -198,9 +205,9 @@ export function ClassroomManagement() {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Classroom Name
+                      Classroom
                     </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-4 font-medium text-gray-600">
                       Students
                     </th>
                     <th className="text-left py-3 px-4 font-medium text-gray-600">
@@ -213,17 +220,23 @@ export function ClassroomManagement() {
                 </thead>
                 <tbody>
                   {filteredClassrooms.length > 0 ? filteredClassrooms.map(classroom => <tr key={classroom.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4 font-medium">
-                          <Link to={`/admin/classrooms/${classroom.id}`} className="text-amazon-teal hover:underline flex items-center">
-                            {classroom.name}
-                            <Eye className="h-4 w-4 ml-2 opacity-60" />
-                          </Link>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center">
-                            <Users className="h-4 w-4 mr-1 text-gray-500" />
-                            <span>{classroom.studentsCount}</span>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold">
+                              {classroom.name.split(' ').map(word => word.charAt(0)).join('').slice(0, 2)}
+                            </div>
+                            <div>
+                              <Link to={`/admin/classrooms/${classroom.id}`} className="text-base font-medium text-foreground hover:text-amazon-teal">
+                                {classroom.name}
+                              </Link>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Users className="h-3 w-3" /> {classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}
+                              </p>
+                            </div>
                           </div>
+                        </td>
+                        <td className="py-3 px-4 text-sm text-muted-foreground">
+                          {classroom.studentsCount}
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex flex-wrap gap-1 max-w-md">
@@ -266,8 +279,7 @@ export function ClassroomManagement() {
                         </td>
                       </tr>) : <tr>
                       <td colSpan={4} className="py-8 text-center text-gray-500">
-                        No classrooms found. Try a different search or add a new
-                        classroom.
+                        No classrooms found. Try a different search or add a new classroom.
                       </td>
                     </tr>}
                 </tbody>
@@ -329,15 +341,12 @@ export function ClassroomManagement() {
           <div className="py-4">
             <p className="text-gray-600">
               Are you sure you want to delete{' '}
-              <span className="font-medium">{selectedClassroom?.name}</span>?
-              This action cannot be undone.
+              <span className="font-medium">{selectedClassroom?.name}</span>? This action cannot be undone.
             </p>
             {selectedClassroom?.studentsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  This classroom has {selectedClassroom.studentsCount} student
-                  {selectedClassroom.studentsCount !== 1 ? 's' : ''} enrolled.
-                  Deleting it will remove all student associations.
+                  This classroom has {selectedClassroom.studentsCount} student{selectedClassroom.studentsCount !== 1 ? 's' : ''} enrolled. Deleting it will remove all student associations.
                 </p>
               </div>}
           </div>
