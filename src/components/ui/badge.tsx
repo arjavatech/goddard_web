@@ -27,4 +27,5 @@ function Badge({
     variant
   }), 'whitespace-nowrap overflow-hidden text-ellipsis max-w-full text-xs', className)} {...props} />;
 }
+// eslint-disable-next-line react-refresh/only-export-components
 export { Badge, badgeVariants };

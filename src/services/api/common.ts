@@ -8,7 +8,15 @@ export async function authedFetch<T>(request: HttpRequest, schema: z.ZodType<T>)
   const response = await httpFetch<unknown>(request, {
     authToken: token
   });
-  return schema.parse(response.data);
+  try {
+    return schema.parse(response.data);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      console.error('Failed to parse API response', request.method, request.url, err); // surface schema mismatch to dev console
+      throw new Error('Received unexpected response from the server.');
+    }
+    throw err;
+  }
 }
 
 export { z };

@@ -156,7 +156,8 @@ export function AdminDashboard() {
         setStats(DEFAULT_STATS);
         setEnrollmentProgress([]);
         setRecentActivity(RECENT_ACTIVITY_FALLBACK);
-        setError(err instanceof Error ? err.message : 'Unable to load admin dashboard data.');
+        const message = err instanceof Error ? err.message : null;
+        setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
       }
     })();
 

@@ -7,7 +7,6 @@ import { QuickActions } from '../components/dashboard/QuickActions';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
-import { MissingApiNotice, type MissingApiItem } from '../components/dashboard/MissingApiNotice';
 import {
   fetchEnrollmentChildren,
   fetchFormTemplates,
@@ -55,22 +54,13 @@ function formatDate(input: string | null | undefined): string {
     year: 'numeric'
   });
 }
-type MissingRecorder = (endpoint: string, description: string) => void;
 function normalizeChild(
   child: EnrollmentChild,
-  templateMap: Map<string, FormTemplate>,
-  addMissing: MissingRecorder
+  templateMap: Map<string, FormTemplate>
 ): DashboardChild {
-  addMissing('GET /parents/{parent_id}/children/{child_id}/profile', 'Expose DOB, age, class placement, and enrollment identifiers so the parent dashboard can show accurate metadata for each child.');
   const formEntries = Object.entries(child.forms ?? {});
-  if (formEntries.length === 0) {
-    addMissing('GET /parents/{parent_id}/children/{child_id}/forms', 'Return assigned forms with status, due dates, and last-updated timestamps so child-specific progress can be rendered.');
-  }
   const forms = formEntries.map(([rawTitle, rawStatus]) => {
     const template = templateMap.get(rawTitle.toLowerCase());
-    if (!template) {
-      addMissing('GET /student-form-assignments/{assignment_id}', 'Include template identifiers and metadata on each child assignment to power labels, descriptions, and due dates.');
-    }
     const status = normalizeFormStatus(rawStatus);
     return {
       title: template?.formName ?? rawTitle,
@@ -85,7 +75,6 @@ function normalizeChild(
   const fallbackStatus = normalizeFormStatus(child.formStatus);
   const enrollmentProgress = totalForms > 0 ? Math.round((completedCount / totalForms) * 100) : fallbackStatus === 'Approved' ? 100 : 0;
   const currentStep = pendingForm?.title ?? (enrollmentProgress === 100 ? 'Enrollment complete' : 'Start enrollment');
-  addMissing('GET /parents/{parent_id}/actions/next', 'Return the next actionable item with a launch URL (e.g., Fillout link) so Quick Actions can navigate users into the correct flow.');
   return {
     id: child.childId,
     name: `${child.firstName} ${child.lastName}`.trim(),
@@ -107,24 +96,13 @@ export function Dashboard() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [missingApis, setMissingApis] = useState<MissingApiItem[]>([]);
   useEffect(() => {
     let isMounted = true;
-    const missing = new Map<string, MissingApiItem>();
-    const addMissing: MissingRecorder = (endpoint, description) => {
-      if (!missing.has(endpoint)) {
-        missing.set(endpoint, {
-          endpoint,
-          description
-        });
-      }
-    };
     setLoading(true);
     (async () => {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) {
-          addMissing('GET /users/me', 'Include school_id and parent_id in the session payload so the frontend can scope guardian data.');
           throw new Error('School context not available for the current user.');
         }
         const [enrollmentChildren, formTemplates] = await Promise.all([
@@ -132,18 +110,12 @@ export function Dashboard() {
           fetchFormTemplates(user.schoolId)
         ]);
         const templatesForSchool = formTemplates.filter(template => !template.schoolId || template.schoolId === user.schoolId);
-        if (templatesForSchool.length === 0) {
-          addMissing('GET /form-templates?school_id={id}', 'Return form templates scoped to the school, including descriptions, due dates, and status fields.');
-        }
         const templateMap = new Map<string, FormTemplate>();
         templatesForSchool.forEach(template => {
           if (!template.formName) return;
           templateMap.set(template.formName.toLowerCase(), template);
         });
-        const processedChildren = enrollmentChildren.map(child => normalizeChild(child, templateMap, addMissing));
-        if (processedChildren.length === 0) {
-          addMissing('GET /parents/{parent_id}/children', 'Provide a filtered list of children tied to the authenticated parent so we do not have to fetch every child for the school.');
-        }
+        const processedChildren = enrollmentChildren.map(child => normalizeChild(child, templateMap));
         const childFormsData = processedChildren.map(child => ({
           childName: child.name,
           forms: child.forms
@@ -154,30 +126,18 @@ export function Dashboard() {
           lastUpdated: formatDate(template.createdAt),
           status: normalizeFormStatus(template.status)
         }));
-        if (familyFormData.length === 0) {
-          addMissing('GET /parents/{parent_id}/family-forms', 'Expose family-wide document assignments with status, last updated, and due dates.');
-        }
-        addMissing('GET /schools/{school_id}/enrollment-insights', 'Return upcoming deadlines, outstanding documents, and school contact information for the Important Information card.');
         if (!isMounted) return;
         setChildren(processedChildren);
         setChildSpecificForms(childFormsData);
         setFamilyForms(familyFormData);
-        setMissingApis(Array.from(missing.values()));
         setError(null);
       } catch (err) {
         if (!isMounted) return;
         setChildren([]);
         setChildSpecificForms([]);
         setFamilyForms([]);
-        setError(err instanceof Error ? err.message : 'Unable to load dashboard data.');
-        const missingItems = Array.from(missing.values());
-        if (!missingItems.length) {
-          missingItems.push({
-            endpoint: 'GET /users/me',
-            description: 'Ensure the session endpoint is reachable in mock mode so the dashboard can bootstrap context.'
-          });
-        }
-        setMissingApis(missingItems);
+        const message = err instanceof Error ? err.message : null;
+        setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load your dashboard details right now. Please try again shortly.");
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -215,7 +175,6 @@ export function Dashboard() {
         {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
-        {!loading && <MissingApiNotice items={missingApis} />}
         {loading ? <div className="py-12 text-center text-muted-foreground">
             Loading parent dashboard...
           </div> : <>
@@ -247,7 +206,7 @@ export function Dashboard() {
                   <div className="section-fade-in" style={{
               animationDelay: '0.5s'
             }}>
-                    <ImportantInfo fallbackMessage="Waiting on /schools/{school_id}/enrollment-insights to supply deadlines, required documents, and contact information." />
+                    <ImportantInfo fallbackMessage="School announcements, deadlines, and contacts will appear here once they are shared." />
                   </div>
                 </div>
               </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-8 text-center text-sm text-muted-foreground">

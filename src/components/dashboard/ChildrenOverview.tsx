@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, User } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Progress } from '../ui/progress';
 interface Child {

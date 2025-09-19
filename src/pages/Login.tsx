@@ -4,6 +4,11 @@ import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
+type LocationState = {
+  from?: {
+    pathname?: string;
+  };
+};
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -15,12 +20,12 @@ export function Login() {
     signInWithPassword
   } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
+  const location = useLocation<LocationState>();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await signInWithPassword(formData.email, formData.password);
-      const redirectTo = (location.state as any)?.from?.pathname || '/';
+      const redirectTo = location.state?.from?.pathname ?? '/';
       navigate(redirectTo, {
         replace: true
       });

@@ -1,4 +1,4 @@
-import React, { Children } from 'react';
+import React from 'react';
 import { Bell, User, Shield } from 'lucide-react';
 import { Button } from '../ui/button';
 export function Header() {

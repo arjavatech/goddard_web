@@ -1,4 +1,5 @@
-import React, { forwardRef, Component } from 'react';
+import React, { forwardRef } from 'react';
+import type { ComponentPropsWithoutRef } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown } from 'lucide-react';
 import { cn } from '../../lib/utils';

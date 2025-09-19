@@ -1,6 +1,7 @@
 import React from 'react';
-import { Badge } from '../ui/badge';
+import { badgeVariants, Badge } from '../ui/badge';
 import { CheckCircle, Clock, AlertCircle, FileEdit, FileText } from 'lucide-react';
+import type { VariantProps } from 'class-variance-authority';
 type Status = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface StatusBadgeProps {
   status: Status;
@@ -8,7 +9,8 @@ interface StatusBadgeProps {
 export function StatusBadge({
   status
 }: StatusBadgeProps) {
-  const getVariant = () => {
+  type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
+  const getVariant = (): BadgeVariant => {
     switch (status) {
       case 'Approved':
         return 'success';
@@ -40,7 +42,7 @@ export function StatusBadge({
         return null;
     }
   };
-  return <Badge variant={getVariant() as any} className="mt-1 self-start flex items-center text-xs">
+  return <Badge variant={getVariant()} className="mt-1 self-start flex items-center text-xs">
       {getIcon()}
       {status}
     </Badge>;
