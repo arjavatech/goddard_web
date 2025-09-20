@@ -9,7 +9,7 @@ import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails } from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 
 interface Form {
@@ -239,6 +239,12 @@ export function ClassroomDetails() {
             </h1>
           </div>
           <div className="flex space-x-2">
+            <Button 
+              variant="outline" 
+              
+            >
+              Rename
+            </Button>
             <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`}>
               <Button variant="outline" className="flex items-center">
                 <FileText className="h-4 w-4 mr-2" />

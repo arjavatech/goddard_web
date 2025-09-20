@@ -21,11 +21,11 @@ export type FormTemplate = {
 };
 const enrollmentChildSchema = z.object({
   child_id: z.union([z.string(), z.number()]),
-  child_first_name: z.string(),
-  child_last_name: z.string(),
+  child_first_name: z.string().optional(),
+  child_last_name: z.string().optional(),
   class_name: z.string().nullable().optional(),
   form_status: z.string().nullable().optional(),
-  forms: z.record(z.string()).nullable().optional(),
+  forms: z.union([z.record(z.string()), z.array(z.unknown())]).nullable().optional(),
   primary_email: z.string().nullable().optional(),
   additional_parent_email: z.string().nullable().optional()
 });
@@ -42,15 +42,15 @@ const formTemplateSchema = z.object({
 export async function fetchEnrollmentChildren(schoolId: string): Promise<EnrollmentChild[]> {
   const data = await authedFetch({
     method: 'GET',
-    url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+    url: `/enrollments/children-forms?school_id=dd3ab483-10b4-4d3d-8613-2c8cf4371f16`
   }, z.array(enrollmentChildSchema));
   return data.map(child => ({
     childId: String(child.child_id),
-    firstName: child.child_first_name,
-    lastName: child.child_last_name,
+    firstName: child.child_first_name ?? '',
+    lastName: child.child_last_name ?? '',
     className: child.class_name ?? null,
     formStatus: child.form_status ?? null,
-    forms: child.forms ?? {},
+    forms: Array.isArray(child.forms) ? {} : (child.forms ?? {}),
     primaryEmail: child.primary_email ?? null,
     additionalParentEmail: child.additional_parent_email ?? null
   }));
@@ -58,7 +58,7 @@ export async function fetchEnrollmentChildren(schoolId: string): Promise<Enrollm
 export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate[]> {
   const data = await authedFetch({
     method: 'GET',
-    url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
+    url: `/form-templates?school_id=dd3ab483-10b4-4d3d-8613-2c8cf4371f16`
   }, z.array(formTemplateSchema));
   return data.map(template => ({
     id: template.id,

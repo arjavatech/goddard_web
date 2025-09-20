@@ -20,7 +20,7 @@ export function Login() {
     signInWithPassword
   } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation<LocationState>();
+  const location = useLocation();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {

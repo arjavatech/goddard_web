@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
-import { fetchClassEnrollmentStats } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
 
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
@@ -129,34 +129,50 @@ export function FormsManagement() {
     return matchesSearch && matchesStatus;
   }), [forms, searchQuery, statusFilter]);
 
-  const handleAddForm = () => {
+  const handleAddForm = async () => {
     if (formName.trim() && formLink.trim()) {
-      const newForm: Form = {
-        id: (forms.length + 1).toString(),
-        name: formName.trim(),
-        link: formLink.trim(),
-        status: formStatus,
-        classroomsCount: 0
-      };
-      setForms([...forms, newForm]);
-      resetFormFields();
-      setIsAddDialogOpen(false);
+      try {
+        await createFormTemplate(formName.trim(), formLink.trim());
+        const newForm: Form = {
+          id: (forms.length + 1).toString(),
+          name: formName.trim(),
+          link: formLink.trim(),
+          status: formStatus,
+          classroomsCount: 0
+        };
+        setForms([...forms, newForm]);
+        resetFormFields();
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to add form:', error);
+      }
     }
   };
-  const handleEditForm = () => {
+  const handleEditForm = async () => {
     if (selectedForm && formName.trim() && formLink.trim()) {
-      setForms(forms.map(form => form.id === selectedForm.id ? {
-        ...form,
-        name: formName.trim(),
-        link: formLink.trim(),
-        status: formStatus
-      } : form));
-      resetFormFields();
-      setIsEditDialogOpen(false);
+      try {
+        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim());
+        setForms(forms.map(form => form.id === selectedForm.id ? {
+          ...form,
+          name: formName.trim(),
+          link: formLink.trim(),
+          status: formStatus
+        } : form));
+        resetFormFields();
+        setIsEditDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to update form:', error);
+      }
     }
   };
-  const handleDeleteForm = () => {
+  const handleDeleteForm = async () => {
     if (selectedForm) {
+      try {
+        await deleteForm('3aa886b5-2c95-4595-a079-29f4e7c18f93', selectedForm.id);
+      } catch (error) {
+        console.error('Failed to delete form:', error);
+      }
+      // Remove from local state regardless of API success
       setForms(forms.filter(form => form.id !== selectedForm.id));
       setIsDeleteDialogOpen(false);
     }
@@ -403,11 +419,11 @@ export function FormsManagement() {
               <span className="font-medium">{selectedForm?.name}</span>? This
               action cannot be undone.
             </p>
-            {selectedForm?.classroomsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
+            {selectedForm?.classroomsCount && selectedForm.classroomsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  This form is assigned to {selectedForm.classroomsCount}{' '}
-                  classroom{selectedForm.classroomsCount !== 1 ? 's' : ''}.
+                  This form is assigned to {selectedForm?.classroomsCount}{' '}
+                  classroom{selectedForm?.classroomsCount !== 1 ? 's' : ''}.
                   Deleting it will remove all assignments.
                 </p>
               </div>}

@@ -72,30 +72,35 @@ export function FormsDocuments({
   }, {
     id: 'family',
     name: 'Family Forms'
-  }, ...childSpecificForms.map(child => ({
-    id: child.childName,
-    name: `${child.childName}'s Forms`
+  }, ...childSpecificForms.map((child, index) => ({
+    id: `child-${index}-${child.childName || 'unnamed'}`,
+    name: `${child.childName || 'Unnamed Child'}'s Forms`
   }))];
   // Filter forms based on active tab
   const filteredForms = useMemo(() => {
     if (activeTab === 'all') {
-      return [...familyForms.map(form => ({
+      return [...familyForms.map((form, index) => ({
         ...form,
-        childName: undefined
-      })), ...childSpecificForms.flatMap(child => child.forms.map(form => ({
+        childName: undefined,
+        _key: `family-${index}`
+      })), ...childSpecificForms.flatMap((child, childIndex) => child.forms.map((form, formIndex) => ({
         ...form,
-        childName: child.childName
+        childName: child.childName,
+        _key: `child-${childIndex}-form-${formIndex}`
       })))];
     } else if (activeTab === 'family') {
-      return familyForms.map(form => ({
+      return familyForms.map((form, index) => ({
         ...form,
-        childName: undefined
+        childName: undefined,
+        _key: `family-${index}`
       }));
     } else {
-      const childForms = childSpecificForms.find(child => child.childName === activeTab);
-      return childForms ? childForms.forms.map(form => ({
+      const childIndex = childSpecificForms.findIndex(child => `child-${childSpecificForms.indexOf(child)}-${child.childName || 'unnamed'}` === activeTab);
+      const childForms = childIndex >= 0 ? childSpecificForms[childIndex] : null;
+      return childForms ? childForms.forms.map((form, formIndex) => ({
         ...form,
-        childName: undefined
+        childName: undefined,
+        _key: `child-${childIndex}-form-${formIndex}`
       })) : [];
     }
   }, [activeTab, familyForms, childSpecificForms]);
@@ -117,7 +122,7 @@ export function FormsDocuments({
       {filteredForms.length === 0 ? <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
           No forms available yet. This section will populate once assignments are available from the backend service.
         </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredForms.map((form, index) => <FormCard key={index} title={form.title} description={form.description} lastUpdated={form.lastUpdated} status={form.status} childName={form.childName} />)}
+          {filteredForms.map((form) => <FormCard key={form._key} title={form.title} description={form.description} lastUpdated={form.lastUpdated} status={form.status} childName={form.childName} />)}
         </div>}
     </div>;
 }

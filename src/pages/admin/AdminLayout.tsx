@@ -1,4 +1,4 @@
-import React from 'react';
+import { ReactNode } from 'react';
 import { Home, School, FileText, Users, Settings, Bell, LogOut, GraduationCap } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -44,10 +44,6 @@ export function AdminLayout({
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'
-  }, {
-    icon: <Settings className="w-5 h-5" />,
-    label: 'Settings',
-    path: '/admin/settings'
   }];
   return <div className="min-h-screen bg-background flex">
       {/* Sidebar */}

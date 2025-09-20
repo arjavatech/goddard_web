@@ -1,5 +1,6 @@
 import { authedFetch, z } from './common';
 
+
 export type Classroom = {
   id: string;
   name: string;
@@ -44,14 +45,15 @@ export type StudentFormAssignment = {
 };
 
 const classroomSchema = z.object({
-  id: z.string(),
-  class_name: z.string()
+  classroom_id: z.string().optional(),
+  classroom_name: z.string().optional(),
+  total_children: z.number().optional()
 });
 
 const classEnrollmentSchema = z.object({
-  class_id: z.union([z.string(), z.number()]),
-  class_name: z.string(),
-  count: z.number().int().nonnegative(),
+  class_id: z.union([z.string(), z.number()]).optional(),
+  class_name: z.string().optional(),
+  count: z.number().int().nonnegative().optional(),
   forms: z.record(z.string()).nullable().optional(),
   default_forms: z.string().nullable().optional()
 });
@@ -64,9 +66,9 @@ const parentDetailSchema = z.object({
 });
 
 const schoolEnrollmentSchema = z.object({
-  child_id: z.union([z.string(), z.number()]),
-  child_first_name: z.string(),
-  child_last_name: z.string(),
+  child_id: z.union([z.string(), z.number()]).optional(),
+  child_first_name: z.string().optional(),
+  child_last_name: z.string().optional(),
   class_name: z.string().nullable().optional(),
   form_status: z.string().nullable().optional(),
   primary_email: z.string().nullable().optional(),
@@ -92,9 +94,9 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
     url: `/classrooms?school_id=${encodeURIComponent(schoolId)}`
   }, z.array(classroomSchema));
 
-  return data.map(item => ({
-    id: item.id,
-    name: item.class_name
+  return data.map((item, index) => ({
+    id: item.classroom_id || `classroom-${index}`,
+    name: item.classroom_name || `Classroom ${index + 1}`
   }));
 }
 
@@ -105,9 +107,9 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
   }, z.array(classEnrollmentSchema));
 
   return data.map(item => ({
-    classId: String(item.class_id),
-    className: item.class_name,
-    studentCount: item.count,
+    classId: item.class_id ? String(item.class_id) : '',
+    className: item.class_name ?? '',
+    studentCount: item.count ?? 0,
     forms: item.forms ?? {},
     defaultFormSetId: item.default_forms ?? null
   }));
@@ -134,9 +136,9 @@ export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEn
   }, z.array(schoolEnrollmentSchema));
 
   return data.map(item => ({
-    childId: String(item.child_id),
-    firstName: item.child_first_name,
-    lastName: item.child_last_name,
+    childId: item.child_id ? String(item.child_id) : '',
+    firstName: item.child_first_name ?? '',
+    lastName: item.child_last_name ?? '',
     className: item.class_name ?? null,
     formStatus: item.form_status ?? null,
     primaryEmail: item.primary_email ?? null,
@@ -162,4 +164,58 @@ export async function fetchStudentFormAssignments(schoolId: string): Promise<Stu
     assignedAt: item.assigned_at ?? null,
     schoolId: item.school_id ?? null
   }));
+}
+
+export async function renameClassroom(classroomId: string, newName: string): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/classrooms',
+    body: {
+      school_id: "0a8c0e48-9ab4-4a20-b56d-8cb1760d54e5",
+      class_id: classroomId,
+      class_name: newName
+    }
+  }, z.object({}));
+}
+
+export async function deleteClassroom(classroomId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/classrooms?classroom_id=${classroomId}&school_id=c754e50e-c738-09fe-2e2a-1b10ce1cf0d5`
+  }, z.object({}));
+}
+
+export async function deleteForm(classroomId: string, formId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/classrooms/${classroomId}/forms/${formId}`
+  }, z.object({}));
+}
+
+export async function createFormTemplate(formName: string, filloutFormId: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/form-templates',
+    body: {
+      school_id: "2c671644-5bed-4d72-92d1-6e901a7d7574",
+      form_name: formName,
+      fillout_form_id: filloutFormId
+    }
+  }, z.object({}));
+}
+
+export async function updateFormTemplate(formId: string, formName: string, filloutFormUrl: string): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/form-templates',
+    body: {
+      school_id: "986ef3e8-c173-4dac-8e18-66c50ba36439",
+      form_id: formId,
+      form_name: formName,
+      display_order: 6,
+      fillout_form_url: filloutFormUrl,
+      fillout_form_id: "qcp48GcDx3FQOfcZ",
+      is_required: true
+    }
+  }, z.object({}));
 }

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, ChevronRight, Eye, Users } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
@@ -183,7 +183,10 @@ export function ParentDetails() {
         ]);
         if (!isMounted) return;
 
+        console.log(ParentDetails)
+
         const parentRecord = parentDetails.find(detail => detail.parentId === parentId);
+        console.log(parentRecord)
         if (!parentRecord) return;
 
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), { id: cls.id, name: cls.name }]));
@@ -288,6 +291,7 @@ export function ParentDetails() {
     setIsReviewDialogOpen(false);
     setIsViewFormDialogOpen(false);
   };
+  console.log(parent)
 
   return <AdminLayout>
       <div className="space-y-6">

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassEnrollmentStats, fetchClassrooms } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom } from '../../services/api/admin';
 
 interface Form {
   id: string;
@@ -110,12 +110,13 @@ export function ClassroomManagement() {
             forms: stat.forms ?? {}
           });
         });
-        const mapped: Classroom[] = rawClassrooms.map(classroom => {
+        console.log(enrollmentStats)
+        const mapped: Classroom[] = rawClassrooms.map((classroom, index) => {
           const stat = statsByName.get(classroom.name);
           const forms = stat ? deriveFormsFromRecord(stat.forms) : [];
           return {
-            id: classroom.id,
-            name: classroom.name,
+            id: classroom.id || `generated-${index}`,
+            name: classroom.name || `Classroom ${index + 1}`,
             studentsCount: stat ? stat.students : 0,
             formsCount: forms.length,
             assignedForms: forms
@@ -150,21 +151,31 @@ export function ClassroomManagement() {
     }
   };
 
-  const handleEditClassroom = () => {
+  const handleEditClassroom = async () => {
     if (selectedClassroom && newClassroomName.trim()) {
-      setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
-        ...classroom,
-        name: newClassroomName.trim()
-      } : classroom));
-      setNewClassroomName('');
-      setIsEditDialogOpen(false);
+      try {
+        await renameClassroom(selectedClassroom.id, newClassroomName.trim());
+        setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
+          ...classroom,
+          name: newClassroomName.trim()
+        } : classroom));
+        setNewClassroomName('');
+        setIsEditDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to rename classroom:', error);
+      }
     }
   };
 
-  const handleDeleteClassroom = () => {
+  const handleDeleteClassroom = async () => {
     if (selectedClassroom) {
-      setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
-      setIsDeleteDialogOpen(false);
+      try {
+        await deleteClassroom(selectedClassroom.id);
+        setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
+        setIsDeleteDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to delete classroom:', error);
+      }
     }
   };
 
@@ -219,7 +230,7 @@ export function ClassroomManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClassrooms.length > 0 ? filteredClassrooms.map(classroom => <tr key={classroom.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  {filteredClassrooms.length > 0 ? filteredClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold">
@@ -343,10 +354,10 @@ export function ClassroomManagement() {
               Are you sure you want to delete{' '}
               <span className="font-medium">{selectedClassroom?.name}</span>? This action cannot be undone.
             </p>
-            {selectedClassroom?.studentsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
+            {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
                 <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-amber-800">
-                  This classroom has {selectedClassroom.studentsCount} student{selectedClassroom.studentsCount !== 1 ? 's' : ''} enrolled. Deleting it will remove all student associations.
+                  This classroom has {selectedClassroom?.studentsCount} student{selectedClassroom?.studentsCount !== 1 ? 's' : ''} enrolled. Deleting it will remove all student associations.
                 </p>
               </div>}
           </div>
