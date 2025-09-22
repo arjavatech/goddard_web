@@ -35,16 +35,9 @@ type ProgressItem = {
   total: number;
 };
 
-const DEFAULT_STATS: StatCard[] = [
-  { title: 'Total Classrooms', value: 0, icon: <School className="h-6 w-6 text-amazon-teal" />, change: '—' },
-  { title: 'Active Forms', value: 0, icon: <FileText className="h-6 w-6 text-amazon-teal" />, change: '—' },
-  { title: 'Registered Parents', value: 0, icon: <Users className="h-6 w-6 text-amazon-teal" />, change: '—' },
-  { title: 'Pending Approvals', value: 0, icon: <Clock className="h-6 w-6 text-amazon-orange" />, change: '—' }
-];
 
-const RECENT_ACTIVITY_FALLBACK: ActivityItem[] = [
-  { type: 'parent_joined', parent: 'New guardian', child: 'Enrollment', time: 'Awaiting activity feed API' }
-];
+
+
 
 function formatRelative(index: number): string {
   if (index === 0) return 'Just now';
@@ -54,8 +47,8 @@ function formatRelative(index: number): string {
 }
 
 export function AdminDashboard() {
-  const [stats, setStats] = useState<StatCard[]>(DEFAULT_STATS);
-  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>(RECENT_ACTIVITY_FALLBACK);
+  const [stats, setStats] = useState<StatCard[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -149,13 +142,13 @@ export function AdminDashboard() {
         if (!isMounted) return;
         setStats(statCards);
         setEnrollmentProgress(progressItems);
-        setRecentActivity(activityItems.length > 0 ? activityItems : RECENT_ACTIVITY_FALLBACK);
+        setRecentActivity(activityItems);
         setError(null);
       } catch (err) {
         if (!isMounted) return;
-        setStats(DEFAULT_STATS);
+        setStats([]);
         setEnrollmentProgress([]);
-        setRecentActivity(RECENT_ACTIVITY_FALLBACK);
+        setRecentActivity([]);
         const message = err instanceof Error ? err.message : null;
         setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
       }

@@ -35,78 +35,7 @@ interface Parent {
   signupStatus: SignupStatus;
 }
 
-const DEFAULT_CLASSROOMS = [{ id: '1', name: 'Sunshine Room' }, { id: '2', name: 'Rainbow Room' }, { id: '3', name: 'Stars Room' }, { id: '4', name: 'Moon Room' }, { id: '5', name: 'Ocean Room' }];
-const DEFAULT_PARENTS: Parent[] = [{
-  id: '1',
-  firstName: 'Sarah',
-  lastName: 'Johnson',
-  email: 'sarah.johnson@example.com',
-  children: [{
-    id: '1',
-    firstName: 'Emma',
-    lastName: 'Johnson',
-    dob: '05/12/2019',
-    classroom: { id: '1', name: 'Sunshine Room' }
-  }],
-  status: 'Active',
-  signupStatus: 'Complete'
-}, {
-  id: '2',
-  firstName: 'Michael',
-  lastName: 'Smith',
-  email: 'michael.smith@example.com',
-  children: [{
-    id: '2',
-    firstName: 'Noah',
-    lastName: 'Smith',
-    dob: '03/15/2020',
-    classroom: { id: '2', name: 'Rainbow Room' }
-  }, {
-    id: '3',
-    firstName: 'Ava',
-    lastName: 'Smith',
-    dob: '06/22/2018',
-    classroom: { id: '1', name: 'Sunshine Room' }
-  }],
-  status: 'Active',
-  signupStatus: 'Complete'
-}, {
-  id: '3',
-  firstName: 'Jennifer',
-  lastName: 'Brown',
-  email: 'jennifer.brown@example.com',
-  children: [{
-    id: '4',
-    firstName: 'Sophia',
-    lastName: 'Brown',
-    dob: '11/03/2019',
-    classroom: { id: '3', name: 'Stars Room' }
-  }],
-  status: 'Active',
-  signupStatus: 'Pending'
-}, {
-  id: '4',
-  firstName: 'David',
-  lastName: 'Wilson',
-  email: 'david.wilson@example.com',
-  children: [{
-    id: '5',
-    firstName: 'Olivia',
-    lastName: 'Wilson',
-    dob: '02/18/2020',
-    classroom: { id: '2', name: 'Rainbow Room' }
-  }],
-  status: 'Archive',
-  signupStatus: 'Complete'
-}, {
-  id: '5',
-  firstName: 'Jessica',
-  lastName: 'Martinez',
-  email: 'jessica.martinez@example.com',
-  children: [],
-  status: 'Active',
-  signupStatus: 'Invited'
-}];
+
 
 const friendlyNameFromEmail = (email: string): { first: string; last: string } => {
   const local = email.split('@')[0] ?? 'guardian';
@@ -117,8 +46,8 @@ const friendlyNameFromEmail = (email: string): { first: string; last: string } =
 };
 
 export function ParentManagement() {
-  const [parents, setParents] = useState<Parent[]>(DEFAULT_PARENTS);
-  const [classrooms, setClassrooms] = useState(DEFAULT_CLASSROOMS);
+  const [parents, setParents] = useState<Parent[]>([]);
+  const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signupFilter, setSignupFilter] = useState<string>('all');

@@ -4,6 +4,9 @@ import { authedFetch, z } from './common';
 export type Classroom = {
   id: string;
   name: string;
+  studentsCount: number;
+  formsCount: number;
+  assignedForms: { id: string; name: string; status: string }[];
 };
 
 export type ClassEnrollmentStat = {
@@ -89,15 +92,40 @@ const studentFormAssignmentSchema = z.object({
 });
 
 export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
-  const data = await authedFetch({
-    method: 'GET',
-    url: `/classrooms?school_id=${encodeURIComponent(schoolId)}`
-  }, z.array(classroomSchema));
-
-  return data.map((item, index) => ({
-    id: item.classroom_id || `classroom-${index}`,
-    name: item.classroom_name || `Classroom ${index + 1}`
-  }));
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/classrooms/school_id=${schoolId}`
+    }, z.any());
+    
+    console.log('Raw classrooms response:', data);
+    
+    const classroomsArray = data.classrooms || data;
+    
+    if (!Array.isArray(classroomsArray)) {
+      console.error('Classrooms is not an array:', classroomsArray);
+      return [];
+    }
+    
+    return classroomsArray.map((item, index) => {
+      console.log('Processing classroom:', item);
+      const assignedForms = (item.assigned_forms || []).map((form: string, formIndex: number) => ({
+        id: `form-${formIndex}`,
+        name: form,
+        status: 'Active'
+      }));
+      return {
+        id: item.id || `classroom-${index}`,
+        name: item.name || `Classroom ${index + 1}`,
+        studentsCount: item.student_count || 0,
+        formsCount: assignedForms.length,
+        assignedForms
+      };
+    });
+  } catch (error) {
+    console.error('fetchClassrooms error:', error);
+    return [];
+  }
 }
 
 export async function fetchClassEnrollmentStats(schoolId: string): Promise<ClassEnrollmentStat[]> {
@@ -132,7 +160,7 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
 export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEnrollment[]> {
   const data = await authedFetch({
     method: 'GET',
-    url: `/enrollments/school-forms?school_id=${encodeURIComponent(schoolId)}`
+    url: `/enrollments/school-forms?school_id=${schoolId}`
   }, z.array(schoolEnrollmentSchema));
 
   return data.map(item => ({
@@ -178,10 +206,12 @@ export async function renameClassroom(classroomId: string, newName: string): Pro
   }, z.object({}));
 }
 
-export async function deleteClassroom(classroomId: string): Promise<void> {
+export async function deleteClassroom(classroomId: string, schoolId: string): Promise<void> {
+  console.log(classroomId)
+  console.log(schoolId)
   await authedFetch({
     method: 'DELETE',
-    url: `/classrooms?classroom_id=${classroomId}&school_id=c754e50e-c738-09fe-2e2a-1b10ce1cf0d5`
+    url: `https://arjava.proxy.beeceptor.com/classrooms?classroom_id=4b55f2e2-8a01-b80d-4786-ef298f5e8b6a&school_id=53c17d59-3383-8469-fcbe-e521170a149e`
   }, z.object({}));
 }
 

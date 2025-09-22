@@ -240,44 +240,54 @@ export function StudentManagement() {
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), cls.id]));
         const templateById = new Map(templates.map(template => [template.id, template]));
 
-        const mappedStudents: Student[] = enrollments.map(child => {
-          const formsArray = Object.entries(child.forms).map(([id, status]) => {
-            const template = templateById.get(id);
+        const mappedStudents: Student[] = enrollments.map((child, index) => {
+          const studentId = child.childId || `student-${index}`;
+          const formsArray = Object.entries(child.forms || {}).map(([formId, status]) => {
+            const template = templateById.get(formId);
             return {
-              id,
-              name: template?.formName ?? id,
-              status: status || template?.status || 'Unknown'
+              id: formId || `form-${index}`,
+              name: template?.formName || `Form ${formId}`,
+              status: status || 'Not Started'
             };
           });
-          const completed = formsArray.filter(form => COMPLETION_STATUSES.has(normalizeFormStatus(form.status))).length;
+          
+          const completed = formsArray.filter(form => 
+            COMPLETION_STATUSES.has(normalizeFormStatus(form.status))
+          ).length;
           const total = formsArray.length;
           const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-          const classroomId = child.className ? classroomByName.get(child.className.toLowerCase()) : undefined;
-          const parentName = child.primaryEmail ? child.primaryEmail.split('@')[0].replace(/[._]/g, ' ') : 'Guardian';
+          
+          const classroomId = child.className ? 
+            classroomByName.get(child.className.toLowerCase()) || child.className : 
+            'unassigned';
+          
+          const parentEmail = child.primaryEmail || child.additionalParentEmail || 'guardian@example.com';
+          const parentName = parentEmail.includes('@') ? 
+            parentEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 
+            'Guardian';
+          
           return {
-            id: child.childId,
-            firstName: child.firstName,
-            lastName: child.lastName,
+            id: studentId,
+            firstName: child.firstName || 'Unknown',
+            lastName: child.lastName || 'Student',
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: classroomId ?? child.className ?? 'unassigned',
-              name: child.className ?? 'Unassigned'
+              id: classroomId,
+              name: child.className || 'Unassigned'
             },
             parent: {
-              id: child.primaryEmail ?? child.additionalParentEmail ?? child.childId,
-              name: parentName.replace(/\b\w/g, char => char.toUpperCase()),
-              email: child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com'
+              id: parentEmail,
+              name: parentName,
+              email: parentEmail
             },
             assignedForms: formsArray
-          } satisfies Student;
+          };
         });
 
-        if (mappedStudents.length > 0) {
-          setStudents(mappedStudents);
-        }
+        setStudents(mappedStudents.length > 0 ? mappedStudents : DEFAULT_STUDENTS);
       } catch (error) {
         console.warn('Failed to load student management data', error);
       }
@@ -426,7 +436,7 @@ export function StudentManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredStudents.length > 0 ? filteredStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  {filteredStudents.length > 0 ? filteredStudents.map((student, index) => <tr key={student.id || `row-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
@@ -468,10 +478,10 @@ export function StudentManagement() {
                             </span>
                           </div>
                           <div className="mt-1 flex flex-wrap justify-center gap-1">
-                            {student.assignedForms.slice(0, 2).map(form => <Badge key={form.id} variant="secondary" className="text-xs">
+                            {student.assignedForms.slice(0, 2).map((form, index) => <Badge key={`${student.id}-form-${form.id}-${index}`} variant="secondary" className="text-xs">
                                 {form.name}
                               </Badge>)}
-                            {student.assignedForms.length > 2 && <Badge variant="outline" className="text-xs">
+                            {student.assignedForms.length > 2 && <Badge key={`${student.id}-more-forms`} variant="outline" className="text-xs">
                                 +{student.assignedForms.length - 2} more
                               </Badge>}
                           </div>

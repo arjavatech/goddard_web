@@ -21,49 +21,7 @@ interface Form {
   classroomsCount: number;
 }
 
-const DEFAULT_FORMS: Form[] = [{
-  id: '1',
-  name: 'Admission Form',
-  link: 'https://goddard.fillout.com/t/tdKTQWnb3Wus',
-  status: 'Active',
-  classroomsCount: 6
-}, {
-  id: '2',
-  name: 'Medical Authorization',
-  link: 'https://goddard.fillout.com/t/med-auth',
-  status: 'Active',
-  classroomsCount: 6
-}, {
-  id: '3',
-  name: 'Emergency Contact Form',
-  link: 'https://goddard.fillout.com/t/emergency',
-  status: 'Active',
-  classroomsCount: 6
-}, {
-  id: '4',
-  name: 'Photo Release Form',
-  link: 'https://goddard.fillout.com/t/photo-release',
-  status: 'Active',
-  classroomsCount: 5
-}, {
-  id: '5',
-  name: 'Field Trip Permission',
-  link: 'https://goddard.fillout.com/t/field-trip',
-  status: 'Inactive',
-  classroomsCount: 3
-}, {
-  id: '6',
-  name: 'Parent Handbook Acknowledgment',
-  link: 'https://goddard.fillout.com/t/handbook',
-  status: 'Default',
-  classroomsCount: 6
-}, {
-  id: '7',
-  name: 'Meal Program Enrollment',
-  link: 'https://goddard.fillout.com/t/meal-program',
-  status: 'Archive',
-  classroomsCount: 0
-}];
+
 
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
@@ -75,7 +33,7 @@ const mapStatus = (status: string | null | undefined): FormStatus => {
 };
 
 export function FormsManagement() {
-  const [forms, setForms] = useState<Form[]>(DEFAULT_FORMS);
+  const [forms, setForms] = useState<Form[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
