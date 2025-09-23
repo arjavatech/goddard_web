@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { App } from './App';
+import { ToastProvider } from './components/ui/toast';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 // Admin pages
@@ -14,7 +15,9 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
-  return <BrowserRouter>
+  return (
+    <ToastProvider>
+      <BrowserRouter>
       <Routes>
         <Route path="/" element={<ProtectedRoute>
               <App />
@@ -35,5 +38,7 @@ export function AppRouter() {
           <Route path="/admin/students" element={<StudentManagement />} />
         </Route>
       </Routes>
-    </BrowserRouter>;
+      </BrowserRouter>
+    </ToastProvider>
+  );
 }

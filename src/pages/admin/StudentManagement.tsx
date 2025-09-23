@@ -218,34 +218,56 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
 
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>(DEFAULT_STUDENTS);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    (async () => {
+    
+    const loadStudentData = async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
-        if (!user.schoolId) return;
+        
+        if (!user.schoolId) {
+          console.warn('No school ID found for user, keeping default data');
+          return;
+        }
 
         const [enrollments, classrooms, templates] = await Promise.all([
-          fetchSchoolEnrollments(user.schoolId).catch(() => []),
-          fetchClassrooms(user.schoolId).catch(() => []),
-          fetchFormTemplates(user.schoolId).catch(() => [])
+          fetchSchoolEnrollments(user.schoolId),
+          fetchClassrooms(user.schoolId),
+          fetchFormTemplates(user.schoolId)
         ]);
 
-        if (!isMounted || enrollments.length === 0) return;
+        if (!isMounted) return;
+        
+        console.log('Setting students with data from API');
 
-        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), cls.id]));
-        const templateById = new Map(templates.map(template => [template.id, template]));
+        console.log('API Response - Enrollments:', enrollments);
+        console.log('API Response - Classrooms:', classrooms);
+        console.log('API Response - Templates:', templates);
 
-        const mappedStudents: Student[] = enrollments.map((child, index) => {
-          const studentId = child.childId || `student-${index}`;
-          const formsArray = Object.entries(child.forms || {}).map(([formId, status]) => {
-            const template = templateById.get(formId);
+        if (!enrollments || enrollments.length === 0) {
+          console.log('No enrollments found');
+          setStudents([]);
+          return;
+        }
+
+        const classroomMap = new Map(classrooms.map(cls => [cls.name?.toLowerCase(), cls]));
+        const templateMap = new Map(templates.map(template => [template.id, template]));
+
+        const mappedStudents: Student[] = enrollments.map((enrollment, index) => {
+          console.log('Processing enrollment:', enrollment);
+          
+          const studentId = enrollment.childId || `student-${index}`;
+          
+          const formsArray = Object.entries(enrollment.forms || {}).map(([formId, status]) => {
+            const template = templateMap.get(formId);
             return {
-              id: formId || `form-${index}`,
+              id: formId,
               name: template?.formName || `Form ${formId}`,
               status: status || 'Not Started'
             };
@@ -254,29 +276,30 @@ export function StudentManagement() {
           const completed = formsArray.filter(form => 
             COMPLETION_STATUSES.has(normalizeFormStatus(form.status))
           ).length;
-          const total = formsArray.length;
-          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+          const total = Math.max(formsArray.length, 1);
+          const progress = Math.round((completed / total) * 100);
           
-          const classroomId = child.className ? 
-            classroomByName.get(child.className.toLowerCase()) || child.className : 
-            'unassigned';
+          const classroom = enrollment.className ? 
+            classroomMap.get(enrollment.className.toLowerCase()) : null;
           
-          const parentEmail = child.primaryEmail || child.additionalParentEmail || 'guardian@example.com';
+          const parentEmail = enrollment.primaryEmail || enrollment.additionalParentEmail || 'parent@example.com';
           const parentName = parentEmail.includes('@') ? 
-            parentEmail.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 
-            'Guardian';
+            parentEmail.split('@')[0]
+              .replace(/[._]/g, ' ')
+              .replace(/\b\w/g, c => c.toUpperCase()) : 
+            'Parent';
           
-          return {
+          const student = {
             id: studentId,
-            firstName: child.firstName || 'Unknown',
-            lastName: child.lastName || 'Student',
+            firstName: enrollment.firstName || 'Unknown',
+            lastName: enrollment.lastName || 'Student',
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: classroomId,
-              name: child.className || 'Unassigned'
+              id: classroom?.id || 'unassigned',
+              name: enrollment.className || 'Unassigned'
             },
             parent: {
               id: parentEmail,
@@ -285,13 +308,27 @@ export function StudentManagement() {
             },
             assignedForms: formsArray
           };
+          
+          console.log('Mapped student:', student);
+          return student;
         });
 
-        setStudents(mappedStudents.length > 0 ? mappedStudents : DEFAULT_STUDENTS);
+        console.log('Final mapped students:', mappedStudents);
+        if (mappedStudents.length > 0) {
+          setStudents(mappedStudents);
+        }
       } catch (error) {
-        console.warn('Failed to load student management data', error);
+        console.error('Failed to load student management data:', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          console.log('Loading complete, students count:', students.length);
+        }
       }
-    })();
+    };
+
+    loadStudentData();
+    
     return () => {
       isMounted = false;
     };
@@ -336,6 +373,17 @@ export function StudentManagement() {
   };
 
   const toggleFilters = () => setShowFilters(prev => !prev);
+
+  if (loading) {
+    return <AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading student data...</p>
+        </div>
+      </div>
+    </AdminLayout>;
+  }
 
   return <AdminLayout>
       <div className="space-y-6">

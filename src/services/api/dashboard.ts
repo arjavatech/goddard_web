@@ -20,54 +20,167 @@ export type FormTemplate = {
   createdAt: string | null;
 };
 const enrollmentChildSchema = z.object({
-  child_id: z.union([z.string(), z.number()]),
-  child_first_name: z.string().optional(),
-  child_last_name: z.string().optional(),
-  class_name: z.string().nullable().optional(),
-  form_status: z.string().nullable().optional(),
-  forms: z.union([z.record(z.string()), z.array(z.unknown())]).nullable().optional(),
-  primary_email: z.string().nullable().optional(),
-  additional_parent_email: z.string().nullable().optional()
+  child_id: z.string(),
+  child_full_name: z.string(),
+  child_dob: z.string().optional(),
+  classroom_name: z.string().optional(),
+  enrollment_id: z.string().optional(),
+  forms: z.array(z.object({
+    form_id: z.string(),
+    form_name: z.string(),
+    status: z.string(),
+    is_required: z.boolean()
+  })).optional(),
+  form_status: z.string().optional(),
+  primary_email: z.string().optional(),
+  additional_parent_email: z.string().optional()
 });
-const formTemplateSchema = z.object({
-  id: z.string(),
-  school_id: z.string().nullable().optional(),
-  form_name: z.string(),
-  status: z.string().nullable().optional(),
-  form_type: z.string().nullable().optional(),
-  fillout_form_url: z.string().nullable().optional(),
-  is_required: z.boolean().nullable().optional(),
-  created_at: z.string().nullable().optional()
-});
+
 export async function fetchEnrollmentChildren(schoolId: string): Promise<EnrollmentChild[]> {
-  const data = await authedFetch({
-    method: 'GET',
-    url: `/enrollments/children-forms?school_id=dd3ab483-10b4-4d3d-8613-2c8cf4371f16`
-  }, z.array(enrollmentChildSchema));
-  return data.map(child => ({
-    childId: String(child.child_id),
-    firstName: child.child_first_name ?? '',
-    lastName: child.child_last_name ?? '',
-    className: child.class_name ?? null,
-    formStatus: child.form_status ?? null,
-    forms: Array.isArray(child.forms) ? {} : (child.forms ?? {}),
-    primaryEmail: child.primary_email ?? null,
-    additionalParentEmail: child.additional_parent_email ?? null
-  }));
+  try {
+    if (!schoolId || !schoolId.trim()) {
+      throw new Error('School ID is required to fetch enrollment children');
+    }
+    
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
+    
+    console.log('Raw enrollment children response:', data);
+    
+    // Handle various response formats
+    let children: any[] = [];
+    
+    if (Array.isArray(data)) {
+      children = data;
+    } else if (data && typeof data === 'object') {
+      // Handle wrapped responses
+      children = data.data || data.children || data.enrollments || [];
+    } else {
+      console.warn('Enrollment children response is not in expected format:', data);
+      return [];
+    }
+    
+    if (!Array.isArray(children)) {
+      console.warn('Enrollment children data is not an array:', children);
+      return [];
+    }
+    
+    const processedChildren: EnrollmentChild[] = [];
+    
+    for (const child of children) {
+      if (!child || typeof child !== 'object') continue;
+      
+      const parseResult = enrollmentChildSchema.safeParse(child);
+      if (!parseResult.success) {
+        console.warn('Invalid child record, skipping:', child, parseResult.error);
+        continue;
+      }
+      
+      const validChild = parseResult.data;
+      const [firstName = '', lastName = ''] = validChild.child_full_name.split(' ');
+      
+      const formsObject: Record<string, string> = {};
+      if (validChild.forms) {
+        validChild.forms.forEach(form => {
+          formsObject[form.form_name] = form.status;
+        });
+      }
+      
+      processedChildren.push({
+        childId: validChild.child_id,
+        firstName,
+        lastName,
+        className: validChild.classroom_name ?? null,
+        formStatus: null,
+        forms: formsObject,
+        primaryEmail: null,
+        additionalParentEmail: null
+      });
+    }
+    
+    return processedChildren;
+      
+  } catch (error) {
+    console.error('Failed to fetch enrollment children:', error);
+    
+    // Re-throw authentication and validation errors
+    if (error instanceof Error && 
+        (error.message.includes('Authentication') || 
+         error.message.includes('School ID is required'))) {
+      throw error;
+    }
+    
+    // For other errors, throw a user-friendly message
+    throw new Error('Unable to load enrollment data. Please try again later.');
+  }
 }
 export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate[]> {
-  const data = await authedFetch({
-    method: 'GET',
-    url: `/form-templates?school_id=dd3ab483-10b4-4d3d-8613-2c8cf4371f16`
-  }, z.array(formTemplateSchema));
-  return data.map(template => ({
-    id: template.id,
-    schoolId: template.school_id ?? null,
-    formName: template.form_name,
-    status: template.status ?? null,
-    formType: template.form_type ?? null,
-    filloutFormUrl: template.fillout_form_url ?? null,
-    isRequired: template.is_required ?? null,
-    createdAt: template.created_at ?? null
-  }));
+  try {
+    if (!schoolId || !schoolId.trim()) {
+      console.warn('Invalid school ID provided to fetchFormTemplates');
+      return [];
+    }
+    
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
+    
+    console.log('Raw form templates response:', data);
+    
+    // Handle various response formats
+    let templates: any[] = [];
+    
+    if (Array.isArray(data)) {
+      templates = data;
+    } else if (data && typeof data === 'object') {
+      // Handle wrapped responses like { data: [...] } or { templates: [...] }
+      templates = data.data || data.templates || data.forms || [];
+    } else {
+      console.warn('Form templates response is not in expected format:', data);
+      return [];
+    }
+    
+    if (!Array.isArray(templates)) {
+      console.warn('Form templates data is not an array:', templates);
+      return [];
+    }
+    
+    return templates
+      .filter(template => template && typeof template === 'object')
+      .map(template => {
+        const normalized: FormTemplate = {
+          id: String(template.id || template.form_id || template.templateId || ''),
+          schoolId: template.school_id || template.schoolId || null,
+          formName: template.form_name || template.formName || template.name || '',
+          status: template.status || null,
+          formType: template.form_type || template.formType || template.type || null,
+          filloutFormUrl: template.fillout_form_url || template.filloutFormUrl || template.url || null,
+          isRequired: template.is_required ?? template.isRequired ?? null,
+          createdAt: template.created_at || template.createdAt || template.dateCreated || null
+        };
+        
+        // Validate required fields
+        if (!normalized.id || !normalized.formName) {
+          console.warn('Skipping invalid form template:', template);
+          return null;
+        }
+        
+        return normalized;
+      })
+      .filter((template): template is FormTemplate => template !== null);
+      
+  } catch (error) {
+    console.error('Failed to fetch form templates:', error);
+    
+    // Re-throw authentication errors
+    if (error instanceof Error && error.message.includes('Authentication')) {
+      throw error;
+    }
+    
+    // Return empty array for other errors to allow graceful degradation
+    return [];
+  }
 }

@@ -83,48 +83,44 @@ export function ParentManagement() {
           setClassrooms(classroomList.map(cls => ({ id: cls.id, name: cls.name })));
         }
 
+        console.log('Parent details received:', parentDetails);
+        
         if (parentDetails.length > 0) {
-          const classroomByName = new Map(classroomList.map(cls => [cls.name.toLowerCase(), cls.id]));
-          const childrenByEmail = new Map<string, Child[]>();
-
-          enrollments.forEach(child => {
-            const emailKeys = [child.primaryEmail, child.additionalParentEmail].filter(Boolean) as string[];
-            const classroomName = child.className ?? 'Unassigned';
-            const classroomId = classroomByName.get(classroomName.toLowerCase()) || classroomName;
-            const childEntry: Child = {
-              id: child.childId,
-              firstName: child.firstName,
-              lastName: child.lastName,
-              dob: '—',
-              classroom: { id: classroomId, name: classroomName }
-            };
-            emailKeys.forEach(email => {
-              const key = email.toLowerCase();
-              const list = childrenByEmail.get(key) ?? [];
-              list.push(childEntry);
-              childrenByEmail.set(key, list);
-            });
-          });
-
           const mappedParents: Parent[] = parentDetails.map(detail => {
-            const email = detail.email;
-            const friendly = friendlyNameFromEmail(email);
-            const children = childrenByEmail.get(email.toLowerCase()) ?? [];
-            const hasCompletion = children.some(child => COMPLETION_STATUSES.has(normalizeFormStatus(enrollments.find(e => e.childId === child.id)?.formStatus)));
+            const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
+            const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
+            
+            const children: Child[] = detail.children?.map(child => {
+              const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
+              return {
+                id: child.childId,
+                firstName: childFirstName || 'Unknown',
+                lastName: childLastNameParts.join(' ') || 'Child',
+                dob: child.childDob || '—',
+                classroom: {
+                  id: child.classroomId || 'unassigned',
+                  name: child.classroomName || 'Unassigned'
+                }
+              };
+            }) || [];
+            
+            const hasCompletedForms = detail.children?.some(child => 
+              child.forms.some(form => form.status === 'completed')
+            ) || false;
+            
             return {
               id: detail.parentId,
-              firstName: friendly.first,
-              lastName: friendly.last,
-              email,
+              firstName,
+              lastName,
+              email: detail.email,
               children,
-              status: detail.isSigned || hasCompletion ? 'Active' : 'Archive',
+              status: hasCompletedForms ? 'Active' : 'Archive',
               signupStatus: detail.isSigned ? 'Complete' : 'Invited'
             } satisfies Parent;
           });
 
-          if (mappedParents.length > 0) {
-            setParents(mappedParents);
-          }
+          console.log('Mapped parents:', mappedParents);
+          setParents(mappedParents);
         }
       } catch (error) {
         console.warn('Failed to load parent management data', error);
@@ -339,7 +335,7 @@ export function ParentManagement() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link to={`/admin/parents/${parent.id}`}>
+                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </Link>

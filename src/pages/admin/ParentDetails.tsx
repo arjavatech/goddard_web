@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import  { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -7,12 +7,14 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
+import { useToast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { fetchParentDetails, fetchSingleParent, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
+import { reviewForm, updateFormStatus } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
@@ -46,94 +48,7 @@ interface ParentDetailView {
   familyForms: Form[];
 }
 
-const DEFAULT_PARENT: ParentDetailView = {
-  id: '1',
-  firstName: 'Sarah',
-  lastName: 'Johnson',
-  email: 'sarah.johnson@example.com',
-  phone: '(555) 123-4567',
-  children: [{
-    id: '1',
-    firstName: 'Emma',
-    lastName: 'Johnson',
-    dob: '05/12/2019',
-    classroom: { id: '1', name: 'Sunshine Room' },
-    forms: [{
-      id: '1',
-      title: 'Medical & Health Forms',
-      description: 'Health history, immunizations, and medical authorizations',
-      lastUpdated: 'May 12, 2023',
-      status: 'Submitted',
-      link: 'https://goddard.fillout.com/t/med-auth'
-    }, {
-      id: '2',
-      title: 'Emergency Contact Information',
-      description: 'Contacts for emergencies and authorized pickups',
-      lastUpdated: 'May 14, 2023',
-      status: 'In Progress',
-      link: 'https://goddard.fillout.com/t/emergency'
-    }, {
-      id: '3',
-      title: 'Photo Release Form',
-      description: "Permission to use child's photos in school materials",
-      lastUpdated: 'May 10, 2023',
-      status: 'Approved',
-      link: 'https://goddard.fillout.com/t/photo-release'
-    }],
-    enrollmentProgress: 67
-  }, {
-    id: '2',
-    firstName: 'Jacob',
-    lastName: 'Johnson',
-    dob: '03/24/2017',
-    classroom: { id: '2', name: 'Rainbow Room' },
-    forms: [{
-      id: '1',
-      title: 'Medical & Health Forms',
-      description: 'Health history, immunizations, and medical authorizations',
-      lastUpdated: 'June 2, 2023',
-      status: 'Approved',
-      link: 'https://goddard.fillout.com/t/med-auth'
-    }, {
-      id: '2',
-      title: 'Emergency Contact Information',
-      description: 'Contacts for emergencies and authorized pickups',
-      lastUpdated: 'June 3, 2023',
-      status: 'Approved',
-      link: 'https://goddard.fillout.com/t/emergency'
-    }, {
-      id: '3',
-      title: 'Photo Release Form',
-      description: "Permission to use child's photos in school materials",
-      lastUpdated: 'June 1, 2023',
-      status: 'Needs Revision',
-      link: 'https://goddard.fillout.com/t/photo-release'
-    }],
-    enrollmentProgress: 83
-  }],
-  familyForms: [{
-    id: '1',
-    title: 'Admission Form',
-    description: 'Basic information about your family',
-    lastUpdated: 'May 10, 2023',
-    status: 'Approved',
-    link: 'https://goddard.fillout.com/t/admission'
-  }, {
-    id: '2',
-    title: 'Parent Handbook Acknowledgment',
-    description: "Confirmation that you've read and understood our policies",
-    lastUpdated: 'May 15, 2023',
-    status: 'Needs Revision',
-    link: 'https://goddard.fillout.com/t/handbook'
-  }, {
-    id: '3',
-    title: 'Enrollment Agreement',
-    description: 'Terms and conditions for enrollment',
-    lastUpdated: 'May 16, 2023',
-    status: 'Draft',
-    link: 'https://goddard.fillout.com/t/agreement'
-  }]
-};
+
 
 const mapToFormStatus = (value: string | null | undefined): FormStatus => {
   const normalized = normalizeFormStatus(value);
@@ -161,42 +76,84 @@ const makeFriendlyName = (email: string) => {
 
 export function ParentDetails() {
   const { parentId } = useParams<{ parentId: string }>();
-  const [parent, setParent] = useState<ParentDetailView>(DEFAULT_PARENT);
-  const [selectedChildId, setSelectedChildId] = useState<string>(DEFAULT_PARENT.children[0]?.id || '');
+  const location = useLocation();
+  const passedParentData = location.state?.parentData;
+  const [parent, setParent] = useState<ParentDetailView | null>(null);
+  const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [isViewFormDialogOpen, setIsViewFormDialogOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
   const [formAction, setFormAction] = useState<'approve' | 'reject' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const { addToast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setIsLoading(true);
+        setError(null);
         const user = await fetchUserContext();
         if (!user.schoolId || !parentId) return;
-        const [parentDetails, enrollments, classrooms, templates] = await Promise.all([
-          fetchParentDetails(user.schoolId).catch(() => []),
+        // Use passed parent data if available, otherwise fetch from API
+        let parentRecord = null;
+        
+        if (passedParentData) {
+          // Convert passed parent data to expected format
+          parentRecord = {
+            parentId: passedParentData.id,
+            email: passedParentData.email,
+            firstName: passedParentData.firstName,
+            lastName: passedParentData.lastName,
+            isSigned: passedParentData.signupStatus === 'Complete',
+            createdAt: null,
+            children: passedParentData.children.map((child: any) => ({
+              childId: child.id,
+              childFullName: `${child.firstName} ${child.lastName}`,
+              childDob: child.dob,
+              classroomId: child.classroom.id,
+              classroomName: child.classroom.name,
+              enrollmentId: child.id,
+              forms: []
+            }))
+          };
+        } else {
+          // Fallback to API fetch
+          parentRecord = await fetchSingleParent(parentId, user.schoolId).catch(() => null);
+          
+          if (!parentRecord) {
+            const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
+            parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
+          }
+        }
+        
+        if (!parentRecord) {
+          console.warn('Parent not found:', parentId);
+          return;
+        }
+        
+        const [enrollments, classrooms, templates] = await Promise.all([
           fetchSchoolEnrollments(user.schoolId).catch(() => []),
           fetchClassrooms(user.schoolId).catch(() => []),
           fetchFormTemplates(user.schoolId).catch(() => [])
         ]);
         if (!isMounted) return;
 
-        console.log(ParentDetails)
-
-        const parentRecord = parentDetails.find(detail => detail.parentId === parentId);
-        console.log(parentRecord)
-        if (!parentRecord) return;
-
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), { id: cls.id, name: cls.name }]));
         const templateById = new Map(templates.map(template => [template.id, template]));
 
         const childEntries = enrollments.filter(child => {
+          console.log("Child : ",child)
+
           const emails = [child.primaryEmail, child.additionalParentEmail]
             .filter((email): email is string => Boolean(email))
             .map(email => email.toLowerCase());
-          return emails.includes(parentRecord.email.toLowerCase());
+          const isMatch = emails.includes(parentRecord.email.toLowerCase());
+          console.log('Child email match check:', { childEmails: emails, parentEmail: parentRecord.email.toLowerCase(), isMatch });
+          return isMatch;
         }).map(child => {
           const formsArray: Form[] = Object.entries(child.forms).map(([formId, status]) => {
             const template = templateById.get(formId);
@@ -235,21 +192,90 @@ export function ParentDetails() {
           });
         });
 
+        // Process children from passed data or API data
+        let processedChildren: ChildInfo[] = [];
+        
+        if (passedParentData && parentRecord.children) {
+          // Use passed parent data children and try to match with enrollment forms
+          processedChildren = parentRecord.children.map((child: any) => {
+            // Try to find matching enrollment data for this child
+            const matchingEnrollment = enrollments.find(enrollment => 
+              enrollment.childId === child.childId || 
+              (enrollment.firstName === child.childFullName.split(' ')[0] && 
+               enrollment.lastName === child.childFullName.split(' ').slice(1).join(' '))
+            );
+            
+            let childForms: Form[] = [];
+            let progress = 0;
+            
+            if (matchingEnrollment) {
+              // Use real form data if available
+              childForms = Object.entries(matchingEnrollment.forms).map(([formId, status]) => {
+                const template = templateById.get(formId);
+                return {
+                  id: formId,
+                  title: template?.formName ?? formId,
+                  description: template?.formType ?? 'Enrollment form',
+                  lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
+                  status: mapToFormStatus(status),
+                  link: template?.filloutFormUrl ?? '#'
+                };
+              });
+              const completed = childForms.filter(form => COMPLETION_STATUSES.has(form.status)).length;
+              progress = childForms.length > 0 ? Math.round((completed / childForms.length) * 100) : 0;
+            } else {
+              // No forms if no enrollment data found
+              childForms = [];
+              progress = 0;
+            }
+            
+            return {
+              id: child.childId,
+              firstName: child.childFullName.split(' ')[0] || 'Unknown',
+              lastName: child.childFullName.split(' ').slice(1).join(' ') || 'Child',
+              dob: child.childDob || '—',
+              classroom: {
+                id: child.classroomId || 'unassigned',
+                name: child.classroomName || 'Unassigned'
+              },
+              forms: childForms,
+              enrollmentProgress: progress
+            };
+          });
+        } else if (childEntries.length > 0) {
+          processedChildren = childEntries;
+        } else {
+          processedChildren = [];
+        }
+
         const friendly = makeFriendlyName(parentRecord.email);
         setParent({
           id: parentRecord.parentId,
-          firstName: friendly.first,
-          lastName: friendly.last,
+          firstName: parentRecord.firstName || friendly.first,
+          lastName: parentRecord.lastName || friendly.last,
           email: parentRecord.email,
           phone: '—',
-          children: childEntries.length > 0 ? childEntries : DEFAULT_PARENT.children,
-          familyForms: familyFormMap.size > 0 ? Array.from(familyFormMap.values()) : DEFAULT_PARENT.familyForms
+          children: processedChildren,
+          familyForms: Array.from(familyFormMap.values())
         });
-        if (childEntries.length > 0) {
-          setSelectedChildId(childEntries[0].id);
+        
+        if (processedChildren.length > 0) {
+          setSelectedChildId(processedChildren[0].id);
         }
       } catch (error) {
-        console.warn('Failed to load parent details', error);
+        console.error('Failed to load parent details', error);
+        if (isMounted) {
+          setError('Failed to load parent details. Please try again.');
+          addToast({
+            type: 'error',
+            title: 'Loading Error',
+            description: 'Failed to load parent details. Please refresh the page.'
+          });
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     })();
     return () => {
@@ -257,7 +283,7 @@ export function ParentDetails() {
     };
   }, [parentId]);
 
-  const selectedChild = useMemo(() => parent.children.find(child => child.id === selectedChildId) || parent.children[0], [parent.children, selectedChildId]);
+  const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
   const openViewFormDialog = (form: Form) => {
     setSelectedForm(form);
@@ -269,29 +295,115 @@ export function ParentDetails() {
     setReviewNotes('');
     setIsReviewDialogOpen(true);
   };
-  const handleFormReview = () => {
-    if (!selectedForm || !formAction) return;
-    const newStatus: FormStatus = formAction === 'approve' ? 'Approved' : 'Needs Revision';
-    setParent(current => ({
-      ...current,
-      familyForms: current.familyForms.map(form => form.id === selectedForm.id ? {
-        ...form,
-        status: newStatus,
-        lastUpdated: new Date().toLocaleDateString()
-      } : form),
-      children: current.children.map(child => ({
-        ...child,
-        forms: child.forms.map(form => form.id === selectedForm.id ? {
-          ...form,
-          status: newStatus,
-          lastUpdated: new Date().toLocaleDateString()
-        } : form)
-      }))
-    }));
+  const handleFormReview = async () => {
+    if (!selectedForm || !formAction || !selectedChild) return;
+    
+    setIsReviewing(true);
+    try {
+      const result = await reviewForm({
+        formId: selectedForm.id,
+        childId: selectedChild.id,
+        action: formAction,
+        notes: reviewNotes
+      });
+      
+      if (result.success) {
+        const newStatus: FormStatus = result.updatedStatus as FormStatus;
+        setParent(current => {
+          if (!current) return current;
+          return {
+            ...current,
+            familyForms: current.familyForms.map(form => form.id === selectedForm.id ? {
+              ...form,
+              status: newStatus,
+              lastUpdated: new Date().toLocaleDateString()
+            } : form),
+            children: current.children.map(child => ({
+              ...child,
+              forms: child.forms.map(form => form.id === selectedForm.id ? {
+                ...form,
+                status: newStatus,
+                lastUpdated: new Date().toLocaleDateString()
+              } : form)
+            }))
+          };
+        });
+        
+        addToast({
+          type: 'success',
+          title: 'Form Review Completed',
+          description: result.message
+        });
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Form Review Failed',
+          description: result.message
+        });
+      }
+    } catch (error) {
+      console.error('Error during form review:', error);
+      addToast({
+        type: 'error',
+        title: 'Review Error',
+        description: 'Failed to review form. Please try again.'
+      });
+    } finally {
+      setIsReviewing(false);
+    }
+    
     setIsReviewDialogOpen(false);
     setIsViewFormDialogOpen(false);
   };
-  console.log(parent)
+  console.log('ParentDetails - final parent state:', parent);
+  console.log('ParentDetails - selectedChild:', selectedChild);
+
+  if (!parent) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold mb-2">Parent Not Found</h2>
+            <p className="text-muted-foreground mb-4">The requested parent could not be found.</p>
+            <Link to="/admin/parents">
+              <Button variant="outline">Back to Parents</Button>
+            </Link>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading parent details...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-lg font-semibold mb-2">Error Loading Parent Details</h2>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()} variant="outline">
+              Try Again
+            </Button>
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return <AdminLayout>
       <div className="space-y-6">
@@ -594,25 +706,65 @@ export function ParentDetails() {
             <div className="mb-4">
               <label className="block text-sm font-medium mb-2">
                 {formAction === 'approve' ? 'Approval Notes (Optional)' : 'Revision Notes'}
+                {formAction === 'reject' && <span className="text-red-500 ml-1">*</span>}
               </label>
-              <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} className="w-full" rows={4} />
+              <Textarea 
+                value={reviewNotes} 
+                onChange={e => setReviewNotes(e.target.value)} 
+                placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} 
+                className={`w-full ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
+                rows={4} 
+                maxLength={500}
+              />
+              <div className="flex justify-between mt-1">
+                <div>
+                  {formAction === 'reject' && !reviewNotes.trim() && (
+                    <p className="text-sm text-red-500">Revision notes are required</p>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">{reviewNotes.length}/500</p>
+              </div>
             </div>
-            <div className="p-3 rounded-md bg-gray-50 border border-gray-200">
+            <div className={`p-3 rounded-md border ${
+              formAction === 'approve' 
+                ? 'bg-green-50 border-green-200' 
+                : 'bg-amber-50 border-amber-200'
+            }`}>
               <p className="text-sm font-medium">
-                {formAction === 'approve' ? 'This will approve the form and notify the parent.' : 'This will request revisions and notify the parent of required changes.'}
+                {formAction === 'approve' 
+                  ? '✓ This will approve the form and notify the parent via email.' 
+                  : '⚠ This will request revisions and notify the parent of required changes.'}
               </p>
+              {formAction === 'approve' && (
+                <p className="text-xs text-gray-600 mt-1">
+                  The parent will receive a confirmation email and can proceed with enrollment.
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleFormReview} className={formAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} disabled={formAction === 'reject' && !reviewNotes.trim()}>
-              {formAction === 'approve' ? <>
+            <Button 
+              onClick={handleFormReview} 
+              className={formAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} 
+              disabled={(formAction === 'reject' && !reviewNotes.trim()) || isReviewing}
+            >
+              {isReviewing ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </div>
+              ) : formAction === 'approve' ? (
+                <>
                   <CheckCircle className="h-4 w-4 mr-2" /> Confirm Approval
-                </> : <>
+                </>
+              ) : (
+                <>
                   <AlertCircle className="h-4 w-4 mr-2" /> Request Revision
-                </>}
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
