@@ -59,13 +59,8 @@ export function Signup() {
       <div className="w-full max-w-md space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <div className="flex items-center justify-center space-x-2">
-            <div className="bg-amazon-teal rounded-full p-3 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <span className="font-bold text-2xl text-foreground">
-              Goddard School
-            </span>
+          <div className="flex justify-center">
+            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 sm:h-20 w-auto max-w-full" />
           </div>
           <div className="space-y-2">
             <h1 className="text-2xl font-semibold text-foreground">
