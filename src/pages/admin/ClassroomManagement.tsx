@@ -115,7 +115,9 @@ export function ClassroomManagement() {
   const handleEditClassroom = async () => {
     if (selectedClassroom && newClassroomName.trim()) {
       try {
-        await renameClassroom(selectedClassroom.id, newClassroomName.trim());
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        await renameClassroom(selectedClassroom.id, newClassroomName.trim(), user.schoolId);
         setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
           ...classroom,
           name: newClassroomName.trim()

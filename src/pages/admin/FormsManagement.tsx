@@ -90,7 +90,9 @@ export function FormsManagement() {
   const handleAddForm = async () => {
     if (formName.trim() && formLink.trim()) {
       try {
-        await createFormTemplate(formName.trim(), formLink.trim());
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
         const newForm: Form = {
           id: (forms.length + 1).toString(),
           name: formName.trim(),
@@ -109,7 +111,9 @@ export function FormsManagement() {
   const handleEditForm = async () => {
     if (selectedForm && formName.trim() && formLink.trim()) {
       try {
-        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim());
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId);
         setForms(forms.map(form => form.id === selectedForm.id ? {
           ...form,
           name: formName.trim(),

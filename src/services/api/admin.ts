@@ -347,12 +347,12 @@ export async function fetchStudentFormAssignments(schoolId: string): Promise<Stu
   }
 }
 
-export async function renameClassroom(classroomId: string, newName: string): Promise<void> {
+export async function renameClassroom(classroomId: string, newName: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'PUT',
     url: '/classrooms',
     body: {
-      school_id: "0a8c0e48-9ab4-4a20-b56d-8cb1760d54e5",
+      school_id: schoolId,
       class_id: classroomId,
       class_name: newName
     }
@@ -364,7 +364,7 @@ export async function deleteClassroom(classroomId: string, schoolId: string): Pr
   console.log(schoolId)
   await authedFetch({
     method: 'DELETE',
-    url: `/classrooms?classroom_id=4b55f2e2-8a01-b80d-4786-ef298f5e8b6a&school_id=53c17d59-3383-8469-fcbe-e521170a149e`
+    url: `/classrooms?classroom_id=${classroomId}&school_id=${schoolId}`
   }, z.object({}));
 }
 
@@ -375,24 +375,24 @@ export async function deleteForm(classroomId: string, formId: string): Promise<v
   }, z.object({}));
 }
 
-export async function createFormTemplate(formName: string, filloutFormId: string): Promise<void> {
+export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'POST',
     url: '/form-templates',
     body: {
-      school_id: "2c671644-5bed-4d72-92d1-6e901a7d7574",
+      school_id: schoolId,
       form_name: formName,
       fillout_form_id: filloutFormId
     }
   }, z.object({}));
 }
 
-export async function updateFormTemplate(formId: string, formName: string, filloutFormUrl: string): Promise<void> {
+export async function updateFormTemplate(formId: string, formName: string, filloutFormUrl: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'PUT',
     url: '/form-templates',
     body: {
-      school_id: "986ef3e8-c173-4dac-8e18-66c50ba36439",
+      school_id: schoolId,
       form_id: formId,
       form_name: formName,
       display_order: 6,
