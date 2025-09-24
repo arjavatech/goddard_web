@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '../../components/ui/checkbox';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats } from '../../services/api/admin';
+import { fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
@@ -155,14 +155,7 @@ const formStatusFromTemplate = (status: string | null | undefined): FormStatus =
   return 'Active';
 };
 
-const formsFromRecord = (record: Record<string, string> | undefined): Form[] => {
-  if (!record) return [];
-  return Object.entries(record).map(([id, status]) => ({
-    id,
-    name: id.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-    status: formStatusFromTemplate(status)
-  }));
-};
+
 
 export function ClassroomFormAssignment() {
   const location = useLocation();

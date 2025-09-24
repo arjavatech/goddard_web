@@ -11,28 +11,10 @@ import { Link } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 
-interface Form {
-  id: string;
-  name: string;
-  status: 'Default' | 'Active' | 'Inactive' | 'Archive';
-}
 
 
 
-function deriveFormsFromRecord(record: Record<string, string>): Form[] {
-  return Object.entries(record).map(([key, value]) => {
-    const status = value.toLowerCase();
-    let normalized: Form['status'] = 'Active';
-    if (status.includes('default')) normalized = 'Default';
-    else if (status.includes('inactive')) normalized = 'Inactive';
-    else if (status.includes('archive')) normalized = 'Archive';
-    return {
-      id: key,
-      name: key.replace(/[-_]/g, ' '),
-      status: normalized
-    } satisfies Form;
-  });
-}
+
 
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -69,7 +51,7 @@ export function ClassroomManagement() {
             forms: stat.forms ?? {}
           });
         });
-        const mapped: Classroom[] = rawClassrooms.map((classroom, index) => {
+        const mapped: Classroom[] = rawClassrooms.map((classroom) => {
           console.log('Using classroom data directly:', classroom);
           return classroom;
         });
