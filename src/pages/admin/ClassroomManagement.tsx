@@ -1,4 +1,4 @@
-import  { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom, type Classroom } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 
 interface Form {
   id: string;
@@ -88,18 +88,27 @@ export function ClassroomManagement() {
     return classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [classrooms, searchQuery]);
 
-  const handleAddClassroom = () => {
+  const handleAddClassroom = async () => {
     if (newClassroomName.trim()) {
-      const newClassroom: Classroom = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: newClassroomName.trim(),
-        studentsCount: 0,
-        formsCount: 0,
-        assignedForms: []
-      };
-      setClassrooms([...classrooms, newClassroom]);
-      setNewClassroomName('');
-      setIsAddDialogOpen(false);
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        
+        await createClassroom(user.schoolId, newClassroomName.trim());
+        
+        const newClassroom: Classroom = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: newClassroomName.trim(),
+          studentsCount: 0,
+          formsCount: 0,
+          assignedForms: []
+        };
+        setClassrooms([...classrooms, newClassroom]);
+        setNewClassroomName('');
+        setIsAddDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to create classroom:', error);
+      }
     }
   };
 

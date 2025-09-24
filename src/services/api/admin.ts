@@ -1,4 +1,5 @@
 import { authedFetch, z } from './common';
+import { fetchUserContext } from './user';
 
 
 export type Classroom = {
@@ -138,11 +139,21 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
     }
     
     return classroomsArray.map((item, index) => {
-      const assignedForms = (item.assigned_forms || item.assignedForms || []).map((form: any, formIndex: number) => ({
-        id: form.id || `form-${formIndex}`,
-        name: form.name || form,
-        status: form.status || 'Active'
-      }));
+      const assignedFormsRaw = item.assigned_forms || item.assignedForms || [];
+      const assignedForms = assignedFormsRaw.map((form: any, formIndex: number) => {
+        if (typeof form === 'string') {
+          return {
+            id: `${form}-${formIndex}`,
+            name: form.replace(/[-_]/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()),
+            status: 'Active'
+          };
+        }
+        return {
+          id: form.id || `form-${formIndex}`,
+          name: form.name || form,
+          status: form.status || 'Active'
+        };
+      });
       
       return {
         id: item.id || item.classroom_id || `classroom-${index}`,
@@ -353,7 +364,7 @@ export async function deleteClassroom(classroomId: string, schoolId: string): Pr
   console.log(schoolId)
   await authedFetch({
     method: 'DELETE',
-    url: `https://arjava.proxy.beeceptor.com/classrooms?classroom_id=4b55f2e2-8a01-b80d-4786-ef298f5e8b6a&school_id=53c17d59-3383-8469-fcbe-e521170a149e`
+    url: `/classrooms?classroom_id=4b55f2e2-8a01-b80d-4786-ef298f5e8b6a&school_id=53c17d59-3383-8469-fcbe-e521170a149e`
   }, z.object({}));
 }
 
@@ -390,4 +401,56 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
       is_required: true
     }
   }, z.object({}));
+}
+
+export async function inviteParent(schoolId: string, parentData: {
+  parentFirstName: string;
+  parentLastName: string;
+  parentEmail: string;
+  childFullName: string;
+  childDob: string;
+  classroomId: string;
+}): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/enrollments/parent-invite',
+    body: {
+      school_id: schoolId,
+      child_full_name: parentData.childFullName,
+      child_dob: parentData.childDob,
+      classroom_id: parentData.classroomId,
+      parent_email: parentData.parentEmail,
+      parent_first_name: parentData.parentFirstName,
+      parent_last_name: parentData.parentLastName
+    }
+  }, z.union([z.object({}), z.string()]));
+}
+
+export async function addChild(schoolId: string, enrollmentId: string, childData: {
+  childFullName: string;
+  childDob: string;
+  classroomId: string;
+}): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/enrollments/add-child',
+    body: {
+      school_id: schoolId,
+      enrollment_id: enrollmentId,
+      child_full_name: childData.childFullName,
+      child_dob: childData.childDob,
+      classroom_id: childData.classroomId
+    }
+  }, z.union([z.object({}), z.string()]));
+}
+
+export async function createClassroom(schoolId: string, className: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/classrooms',
+    body: {
+      school_id: schoolId,
+      class_name: className
+    }
+  }, z.union([z.object({}), z.string()]));
 }

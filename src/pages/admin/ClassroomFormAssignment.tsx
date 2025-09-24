@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -159,7 +159,7 @@ const formsFromRecord = (record: Record<string, string> | undefined): Form[] => 
   if (!record) return [];
   return Object.entries(record).map(([id, status]) => ({
     id,
-    name: id.replace(/[-_]/g, ' '),
+    name: id.replace(/[-_]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
     status: formStatusFromTemplate(status)
   }));
 };
@@ -170,7 +170,7 @@ export function ClassroomFormAssignment() {
   const queryParams = new URLSearchParams(location.search);
   const classroomIdFromQuery = queryParams.get('classroom');
   const [allForms, setAllForms] = useState<Form[]>(DEFAULT_FORMS);
-  const [classrooms, setClassrooms] = useState<Classroom[]>(DEFAULT_CLASSROOMS);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || DEFAULT_CLASSROOMS[0]?.id || '');
 
   useEffect(() => {
@@ -180,9 +180,8 @@ export function ClassroomFormAssignment() {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
 
-        const [templates, classStats, classroomList] = await Promise.all([
+        const [templates, classroomList] = await Promise.all([
           fetchFormTemplates(user.schoolId).catch(() => []),
-          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
           fetchClassrooms(user.schoolId).catch(() => [])
         ]);
 
@@ -198,27 +197,17 @@ export function ClassroomFormAssignment() {
         }
 
         if (classroomList.length > 0) {
-          const statsById = new Map<string, Record<string, string>>();
-          const statsByName = new Map<string, Record<string, string>>();
-          classStats.forEach(stat => {
-            statsById.set(stat.classId, stat.forms);
-            statsByName.set(stat.className, stat.forms);
-          });
+          console.log('ClassroomList from API:', classroomList);
+          const convertedClassrooms = classroomList.map(classroom => ({
+            ...classroom,
+            assignedForms: classroom.assignedForms.map(form => ({
+              ...form,
+              status: formStatusFromTemplate(form.status)
+            }))
+          }));
+          setClassrooms(convertedClassrooms);
 
-          const mappedClassrooms = classroomList.map(cls => {
-            const formsRecord = statsById.get(cls.id) ?? statsByName.get(cls.name) ?? {};
-            const assignedForms = formsFromRecord(formsRecord);
-            return {
-              id: cls.id,
-              name: cls.name,
-              assignedForms: assignedForms.length > 0 ? assignedForms : []
-            } satisfies Classroom;
-          });
-
-          const finalClassrooms = mappedClassrooms.length > 0 ? mappedClassrooms : DEFAULT_CLASSROOMS;
-          setClassrooms(finalClassrooms);
-
-          const preferredId = classroomIdFromQuery && finalClassrooms.some(cls => cls.id === classroomIdFromQuery) ? classroomIdFromQuery : finalClassrooms[0]?.id;
+          const preferredId = classroomIdFromQuery && classroomList.some(cls => cls.id === classroomIdFromQuery) ? classroomIdFromQuery : classroomList[0]?.id;
           if (preferredId) {
             setSelectedClassroomId(preferredId);
           }

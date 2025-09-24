@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Link } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 
 type ParentStatus = 'Active' | 'Archive';
@@ -139,52 +139,84 @@ export function ParentManagement() {
     return matchesSearch && matchesStatus && matchesSignup;
   }), [parents, searchQuery, statusFilter, signupFilter]);
 
-  const handleInviteParent = () => {
+  const handleInviteParent = async () => {
     if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childClassroom) {
-      const classroom = classrooms.find(c => c.id === childClassroom);
-      const newParent: Parent = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        firstName: parentFirstName,
-        lastName: parentLastName,
-        email: parentEmail,
-        children: [{
-          id: Math.random().toString(36).substring(2, 9),
-          firstName: childFirstName,
-          lastName: childLastName,
-          dob: childDob,
-          classroom: {
-            id: childClassroom,
-            name: classroom?.name || 'Unassigned'
-          }
-        }],
-        status: 'Active',
-        signupStatus: 'Invited'
-      };
-      setParents([...parents, newParent]);
-      resetInviteForm();
-      setIsInviteDialogOpen(false);
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        
+        await inviteParent(user.schoolId, {
+          parentFirstName,
+          parentLastName,
+          parentEmail,
+          childFullName: `${childFirstName} ${childLastName}`,
+          childDob,
+          classroomId: childClassroom
+        });
+        
+        const classroom = classrooms.find(c => c.id === childClassroom);
+        const newParent: Parent = {
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          firstName: parentFirstName,
+          lastName: parentLastName,
+          email: parentEmail,
+          children: [{
+            id: Math.random().toString(36).substring(2, 9),
+            firstName: childFirstName,
+            lastName: childLastName,
+            dob: childDob,
+            classroom: {
+              id: childClassroom,
+              name: classroom?.name || 'Unassigned'
+            }
+          }],
+          status: 'Active',
+          signupStatus: 'Invited'
+        };
+        setParents([...parents, newParent]);
+        resetInviteForm();
+        setIsInviteDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to invite parent:', error);
+      }
     }
   };
 
-  const handleAddChild = () => {
+  const handleAddChild = async () => {
     if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildClassroom) {
-      const classroom = classrooms.find(c => c.id === newChildClassroom);
-      const newChild: Child = {
-        id: Math.random().toString(36).substring(2, 9),
-        firstName: newChildFirstName,
-        lastName: newChildLastName,
-        dob: newChildDob,
-        classroom: {
-          id: newChildClassroom,
-          name: classroom?.name || 'Unassigned'
-        }
-      };
-      setParents(parents.map(parent => parent.id === selectedParent.id ? {
-        ...parent,
-        children: [...parent.children, newChild]
-      } : parent));
-      resetAddChildForm();
-      setIsAddChildDialogOpen(false);
+      try {
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        
+        // Use first child's enrollment ID or generate one
+        const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
+        
+        await addChild(user.schoolId, enrollmentId, {
+          childFullName: `${newChildFirstName} ${newChildLastName}`,
+          childDob: newChildDob,
+          classroomId: newChildClassroom
+        });
+        
+        const classroom = classrooms.find(c => c.id === newChildClassroom);
+        const newChild: Child = {
+          id: Math.random().toString(36).substring(2, 9),
+          firstName: newChildFirstName,
+          lastName: newChildLastName,
+          dob: newChildDob,
+          classroom: {
+            id: newChildClassroom,
+            name: classroom?.name || 'Unassigned'
+          }
+        };
+        setParents(parents.map(parent => parent.id === selectedParent.id ? {
+          ...parent,
+          children: [...parent.children, newChild]
+        } : parent));
+        resetAddChildForm();
+        setIsAddChildDialogOpen(false);
+      } catch (error) {
+        console.error('Failed to add child:', error);
+      }
     }
   };
 
