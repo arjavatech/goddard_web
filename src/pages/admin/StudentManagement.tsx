@@ -9,7 +9,7 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { fetchChildrenForms, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
 
@@ -18,6 +18,7 @@ interface Student {
   id: string;
   firstName: string;
   lastName: string;
+  dateOfBirth?: string;
   enrollmentProgress: number;
   enrollmentStatus: EnrollmentStatus;
   formsCompleted: number;
@@ -38,186 +39,13 @@ interface Student {
   }[];
 }
 
-const DEFAULT_STUDENTS: Student[] = [{
-  id: '1',
-  firstName: 'Emma',
-  lastName: 'Johnson',
-  enrollmentProgress: 85,
-  enrollmentStatus: 'In Progress',
-  formsCompleted: 3,
-  totalForms: 4,
-  classroom: {
-    id: '1',
-    name: 'Sunshine Room'
-  },
-  parent: {
-    id: '1',
-    name: 'Sarah Johnson',
-    email: 'sarah.johnson@example.com'
-  },
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Completed'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Completed'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Completed'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'In Progress'
-  }]
-}, {
-  id: '2',
-  firstName: 'Noah',
-  lastName: 'Smith',
-  enrollmentProgress: 100,
-  enrollmentStatus: 'Complete',
-  formsCompleted: 4,
-  totalForms: 4,
-  classroom: {
-    id: '2',
-    name: 'Rainbow Room'
-  },
-  parent: {
-    id: '2',
-    name: 'Michael Smith',
-    email: 'michael.smith@example.com'
-  },
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Completed'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Completed'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Completed'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Completed'
-  }]
-}, {
-  id: '3',
-  firstName: 'Olivia',
-  lastName: 'Wilson',
-  enrollmentProgress: 50,
-  enrollmentStatus: 'In Progress',
-  formsCompleted: 2,
-  totalForms: 4,
-  classroom: {
-    id: '3',
-    name: 'Stars Room'
-  },
-  parent: {
-    id: '4',
-    name: 'David Wilson',
-    email: 'david.wilson@example.com'
-  },
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Completed'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Completed'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Not Started'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Not Started'
-  }]
-}, {
-  id: '4',
-  firstName: 'Sophia',
-  lastName: 'Brown',
-  enrollmentProgress: 25,
-  enrollmentStatus: 'In Progress',
-  formsCompleted: 1,
-  totalForms: 4,
-  classroom: {
-    id: '4',
-    name: 'Moon Room'
-  },
-  parent: {
-    id: '3',
-    name: 'Jennifer Brown',
-    email: 'jennifer.brown@example.com'
-  },
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Completed'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Not Started'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Not Started'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Not Started'
-  }]
-}, {
-  id: '5',
-  firstName: 'Liam',
-  lastName: 'Davis',
-  enrollmentProgress: 0,
-  enrollmentStatus: 'Not Started',
-  formsCompleted: 0,
-  totalForms: 4,
-  classroom: {
-    id: '5',
-    name: 'Ocean Room'
-  },
-  parent: {
-    id: '5',
-    name: 'Robert Davis',
-    email: 'robert.davis@example.com'
-  },
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Not Started'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Not Started'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Not Started'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Not Started'
-  }]
-}];
-
+export function StudentManagement() {
+  const [students, setStudents] = useState<Student[]>([]);
 const statusFromProgress = (progress: number): EnrollmentStatus => {
   if (progress === 100) return 'Complete';
   if (progress > 0) return 'In Progress';
   return 'Not Started';
 };
-
-export function StudentManagement() {
-  const [students, setStudents] = useState<Student[]>(DEFAULT_STUDENTS);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -232,12 +60,13 @@ export function StudentManagement() {
         const user = await fetchUserContext();
         
         if (!user.schoolId) {
-          console.warn('No school ID found for user, keeping default data');
+          console.warn('No school ID found for user');
+          setStudents([]);
           return;
         }
 
         const [enrollments, classrooms, templates] = await Promise.all([
-          fetchSchoolEnrollments(user.schoolId),
+          fetchChildrenForms(user.schoolId),
           fetchClassrooms(user.schoolId),
           fetchFormTemplates(user.schoolId)
         ]);
@@ -263,15 +92,15 @@ export function StudentManagement() {
           console.log('Processing enrollment:', enrollment);
           
           const studentId = enrollment.childId || `student-${index}`;
+          const fullName = enrollment.childFullName || 'Unknown Student';
+          const [firstName, ...lastNameParts] = fullName.split(' ');
+          const lastName = lastNameParts.join(' ') || 'Student';
           
-          const formsArray = Object.entries(enrollment.forms || {}).map(([formId, status]) => {
-            const template = templateMap.get(formId);
-            return {
-              id: formId,
-              name: template?.formName || `Form ${formId}`,
-              status: status || 'Not Started'
-            };
-          });
+          const formsArray = enrollment.forms.map(form => ({
+            id: form.formId,
+            name: form.formName,
+            status: form.status || 'Not Started'
+          }));
           
           const completed = formsArray.filter(form => 
             COMPLETION_STATUSES.has(normalizeFormStatus(form.status))
@@ -279,27 +108,27 @@ export function StudentManagement() {
           const total = Math.max(formsArray.length, 1);
           const progress = Math.round((completed / total) * 100);
           
-          const classroom = enrollment.className ? 
-            classroomMap.get(enrollment.className.toLowerCase()) : null;
+          const classroomName = enrollment.classroomName;
+          const classroom = classroomName ? 
+            classroomMap.get(classroomName.toLowerCase()) : null;
           
-          const parentEmail = enrollment.primaryEmail || enrollment.additionalParentEmail || 'parent@example.com';
-          const parentName = parentEmail.includes('@') ? 
-            parentEmail.split('@')[0]
-              .replace(/[._]/g, ' ')
-              .replace(/\b\w/g, c => c.toUpperCase()) : 
-            'Parent';
+          const parentEmail = 'parent@example.com';
+          const parentName = 'Parent';
+          
+          console.log('Child DOB from enrollment:', enrollment.childDob);
           
           const student = {
             id: studentId,
-            firstName: enrollment.firstName || 'Unknown',
-            lastName: enrollment.lastName || 'Student',
+            firstName: firstName || 'Unknown',
+            lastName: lastName,
+            dateOfBirth: enrollment.childDob,
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: classroom?.id || 'unassigned',
-              name: enrollment.className || 'Unassigned'
+              id: enrollment.classroomId || classroom?.id || 'unassigned',
+              name: classroomName || 'Unassigned'
             },
             parent: {
               id: parentEmail,
@@ -309,7 +138,7 @@ export function StudentManagement() {
             assignedForms: formsArray
           };
           
-          console.log('Mapped student:', student);
+          console.log('Mapped student with DOB:', student.dateOfBirth, student);
           return student;
         });
 
@@ -491,8 +320,13 @@ export function StudentManagement() {
                               {student.firstName.charAt(0)}
                               {student.lastName.charAt(0)}
                             </div>
-                            <div className="font-medium">
-                              {student.firstName} {student.lastName}
+                            <div>
+                              <div className="font-medium">
+                                {student.firstName} {student.lastName}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                DOB: {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '2019-06-18 (test)'}
+                              </div>
                             </div>
                           </div>
                         </td>

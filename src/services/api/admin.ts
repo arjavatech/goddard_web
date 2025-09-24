@@ -454,3 +454,58 @@ export async function createClassroom(schoolId: string, className: string): Prom
     }
   }, z.union([z.object({}), z.string()]));
 }
+
+export type ChildEnrollment = {
+  childId: string;
+  childFullName: string;
+  childDob?: string;
+  classroomId?: string;
+  classroomName?: string;
+  enrollmentId: string;
+  forms: {
+    formId: string;
+    formName: string;
+    status: string;
+    isRequired: boolean;
+  }[];
+};
+
+export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollment[]> {
+  try {
+    console.log('Fetching children forms for school ID:', schoolId);
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
+
+    console.log('Raw children forms response:', data);
+
+    if (typeof data === 'string') {
+      console.warn('API returned string for children forms:', data);
+      return [];
+    }
+
+    if (!Array.isArray(data)) {
+      console.warn('Children forms response is not an array:', data);
+      return [];
+    }
+
+    return data.map(item => ({
+      childId: item.child_id || '',
+      childFullName: item.child_full_name || '',
+      childDob: item.child_dob,
+      classroomId: item.classroom_id,
+      classroomName: item.classroom_name,
+      enrollmentId: item.enrollment_id || '',
+      forms: (item.forms || []).map((form: any) => ({
+        formId: form.form_id || '',
+        formName: form.form_name || '',
+        status: form.status || 'Not Started',
+        isRequired: form.is_required || false
+      }))
+    }));
+  } catch (error) {
+    console.error('fetchChildrenForms error:', error);
+    return [];
+  }
+}
