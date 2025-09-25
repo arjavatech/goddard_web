@@ -15,8 +15,7 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
-  return (
-    <ToastProvider>
+  return <ToastProvider>
       <BrowserRouter>
       <Routes>
         <Route path="/" element={<ProtectedRoute>
@@ -39,6 +38,5 @@ export function AppRouter() {
         </Route>
       </Routes>
       </BrowserRouter>
-    </ToastProvider>
-  );
+    </ToastProvider>;
 }

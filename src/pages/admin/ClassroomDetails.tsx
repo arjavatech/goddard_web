@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-
 interface Form {
   id: string;
   name: string;
@@ -31,13 +30,28 @@ interface Student {
     email: string;
   };
 }
-
 const DEFAULT_CLASSROOM = {
   id: '1',
   name: 'Sunshine Room',
   capacity: 20,
   ageGroup: '3-4 years',
-  assignedForms: [{ id: '1', name: 'Admission Form', status: 'Active' }, { id: '2', name: 'Medical Authorization', status: 'Active' }, { id: '3', name: 'Emergency Contact Form', status: 'Active' }, { id: '4', name: 'Photo Release Form', status: 'Active' }] as Form[],
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
+  }, {
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Active'
+  }, {
+    id: '4',
+    name: 'Photo Release Form',
+    status: 'Active'
+  }] as Form[],
   students: [{
     id: '1',
     firstName: 'Emma',
@@ -46,7 +60,11 @@ const DEFAULT_CLASSROOM = {
     enrollmentStatus: 'In Progress' as const,
     formsCompleted: 3,
     totalForms: 4,
-    parent: { id: '1', name: 'Sarah Johnson', email: 'sarah.johnson@example.com' }
+    parent: {
+      id: '1',
+      name: 'Sarah Johnson',
+      email: 'sarah.johnson@example.com'
+    }
   }, {
     id: '2',
     firstName: 'Noah',
@@ -55,7 +73,11 @@ const DEFAULT_CLASSROOM = {
     enrollmentStatus: 'Complete' as const,
     formsCompleted: 4,
     totalForms: 4,
-    parent: { id: '2', name: 'Michael Smith', email: 'michael.smith@example.com' }
+    parent: {
+      id: '2',
+      name: 'Michael Smith',
+      email: 'michael.smith@example.com'
+    }
   }, {
     id: '3',
     firstName: 'Olivia',
@@ -64,7 +86,11 @@ const DEFAULT_CLASSROOM = {
     enrollmentStatus: 'In Progress' as const,
     formsCompleted: 2,
     totalForms: 4,
-    parent: { id: '4', name: 'David Wilson', email: 'david.wilson@example.com' }
+    parent: {
+      id: '4',
+      name: 'David Wilson',
+      email: 'david.wilson@example.com'
+    }
   }, {
     id: '4',
     firstName: 'Sophia',
@@ -73,7 +99,11 @@ const DEFAULT_CLASSROOM = {
     enrollmentStatus: 'In Progress' as const,
     formsCompleted: 1,
     totalForms: 4,
-    parent: { id: '3', name: 'Jennifer Brown', email: 'jennifer.brown@example.com' }
+    parent: {
+      id: '3',
+      name: 'Jennifer Brown',
+      email: 'jennifer.brown@example.com'
+    }
   }, {
     id: '5',
     firstName: 'Liam',
@@ -82,10 +112,13 @@ const DEFAULT_CLASSROOM = {
     enrollmentStatus: 'Not Started' as const,
     formsCompleted: 0,
     totalForms: 4,
-    parent: { id: '5', name: 'Robert Davis', email: 'robert.davis@example.com' }
+    parent: {
+      id: '5',
+      name: 'Robert Davis',
+      email: 'robert.davis@example.com'
+    }
   }] as Student[]
 };
-
 function inferFormStatus(value: string | null | undefined): Form['status'] {
   const normalized = (value ?? '').toLowerCase();
   if (normalized.includes('default')) return 'Default';
@@ -93,7 +126,6 @@ function inferFormStatus(value: string | null | undefined): Form['status'] {
   if (normalized.includes('archive')) return 'Archive';
   return 'Active';
 }
-
 function formsFromRecord(record: Record<string, string>): Form[] {
   return Object.entries(record).map(([id, status]) => ({
     id,
@@ -101,49 +133,40 @@ function formsFromRecord(record: Record<string, string>): Form[] {
     status: inferFormStatus(status)
   }));
 }
-
 function friendlyNameFromEmail(email: string): string {
   const local = email.split('@')[0];
   return local.replace(/[._]/g, ' ').replace(/\b\w/g, char => char.toUpperCase());
 }
-
 export function ClassroomDetails() {
-  const { classroomId } = useParams<{ classroomId: string }>();
+  const {
+    classroomId
+  } = useParams<{
+    classroomId: string;
+  }>();
   const [classroom, setClassroom] = useState(DEFAULT_CLASSROOM);
   const [searchQuery, setSearchQuery] = useState('');
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-
-        const [classrooms, classStats, enrollments, parents] = await Promise.all([
-          fetchClassrooms(user.schoolId).catch(() => []),
-          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
-          fetchSchoolEnrollments(user.schoolId).catch(() => []),
-          fetchParentDetails(user.schoolId).catch(() => [])
-        ]);
-
+        const [classrooms, classStats, enrollments, parents] = await Promise.all([fetchClassrooms(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchParentDetails(user.schoolId).catch(() => [])]);
         const parentByEmail = new Map<string, string>();
         parents.forEach(parent => {
           parentByEmail.set(parent.email.toLowerCase(), parent.parentId);
         });
-
         const targetClassroom = classrooms.find(cls => cls.id === classroomId) || classrooms.find(cls => cls.name === DEFAULT_CLASSROOM.name);
         if (!targetClassroom) return;
-
         const className = targetClassroom.name;
         const stats = classStats.find(stat => stat.className === className);
         const assignedForms = stats ? formsFromRecord(stats.forms) : DEFAULT_CLASSROOM.assignedForms;
-
         const classStudents = enrollments.filter(child => (child.className ?? '').toLowerCase() === className.toLowerCase());
         const students: Student[] = classStudents.map(child => {
           const entries = Object.entries(child.forms);
           const completed = entries.filter(([, status]) => COMPLETION_STATUSES.has(normalizeFormStatus(status))).length;
           const total = entries.length || assignedForms.length || DEFAULT_CLASSROOM.students[0].totalForms;
-          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+          const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
           const email = child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com';
           const parentId = parentByEmail.get(email.toLowerCase()) ?? child.childId;
@@ -162,7 +185,6 @@ export function ClassroomDetails() {
             }
           } satisfies Student;
         });
-
         if (!isMounted) return;
         setClassroom({
           id: targetClassroom.id,
@@ -180,7 +202,6 @@ export function ClassroomDetails() {
       isMounted = false;
     };
   }, [classroomId]);
-
   const filteredStudents = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return classroom.students.filter(student => {
@@ -189,7 +210,6 @@ export function ClassroomDetails() {
       return fullName.includes(query) || parentName.includes(query) || student.parent.email.toLowerCase().includes(query);
     });
   }, [classroom.students, searchQuery]);
-
   const enrollmentStats = useMemo(() => {
     const totalStudents = classroom.students.length;
     const complete = classroom.students.filter(s => s.enrollmentStatus === 'Complete').length;
@@ -197,9 +217,14 @@ export function ClassroomDetails() {
     const notStarted = classroom.students.filter(s => s.enrollmentStatus === 'Not Started').length;
     const totalProgress = classroom.students.reduce((acc, student) => acc + student.enrollmentProgress, 0);
     const averageProgress = totalStudents > 0 ? Math.round(totalProgress / totalStudents) : 0;
-    return { complete, inProgress, notStarted, totalStudents, averageProgress };
+    return {
+      complete,
+      inProgress,
+      notStarted,
+      totalStudents,
+      averageProgress
+    };
   }, [classroom.students]);
-
   const getStatusBadgeVariant = (status: Student['enrollmentStatus']): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Complete':
@@ -224,7 +249,6 @@ export function ClassroomDetails() {
         return null;
     }
   };
-
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -239,10 +263,7 @@ export function ClassroomDetails() {
             </h1>
           </div>
           <div className="flex space-x-2">
-            <Button 
-              variant="outline" 
-              
-            >
+            <Button variant="outline">
               Rename
             </Button>
             <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`}>

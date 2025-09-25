@@ -52,101 +52,99 @@ const DEFAULT_FORMS: Form[] = [{
   name: 'Meal Program Enrollment',
   status: 'Archive'
 }];
-
 const DEFAULT_CLASSROOMS: Classroom[] = [{
   id: '1',
   name: 'Sunshine Room',
   assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Active'
-    }, {
-      id: '4',
-      name: 'Photo Release Form',
-      status: 'Active'
-    }]
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
   }, {
     id: '2',
-    name: 'Rainbow Room',
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '3',
-      name: 'Emergency Contact Form',
-      status: 'Active'
-    }]
+    name: 'Medical Authorization',
+    status: 'Active'
   }, {
     id: '3',
-    name: 'Stars Room',
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }]
+    name: 'Emergency Contact Form',
+    status: 'Active'
   }, {
     id: '4',
-    name: 'Moon Room',
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '5',
-      name: 'Field Trip Permission',
-      status: 'Inactive'
-    }]
+    name: 'Photo Release Form',
+    status: 'Active'
+  }]
+}, {
+  id: '2',
+  name: 'Rainbow Room',
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
+  }, {
+    id: '3',
+    name: 'Emergency Contact Form',
+    status: 'Active'
+  }]
+}, {
+  id: '3',
+  name: 'Stars Room',
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
+  }]
+}, {
+  id: '4',
+  name: 'Moon Room',
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
   }, {
     id: '5',
-    name: 'Ocean Room',
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }, {
-      id: '6',
-      name: 'Parent Handbook Acknowledgment',
-      status: 'Default'
-    }]
+    name: 'Field Trip Permission',
+    status: 'Inactive'
+  }]
+}, {
+  id: '5',
+  name: 'Ocean Room',
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
   }, {
     id: '6',
-    name: 'Mountain Room',
-    assignedForms: [{
-      id: '1',
-      name: 'Admission Form',
-      status: 'Active'
-    }, {
-      id: '2',
-      name: 'Medical Authorization',
-      status: 'Active'
-    }]
-  }];
-
+    name: 'Parent Handbook Acknowledgment',
+    status: 'Default'
+  }]
+}, {
+  id: '6',
+  name: 'Mountain Room',
+  assignedForms: [{
+    id: '1',
+    name: 'Admission Form',
+    status: 'Active'
+  }, {
+    id: '2',
+    name: 'Medical Authorization',
+    status: 'Active'
+  }]
+}];
 const formStatusFromTemplate = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
   if (value.includes('default')) return 'Default';
@@ -154,9 +152,6 @@ const formStatusFromTemplate = (status: string | null | undefined): FormStatus =
   if (value.includes('archive')) return 'Archive';
   return 'Active';
 };
-
-
-
 export function ClassroomFormAssignment() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -165,21 +160,14 @@ export function ClassroomFormAssignment() {
   const [allForms, setAllForms] = useState<Form[]>(DEFAULT_FORMS);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || DEFAULT_CLASSROOMS[0]?.id || '');
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-
-        const [templates, classroomList] = await Promise.all([
-          fetchFormTemplates(user.schoolId).catch(() => []),
-          fetchClassrooms(user.schoolId).catch(() => [])
-        ]);
-
+        const [templates, classroomList] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
-
         if (templates.length > 0) {
           const mappedForms = templates.map(template => ({
             id: template.id,
@@ -188,7 +176,6 @@ export function ClassroomFormAssignment() {
           }));
           setAllForms(mappedForms);
         }
-
         if (classroomList.length > 0) {
           console.log('ClassroomList from API:', classroomList);
           const convertedClassrooms = classroomList.map(classroom => ({
@@ -199,7 +186,6 @@ export function ClassroomFormAssignment() {
             }))
           }));
           setClassrooms(convertedClassrooms);
-
           const preferredId = classroomIdFromQuery && classroomList.some(cls => cls.id === classroomIdFromQuery) ? classroomIdFromQuery : classroomList[0]?.id;
           if (preferredId) {
             setSelectedClassroomId(preferredId);

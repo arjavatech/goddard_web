@@ -4,22 +4,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { School, FileText, Users, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
 import { fetchUserContext } from '../../services/api/user';
-import {
-  fetchClassrooms,
-  fetchClassEnrollmentStats,
-  fetchParentDetails,
-  fetchSchoolEnrollments
-} from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchParentDetails, fetchSchoolEnrollments } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-
 type StatCard = {
   title: string;
   value: number;
   icon: React.ReactNode;
   change: string;
 };
-
 type ActivityItem = {
   type: 'form_approved' | 'form_needs_revision' | 'form_submitted' | 'parent_joined' | 'classroom_added';
   parent?: string;
@@ -28,30 +21,22 @@ type ActivityItem = {
   classroom?: string;
   time: string;
 };
-
 type ProgressItem = {
   classroom: string;
   completed: number;
   total: number;
 };
-
-
-
-
-
 function formatRelative(index: number): string {
   if (index === 0) return 'Just now';
   if (index === 1) return 'A few minutes ago';
   if (index === 2) return 'Earlier today';
   return 'Recently';
 }
-
 export function AdminDashboard() {
   const [stats, setStats] = useState<StatCard[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
   const [error, setError] = useState<string | null>(null);
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -61,39 +46,49 @@ export function AdminDashboard() {
           throw new Error('Unable to determine school context for the current admin.');
         }
         const schoolId = user.schoolId;
-
-        const [classrooms, classStats, forms, parents, enrollments] = await Promise.all([
-          fetchClassrooms(schoolId).catch(() => []),
-          fetchClassEnrollmentStats(schoolId).catch(() => []),
-          fetchFormTemplates(schoolId).catch(() => []),
-          fetchParentDetails(schoolId).catch(() => []),
-          fetchSchoolEnrollments(schoolId).catch(() => [])
-        ]);
-
+        const [classrooms, classStats, forms, parents, enrollments] = await Promise.all([fetchClassrooms(schoolId).catch(() => []), fetchClassEnrollmentStats(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchParentDetails(schoolId).catch(() => []), fetchSchoolEnrollments(schoolId).catch(() => [])]);
         const totalClassrooms = classrooms.length;
         const activeForms = forms.filter(template => (template.status ?? '').toLowerCase() === 'active').length;
         const registeredParents = parents.length;
         const pendingApprovals = enrollments.filter(child => !COMPLETION_STATUSES.has(normalizeFormStatus(child.formStatus))).length;
-
-        const statCards: StatCard[] = [
-          { title: 'Total Classrooms', value: totalClassrooms, icon: <School className="h-6 w-6 text-amazon-teal" />, change: 'Live data' },
-          { title: 'Active Forms', value: activeForms, icon: <FileText className="h-6 w-6 text-amazon-teal" />, change: 'Live data' },
-          { title: 'Registered Parents', value: registeredParents, icon: <Users className="h-6 w-6 text-amazon-teal" />, change: 'Live data' },
-          { title: 'Pending Approvals', value: pendingApprovals, icon: <Clock className="h-6 w-6 text-amazon-orange" />, change: 'Awaiting completion' }
-        ];
-
-        const completionsByClass = new Map<string, { completed: number; total: number }>();
+        const statCards: StatCard[] = [{
+          title: 'Total Classrooms',
+          value: totalClassrooms,
+          icon: <School className="h-6 w-6 text-amazon-teal" />,
+          change: 'Live data'
+        }, {
+          title: 'Active Forms',
+          value: activeForms,
+          icon: <FileText className="h-6 w-6 text-amazon-teal" />,
+          change: 'Live data'
+        }, {
+          title: 'Registered Parents',
+          value: registeredParents,
+          icon: <Users className="h-6 w-6 text-amazon-teal" />,
+          change: 'Live data'
+        }, {
+          title: 'Pending Approvals',
+          value: pendingApprovals,
+          icon: <Clock className="h-6 w-6 text-amazon-orange" />,
+          change: 'Awaiting completion'
+        }];
+        const completionsByClass = new Map<string, {
+          completed: number;
+          total: number;
+        }>();
         classStats.forEach(stat => {
           completionsByClass.set(stat.className, {
             completed: 0,
             total: stat.studentCount
           });
         });
-
         enrollments.forEach(child => {
           const className = child.className ?? 'Unassigned';
           if (!completionsByClass.has(className)) {
-            completionsByClass.set(className, { completed: 0, total: 0 });
+            completionsByClass.set(className, {
+              completed: 0,
+              total: 0
+            });
           }
           const bucket = completionsByClass.get(className);
           if (!bucket) return;
@@ -103,13 +98,11 @@ export function AdminDashboard() {
             bucket.completed += 1;
           }
         });
-
         const progressItems: ProgressItem[] = Array.from(completionsByClass.entries()).map(([classroom, counts]) => ({
           classroom,
           completed: counts.completed,
           total: counts.total
         })).sort((a, b) => a.classroom.localeCompare(b.classroom));
-
         const activityItems: ActivityItem[] = enrollments.slice(0, 5).map((child, index) => {
           const status = normalizeFormStatus(child.formStatus);
           if (COMPLETION_STATUSES.has(status)) {
@@ -138,7 +131,6 @@ export function AdminDashboard() {
             time: formatRelative(index)
           } satisfies ActivityItem;
         });
-
         if (!isMounted) return;
         setStats(statCards);
         setEnrollmentProgress(progressItems);
@@ -153,12 +145,10 @@ export function AdminDashboard() {
         setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
       }
     })();
-
     return () => {
       isMounted = false;
     };
   }, []);
-
   return <AdminLayout>
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-foreground">

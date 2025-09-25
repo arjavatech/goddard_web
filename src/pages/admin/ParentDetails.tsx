@@ -1,4 +1,4 @@
-import  { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,7 +16,6 @@ import { fetchParentDetails, fetchSingleParent, fetchSchoolEnrollments, fetchCla
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm, updateFormStatus } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -47,9 +46,6 @@ interface ParentDetailView {
   children: ChildInfo[];
   familyForms: Form[];
 }
-
-
-
 const mapToFormStatus = (value: string | null | undefined): FormStatus => {
   const normalized = normalizeFormStatus(value);
   switch (normalized) {
@@ -65,17 +61,22 @@ const mapToFormStatus = (value: string | null | undefined): FormStatus => {
       return 'In Progress';
   }
 };
-
 const makeFriendlyName = (email: string) => {
   const local = email.split('@')[0] ?? 'guardian';
   const parts = local.replace(/[._]/g, ' ').split(' ').filter(Boolean);
   const first = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Guardian';
   const last = parts.slice(1).map(part => part[0].toUpperCase() + part.slice(1)).join(' ') || 'Family';
-  return { first, last };
+  return {
+    first,
+    last
+  };
 };
-
 export function ParentDetails() {
-  const { parentId } = useParams<{ parentId: string }>();
+  const {
+    parentId
+  } = useParams<{
+    parentId: string;
+  }>();
   const location = useLocation();
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
@@ -88,8 +89,9 @@ export function ParentDetails() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const { addToast } = useToast();
-
+  const {
+    addToast
+  } = useToast();
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -100,7 +102,6 @@ export function ParentDetails() {
         if (!user.schoolId || !parentId) return;
         // Use passed parent data if available, otherwise fetch from API
         let parentRecord = null;
-        
         if (passedParentData) {
           // Convert passed parent data to expected format
           parentRecord = {
@@ -123,36 +124,31 @@ export function ParentDetails() {
         } else {
           // Fallback to API fetch
           parentRecord = await fetchSingleParent(parentId, user.schoolId).catch(() => null);
-          
           if (!parentRecord) {
             const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
             parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
           }
         }
-        
         if (!parentRecord) {
           console.warn('Parent not found:', parentId);
           return;
         }
-        
-        const [enrollments, classrooms, templates] = await Promise.all([
-          fetchSchoolEnrollments(user.schoolId).catch(() => []),
-          fetchClassrooms(user.schoolId).catch(() => []),
-          fetchFormTemplates(user.schoolId).catch(() => [])
-        ]);
+        const [enrollments, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
-
-        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), { id: cls.id, name: cls.name }]));
+        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
+          id: cls.id,
+          name: cls.name
+        }]));
         const templateById = new Map(templates.map(template => [template.id, template]));
-
         const childEntries = enrollments.filter(child => {
-          console.log("Child : ",child)
-
-          const emails = [child.primaryEmail, child.additionalParentEmail]
-            .filter((email): email is string => Boolean(email))
-            .map(email => email.toLowerCase());
+          console.log("Child : ", child);
+          const emails = [child.primaryEmail, child.additionalParentEmail].filter((email): email is string => Boolean(email)).map(email => email.toLowerCase());
           const isMatch = emails.includes(parentRecord.email.toLowerCase());
-          console.log('Child email match check:', { childEmails: emails, parentEmail: parentRecord.email.toLowerCase(), isMatch });
+          console.log('Child email match check:', {
+            childEmails: emails,
+            parentEmail: parentRecord.email.toLowerCase(),
+            isMatch
+          });
           return isMatch;
         }).map(child => {
           const formsArray: Form[] = Object.entries(child.forms).map(([formId, status]) => {
@@ -167,7 +163,7 @@ export function ParentDetails() {
             } satisfies Form;
           });
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
-          const progress = formsArray.length > 0 ? Math.round((completed / formsArray.length) * 100) : 0;
+          const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
           const classroomInfo = classroomByName.get((child.className ?? 'Unassigned').toLowerCase()) ?? {
             id: child.className ?? 'Unassigned',
             name: child.className ?? 'Unassigned'
@@ -182,7 +178,6 @@ export function ParentDetails() {
             enrollmentProgress: progress
           } satisfies ChildInfo;
         });
-
         const familyFormMap = new Map<string, Form>();
         childEntries.forEach(child => {
           child.forms.forEach(form => {
@@ -194,20 +189,13 @@ export function ParentDetails() {
 
         // Process children from passed data or API data
         let processedChildren: ChildInfo[] = [];
-        
         if (passedParentData && parentRecord.children) {
           // Use passed parent data children and try to match with enrollment forms
           processedChildren = parentRecord.children.map((child: any) => {
             // Try to find matching enrollment data for this child
-            const matchingEnrollment = enrollments.find(enrollment => 
-              enrollment.childId === child.childId || 
-              (enrollment.firstName === child.childFullName.split(' ')[0] && 
-               enrollment.lastName === child.childFullName.split(' ').slice(1).join(' '))
-            );
-            
+            const matchingEnrollment = enrollments.find(enrollment => enrollment.childId === child.childId || enrollment.firstName === child.childFullName.split(' ')[0] && enrollment.lastName === child.childFullName.split(' ').slice(1).join(' '));
             let childForms: Form[] = [];
             let progress = 0;
-            
             if (matchingEnrollment) {
               // Use real form data if available
               childForms = Object.entries(matchingEnrollment.forms).map(([formId, status]) => {
@@ -222,13 +210,12 @@ export function ParentDetails() {
                 };
               });
               const completed = childForms.filter(form => COMPLETION_STATUSES.has(form.status)).length;
-              progress = childForms.length > 0 ? Math.round((completed / childForms.length) * 100) : 0;
+              progress = childForms.length > 0 ? Math.round(completed / childForms.length * 100) : 0;
             } else {
               // No forms if no enrollment data found
               childForms = [];
               progress = 0;
             }
-            
             return {
               id: child.childId,
               firstName: child.childFullName.split(' ')[0] || 'Unknown',
@@ -247,7 +234,6 @@ export function ParentDetails() {
         } else {
           processedChildren = [];
         }
-
         const friendly = makeFriendlyName(parentRecord.email);
         setParent({
           id: parentRecord.parentId,
@@ -258,7 +244,6 @@ export function ParentDetails() {
           children: processedChildren,
           familyForms: Array.from(familyFormMap.values())
         });
-        
         if (processedChildren.length > 0) {
           setSelectedChildId(processedChildren[0].id);
         }
@@ -282,9 +267,7 @@ export function ParentDetails() {
       isMounted = false;
     };
   }, [parentId]);
-
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
-
   const openViewFormDialog = (form: Form) => {
     setSelectedForm(form);
     setIsViewFormDialogOpen(true);
@@ -297,7 +280,6 @@ export function ParentDetails() {
   };
   const handleFormReview = async () => {
     if (!selectedForm || !formAction || !selectedChild) return;
-    
     setIsReviewing(true);
     try {
       const result = await reviewForm({
@@ -306,7 +288,6 @@ export function ParentDetails() {
         action: formAction,
         notes: reviewNotes
       });
-      
       if (result.success) {
         const newStatus: FormStatus = result.updatedStatus as FormStatus;
         setParent(current => {
@@ -328,7 +309,6 @@ export function ParentDetails() {
             }))
           };
         });
-        
         addToast({
           type: 'success',
           title: 'Form Review Completed',
@@ -351,16 +331,13 @@ export function ParentDetails() {
     } finally {
       setIsReviewing(false);
     }
-    
     setIsReviewDialogOpen(false);
     setIsViewFormDialogOpen(false);
   };
   console.log('ParentDetails - final parent state:', parent);
   console.log('ParentDetails - selectedChild:', selectedChild);
-
   if (!parent) {
-    return (
-      <AdminLayout>
+    return <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -371,26 +348,20 @@ export function ParentDetails() {
             </Link>
           </div>
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>;
   }
-
   if (isLoading) {
-    return (
-      <AdminLayout>
+    return <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
             <p className="text-muted-foreground">Loading parent details...</p>
           </div>
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>;
   }
-
   if (error) {
-    return (
-      <AdminLayout>
+    return <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
@@ -401,10 +372,8 @@ export function ParentDetails() {
             </Button>
           </div>
         </div>
-      </AdminLayout>
-    );
+      </AdminLayout>;
   }
-
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -708,63 +677,36 @@ export function ParentDetails() {
                 {formAction === 'approve' ? 'Approval Notes (Optional)' : 'Revision Notes'}
                 {formAction === 'reject' && <span className="text-red-500 ml-1">*</span>}
               </label>
-              <Textarea 
-                value={reviewNotes} 
-                onChange={e => setReviewNotes(e.target.value)} 
-                placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} 
-                className={`w-full ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:border-red-500' : ''}`}
-                rows={4} 
-                maxLength={500}
-              />
+              <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} className={`w-full ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:border-red-500' : ''}`} rows={4} maxLength={500} />
               <div className="flex justify-between mt-1">
                 <div>
-                  {formAction === 'reject' && !reviewNotes.trim() && (
-                    <p className="text-sm text-red-500">Revision notes are required</p>
-                  )}
+                  {formAction === 'reject' && !reviewNotes.trim() && <p className="text-sm text-red-500">Revision notes are required</p>}
                 </div>
                 <p className="text-xs text-gray-500">{reviewNotes.length}/500</p>
               </div>
             </div>
-            <div className={`p-3 rounded-md border ${
-              formAction === 'approve' 
-                ? 'bg-green-50 border-green-200' 
-                : 'bg-amber-50 border-amber-200'
-            }`}>
+            <div className={`p-3 rounded-md border ${formAction === 'approve' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
               <p className="text-sm font-medium">
-                {formAction === 'approve' 
-                  ? '✓ This will approve the form and notify the parent via email.' 
-                  : '⚠ This will request revisions and notify the parent of required changes.'}
+                {formAction === 'approve' ? '✓ This will approve the form and notify the parent via email.' : '⚠ This will request revisions and notify the parent of required changes.'}
               </p>
-              {formAction === 'approve' && (
-                <p className="text-xs text-gray-600 mt-1">
+              {formAction === 'approve' && <p className="text-xs text-gray-600 mt-1">
                   The parent will receive a confirmation email and can proceed with enrollment.
-                </p>
-              )}
+                </p>}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleFormReview} 
-              className={formAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} 
-              disabled={(formAction === 'reject' && !reviewNotes.trim()) || isReviewing}
-            >
-              {isReviewing ? (
-                <div className="flex items-center">
+            <Button onClick={handleFormReview} className={formAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} disabled={formAction === 'reject' && !reviewNotes.trim() || isReviewing}>
+              {isReviewing ? <div className="flex items-center">
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Processing...
-                </div>
-              ) : formAction === 'approve' ? (
-                <>
+                </div> : formAction === 'approve' ? <>
                   <CheckCircle className="h-4 w-4 mr-2" /> Confirm Approval
-                </>
-              ) : (
-                <>
+                </> : <>
                   <AlertCircle className="h-4 w-4 mr-2" /> Request Revision
-                </>
-              )}
+                </>}
             </Button>
           </DialogFooter>
         </DialogContent>

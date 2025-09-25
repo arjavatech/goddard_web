@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Children } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -12,7 +12,6 @@ import { fetchUserContext } from '../../services/api/user';
 import { fetchChildrenForms, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
-
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 interface Student {
   id: string;
@@ -38,85 +37,60 @@ interface Student {
     status: string;
   }[];
 }
-
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
-const statusFromProgress = (progress: number): EnrollmentStatus => {
-  if (progress === 100) return 'Complete';
-  if (progress > 0) return 'In Progress';
-  return 'Not Started';
-};
+  const statusFromProgress = (progress: number): EnrollmentStatus => {
+    if (progress === 100) return 'Complete';
+    if (progress > 0) return 'In Progress';
+    return 'Not Started';
+  };
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
-
   useEffect(() => {
     let isMounted = true;
-    
     const loadStudentData = async () => {
       try {
         setLoading(true);
         const user = await fetchUserContext();
-        
         if (!user.schoolId) {
           console.warn('No school ID found for user');
           setStudents([]);
           return;
         }
-
-        const [enrollments, classrooms, templates] = await Promise.all([
-          fetchChildrenForms(user.schoolId),
-          fetchClassrooms(user.schoolId),
-          fetchFormTemplates(user.schoolId)
-        ]);
-
+        const [enrollments, classrooms, templates] = await Promise.all([fetchChildrenForms(user.schoolId), fetchClassrooms(user.schoolId), fetchFormTemplates(user.schoolId)]);
         if (!isMounted) return;
-        
         console.log('Setting students with data from API');
-
         console.log('API Response - Enrollments:', enrollments);
         console.log('API Response - Classrooms:', classrooms);
         console.log('API Response - Templates:', templates);
-
         if (!enrollments || enrollments.length === 0) {
           console.log('No enrollments found');
           setStudents([]);
           return;
         }
-
         const classroomMap = new Map(classrooms.map(cls => [cls.name?.toLowerCase(), cls]));
         const templateMap = new Map(templates.map(template => [template.id, template]));
-
         const mappedStudents: Student[] = enrollments.map((enrollment, index) => {
           console.log('Processing enrollment:', enrollment);
-          
           const studentId = enrollment.childId || `student-${index}`;
           const fullName = enrollment.childFullName || 'Unknown Student';
           const [firstName, ...lastNameParts] = fullName.split(' ');
           const lastName = lastNameParts.join(' ') || 'Student';
-          
           const formsArray = enrollment.forms.map(form => ({
             id: form.formId,
             name: form.formName,
             status: form.status || 'Not Started'
           }));
-          
-          const completed = formsArray.filter(form => 
-            COMPLETION_STATUSES.has(normalizeFormStatus(form.status))
-          ).length;
+          const completed = formsArray.filter(form => COMPLETION_STATUSES.has(normalizeFormStatus(form.status))).length;
           const total = Math.max(formsArray.length, 1);
-          const progress = Math.round((completed / total) * 100);
-          
+          const progress = Math.round(completed / total * 100);
           const classroomName = enrollment.classroomName;
-          const classroom = classroomName ? 
-            classroomMap.get(classroomName.toLowerCase()) : null;
-          
+          const classroom = classroomName ? classroomMap.get(classroomName.toLowerCase()) : null;
           const parentEmail = 'parent@example.com';
           const parentName = 'Parent';
-          
           console.log('Child DOB from enrollment:', enrollment.childDob);
-          
           const student = {
             id: studentId,
             firstName: firstName || 'Unknown',
@@ -137,11 +111,9 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
             },
             assignedForms: formsArray
           };
-          
           console.log('Mapped student with DOB:', student.dateOfBirth, student);
           return student;
         });
-
         console.log('Final mapped students:', mappedStudents);
         if (mappedStudents.length > 0) {
           setStudents(mappedStudents);
@@ -155,26 +127,21 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
         }
       }
     };
-
     loadStudentData();
-    
     return () => {
       isMounted = false;
     };
   }, []);
-
   const filteredStudents = useMemo(() => students.filter(student => {
     const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || student.enrollmentStatus === statusFilter;
     return matchesSearch && matchesStatus;
   }), [students, searchQuery, statusFilter]);
-
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
-    return Math.round((complete / students.length) * 100);
+    return Math.round(complete / students.length * 100);
   }, [students]);
-
   const getStatusBadgeVariant = (status: EnrollmentStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Complete':
@@ -187,7 +154,6 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
         return 'default';
     }
   };
-
   const getStatusIcon = (status: EnrollmentStatus) => {
     switch (status) {
       case 'Complete':
@@ -200,20 +166,17 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
         return null;
     }
   };
-
   const toggleFilters = () => setShowFilters(prev => !prev);
-
   if (loading) {
     return <AdminLayout>
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading student data...</p>
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading student data...</p>
+          </div>
         </div>
-      </div>
-    </AdminLayout>;
+      </AdminLayout>;
   }
-
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -234,7 +197,9 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
               <div className="flex items-center">
                 <GraduationCap className="h-12 w-12 text-amazon-teal mr-4" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Students</p>
+                  <p className="text-sm text-muted-foreground">
+                    Total Students
+                  </p>
                   <p className="text-3xl font-bold">{students.length}</p>
                 </div>
               </div>
@@ -245,7 +210,9 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
               <div className="flex items-center">
                 <Users className="h-12 w-12 text-amazon-teal mr-4" />
                 <div>
-                  <p className="text-sm text-muted-foreground">Completion Rate</p>
+                  <p className="text-sm text-muted-foreground">
+                    Completion Rate
+                  </p>
                   <p className="text-3xl font-bold">{completionRate}%</p>
                 </div>
               </div>
@@ -325,7 +292,8 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
                                 {student.firstName} {student.lastName}
                               </div>
                               <div className="text-xs text-gray-500">
-                                DOB: {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '2019-06-18 (test)'}
+                                DOB:{' '}
+                                {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '2019-06-18 (test)'}
                               </div>
                             </div>
                           </div>
@@ -361,8 +329,8 @@ const statusFromProgress = (progress: number): EnrollmentStatus => {
                           </div>
                           <div className="mt-1 flex flex-wrap justify-center gap-1">
                             {student.assignedForms.slice(0, 2).map((form, index) => <Badge key={`${student.id}-form-${form.id}-${index}`} variant="secondary" className="text-xs">
-                                {form.name}
-                              </Badge>)}
+                                  {form.name}
+                                </Badge>)}
                             {student.assignedForms.length > 2 && <Badge key={`${student.id}-more-forms`} variant="outline" className="text-xs">
                                 +{student.assignedForms.length - 2} more
                               </Badge>}

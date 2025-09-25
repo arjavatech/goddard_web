@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Children } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
-
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Complete' | 'Pending' | 'Invited';
 interface Child {
@@ -33,20 +32,25 @@ interface Parent {
   status: ParentStatus;
   signupStatus: SignupStatus;
 }
-
-
-
-const friendlyNameFromEmail = (email: string): { first: string; last: string } => {
+const friendlyNameFromEmail = (email: string): {
+  first: string;
+  last: string;
+} => {
   const local = email.split('@')[0] ?? 'guardian';
   const parts = local.replace(/[._]/g, ' ').split(' ').filter(Boolean);
   const first = parts[0] ? parts[0][0].toUpperCase() + parts[0].slice(1) : 'Guardian';
   const last = parts.slice(1).map(part => part[0].toUpperCase() + part.slice(1)).join(' ') || 'Family';
-  return { first, last };
+  return {
+    first,
+    last
+  };
 };
-
 export function ParentManagement() {
   const [parents, setParents] = useState<Parent[]>([]);
-  const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
+  const [classrooms, setClassrooms] = useState<{
+    id: string;
+    name: string;
+  }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signupFilter, setSignupFilter] = useState<string>('all');
@@ -64,31 +68,25 @@ export function ParentManagement() {
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildDob, setNewChildDob] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const [parentDetails, enrollments, classroomList] = await Promise.all([
-          fetchParentDetails(user.schoolId).catch(() => []),
-          fetchSchoolEnrollments(user.schoolId).catch(() => []),
-          fetchClassrooms(user.schoolId).catch(() => [])
-        ]);
+        const [parentDetails, enrollments, classroomList] = await Promise.all([fetchParentDetails(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
-
         if (classroomList.length > 0) {
-          setClassrooms(classroomList.map(cls => ({ id: cls.id, name: cls.name })));
+          setClassrooms(classroomList.map(cls => ({
+            id: cls.id,
+            name: cls.name
+          })));
         }
-
         console.log('Parent details received:', parentDetails);
-        
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
             const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
             const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
-            
             const children: Child[] = detail.children?.map(child => {
               const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
               return {
@@ -102,11 +100,7 @@ export function ParentManagement() {
                 }
               };
             }) || [];
-            
-            const hasCompletedForms = detail.children?.some(child => 
-              child.forms.some(form => form.status === 'completed')
-            ) || false;
-            
+            const hasCompletedForms = detail.children?.some(child => child.forms.some(form => form.status === 'completed')) || false;
             return {
               id: detail.parentId,
               firstName,
@@ -117,7 +111,6 @@ export function ParentManagement() {
               signupStatus: detail.isSigned ? 'Complete' : 'Invited'
             } satisfies Parent;
           });
-
           console.log('Mapped parents:', mappedParents);
           setParents(mappedParents);
         }
@@ -129,7 +122,6 @@ export function ParentManagement() {
       isMounted = false;
     };
   }, []);
-
   const filteredParents = useMemo(() => parents.filter(parent => {
     const fullName = `${parent.firstName} ${parent.lastName}`.toLowerCase();
     const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || parent.email.toLowerCase().includes(searchQuery.toLowerCase());
@@ -137,13 +129,11 @@ export function ParentManagement() {
     const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
     return matchesSearch && matchesStatus && matchesSignup;
   }), [parents, searchQuery, statusFilter, signupFilter]);
-
   const handleInviteParent = async () => {
     if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childClassroom) {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        
         await inviteParent(user.schoolId, {
           parentFirstName,
           parentLastName,
@@ -152,7 +142,6 @@ export function ParentManagement() {
           childDob,
           classroomId: childClassroom
         });
-        
         const classroom = classrooms.find(c => c.id === childClassroom);
         const newParent: Parent = {
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -180,22 +169,18 @@ export function ParentManagement() {
       }
     }
   };
-
   const handleAddChild = async () => {
     if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildClassroom) {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        
         // Use first child's enrollment ID or generate one
         const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
-        
         await addChild(user.schoolId, enrollmentId, {
           childFullName: `${newChildFirstName} ${newChildLastName}`,
           childDob: newChildDob,
           classroomId: newChildClassroom
         });
-        
         const classroom = classrooms.find(c => c.id === newChildClassroom);
         const newChild: Child = {
           id: Math.random().toString(36).substring(2, 9),
@@ -218,7 +203,6 @@ export function ParentManagement() {
       }
     }
   };
-
   const resetInviteForm = () => {
     setParentFirstName('');
     setParentLastName('');
@@ -228,14 +212,12 @@ export function ParentManagement() {
     setChildDob('');
     setChildClassroom('');
   };
-
   const resetAddChildForm = () => {
     setNewChildFirstName('');
     setNewChildLastName('');
     setNewChildDob('');
     setNewChildClassroom('');
   };
-
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Complete':
@@ -248,7 +230,6 @@ export function ParentManagement() {
         return 'default';
     }
   };
-
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex justify-between items-center">
@@ -366,15 +347,17 @@ export function ParentManagement() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem asChild>
-                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }}>
+                                <Link to={`/admin/parents/${parent.id}`} state={{
+                            parentData: parent
+                          }}>
                                   <Eye className="h-4 w-4 mr-2" />
                                   View Details
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => {
-                              setSelectedParent(parent);
-                              setIsAddChildDialogOpen(true);
-                            }}>
+                          setSelectedParent(parent);
+                          setIsAddChildDialogOpen(true);
+                        }}>
                                 <UserCircle className="h-4 w-4 mr-2" />
                                 Add Child
                               </DropdownMenuItem>
@@ -482,7 +465,10 @@ export function ParentManagement() {
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Child to {selectedParent?.firstName} {selectedParent?.lastName}</DialogTitle>
+            <DialogTitle>
+              Add Child to {selectedParent?.firstName}{' '}
+              {selectedParent?.lastName}
+            </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>

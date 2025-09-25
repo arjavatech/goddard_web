@@ -72,7 +72,7 @@ export function ImportantInfo({
                   Email: {contact.email}
                 </p>}
             </div>}
-          {!enrollmentDeadline && (!requiredDocuments || requiredDocuments.length === 0) && (!contact || (!contact.phone && !contact.email)) && <p className="text-sm text-muted-foreground">
+          {!enrollmentDeadline && (!requiredDocuments || requiredDocuments.length === 0) && (!contact || !contact.phone && !contact.email) && <p className="text-sm text-muted-foreground">
               No announcements yet.
             </p>}
         </div>

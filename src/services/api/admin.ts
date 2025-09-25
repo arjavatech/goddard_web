@@ -1,15 +1,16 @@
 import { authedFetch, z } from './common';
 import { fetchUserContext } from './user';
-
-
 export type Classroom = {
   id: string;
   name: string;
   studentsCount: number;
   formsCount: number;
-  assignedForms: { id: string; name: string; status: string }[];
+  assignedForms: {
+    id: string;
+    name: string;
+    status: string;
+  }[];
 };
-
 export type ClassEnrollmentStat = {
   classId: string;
   className: string;
@@ -17,7 +18,6 @@ export type ClassEnrollmentStat = {
   forms: Record<string, string>;
   defaultFormSetId: string | null;
 };
-
 export type ParentDetail = {
   parentId: string;
   email: string;
@@ -40,7 +40,6 @@ export type ParentDetail = {
     }[];
   }[];
 };
-
 export type SchoolEnrollment = {
   childId: string;
   firstName: string;
@@ -51,7 +50,6 @@ export type SchoolEnrollment = {
   additionalParentEmail: string | null;
   forms: Record<string, string>;
 };
-
 export type StudentFormAssignment = {
   id: string;
   childId: string;
@@ -63,13 +61,11 @@ export type StudentFormAssignment = {
   assignedAt: string | null;
   schoolId: string | null;
 };
-
 const classroomSchema = z.object({
   classroom_id: z.string().optional(),
   classroom_name: z.string().optional(),
   total_children: z.number().optional()
 });
-
 const classEnrollmentSchema = z.object({
   class_id: z.union([z.string(), z.number()]).optional(),
   class_name: z.string().optional(),
@@ -77,7 +73,6 @@ const classEnrollmentSchema = z.object({
   forms: z.record(z.string()).nullable().optional(),
   default_forms: z.string().nullable().optional()
 });
-
 const parentDetailSchema = z.object({
   parent_id: z.string(),
   parent_email: z.string(),
@@ -98,7 +93,6 @@ const parentDetailSchema = z.object({
     }))
   }))
 });
-
 const schoolEnrollmentSchema = z.object({
   child_id: z.union([z.string(), z.number()]).optional(),
   child_first_name: z.string().optional(),
@@ -109,7 +103,6 @@ const schoolEnrollmentSchema = z.object({
   additional_parent_email: z.string().nullable().optional(),
   forms: z.record(z.string()).nullable().optional()
 });
-
 const studentFormAssignmentSchema = z.object({
   id: z.string(),
   child_id: z.string(),
@@ -121,23 +114,18 @@ const studentFormAssignmentSchema = z.object({
   assigned_at: z.string().nullable().optional(),
   school_id: z.string().nullable().optional()
 });
-
 export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
   try {
     const data = await authedFetch({
       method: 'GET',
       url: `/classrooms?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    
     console.log('Raw classrooms response:', data);
-    
     const classroomsArray = data.classrooms || data;
-    
     if (!Array.isArray(classroomsArray)) {
       console.warn('Classrooms response is not an array:', classroomsArray);
       return [];
     }
-    
     return classroomsArray.map((item, index) => {
       const assignedFormsRaw = item.assigned_forms || item.assignedForms || [];
       const assignedForms = assignedFormsRaw.map((form: any, formIndex: number) => {
@@ -154,7 +142,6 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
           status: form.status || 'Active'
         };
       });
-      
       return {
         id: item.id || item.classroom_id || `classroom-${index}`,
         name: item.name || item.classroom_name || `Classroom ${index + 1}`,
@@ -168,19 +155,16 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
     return [];
   }
 }
-
 export async function fetchClassEnrollmentStats(schoolId: string): Promise<ClassEnrollmentStat[]> {
   try {
     const data = await authedFetch({
       method: 'GET',
       url: `/enrollments/class-wise-count?school_id=${encodeURIComponent(schoolId)}`
     }, z.union([z.array(classEnrollmentSchema), z.string()]));
-
     if (typeof data === 'string') {
       console.warn('API returned string for class enrollment stats:', data);
       return [];
     }
-
     return data.map(item => ({
       classId: item.class_id ? String(item.class_id) : '',
       className: item.class_name ?? '',
@@ -193,7 +177,6 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
     return [];
   }
 }
-
 export async function fetchParentDetails(schoolId: string): Promise<ParentDetail[]> {
   try {
     console.log('Fetching parent details for school ID:', schoolId);
@@ -201,19 +184,15 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
       method: 'GET',
       url: `/parents/details?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-
     console.log('Raw parent details response:', data);
-
     if (typeof data === 'string') {
       console.warn('API returned string for parent details:', data);
       return [];
     }
-
     if (!Array.isArray(data)) {
       console.warn('Parent details response is not an array:', data);
       return [];
     }
-
     const result = data.map(item => ({
       parentId: item.parent_id || item.parentId || '',
       email: item.parent_email || item.email || '',
@@ -236,7 +215,6 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
         }))
       }))
     }));
-
     console.log('Processed parent details:', result);
     return result;
   } catch (error) {
@@ -244,16 +222,13 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
     return [];
   }
 }
-
 export async function fetchSingleParent(parentId: string, schoolId: string): Promise<ParentDetail | null> {
   try {
     const data = await authedFetch({
       method: 'GET',
       url: `/parents/${encodeURIComponent(parentId)}?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-
     if (!data) return null;
-
     return {
       parentId: data.parent_id || data.parentId || '',
       email: data.parent_email || data.email || '',
@@ -281,7 +256,6 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
     return null;
   }
 }
-
 export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEnrollment[]> {
   try {
     console.log('Fetching enrollments for school ID:', schoolId);
@@ -289,19 +263,15 @@ export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEn
       method: 'GET',
       url: `/enrollments/school-forms?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-
     console.log('Raw enrollments response:', data);
-
     if (typeof data === 'string') {
       console.warn('API returned string for school enrollments:', data);
       return [];
     }
-
     if (!Array.isArray(data)) {
       console.warn('School enrollments response is not an array:', data);
       return [];
     }
-
     return data.map(item => ({
       childId: String(item.child_id || item.childId || ''),
       firstName: item.child_first_name || item.firstName || '',
@@ -317,19 +287,16 @@ export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEn
     return [];
   }
 }
-
 export async function fetchStudentFormAssignments(schoolId: string): Promise<StudentFormAssignment[]> {
   try {
     const data = await authedFetch({
       method: 'GET',
       url: `/student-form-assignments?school_id=${encodeURIComponent(schoolId)}`
     }, z.union([z.array(studentFormAssignmentSchema), z.string()]));
-
     if (typeof data === 'string') {
       console.warn('API returned string for student form assignments:', data);
       return [];
     }
-
     return data.map(item => ({
       id: item.id,
       childId: item.child_id,
@@ -346,7 +313,6 @@ export async function fetchStudentFormAssignments(schoolId: string): Promise<Stu
     return [];
   }
 }
-
 export async function renameClassroom(classroomId: string, newName: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'PUT',
@@ -358,23 +324,20 @@ export async function renameClassroom(classroomId: string, newName: string, scho
     }
   }, z.object({}));
 }
-
 export async function deleteClassroom(classroomId: string, schoolId: string): Promise<void> {
-  console.log(classroomId)
-  console.log(schoolId)
+  console.log(classroomId);
+  console.log(schoolId);
   await authedFetch({
     method: 'DELETE',
     url: `/classrooms?classroom_id=${classroomId}&school_id=${schoolId}`
   }, z.object({}));
 }
-
 export async function deleteForm(classroomId: string, formId: string): Promise<void> {
   await authedFetch({
     method: 'DELETE',
     url: `/classrooms/${classroomId}/forms/${formId}`
   }, z.object({}));
 }
-
 export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'POST',
@@ -386,7 +349,6 @@ export async function createFormTemplate(formName: string, filloutFormId: string
     }
   }, z.object({}));
 }
-
 export async function updateFormTemplate(formId: string, formName: string, filloutFormUrl: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'PUT',
@@ -402,7 +364,6 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
     }
   }, z.object({}));
 }
-
 export async function inviteParent(schoolId: string, parentData: {
   parentFirstName: string;
   parentLastName: string;
@@ -425,7 +386,6 @@ export async function inviteParent(schoolId: string, parentData: {
     }
   }, z.union([z.object({}), z.string()]));
 }
-
 export async function addChild(schoolId: string, enrollmentId: string, childData: {
   childFullName: string;
   childDob: string;
@@ -443,7 +403,6 @@ export async function addChild(schoolId: string, enrollmentId: string, childData
     }
   }, z.union([z.object({}), z.string()]));
 }
-
 export async function createClassroom(schoolId: string, className: string): Promise<void> {
   await authedFetch({
     method: 'POST',
@@ -454,7 +413,6 @@ export async function createClassroom(schoolId: string, className: string): Prom
     }
   }, z.union([z.object({}), z.string()]));
 }
-
 export type ChildEnrollment = {
   childId: string;
   childFullName: string;
@@ -469,7 +427,6 @@ export type ChildEnrollment = {
     isRequired: boolean;
   }[];
 };
-
 export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollment[]> {
   try {
     console.log('Fetching children forms for school ID:', schoolId);
@@ -477,19 +434,15 @@ export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollm
       method: 'GET',
       url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-
     console.log('Raw children forms response:', data);
-
     if (typeof data === 'string') {
       console.warn('API returned string for children forms:', data);
       return [];
     }
-
     if (!Array.isArray(data)) {
       console.warn('Children forms response is not an array:', data);
       return [];
     }
-
     return data.map(item => ({
       childId: item.child_id || '',
       childFullName: item.child_full_name || '',

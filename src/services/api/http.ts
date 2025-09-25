@@ -27,14 +27,13 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   }
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
-    
     if (typeof data === 'string') {
       message = data;
     } else if (data && typeof data === 'object') {
       const errorData = data as Record<string, unknown>;
       message = (errorData.message || errorData.error || errorData.detail) as string || message;
     }
-    
+
     // Add more context for common HTTP errors
     switch (res.status) {
       case 401:
@@ -50,7 +49,6 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
         message = 'Server error. Please try again later.';
         break;
     }
-    
     const error = new Error(message);
     (error as any).status = res.status;
     (error as any).response = data;

@@ -7,12 +7,7 @@ import { QuickActions } from '../components/dashboard/QuickActions';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
-import {
-  fetchEnrollmentChildren,
-  fetchFormTemplates,
-  type EnrollmentChild,
-  type FormTemplate
-} from '../services/api/dashboard';
+import { fetchEnrollmentChildren, fetchFormTemplates, type EnrollmentChild, type FormTemplate } from '../services/api/dashboard';
 import { fetchUserContext } from '../services/api/user';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
 type FormStatus = NormalizedFormStatus;
@@ -54,10 +49,7 @@ function formatDate(input: string | null | undefined): string {
     year: 'numeric'
   });
 }
-function normalizeChild(
-  child: EnrollmentChild,
-  templateMap: Map<string, FormTemplate>
-): DashboardChild {
+function normalizeChild(child: EnrollmentChild, templateMap: Map<string, FormTemplate>): DashboardChild {
   const formEntries = Object.entries(child.forms ?? {});
   const forms = formEntries.map(([rawTitle, rawStatus]) => {
     const template = templateMap.get(rawTitle.toLowerCase());
@@ -73,7 +65,7 @@ function normalizeChild(
   const totalForms = forms.length;
   const pendingForm = forms.find(form => !COMPLETION_STATUSES.has(form.status)) ?? null;
   const fallbackStatus = normalizeFormStatus(child.formStatus);
-  const enrollmentProgress = totalForms > 0 ? Math.round((completedCount / totalForms) * 100) : fallbackStatus === 'Approved' ? 100 : 0;
+  const enrollmentProgress = totalForms > 0 ? Math.round(completedCount / totalForms * 100) : fallbackStatus === 'Approved' ? 100 : 0;
   const currentStep = pendingForm?.title ?? (enrollmentProgress === 100 ? 'Enrollment complete' : 'Start enrollment');
   return {
     id: child.childId,
@@ -105,10 +97,7 @@ export function Dashboard() {
         if (!user.schoolId) {
           throw new Error('School context not available for the current user.');
         }
-        const [enrollmentChildren, formTemplates] = await Promise.all([
-          fetchEnrollmentChildren(user.schoolId),
-          fetchFormTemplates(user.schoolId)
-        ]);
+        const [enrollmentChildren, formTemplates] = await Promise.all([fetchEnrollmentChildren(user.schoolId), fetchFormTemplates(user.schoolId)]);
         const templatesForSchool = formTemplates.filter(template => !template.schoolId || template.schoolId === user.schoolId);
         const templateMap = new Map<string, FormTemplate>();
         templatesForSchool.forEach(template => {
@@ -169,10 +158,10 @@ export function Dashboard() {
       disabled: true
     }];
   }, [selectedChild]);
-  console.log('Processed children:', children)
-  console.log('Child specific forms:', childSpecificForms)
-  console.log('Family forms:', familyForms)
-  console.log('Selected child:', selectedChild)
+  console.log('Processed children:', children);
+  console.log('Child specific forms:', childSpecificForms);
+  console.log('Family forms:', familyForms);
+  console.log('Selected child:', selectedChild);
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -182,7 +171,7 @@ export function Dashboard() {
         {loading ? <div className="py-12 text-center text-muted-foreground">
             Loading parent dashboard...
           </div> : <>
-            <ChildSelector children={children} selectedChildId={selectedChildId ?? (children[0]?.id ?? '')} onSelectChild={setSelectedChildId} />
+            <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
             {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-2 space-y-6">
                   <div className="section-fade-in" style={{

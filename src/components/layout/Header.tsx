@@ -1,7 +1,6 @@
 import React from 'react';
 import { Bell, User, Shield } from 'lucide-react';
 import { Button } from '../ui/button';
-
 export function Header() {
   return <header className="bg-white shadow-sm border-b border-gray-100 py-4 px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2">

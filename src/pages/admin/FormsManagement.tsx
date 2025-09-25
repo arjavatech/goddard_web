@@ -11,7 +11,6 @@ import { Badge } from '../../components/ui/badge';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { fetchClassEnrollmentStats, deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
-
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -20,9 +19,6 @@ interface Form {
   status: FormStatus;
   classroomsCount: number;
 }
-
-
-
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
   if (value.includes('default')) return 'Default';
@@ -31,7 +27,6 @@ const mapStatus = (status: string | null | undefined): FormStatus => {
   if (value.includes('active')) return 'Active';
   return 'Active';
 };
-
 export function FormsManagement() {
   const [forms, setForms] = useState<Form[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -43,27 +38,21 @@ export function FormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
-
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const [templates, classStats] = await Promise.all([
-          fetchFormTemplates(user.schoolId).catch(() => []),
-          fetchClassEnrollmentStats(user.schoolId).catch(() => [])
-        ]);
+        const [templates, classStats] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
         if (templates.length === 0) return;
-
         const classCounts = new Map<string, number>();
         classStats.forEach(stat => {
           Object.keys(stat.forms).forEach(formId => {
             classCounts.set(formId, (classCounts.get(formId) ?? 0) + 1);
           });
         });
-
         const mappedForms: Form[] = templates.map(template => ({
           id: template.id,
           name: template.formName,
@@ -80,13 +69,11 @@ export function FormsManagement() {
       isMounted = false;
     };
   }, []);
-
   const filteredForms = useMemo(() => forms.filter(form => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
     return matchesSearch && matchesStatus;
   }), [forms, searchQuery, statusFilter]);
-
   const handleAddForm = async () => {
     if (formName.trim() && formLink.trim()) {
       try {
