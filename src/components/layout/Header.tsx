@@ -4,9 +4,9 @@ import { Button } from '../ui/button';
 export function Header() {
   return <header className="bg-white shadow-sm border-b border-gray-100 py-4 px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2">
-        <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 w-auto" />
+        <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
       </div>
-      <nav className="hidden md:flex items-center space-x-8">
+      {/* <nav className="hidden md:flex items-center space-x-8">
         <Button variant="link" className="font-medium text-amazon-teal">
           Dashboard
         </Button>
@@ -22,7 +22,7 @@ export function Header() {
         <Button variant="link" className="font-medium text-muted-foreground hover:text-foreground">
           Messages
         </Button>
-      </nav>
+      </nav> */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon" className="relative hover:bg-gray-50">
           <Bell size={20} className="two-tone-icon" />
