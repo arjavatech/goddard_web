@@ -1,5 +1,6 @@
 import { authedFetch, z } from './common';
 export type EnrollmentChild = {
+  dob: string | null | undefined;
   childId: string;
   firstName: string;
   lastName: string;
@@ -42,7 +43,8 @@ export async function fetchEnrollmentChildren(schoolId: string): Promise<Enrollm
     }
     const data = await authedFetch({
       method: 'GET',
-      url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+      // url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+      url: `/enrollments/children-forms`
     }, z.any());
     console.log('Raw enrollment children response:', data);
 
@@ -81,6 +83,7 @@ export async function fetchEnrollmentChildren(schoolId: string): Promise<Enrollm
         childId: validChild.child_id,
         firstName,
         lastName,
+        dob: validChild.child_dob ?? null,
         className: validChild.classroom_name ?? null,
         formStatus: null,
         forms: formsObject,
@@ -109,7 +112,7 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
     }
     const data = await authedFetch({
       method: 'GET',
-      url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
+      url: `/form-templates?school_id=552f99ff-4a34-db78-6f16-32a5fb72bedc`
     }, z.any());
     console.log('Raw form templates response:', data);
 

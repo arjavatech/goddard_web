@@ -13,10 +13,31 @@ import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSingleParent, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
-import { fetchFormTemplates } from '../../services/api/dashboard';
+import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
 import { reviewForm, updateFormStatus } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
+
+interface FormTemplate {
+  id: string;
+  formName?: string;
+  form_name?: string;
+  formType?: string;
+  form_type?: string;
+  createdAt?: string;
+  created_at?: string;
+  filloutFormUrl?: string;
+  fillout_form_url?: string;
+}
+
+interface DirectFormData {
+  id: string;
+  form_name: string;
+  form_type: string;
+  fillout_form_url: string;
+  created_at: string;
+}
 interface Form {
   id: string;
   title: string;
@@ -100,10 +121,12 @@ export function ParentDetails() {
         setError(null);
         const user = await fetchUserContext();
         if (!user.schoolId || !parentId) return;
-        // Use passed parent data if available, otherwise fetch from API
-        let parentRecord = null;
-        if (passedParentData) {
-          // Convert passed parent data to expected format
+        // Always fetch from parent details API which has the forms data
+        const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
+        let parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
+        
+        // If not found in parent details, use passed data as fallback
+        if (!parentRecord && passedParentData) {
           parentRecord = {
             parentId: passedParentData.id,
             email: passedParentData.email,
@@ -121,129 +144,104 @@ export function ParentDetails() {
               forms: []
             }))
           };
-        } else {
-          // Fallback to API fetch
-          parentRecord = await fetchSingleParent(parentId, user.schoolId).catch(() => null);
-          if (!parentRecord) {
-            const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
-            parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
-          }
         }
         if (!parentRecord) {
           console.warn('Parent not found:', parentId);
           return;
         }
-        const [enrollments, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => [])]);
+        const [enrollments, classrooms, templates, enrollmentChildren] = await Promise.all([
+          fetchSchoolEnrollments(user.schoolId).catch(() => []), 
+          fetchClassrooms(user.schoolId).catch(() => []), 
+          fetchFormTemplates(user.schoolId).catch(() => []),
+          fetchEnrollmentChildren(user.schoolId).catch(() => [])
+        ]);
+        
+        console.log('Enrollment children data:', enrollmentChildren);
+        
         if (!isMounted) return;
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
           id: cls.id,
           name: cls.name
         }]));
         const templateById = new Map(templates.map(template => [template.id, template]));
-        const childEntries = enrollments.filter(child => {
-          console.log("Child : ", child);
-          const emails = [child.primaryEmail, child.additionalParentEmail].filter((email): email is string => Boolean(email)).map(email => email.toLowerCase());
-          const isMatch = emails.includes(parentRecord.email.toLowerCase());
-          console.log('Child email match check:', {
-            childEmails: emails,
-            parentEmail: parentRecord.email.toLowerCase(),
-            isMatch
-          });
-          return isMatch;
-        }).map(child => {
-          const formsArray: Form[] = Object.entries(child.forms).map(([formId, status]) => {
-            const template = templateById.get(formId);
-            return {
-              id: formId,
-              title: template?.formName ?? formId,
-              description: template?.formType ?? 'Enrollment form',
-              lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
-              status: mapToFormStatus(status),
-              link: template?.filloutFormUrl ?? '#'
-            } satisfies Form;
-          });
+        console.log('Templates available:', templates);
+        console.log('Enrollments data:', enrollments);
+        console.log('Enrollment children:', enrollmentChildren);
+        
+        // Process children directly from parent record which has forms data
+        const processedChildren = parentRecord.children?.map((child: any) => {
+          console.log('Processing child forms for:', child.childFullName);
+          console.log('Child forms data:', child.forms);
+          
+          let formsArray: Form[] = [];
+          
+          // Only use the child's specific forms array - no fallback to templates
+          if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
+            formsArray = child.forms.map((form: any) => {
+              // Find template by matching form ID or name
+              const template = templates.find(t => 
+                t.id === form.form_id ||
+                t.formName === form.form_name ||
+                (t as any).form_name === form.form_name
+              );
+              
+              console.log('Form mapping:', { form, template });
+              
+              return {
+                id: form.form_id,
+                title: form.form_name,
+                description: template?.formType || (template as any)?.form_type || 'Enrollment form',
+                lastUpdated: template?.createdAt ? 
+                  new Date(template.createdAt).toLocaleDateString() : '—',
+                status: mapToFormStatus(form.status),
+                link: template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
+              } satisfies Form;
+            });
+          }
+          
+          console.log('Processed forms array:', formsArray);
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
           const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
-          const classroomInfo = classroomByName.get((child.className ?? 'Unassigned').toLowerCase()) ?? {
-            id: child.className ?? 'Unassigned',
-            name: child.className ?? 'Unassigned'
+          const classroomInfo = classroomByName.get((child.classroomName ?? 'Unassigned').toLowerCase()) ?? {
+            id: child.classroomId ?? 'Unassigned',
+            name: child.classroomName ?? 'Unassigned'
           };
+          
+          const [firstName, ...lastNameParts] = child.childFullName.split(' ');
+          
           return {
             id: child.childId,
-            firstName: child.firstName,
-            lastName: child.lastName,
-            dob: '—',
+            firstName: firstName || 'Unknown',
+            lastName: lastNameParts.join(' ') || 'Child',
+            dob: child.childDob || '—',
             classroom: classroomInfo,
             forms: formsArray,
             enrollmentProgress: progress
           } satisfies ChildInfo;
-        });
-        const familyFormMap = new Map<string, Form>();
-        childEntries.forEach(child => {
-          child.forms.forEach(form => {
-            if (!familyFormMap.has(form.id) || form.status !== 'Approved') {
-              familyFormMap.set(form.id, form);
-            }
+        }) || [];
+        
+        // Create family forms from all unique forms across children
+        const allForms = new Map<string, Form>();
+        processedChildren.forEach((child: ChildInfo) => {
+          child.forms.forEach((form: Form) => {
+            allForms.set(form.id, form);
           });
         });
-
-        // Process children from passed data or API data
-        let processedChildren: ChildInfo[] = [];
-        if (passedParentData && parentRecord.children) {
-          // Use passed parent data children and try to match with enrollment forms
-          processedChildren = parentRecord.children.map((child: any) => {
-            // Try to find matching enrollment data for this child
-            const matchingEnrollment = enrollments.find(enrollment => enrollment.childId === child.childId || enrollment.firstName === child.childFullName.split(' ')[0] && enrollment.lastName === child.childFullName.split(' ').slice(1).join(' '));
-            let childForms: Form[] = [];
-            let progress = 0;
-            if (matchingEnrollment) {
-              // Use real form data if available
-              childForms = Object.entries(matchingEnrollment.forms).map(([formId, status]) => {
-                const template = templateById.get(formId);
-                return {
-                  id: formId,
-                  title: template?.formName ?? formId,
-                  description: template?.formType ?? 'Enrollment form',
-                  lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
-                  status: mapToFormStatus(status),
-                  link: template?.filloutFormUrl ?? '#'
-                };
-              });
-              const completed = childForms.filter(form => COMPLETION_STATUSES.has(form.status)).length;
-              progress = childForms.length > 0 ? Math.round(completed / childForms.length * 100) : 0;
-            } else {
-              // No forms if no enrollment data found
-              childForms = [];
-              progress = 0;
-            }
-            return {
-              id: child.childId,
-              firstName: child.childFullName.split(' ')[0] || 'Unknown',
-              lastName: child.childFullName.split(' ').slice(1).join(' ') || 'Child',
-              dob: child.childDob || '—',
-              classroom: {
-                id: child.classroomId || 'unassigned',
-                name: child.classroomName || 'Unassigned'
-              },
-              forms: childForms,
-              enrollmentProgress: progress
-            };
-          });
-        } else if (childEntries.length > 0) {
-          processedChildren = childEntries;
-        } else {
-          processedChildren = [];
-        }
         const friendly = makeFriendlyName(parentRecord.email);
-        setParent({
+        const finalParentData = {
           id: parentRecord.parentId,
           firstName: parentRecord.firstName || friendly.first,
           lastName: parentRecord.lastName || friendly.last,
           email: parentRecord.email,
           phone: '—',
           children: processedChildren,
-          familyForms: Array.from(familyFormMap.values())
-        });
+          familyForms: Array.from(allForms.values())
+        };
+        
+        console.log('Final parent data being set:', finalParentData);
+        console.log('Processed children:', processedChildren);
+        
+        setParent(finalParentData);
         if (processedChildren.length > 0) {
           setSelectedChildId(processedChildren[0].id);
         }
@@ -436,6 +434,9 @@ export function ParentDetails() {
                           <div className="text-sm text-muted-foreground">
                             Classroom: {child.classroom.name}
                           </div>
+                          <div className="text-xs text-muted-foreground">
+                            DOB: {child.dob}
+                          </div>
                         </div>
                         <Badge variant={child.enrollmentProgress === 100 ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}>
                           {child.enrollmentProgress}%
@@ -466,109 +467,6 @@ export function ParentDetails() {
             </CardContent>
           </Card>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Card className="glass-card">
-              <CardHeader className="flex items-center justify-between">
-                <CardTitle>Enrollment Progress</CardTitle>
-                <Button variant="outline" size="sm">
-                  <ChevronRight className="h-4 w-4 mr-1" />
-                  View Timeline
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Current Child</p>
-                    <p className="text-lg font-semibold">
-                      {selectedChild?.firstName} {selectedChild?.lastName}
-                    </p>
-                  </div>
-                  <Badge variant={selectedChild?.enrollmentProgress === 100 ? 'success' : 'secondary'}>
-                    {selectedChild?.enrollmentProgress}% Complete
-                  </Badge>
-                </div>
-                <Progress value={selectedChild?.enrollmentProgress ?? 0} className="h-2" />
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card className="bg-white/60">
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">
-                        Current Classroom
-                      </div>
-                      <div className="text-sm font-semibold">
-                        {selectedChild?.classroom.name}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-white/60">
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">
-                        Required Forms
-                      </div>
-                      <div className="text-sm font-semibold">
-                        {selectedChild?.forms.length ?? 0}
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card className="bg-white/60">
-                    <CardContent className="p-4">
-                      <div className="text-xs text-muted-foreground">
-                        Completed Forms
-                      </div>
-                      <div className="text-sm font-semibold">
-                        {selectedChild ? selectedChild.forms.filter(form => COMPLETION_STATUSES.has(form.status)).length : 0}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Family Forms</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {parent.familyForms.map(form => <div key={form.id} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-100">
-                    <div>
-                      <h3 className="font-medium">{form.title}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Last updated: {form.lastUpdated}
-                      </p>
-                    </div>
-                    <StatusBadge status={form.status} />
-                  </div>)}
-              </CardContent>
-            </Card>
-          </div>
-          <div className="space-y-6">
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-4 w-4 text-green-500" />
-                  Enrollment packet approved (placeholder)
-                </div>
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4 text-amber-500" />
-                  Awaiting API activity feed
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle>Contact Log</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  No logged interactions yet.
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
         <Card className="glass-card">
           <CardHeader>
             <CardTitle>Child Forms</CardTitle>
@@ -581,51 +479,88 @@ export function ParentDetails() {
                   </TabsTrigger>)}
               </TabsList>
               {parent.children.map(child => <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
-                  {child.forms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="flex items-center">
-                            <FileText className="h-5 w-5 mr-2 text-amazon-teal" />
-                            <h3 className="font-medium">{form.title}</h3>
+                  {child.forms && child.forms.length > 0 ? (
+                    child.forms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center">
+                              <FileText className="h-5 w-5 mr-2 text-amazon-teal" />
+                              <h3 className="font-medium">{form.title}</h3>
+                            </div>
+                            <StatusBadge status={form.status} />
+                            <p className="text-sm text-gray-600 mt-1">
+                              {form.description}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Last updated: {form.lastUpdated}
+                            </p>
                           </div>
-                          <StatusBadge status={form.status} />
-                          <p className="text-sm text-gray-600 mt-1">
-                            {form.description}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-2">
-                            Last updated: {form.lastUpdated}
-                          </p>
+                          <div className="flex space-x-2">
+                            <Button variant="outline" size="sm" onClick={() => openViewFormDialog(form)}>
+                              <Eye className="h-4 w-4 mr-1" />
+                              View Form
+                            </Button>
+                            {form.status === 'Submitted' && (
+                              <>
+                                <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
+                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                  Approve
+                                </Button>
+                                <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => openReviewDialog(form, 'reject')}>
+                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                  Revise
+                                </Button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex space-x-2">
-                          <Button variant="outline" size="sm" onClick={() => openViewFormDialog(form)}>
-                            <Eye className="h-4 w-4 mr-1" />
-                            View
-                          </Button>
-                          {form.status === 'Submitted' && <>
-                              <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
-                                <CheckCircle className="h-4 w-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => openReviewDialog(form, 'reject')}>
-                                <AlertCircle className="h-4 w-4 mr-1" />
-                                Request Revision
-                              </Button>
-                            </>}
-                        </div>
-                      </div>
-                    </div>)}
+                      </div>)
+                  ) : (
+                    <div className="border border-gray-100 rounded-lg p-8 bg-white text-center">
+                      <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                      <h3 className="font-medium text-gray-900 mb-2">No Forms Available</h3>
+                      <p className="text-sm text-gray-500">
+                        No enrollment forms have been assigned to {child.firstName} {child.lastName} yet.
+                      </p>
+                    </div>
+                  )}
                 </TabsContent>)}
             </Tabs>
           </CardContent>
         </Card>
       </div>
       <Dialog open={isViewFormDialogOpen} onOpenChange={setIsViewFormDialogOpen}>
-        <DialogContent className="max-w-4xl h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>{selectedForm?.title}</DialogTitle>
+        <DialogContent className="max-w-6xl h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-0">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-xl">{selectedForm?.title}</DialogTitle>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  {selectedForm && <StatusBadge status={selectedForm.status} />}
+                </div>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
-            {selectedForm && <iframe src={selectedForm.link} className="w-full h-full border-0" title={selectedForm.title} />}
+          <div className="flex-1 p-6 pt-4">
+            {selectedForm && selectedForm.link && selectedForm.link !== '#' ? (
+              <div className="w-full h-full border rounded-lg overflow-hidden bg-white">
+                <iframe 
+                  src={selectedForm.link} 
+                  className="w-full h-full border-0" 
+                  title={selectedForm.title}
+                  style={{ minHeight: '600px' }}
+                />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-96 border rounded-lg bg-gray-50">
+                <div className="text-center">
+                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                  <h3 className="font-medium text-gray-900 mb-2">Form Not Available</h3>
+                  <p className="text-sm text-gray-500">This form link is not available yet.</p>
+                </div>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <div className="flex justify-between w-full">
@@ -650,10 +585,10 @@ export function ParentDetails() {
                       Request Revision
                     </Button>
                   </>}
-                <Button onClick={() => setIsViewFormDialogOpen(false)}>
-                  Close
-                </Button>
               </div>
+              <Button variant="outline" onClick={() => setIsViewFormDialogOpen(false)}>
+                Close
+              </Button>
             </div>
           </DialogFooter>
         </DialogContent>

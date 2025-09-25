@@ -100,7 +100,9 @@ export function ParentManagement() {
                 }
               };
             }) || [];
-            const hasCompletedForms = detail.children?.some(child => child.forms.some(form => form.status === 'completed')) || false;
+            const hasCompletedForms = detail.children?.some(child => 
+              Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')
+            ) || false;
             return {
               id: detail.parentId,
               firstName,

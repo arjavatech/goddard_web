@@ -69,7 +69,7 @@ export function FormsManagement() {
       isMounted = false;
     };
   }, []);
-  const filteredForms = useMemo(() => forms.filter(form => {
+  const filteredForms = useMemo(() => forms.filter((form: Form) => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
     return matchesSearch && matchesStatus;
@@ -101,7 +101,7 @@ export function FormsManagement() {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId);
-        setForms(forms.map(form => form.id === selectedForm.id ? {
+        setForms(forms.map((form: Form) => form.id === selectedForm.id ? {
           ...form,
           name: formName.trim(),
           link: formLink.trim(),
@@ -122,7 +122,7 @@ export function FormsManagement() {
         console.error('Failed to delete form:', error);
       }
       // Remove from local state regardless of API success
-      setForms(forms.filter(form => form.id !== selectedForm.id));
+      setForms(forms.filter((form: Form) => form.id !== selectedForm.id));
       setIsDeleteDialogOpen(false);
     }
   };
@@ -158,7 +158,7 @@ export function FormsManagement() {
   };
   const statuses = useMemo(() => {
     const unique = new Set<FormStatus>();
-    forms.forEach(form => unique.add(form.status));
+    forms.forEach((form: Form) => unique.add(form.status));
     return Array.from(unique);
   }, [forms]);
   return <AdminLayout>

@@ -72,7 +72,7 @@ function normalizeChild(child: EnrollmentChild, templateMap: Map<string, FormTem
     name: `${child.firstName} ${child.lastName}`.trim(),
     initials: getInitials(child.firstName, child.lastName),
     age: '—',
-    dob: '—',
+    dob: formatDate(child.dob) || '—',
     enrollmentProgress,
     formsCompleted: completedCount,
     totalForms,
