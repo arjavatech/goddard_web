@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, useState, Children } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, ChevronRight, Eye, Users } from 'lucide-react';
+import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
-import { Progress } from '../../components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Link, useParams, useLocation } from 'react-router-dom';
@@ -12,29 +11,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchSingleParent, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
+import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
-import { reviewForm, updateFormStatus } from '../../services/api/forms';
+import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
-interface FormTemplate {
-  id: string;
-  formName?: string;
-  form_name?: string;
-  formType?: string;
-  form_type?: string;
-  createdAt?: string;
-  created_at?: string;
-  filloutFormUrl?: string;
-  fillout_form_url?: string;
-}
-interface DirectFormData {
-  id: string;
-  form_name: string;
-  form_type: string;
-  fillout_form_url: string;
-  created_at: string;
-}
 interface Form {
   id: string;
   title: string;
@@ -144,31 +125,20 @@ export function ParentDetails() {
           console.warn('Parent not found:', parentId);
           return;
         }
-        const [enrollments, classrooms, templates, enrollmentChildren] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
-        console.log('Enrollment children data:', enrollmentChildren);
+        const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
           id: cls.id,
           name: cls.name
         }]));
-        const templateById = new Map(templates.map(template => [template.id, template]));
-        console.log('Templates available:', templates);
-        console.log('Enrollments data:', enrollments);
-        console.log('Enrollment children:', enrollmentChildren);
         // Process children directly from parent record which has forms data
         const processedChildren = parentRecord.children?.map((child: any) => {
-          console.log('Processing child forms for:', child.childFullName);
-          console.log('Child forms data:', child.forms);
           let formsArray: Form[] = [];
           // Only use the child's specific forms array - no fallback to templates
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
               // Find template by matching form ID or name
               const template = templates.find(t => t.id === form.form_id || t.formName === form.form_name || (t as any).form_name === form.form_name);
-              console.log('Form mapping:', {
-                form,
-                template
-              });
               return {
                 id: form.form_id,
                 title: form.form_name,
@@ -179,7 +149,6 @@ export function ParentDetails() {
               } satisfies Form;
             });
           }
-          console.log('Processed forms array:', formsArray);
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
           const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
           const classroomInfo = classroomByName.get((child.classroomName ?? 'Unassigned').toLowerCase()) ?? {
@@ -214,8 +183,6 @@ export function ParentDetails() {
           children: processedChildren,
           familyForms: Array.from(allForms.values())
         };
-        console.log('Final parent data being set:', finalParentData);
-        console.log('Processed children:', processedChildren);
         setParent(finalParentData);
         if (processedChildren.length > 0) {
           setSelectedChildId(processedChildren[0].id);
@@ -302,8 +269,6 @@ export function ParentDetails() {
     }
     setIsReviewDialogOpen(false);
   };
-  console.log('ParentDetails - final parent state:', parent);
-  console.log('ParentDetails - selectedChild:', selectedChild);
   if (!parent) {
     return <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">

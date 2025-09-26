@@ -1,39 +1,18 @@
-import React, { useMemo } from 'react';
-import { useLocation, useParams, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
-import { ArrowLeft, FileText, Calendar, User, School } from 'lucide-react';
+import { Calendar, User, School, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    formId
-  } = useParams();
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
-  const childId = location.state?.childId;
   const childName = location.state?.childName;
-  const parentId = location.state?.parentId;
-  const parentName = location.state?.parentName || 'Parent';
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
-  // Extract the formId from the URL if present
-  const filloutFormId = useMemo(() => {
-    if (!formData?.link || formData.link === '#') return null;
-    try {
-      // Try to extract formId from URL patterns like:
-      // https://fillout.com/fill/formId
-      // https://app.fillout.com/t/formId
-      const url = new URL(formData.link);
-      const pathParts = url.pathname.split('/');
-      return pathParts[pathParts.length - 1] || null;
-    } catch (e) {
-      console.error('Failed to parse form URL:', e);
-      return null;
-    }
-  }, [formData?.link]);
   // Handle back button click
   const handleBack = () => {
     navigate(returnPath);
@@ -42,9 +21,8 @@ export function FormView() {
     return <AdminLayout>
         <div className="space-y-6">
           <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+            <Button variant="outline" onClick={handleBack} size="icon">
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <h1 className="text-2xl font-bold">Form Not Found</h1>
           </div>
@@ -65,9 +43,8 @@ export function FormView() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleBack}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+            <Button variant="outline" onClick={handleBack} size="icon">
+              <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="flex items-center">
               {childName && <div className="flex items-center text-gray-600 mr-4">
