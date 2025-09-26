@@ -4,6 +4,7 @@ import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
+import { fetchUserContext } from '../services/api/user';
 type LocationState = {
   from?: {
     pathname?: string;
@@ -25,7 +26,22 @@ export function Login() {
     e.preventDefault();
     try {
       await signInWithPassword(formData.email, formData.password);
-      const redirectTo = location.state?.from?.pathname ?? '/';
+
+      // Fetch user context to determine role-based redirect
+      const userContext = await fetchUserContext();
+      console.log('User context fetched:', userContext);
+      console.log('User role:', userContext.role);
+
+      let redirectTo = location.state?.from?.pathname;
+      console.log('Location state redirect:', redirectTo);
+
+      // If no specific redirect path, use role-based default
+      if (!redirectTo) {
+        redirectTo = userContext.role === 'Admin' ? '/admin' : '/';
+        console.log('Role-based redirect path:', redirectTo);
+      }
+
+      console.log('Final redirect path:', redirectTo);
       navigate(redirectTo, {
         replace: true
       });
