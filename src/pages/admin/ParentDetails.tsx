@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Children } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -16,9 +16,7 @@ import { fetchParentDetails, fetchSingleParent, fetchSchoolEnrollments, fetchCla
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
 import { reviewForm, updateFormStatus } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
-
 interface FormTemplate {
   id: string;
   formName?: string;
@@ -30,7 +28,6 @@ interface FormTemplate {
   filloutFormUrl?: string;
   fillout_form_url?: string;
 }
-
 interface DirectFormData {
   id: string;
   form_name: string;
@@ -102,7 +99,6 @@ export function ParentDetails() {
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
-  const [isViewFormDialogOpen, setIsViewFormDialogOpen] = useState(false);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -124,7 +120,6 @@ export function ParentDetails() {
         // Always fetch from parent details API which has the forms data
         const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
         let parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
-        
         // If not found in parent details, use passed data as fallback
         if (!parentRecord && passedParentData) {
           parentRecord = {
@@ -149,15 +144,8 @@ export function ParentDetails() {
           console.warn('Parent not found:', parentId);
           return;
         }
-        const [enrollments, classrooms, templates, enrollmentChildren] = await Promise.all([
-          fetchSchoolEnrollments(user.schoolId).catch(() => []), 
-          fetchClassrooms(user.schoolId).catch(() => []), 
-          fetchFormTemplates(user.schoolId).catch(() => []),
-          fetchEnrollmentChildren(user.schoolId).catch(() => [])
-        ]);
-        
+        const [enrollments, classrooms, templates, enrollmentChildren] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
         console.log('Enrollment children data:', enrollmentChildren);
-        
         if (!isMounted) return;
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
           id: cls.id,
@@ -167,38 +155,30 @@ export function ParentDetails() {
         console.log('Templates available:', templates);
         console.log('Enrollments data:', enrollments);
         console.log('Enrollment children:', enrollmentChildren);
-        
         // Process children directly from parent record which has forms data
         const processedChildren = parentRecord.children?.map((child: any) => {
           console.log('Processing child forms for:', child.childFullName);
           console.log('Child forms data:', child.forms);
-          
           let formsArray: Form[] = [];
-          
           // Only use the child's specific forms array - no fallback to templates
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
               // Find template by matching form ID or name
-              const template = templates.find(t => 
-                t.id === form.form_id ||
-                t.formName === form.form_name ||
-                (t as any).form_name === form.form_name
-              );
-              
-              console.log('Form mapping:', { form, template });
-              
+              const template = templates.find(t => t.id === form.form_id || t.formName === form.form_name || (t as any).form_name === form.form_name);
+              console.log('Form mapping:', {
+                form,
+                template
+              });
               return {
                 id: form.form_id,
                 title: form.form_name,
                 description: template?.formType || (template as any)?.form_type || 'Enrollment form',
-                lastUpdated: template?.createdAt ? 
-                  new Date(template.createdAt).toLocaleDateString() : '—',
+                lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
                 status: mapToFormStatus(form.status),
                 link: template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
               } satisfies Form;
             });
           }
-          
           console.log('Processed forms array:', formsArray);
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
           const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
@@ -206,9 +186,7 @@ export function ParentDetails() {
             id: child.classroomId ?? 'Unassigned',
             name: child.classroomName ?? 'Unassigned'
           };
-          
           const [firstName, ...lastNameParts] = child.childFullName.split(' ');
-          
           return {
             id: child.childId,
             firstName: firstName || 'Unknown',
@@ -219,7 +197,6 @@ export function ParentDetails() {
             enrollmentProgress: progress
           } satisfies ChildInfo;
         }) || [];
-        
         // Create family forms from all unique forms across children
         const allForms = new Map<string, Form>();
         processedChildren.forEach((child: ChildInfo) => {
@@ -237,10 +214,8 @@ export function ParentDetails() {
           children: processedChildren,
           familyForms: Array.from(allForms.values())
         };
-        
         console.log('Final parent data being set:', finalParentData);
         console.log('Processed children:', processedChildren);
-        
         setParent(finalParentData);
         if (processedChildren.length > 0) {
           setSelectedChildId(processedChildren[0].id);
@@ -266,10 +241,6 @@ export function ParentDetails() {
     };
   }, [parentId]);
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
-  const openViewFormDialog = (form: Form) => {
-    setSelectedForm(form);
-    setIsViewFormDialogOpen(true);
-  };
   const openReviewDialog = (form: Form, action: 'approve' | 'reject') => {
     setSelectedForm(form);
     setFormAction(action);
@@ -330,7 +301,6 @@ export function ParentDetails() {
       setIsReviewing(false);
     }
     setIsReviewDialogOpen(false);
-    setIsViewFormDialogOpen(false);
   };
   console.log('ParentDetails - final parent state:', parent);
   console.log('ParentDetails - selectedChild:', selectedChild);
@@ -340,7 +310,9 @@ export function ParentDetails() {
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">Parent Not Found</h2>
-            <p className="text-muted-foreground mb-4">The requested parent could not be found.</p>
+            <p className="text-muted-foreground mb-4">
+              The requested parent could not be found.
+            </p>
             <Link to="/admin/parents">
               <Button variant="outline">Back to Parents</Button>
             </Link>
@@ -363,7 +335,9 @@ export function ParentDetails() {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
             <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-            <h2 className="text-lg font-semibold mb-2">Error Loading Parent Details</h2>
+            <h2 className="text-lg font-semibold mb-2">
+              Error Loading Parent Details
+            </h2>
             <p className="text-muted-foreground mb-4">{error}</p>
             <Button onClick={() => window.location.reload()} variant="outline">
               Try Again
@@ -414,7 +388,8 @@ export function ParentDetails() {
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <Users className="h-4 w-4" />
-                      {parent.children.length} child{parent.children.length === 1 ? '' : 'ren'}
+                      {parent.children.length} child
+                      {parent.children.length === 1 ? '' : 'ren'}
                     </span>
                     <span className="flex items-center gap-1">
                       <Calendar className="h-4 w-4" />
@@ -479,8 +454,7 @@ export function ParentDetails() {
                   </TabsTrigger>)}
               </TabsList>
               {parent.children.map(child => <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
-                  {child.forms && child.forms.length > 0 ? (
-                    child.forms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
+                  {child.forms && child.forms.length > 0 ? child.forms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="flex items-center">
@@ -496,12 +470,19 @@ export function ParentDetails() {
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            <Button variant="outline" size="sm" onClick={() => openViewFormDialog(form)}>
-                              <Eye className="h-4 w-4 mr-1" />
-                              View Form
-                            </Button>
-                            {form.status === 'Submitted' && (
-                              <>
+                            <Link to={`/admin/forms/view/${form.id}`} state={{
+                      form,
+                      childId: selectedChild?.id,
+                      childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
+                      parentId: parent.id,
+                      returnPath: `/admin/parents/${parentId}`
+                    }}>
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View Form
+                              </Button>
+                            </Link>
+                            {form.status === 'Submitted' && <>
                                 <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
                                   <CheckCircle className="h-4 w-4 mr-1" />
                                   Approve
@@ -510,89 +491,24 @@ export function ParentDetails() {
                                   <AlertCircle className="h-4 w-4 mr-1" />
                                   Revise
                                 </Button>
-                              </>
-                            )}
+                              </>}
                           </div>
                         </div>
-                      </div>)
-                  ) : (
-                    <div className="border border-gray-100 rounded-lg p-8 bg-white text-center">
+                      </div>) : <div className="border border-gray-100 rounded-lg p-8 bg-white text-center">
                       <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                      <h3 className="font-medium text-gray-900 mb-2">No Forms Available</h3>
+                      <h3 className="font-medium text-gray-900 mb-2">
+                        No Forms Available
+                      </h3>
                       <p className="text-sm text-gray-500">
-                        No enrollment forms have been assigned to {child.firstName} {child.lastName} yet.
+                        No enrollment forms have been assigned to{' '}
+                        {child.firstName} {child.lastName} yet.
                       </p>
-                    </div>
-                  )}
+                    </div>}
                 </TabsContent>)}
             </Tabs>
           </CardContent>
         </Card>
       </div>
-      <Dialog open={isViewFormDialogOpen} onOpenChange={setIsViewFormDialogOpen}>
-        <DialogContent className="max-w-6xl h-[90vh] p-0">
-          <DialogHeader className="p-6 pb-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-xl">{selectedForm?.title}</DialogTitle>
-                <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
-                  {selectedForm && <StatusBadge status={selectedForm.status} />}
-                </div>
-              </div>
-            </div>
-          </DialogHeader>
-          <div className="flex-1 p-6 pt-4">
-            {selectedForm && selectedForm.link && selectedForm.link !== '#' ? (
-              <div className="w-full h-full border rounded-lg overflow-hidden bg-white">
-                <iframe 
-                  src={selectedForm.link} 
-                  className="w-full h-full border-0" 
-                  title={selectedForm.title}
-                  style={{ minHeight: '600px' }}
-                />
-              </div>
-            ) : (
-              <div className="flex items-center justify-center h-96 border rounded-lg bg-gray-50">
-                <div className="text-center">
-                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="font-medium text-gray-900 mb-2">Form Not Available</h3>
-                  <p className="text-sm text-gray-500">This form link is not available yet.</p>
-                </div>
-              </div>
-            )}
-          </div>
-          <DialogFooter>
-            <div className="flex justify-between w-full">
-              <div className="flex items-center">
-                <span className="mr-2">Status:</span>
-                {selectedForm && <StatusBadge status={selectedForm.status} />}
-              </div>
-              <div className="flex space-x-2">
-                {selectedForm?.status === 'Submitted' && <>
-                    <Button variant="outline" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
-                  setIsViewFormDialogOpen(false);
-                  openReviewDialog(selectedForm, 'approve');
-                }}>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Confirm Approval
-                    </Button>
-                    <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => {
-                  setIsViewFormDialogOpen(false);
-                  openReviewDialog(selectedForm, 'reject');
-                }}>
-                      <AlertCircle className="h-4 w-4 mr-2" />
-                      Request Revision
-                    </Button>
-                  </>}
-              </div>
-              <Button variant="outline" onClick={() => setIsViewFormDialogOpen(false)}>
-                Close
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -615,9 +531,13 @@ export function ParentDetails() {
               <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} className={`w-full ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:border-red-500' : ''}`} rows={4} maxLength={500} />
               <div className="flex justify-between mt-1">
                 <div>
-                  {formAction === 'reject' && !reviewNotes.trim() && <p className="text-sm text-red-500">Revision notes are required</p>}
+                  {formAction === 'reject' && !reviewNotes.trim() && <p className="text-sm text-red-500">
+                      Revision notes are required
+                    </p>}
                 </div>
-                <p className="text-xs text-gray-500">{reviewNotes.length}/500</p>
+                <p className="text-xs text-gray-500">
+                  {reviewNotes.length}/500
+                </p>
               </div>
             </div>
             <div className={`p-3 rounded-md border ${formAction === 'approve' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
@@ -625,7 +545,8 @@ export function ParentDetails() {
                 {formAction === 'approve' ? '✓ This will approve the form and notify the parent via email.' : '⚠ This will request revisions and notify the parent of required changes.'}
               </p>
               {formAction === 'approve' && <p className="text-xs text-gray-600 mt-1">
-                  The parent will receive a confirmation email and can proceed with enrollment.
+                  The parent will receive a confirmation email and can proceed
+                  with enrollment.
                 </p>}
             </div>
           </div>

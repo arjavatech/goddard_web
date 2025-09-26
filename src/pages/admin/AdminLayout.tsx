@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import React from 'react';
 import { Home, School, FileText, Users, Bell, LogOut, GraduationCap } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -50,7 +50,7 @@ export function AdminLayout({
       <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center space-x-1">
-            <img src="/images/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0" />
+            <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0" />
           </div>
         </div>
         <nav className="flex-1 p-4">

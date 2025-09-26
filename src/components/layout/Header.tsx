@@ -22,7 +22,7 @@ export function Header() {
         <Button variant="link" className="font-medium text-muted-foreground hover:text-foreground">
           Messages
         </Button>
-      </nav> */}
+       </nav> */}
       <div className="flex items-center space-x-4">
         <Button variant="ghost" size="icon" className="relative hover:bg-gray-50">
           <Bell size={20} className="two-tone-icon" />

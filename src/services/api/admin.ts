@@ -435,7 +435,7 @@ export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollm
     console.log('Fetching children forms for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
-      url:`/enrollments/children-forms`
+      url: `/enrollments/children-forms`
       // url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     console.log('Raw children forms response:', data);
