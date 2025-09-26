@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useLocation, useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
-import { ArrowLeft, FileText } from 'lucide-react';
+import { ArrowLeft, FileText, Calendar, User, School } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 export function FormView() {
@@ -16,7 +16,24 @@ export function FormView() {
   const childId = location.state?.childId;
   const childName = location.state?.childName;
   const parentId = location.state?.parentId;
+  const parentName = location.state?.parentName || 'Parent';
+  const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
+  // Extract the formId from the URL if present
+  const filloutFormId = useMemo(() => {
+    if (!formData?.link || formData.link === '#') return null;
+    try {
+      // Try to extract formId from URL patterns like:
+      // https://fillout.com/fill/formId
+      // https://app.fillout.com/t/formId
+      const url = new URL(formData.link);
+      const pathParts = url.pathname.split('/');
+      return pathParts[pathParts.length - 1] || null;
+    } catch (e) {
+      console.error('Failed to parse form URL:', e);
+      return null;
+    }
+  }, [formData?.link]);
   // Handle back button click
   const handleBack = () => {
     navigate(returnPath);
@@ -46,32 +63,42 @@ export function FormView() {
   }
   return <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" onClick={handleBack}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">{formData.title}</h1>
-          <StatusBadge status={formData.status} />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Button variant="outline" onClick={handleBack}>
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back
+            </Button>
+            <div className="flex items-center">
+              {childName && <div className="flex items-center text-gray-600 mr-4">
+                  <User className="h-4 w-4 mr-2" />
+                  <span>{childName}</span>
+                  <span className="mx-1">•</span>
+                  <School className="h-4 w-4 mx-1" />
+                  <span>{classDetails}</span>
+                </div>}
+            </div>
+          </div>
+          <div className="flex flex-col items-end">
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Calendar className="h-4 w-4 mr-1" />
+              Last updated: {formData.lastUpdated}
+            </div>
+            <div className="mt-1">
+              <StatusBadge status={formData.status} />
+            </div>
+          </div>
         </div>
-        {childName && <div className="flex items-center mb-4 text-gray-600">
-            <FileText className="h-4 w-4 mr-2" />
-            <span>Form for: {childName}</span>
-          </div>}
         <Card className="glass-card">
           <CardContent className="p-6">
-            <div className="mb-4">
-              <p className="text-sm text-gray-600">{formData.description}</p>
-              <p className="text-xs text-gray-500 mt-2">
-                Last updated: {formData.lastUpdated}
-              </p>
+            <div className="mb-4 flex justify-between items-center">
+              <h2 className="text-xl font-bold">{formData.title}</h2>
             </div>
-            {/* Form container with fixed height */}
-            <div className="mt-6 h-[800px] border rounded-md overflow-hidden">
-              {formData.link && formData.link !== '#' ? <iframe src={formData.link} title={formData.title} className="w-full h-full border-0" style={{
-              width: '100%',
-              height: '100%'
-            }} /> : <div className="flex items-center justify-center h-full text-gray-500">
+            {/* Form container with full height */}
+            <div className="mt-6 h-[800px] rounded-md overflow-hidden">
+              {formData.link && formData.link !== '#' ?
+            // Use iframe approach for all forms
+            <iframe src={formData.link} title={formData.title} className="w-full h-full border-0" /> : <div className="flex items-center justify-center h-full text-gray-500">
                   Form URL not available
                 </div>}
             </div>

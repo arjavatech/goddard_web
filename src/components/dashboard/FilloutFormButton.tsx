@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '../ui/button';
 import { Dialog, DialogContent } from '../ui/dialog';
 import { ExternalLink } from 'lucide-react';
@@ -19,12 +19,6 @@ export function FilloutFormButton({
   autoOpen = false
 }: FilloutFormButtonProps) {
   const [isOpen, setIsOpen] = useState(autoOpen);
-  // Open the form dialog when component mounts if autoOpen is true
-  useEffect(() => {
-    if (autoOpen) {
-      setIsOpen(true);
-    }
-  }, [autoOpen]);
   return <>
       <Button variant={variant} size={size} className={className} onClick={() => setIsOpen(true)}>
         <ExternalLink className="h-4 w-4 mr-2" />

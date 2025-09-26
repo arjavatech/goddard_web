@@ -302,9 +302,11 @@ export function ParentManagement() {
                               {parent.lastName.charAt(0)}
                             </div>
                             <div>
-                              <div className="font-medium">
+                              <Link to={`/admin/parents/${parent.id}`} state={{
+                          parentData: parent
+                        }} className="font-medium text-amazon-teal hover:underline">
                                 {parent.firstName} {parent.lastName}
-                              </div>
+                              </Link>
                               <div className={`text-xs ${parent.status === 'Active' ? 'text-green-600' : 'text-gray-500'}`}>
                                 {parent.status === 'Active' ? 'Verified' : 'Archived'}
                               </div>

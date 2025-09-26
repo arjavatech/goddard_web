@@ -39,7 +39,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
     variant,
     size,
     className
-  }), 'hover:text-foreground')} ref={ref} {...props} />;
+  }), 'hover:text-foreground transition-all')} ref={ref} {...props} />;
 });
 Button.displayName = 'Button';
 // eslint-disable-next-line react-refresh/only-export-components
