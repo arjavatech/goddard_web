@@ -38,6 +38,7 @@ export type ParentDetail = {
       status: string;
       isRequired: boolean;
       filloutFormId: string;
+      studentFormAssignmentId: string;
     }[];
   }[];
 };
@@ -214,7 +215,8 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           formName: form.form_name || form.formName || '',
           status: form.status || 'In Progress',
           isRequired: form.is_required || form.isRequired || false,
-          filloutFormId: form.fillout_form_id || form.filloutFormId || ''
+          filloutFormId: form.fillout_form_id || form.filloutFormId || '',
+          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || ''
         }))
       }))
     }));
@@ -251,7 +253,8 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           formName: form.form_name || form.formName || '',
           status: form.status || 'In Progress',
           isRequired: form.is_required || form.isRequired || false,
-          filloutFormId: form.fillout_form_id || form.filloutFormId || ''
+          filloutFormId: form.fillout_form_id || form.filloutFormId || '',
+          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || ''
         }))
       }))
     };
