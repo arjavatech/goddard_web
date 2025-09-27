@@ -435,27 +435,19 @@ export function ParentDetails() {
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            {form.link && form.link !== '#' ? (
-                              <a href={form.link} target="_blank" rel="noopener noreferrer">
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View Form
-                                </Button>
-                              </a>
-                            ) : (
-                              <Link to={`/admin/forms/view/${form.id}`} state={{
-                        form,
-                        childId: selectedChild?.id,
-                        childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
-                        parentId: parent.id,
-                        returnPath: `/admin/parents/${parentId}`
-                      }}>
-                                <Button variant="outline" size="sm">
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  View Form
-                                </Button>
-                              </Link>
-                            )}
+                            <Link to={`/admin/forms/view/${form.id}`} state={{
+                      form,
+                      childId: selectedChild?.id,
+                      childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
+                      parentId: parent.id,
+                      returnPath: `/admin/parents/${parentId}`,
+                      filloutFormUrl: form.link
+                    }}>
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4 mr-1" />
+                                View Form
+                              </Button>
+                            </Link>
                             {form.status === 'Submitted' && <>
                                 <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
                                   <CheckCircle className="h-4 w-4 mr-1" />

@@ -13,6 +13,7 @@ export function FormView() {
   const childName = location.state?.childName;
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
+  const filloutFormUrl = location.state?.filloutFormUrl;
   // Handle back button click
   const handleBack = () => {
     navigate(returnPath);
@@ -73,9 +74,9 @@ export function FormView() {
             </div>
             {/* Form container with full height */}
             <div className="mt-6 h-[800px] rounded-md overflow-hidden">
-              {formData.link && formData.link !== '#' ?
-            // Use iframe approach for all forms
-            <iframe src={formData.link} title={formData.title} className="w-full h-full border-0" /> : <div className="flex items-center justify-center h-full text-gray-500">
+              {(filloutFormUrl && filloutFormUrl !== '#') || (formData.link && formData.link !== '#') ?
+            // Use iframe approach for all forms - prioritize filloutFormUrl from API
+            <iframe src={filloutFormUrl || formData.link} title={formData.title} className="w-full h-full border-0" /> : <div className="flex items-center justify-center h-full text-gray-500">
                   Form URL not available
                 </div>}
             </div>
