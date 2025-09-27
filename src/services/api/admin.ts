@@ -183,8 +183,7 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
     console.log('Fetching parent details for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
-      // url: `/parents/details?school_id=${encodeURIComponent(schoolId)}`
-      url: `/parents/details?school_id=1504cb85-749f-8e81-7334-541cc9121753`
+      url: `/parent/details?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     console.log('Raw parent details response:', data);
     if (typeof data === 'string') {
@@ -263,7 +262,7 @@ export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEn
     console.log('Fetching enrollments for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
-      url: `/enrollments/school-forms?school_id=${encodeURIComponent(schoolId)}`
+      url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     console.log('Raw enrollments response:', data);
     if (typeof data === 'string') {
@@ -435,8 +434,7 @@ export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollm
     console.log('Fetching children forms for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
-      url: `/enrollments/children-forms`
-      // url: `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+      url: `/enrollments?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     console.log('Raw children forms response:', data);
     if (typeof data === 'string') {

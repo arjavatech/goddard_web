@@ -37,7 +37,10 @@ export function Login() {
 
       // If no specific redirect path, use role-based default
       if (!redirectTo) {
-        redirectTo = userContext.role === 'Admin' ? '/admin' : '/';
+        // Check role case-insensitively (API returns 'Admin' with capital A)
+        const isAdmin = userContext.role && userContext.role.toLowerCase() === 'admin';
+        redirectTo = isAdmin ? '/admin' : '/';
+        console.log('Role check - userContext.role:', userContext.role, 'isAdmin:', isAdmin);
         console.log('Role-based redirect path:', redirectTo);
       }
 
