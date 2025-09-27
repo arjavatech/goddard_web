@@ -37,6 +37,7 @@ export type ParentDetail = {
       formName: string;
       status: string;
       isRequired: boolean;
+      filloutFormId: string;
     }[];
   }[];
 };
@@ -212,7 +213,8 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           formId: form.form_id || form.formId || '',
           formName: form.form_name || form.formName || '',
           status: form.status || 'In Progress',
-          isRequired: form.is_required || form.isRequired || false
+          isRequired: form.is_required || form.isRequired || false,
+          filloutFormId: form.fillout_form_id || form.filloutFormId || ''
         }))
       }))
     }));
@@ -248,7 +250,8 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           formId: form.form_id || form.formId || '',
           formName: form.form_name || form.formName || '',
           status: form.status || 'In Progress',
-          isRequired: form.is_required || form.isRequired || false
+          isRequired: form.is_required || form.isRequired || false,
+          filloutFormId: form.fillout_form_id || form.filloutFormId || ''
         }))
       }))
     };
@@ -427,6 +430,7 @@ export type ChildEnrollment = {
     formName: string;
     status: string;
     isRequired: boolean;
+    filloutFormId: string;
   }[];
 };
 export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollment[]> {
@@ -456,7 +460,8 @@ export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollm
         formId: form.form_id || '',
         formName: form.form_name || '',
         status: form.status || 'Not Started',
-        isRequired: form.is_required || false
+        isRequired: form.is_required || false,
+        filloutFormId: form.fillout_form_id || form.filloutFormId || ''
       }))
     }));
   } catch (error) {

@@ -138,14 +138,14 @@ export function ParentDetails() {
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
               // Find template by matching form ID or name
-              const template = templates.find(t => t.id === form.form_id || t.formName === form.form_name || (t as any).form_name === form.form_name);
+              const template = templates.find(t => t.id === form.formId || t.formName === form.formName || (t as any).form_name === form.formName);
               return {
-                id: form.form_id,
-                title: form.form_name,
+                id: form.formId,
+                title: form.formName,
                 description: template?.formType || (template as any)?.form_type || 'Enrollment form',
                 lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
                 status: mapToFormStatus(form.status),
-                link: template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
+                link: form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
               } satisfies Form;
             });
           }
@@ -435,18 +435,27 @@ export function ParentDetails() {
                             </p>
                           </div>
                           <div className="flex space-x-2">
-                            <Link to={`/admin/forms/view/${form.id}`} state={{
-                      form,
-                      childId: selectedChild?.id,
-                      childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
-                      parentId: parent.id,
-                      returnPath: `/admin/parents/${parentId}`
-                    }}>
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
-                                View Form
-                              </Button>
-                            </Link>
+                            {form.link && form.link !== '#' ? (
+                              <a href={form.link} target="_blank" rel="noopener noreferrer">
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Form
+                                </Button>
+                              </a>
+                            ) : (
+                              <Link to={`/admin/forms/view/${form.id}`} state={{
+                        form,
+                        childId: selectedChild?.id,
+                        childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
+                        parentId: parent.id,
+                        returnPath: `/admin/parents/${parentId}`
+                      }}>
+                                <Button variant="outline" size="sm">
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View Form
+                                </Button>
+                              </Link>
+                            )}
                             {form.status === 'Submitted' && <>
                                 <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
                                   <CheckCircle className="h-4 w-4 mr-1" />
