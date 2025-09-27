@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
-import { Calendar, User, School, ChevronLeft } from 'lucide-react';
+import { Textarea } from '../../components/ui/textarea';
+import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
@@ -11,6 +12,9 @@ export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
   const [isFrameLoading, setIsFrameLoading] = useState(true);
+
+  // State for approval actions and notes
+  const [notes, setNotes] = useState('');
 
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
@@ -52,6 +56,20 @@ export function FormView() {
   // Handle back button click
   const handleBack = () => {
     navigate(returnPath);
+  };
+
+  // Handle form approval
+  const handleApprove = () => {
+    // TODO: Implement approval logic
+    console.log('Form approved with notes:', notes);
+    alert(`Form approved${notes ? ` with notes: ${notes}` : ''}`);
+  };
+
+  // Handle form rejection
+  const handleReject = () => {
+    // TODO: Implement rejection logic
+    console.log('Form rejected with notes:', notes);
+    alert(`Form rejected${notes ? ` with notes: ${notes}` : ''}`);
   };
   if (!formData) {
     return <AdminLayout>
@@ -107,8 +125,35 @@ export function FormView() {
         </div>
         <Card className="glass-card">
           <CardContent className="p-6">
-            <div className="mb-4 flex justify-between items-center">
+            <div className="mb-4 flex justify-between items-start gap-4">
               <h2 className="text-xl font-bold">{formData.title}</h2>
+              <div className="flex items-center gap-3">
+                <Textarea
+                  placeholder="Add notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[60px] w-64 text-sm"
+                  rows={2}
+                />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleApprove}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    size="sm"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-1" />
+                    Approve
+                  </Button>
+                  <Button
+                    onClick={handleReject}
+                    variant="destructive"
+                    size="sm"
+                  >
+                    <XCircle className="h-4 w-4 mr-1" />
+                    Reject
+                  </Button>
+                </div>
+              </div>
             </div>
             {/* Form container with dynamic height */}
             <div className="mt-6 rounded-md">
