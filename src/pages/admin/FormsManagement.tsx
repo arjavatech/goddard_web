@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
+import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { fetchClassEnrollmentStats, deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
@@ -38,10 +39,12 @@ export function FormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         const [templates, classStats] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
@@ -63,6 +66,10 @@ export function FormsManagement() {
         setForms(mappedForms);
       } catch (error) {
         console.warn('Failed to load forms', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -219,7 +226,11 @@ export function FormsManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  {loading ? <tr>
+                      <td colSpan={5} className="py-8">
+                        <Loading message="Loading forms..." size="sm" />
+                      </td>
+                    </tr> : filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4 font-medium">{form.name}</td>
                         <td className="py-3 px-4">
                           <Badge variant={getStatusBadgeVariant(form.status)}>

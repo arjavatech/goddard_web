@@ -1,14 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Calendar, User, School, ChevronLeft } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
+import { Loading } from '../../components/ui/loading';
 
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isFrameLoading, setIsFrameLoading] = useState(true);
 
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
@@ -144,17 +146,27 @@ export function FormView() {
               {(() => {
                 if (selectedUrl && selectedUrl !== '#') {
                   return (
-                    <iframe
-                      src={selectedUrl}
-                      style={{
-                        width: '100%',
-                        height: '600px',
-                        border: 'none',
-                        borderRadius: '8px'
-                      }}
-                      title={formData.title}
-                      allow="fullscreen"
-                    />
+                    <div className="relative">
+                      {isFrameLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md">
+                          <Loading message="Loading form..." size="md" />
+                        </div>
+                      )}
+                      <iframe
+                        src={selectedUrl}
+                        style={{
+                          width: '100%',
+                          height: '600px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          opacity: isFrameLoading ? 0 : 1,
+                          transition: 'opacity 0.3s ease-in-out'
+                        }}
+                        title={formData.title}
+                        allow="fullscreen"
+                        onLoad={() => setIsFrameLoading(false)}
+                      />
+                    </div>
                   );
                 }
 

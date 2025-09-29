@@ -3,6 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { School, FileText, Users, Clock, AlertCircle, CheckCircle } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
+import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchParentDetails, fetchSchoolEnrollments } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
@@ -37,10 +38,12 @@ export function AdminDashboard() {
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) {
           throw new Error('Unable to determine school context for the current admin.');
@@ -143,6 +146,10 @@ export function AdminDashboard() {
         setRecentActivity([]);
         const message = err instanceof Error ? err.message : null;
         setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -186,7 +193,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {enrollmentProgress.length === 0 ? <div className="text-sm text-muted-foreground">
+                {loading ? <Loading message="Loading enrollment data..." size="sm" /> : enrollmentProgress.length === 0 ? <div className="text-sm text-muted-foreground">
                     No enrollment data available yet.
                   </div> : enrollmentProgress.map((classroom, index) => <div key={`${classroom.classroom}-${index}`}>
                       <div className="flex justify-between items-center mb-1">

@@ -8,6 +8,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
+import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 export function ClassroomManagement() {
@@ -18,10 +19,12 @@ export function ClassroomManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) {
           throw new Error('Unable to determine school context for this admin.');
@@ -55,6 +58,10 @@ export function ClassroomManagement() {
         setClassrooms(mapped);
       } catch (err) {
         console.warn('Failed to load classroom data', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -166,7 +173,11 @@ export function ClassroomManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredClassrooms.length > 0 ? filteredClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
+                  {loading ? <tr>
+                      <td colSpan={4} className="py-8">
+                        <Loading message="Loading classrooms..." size="sm" />
+                      </td>
+                    </tr> : filteredClassrooms.length > 0 ? filteredClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold">

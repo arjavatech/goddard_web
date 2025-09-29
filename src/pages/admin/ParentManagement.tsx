@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Link } from 'react-router-dom';
+import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
@@ -69,10 +70,12 @@ export function ParentManagement() {
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildDob, setNewChildDob] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         const [parentDetails, enrollments, classroomList] = await Promise.all([fetchParentDetails(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => [])]);
@@ -115,6 +118,10 @@ export function ParentManagement() {
         }
       } catch (error) {
         console.warn('Failed to load parent management data', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -295,7 +302,11 @@ export function ParentManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100 hover:bg-gray-50">
+                  {loading ? <tr>
+                      <td colSpan={5} className="py-8">
+                        <Loading message="Loading parents..." size="sm" />
+                      </td>
+                    </tr> : filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">

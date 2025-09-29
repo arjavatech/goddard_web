@@ -285,6 +285,16 @@ export function ParentDetails() {
     }
     setIsReviewDialogOpen(false);
   };
+  if (isLoading) {
+    return <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading parent details...</p>
+          </div>
+        </div>
+      </AdminLayout>;
+  }
   if (!parent) {
     return <AdminLayout>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -297,16 +307,6 @@ export function ParentDetails() {
             <Link to="/admin/parents">
               <Button variant="outline">Back to Parents</Button>
             </Link>
-          </div>
-        </div>
-      </AdminLayout>;
-  }
-  if (isLoading) {
-    return <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading parent details...</p>
           </div>
         </div>
       </AdminLayout>;
