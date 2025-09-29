@@ -39,8 +39,6 @@ export type ParentDetail = {
       isRequired: boolean;
       filloutFormId: string;
       studentFormAssignmentId: string;
-      recent_edit_link: string | null;
-      fillout_form_id: string;
     }[];
   }[];
 };
@@ -165,12 +163,22 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
     const data = await authedFetch({
       method: 'GET',
       url: `/enrollments/class-wise-count?school_id=${encodeURIComponent(schoolId)}`
-    }, z.union([z.array(classEnrollmentSchema), z.string()]));
+    }, z.any());
+
     if (typeof data === 'string') {
       console.warn('API returned string for class enrollment stats:', data);
       return [];
     }
-    return data.map(item => ({
+
+    // Handle both {classes: [...]} and direct array response
+    const classesArray = data.classes || data;
+
+    if (!Array.isArray(classesArray)) {
+      console.warn('Class enrollment stats response is not an array:', classesArray);
+      return [];
+    }
+
+    return classesArray.map(item => ({
       classId: item.class_id ? String(item.class_id) : '',
       className: item.class_name ?? '',
       studentCount: item.count ?? 0,
@@ -258,9 +266,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           status: form.status || 'In Progress',
           isRequired: form.is_required || form.isRequired || false,
           filloutFormId: form.fillout_form_id || form.filloutFormId || '',
-          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
-          recent_edit_link: form.recent_edit_link || null,
-          fillout_form_id: form.fillout_form_id || form.filloutFormId || ''
+          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || ''
         }))
       }))
     };

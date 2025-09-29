@@ -44,8 +44,12 @@ export function ClassroomManagement() {
           });
         });
         const mapped: Classroom[] = rawClassrooms.map(classroom => {
-          console.log('Using classroom data directly:', classroom);
-          return classroom;
+          const stats = statsByName.get(classroom.name);
+          console.log('Applying stats for classroom:', classroom.name, stats);
+          return {
+            ...classroom,
+            studentsCount: stats?.students ?? 0
+          };
         });
         console.log('Final mapped classrooms:', mapped);
         setClassrooms(mapped);
