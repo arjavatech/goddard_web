@@ -139,7 +139,7 @@ export function ParentDetails() {
             formsArray = child.forms.map((form: any) => {
               // Find template by matching form ID or name
               const template = templates.find(t => t.id === form.formId || t.formName === form.formName || (t as any).form_name === form.formName);
-              return {
+              const formObj = {
                 id: form.formId,
                 title: form.formName,
                 description: template?.formType || (template as any)?.form_type || 'Enrollment form',
@@ -147,6 +147,12 @@ export function ParentDetails() {
                 status: mapToFormStatus(form.status),
                 link: form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
               } satisfies Form;
+
+              console.log('DEBUG ParentDetails - Created form object:', formObj);
+              console.log('DEBUG ParentDetails - Raw form data:', form);
+              console.log('DEBUG ParentDetails - Template data:', template);
+
+              return formObj;
             });
           }
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
@@ -442,6 +448,15 @@ export function ParentDetails() {
                       parentId: parent.id,
                       returnPath: `/admin/parents/${parentId}`,
                       filloutFormUrl: form.link
+                    }} onClick={() => {
+                      console.log('DEBUG ParentDetails - Navigating to form view with state:', {
+                        form,
+                        childId: selectedChild?.id,
+                        childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
+                        parentId: parent.id,
+                        returnPath: `/admin/parents/${parentId}`,
+                        filloutFormUrl: form.link
+                      });
                     }}>
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4 mr-1" />
