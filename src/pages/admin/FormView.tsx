@@ -1,6 +1,5 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { FilloutStandardEmbed } from '@fillout/react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Calendar, User, School, ChevronLeft } from 'lucide-react';
@@ -17,104 +16,54 @@ export function FormView() {
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
   const filloutFormUrl = location.state?.filloutFormUrl;
+  const recentEditLink = location.state?.recentEditLink;
+  const filloutFormId = location.state?.filloutFormId;
 
-  // Extract Fillout form ID and parameters from standard URL format or form ID
-  const getFilloutConfig = () => {
-    const url = filloutFormUrl || formData?.link;
-    console.log('DEBUG getFilloutConfig - Starting with url:', url);
-    console.log('DEBUG getFilloutConfig - filloutFormUrl:', filloutFormUrl);
-    console.log('DEBUG getFilloutConfig - formData?.link:', formData?.link);
+  // Determine which URL to use based on form status
+  const getFormUrl = () => {
+    console.log('=== getFormUrl Debug ===');
+    console.log('recentEditLink:', recentEditLink);
+    console.log('recentEditLink type:', typeof recentEditLink);
+    console.log('recentEditLink === null:', recentEditLink === null);
+    console.log('recentEditLink === undefined:', recentEditLink === undefined);
+    console.log('recentEditLink === "#":', recentEditLink === '#');
+    console.log('Boolean(recentEditLink):', Boolean(recentEditLink));
+    console.log('filloutFormId:', filloutFormId);
+    console.log('filloutFormUrl:', filloutFormUrl);
+    console.log('formData?.link:', formData?.link);
 
-    if (!url || url === '#') {
-      console.log('DEBUG getFilloutConfig - No valid URL, returning null');
-      return null;
+    // Priority 1: Use recent_edit_link if form is filled (has existing submission)
+    // Check for truthy value and not '#' and not null and not undefined
+    if (recentEditLink &&
+        recentEditLink !== '#' &&
+        recentEditLink !== null &&
+        recentEditLink !== undefined &&
+        recentEditLink.trim() !== '') {
+      console.log('✅ Using recent_edit_link for filled form:', recentEditLink);
+      return recentEditLink;
+    } else {
+      console.log('❌ recent_edit_link not valid, reason:');
+      if (!recentEditLink) console.log('  - recentEditLink is falsy');
+      if (recentEditLink === '#') console.log('  - recentEditLink is "#"');
+      if (recentEditLink === null) console.log('  - recentEditLink is null');
+      if (recentEditLink === undefined) console.log('  - recentEditLink is undefined');
+      if (recentEditLink && recentEditLink.trim() === '') console.log('  - recentEditLink is empty string');
     }
 
-    try {
-      console.log('DEBUG getFilloutConfig - Processing URL:', url, 'Type:', typeof url);
-
-      // First, check if it's already a valid form ID (not a full URL)
-      if (typeof url === 'string' && !url.includes('://')) {
-        console.log('DEBUG getFilloutConfig - Detected as form ID (no protocol)');
-        const config = {
-          formId: url,
-          parameters: {}
-        };
-        console.log('DEBUG getFilloutConfig - Returning form ID config:', config);
-        return config;
-      }
-
-      console.log('DEBUG getFilloutConfig - Attempting to parse as URL');
-      // Try to parse as a URL
-      const urlObj = new URL(url);
-      console.log('DEBUG getFilloutConfig - Parsed URL object:', {
-        hostname: urlObj.hostname,
-        pathname: urlObj.pathname,
-        searchParams: Array.from(urlObj.searchParams.entries())
-      });
-
-      // Check if this is a Fillout URL
-      if (!urlObj.hostname.includes('fillout.com')) {
-        console.log('DEBUG getFilloutConfig - Not a fillout.com URL, returning null');
-        return null;
-      }
-
-      // Extract form ID from URL - handle both standard and subdomain formats
-      const pathParts = urlObj.pathname.split('/').filter(p => p);
-      console.log('DEBUG getFilloutConfig - Path parts:', pathParts);
-
-      let formId = null;
-
-      // Method 1: Look for standard /t/{formId} pattern
-      const tIndex = pathParts.indexOf('t');
-      console.log('DEBUG getFilloutConfig - t index:', tIndex);
-
-      if (tIndex !== -1 && pathParts.length > tIndex + 1) {
-        formId = pathParts[tIndex + 1];
-        console.log('DEBUG getFilloutConfig - Found form ID via /t/ pattern:', formId);
-      }
-
-      // Method 2: If no /t/ pattern, check for subdomain format (e.g., goddard.fillout.com/aut_form)
-      if (!formId && pathParts.length > 0) {
-        // Use the first path segment as form ID for subdomain format
-        formId = pathParts[0];
-        console.log('DEBUG getFilloutConfig - Found form ID via subdomain format:', formId);
-      }
-
-      if (!formId) {
-        console.log('DEBUG getFilloutConfig - No form ID found in URL path');
-        return null;
-      }
-
-      // Extract parameters from URL
-      const params: Record<string, string> = {};
-      urlObj.searchParams.forEach((value, key) => {
-        params[key] = value;
-      });
-
-      const config = {
-        formId: formId,
-        parameters: params,
-        domain: urlObj.hostname
-      };
-      console.log('DEBUG getFilloutConfig - Returning URL-based config:', config);
-      return config;
-    } catch (error) {
-      // If URL parsing fails, treat the input as a form ID
-      console.log('DEBUG getFilloutConfig - URL parsing failed, treating as form ID:', url);
-      console.log('DEBUG getFilloutConfig - Error was:', error);
-
-      if (typeof url === 'string' && url.trim().length > 0) {
-        const config = {
-          formId: url.trim(),
-          parameters: {}
-        };
-        console.log('DEBUG getFilloutConfig - Returning fallback form ID config:', config);
-        return config;
-      }
-      console.error('Error parsing Fillout URL or form ID:', error);
-      return null;
+    // Priority 2: Use fillout_form_id if form is empty (no existing submission)
+    if (filloutFormId &&
+        filloutFormId !== '#' &&
+        filloutFormId !== null &&
+        filloutFormId !== undefined &&
+        filloutFormId.trim() !== '') {
+      console.log('✅ Using fillout_form_id for empty form:', filloutFormId);
+      return filloutFormId;
     }
+
+    // Fallback: Use the original filloutFormUrl or form link
+    const fallbackUrl = filloutFormUrl || formData?.link;
+    console.log('✅ Using fallback URL:', fallbackUrl);
+    return fallbackUrl;
   };
 
   // Handle back button click
@@ -144,11 +93,19 @@ export function FormView() {
       </AdminLayout>;
   }
 
-  const config = getFilloutConfig();
+  console.log('🔍 FormView - Full location.state:', location.state);
+  console.log('🔍 FormView - Individual state values:');
+  console.log('  - location.state?.recentEditLink:', location.state?.recentEditLink);
+  console.log('  - location.state?.filloutFormId:', location.state?.filloutFormId);
+  console.log('  - location.state?.filloutFormUrl:', location.state?.filloutFormUrl);
+
+  const selectedUrl = getFormUrl();
   console.log('FormView Debug Info:');
+  console.log('- recentEditLink:', recentEditLink);
+  console.log('- filloutFormId:', filloutFormId);
   console.log('- filloutFormUrl:', filloutFormUrl);
   console.log('- formData.link:', formData?.link);
-  console.log('- computed config:', config);
+  console.log('- selected URL:', selectedUrl);
   console.log('- Form Data:', formData);
   return <AdminLayout>
       <div className="space-y-6">
@@ -185,15 +142,10 @@ export function FormView() {
             {/* Form container with dynamic height */}
             <div className="mt-6 rounded-md">
               {(() => {
-                const config = getFilloutConfig();
-
-
-                // Use the original URL directly since it works
-                const originalUrl = filloutFormUrl || formData?.link;
-                if (originalUrl && originalUrl !== '#') {
+                if (selectedUrl && selectedUrl !== '#') {
                   return (
                     <iframe
-                      src={originalUrl}
+                      src={selectedUrl}
                       style={{
                         width: '100%',
                         height: '600px',
@@ -206,7 +158,7 @@ export function FormView() {
                   );
                 }
 
-                // No valid form configuration
+                // No valid form URL
                 return (
                   <div className="flex items-center justify-center min-h-[400px] text-gray-500">
                     Unable to load form. Please check the form configuration.

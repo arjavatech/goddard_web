@@ -23,6 +23,8 @@ interface Form {
   lastUpdated: string;
   status: FormStatus;
   link: string;
+  recentEditLink: string | null;
+  filloutFormId: string;
 }
 interface ChildInfo {
   id: string;
@@ -145,12 +147,20 @@ export function ParentDetails() {
                 description: template?.formType || (template as any)?.form_type || 'Enrollment form',
                 lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
                 status: mapToFormStatus(form.status),
-                link: form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
+                link: form.recent_edit_link || form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
+                recentEditLink: form.recent_edit_link || null,
+                filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
               } satisfies Form;
 
-              console.log('DEBUG ParentDetails - Created form object:', formObj);
-              console.log('DEBUG ParentDetails - Raw form data:', form);
-              console.log('DEBUG ParentDetails - Template data:', template);
+              console.log('🔍 ParentDetails - Form creation debug:');
+              console.log('- Form ID:', form.formId);
+              console.log('- Form Name:', form.formName);
+              console.log('- Raw recent_edit_link:', form.recent_edit_link);
+              console.log('- Raw fillout_form_id:', form.fillout_form_id);
+              console.log('- Created formObj.recentEditLink:', formObj.recentEditLink);
+              console.log('- Created formObj.filloutFormId:', formObj.filloutFormId);
+              console.log('- Created formObj.link:', formObj.link);
+
 
               return formObj;
             });
@@ -447,16 +457,9 @@ export function ParentDetails() {
                       childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
                       parentId: parent.id,
                       returnPath: `/admin/parents/${parentId}`,
-                      filloutFormUrl: form.link
-                    }} onClick={() => {
-                      console.log('DEBUG ParentDetails - Navigating to form view with state:', {
-                        form,
-                        childId: selectedChild?.id,
-                        childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
-                        parentId: parent.id,
-                        returnPath: `/admin/parents/${parentId}`,
-                        filloutFormUrl: form.link
-                      });
+                      filloutFormUrl: form.link,
+                      recentEditLink: form.recentEditLink,
+                      filloutFormId: form.filloutFormId
                     }}>
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4 mr-1" />

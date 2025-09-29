@@ -39,6 +39,8 @@ export type ParentDetail = {
       isRequired: boolean;
       filloutFormId: string;
       studentFormAssignmentId: string;
+      recent_edit_link: string | null;
+      fillout_form_id: string;
     }[];
   }[];
 };
@@ -216,7 +218,9 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           status: form.status || 'In Progress',
           isRequired: form.is_required || form.isRequired || false,
           filloutFormId: form.fillout_form_id || form.filloutFormId || '',
-          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || ''
+          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
+          recent_edit_link: form.recent_edit_link || null,
+          fillout_form_id: form.fillout_form_id || form.filloutFormId || ''
         }))
       }))
     }));
@@ -254,7 +258,9 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           status: form.status || 'In Progress',
           isRequired: form.is_required || form.isRequired || false,
           filloutFormId: form.fillout_form_id || form.filloutFormId || '',
-          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || ''
+          studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
+          recent_edit_link: form.recent_edit_link || null,
+          fillout_form_id: form.fillout_form_id || form.filloutFormId || ''
         }))
       }))
     };
