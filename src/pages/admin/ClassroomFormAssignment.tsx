@@ -177,7 +177,6 @@ export function ClassroomFormAssignment() {
           setAllForms(mappedForms);
         }
         if (classroomList.length > 0) {
-          console.log('ClassroomList from API:', classroomList);
           const convertedClassrooms = classroomList.map(classroom => ({
             ...classroom,
             assignedForms: classroom.assignedForms.map(form => ({
@@ -192,7 +191,6 @@ export function ClassroomFormAssignment() {
           }
         }
       } catch (error) {
-        console.warn('Failed to load classroom form assignments', error);
       }
     })();
     return () => {

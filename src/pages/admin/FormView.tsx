@@ -23,16 +23,6 @@ export function FormView() {
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
-    console.log('=== getFormUrl Debug ===');
-    console.log('recentEditLink:', recentEditLink);
-    console.log('recentEditLink type:', typeof recentEditLink);
-    console.log('recentEditLink === null:', recentEditLink === null);
-    console.log('recentEditLink === undefined:', recentEditLink === undefined);
-    console.log('recentEditLink === "#":', recentEditLink === '#');
-    console.log('Boolean(recentEditLink):', Boolean(recentEditLink));
-    console.log('filloutFormId:', filloutFormId);
-    console.log('filloutFormUrl:', filloutFormUrl);
-    console.log('formData?.link:', formData?.link);
 
     // Priority 1: Use recent_edit_link if form is filled (has existing submission)
     // Check for truthy value and not '#' and not null and not undefined
@@ -41,15 +31,8 @@ export function FormView() {
         recentEditLink !== null &&
         recentEditLink !== undefined &&
         recentEditLink.trim() !== '') {
-      console.log('✅ Using recent_edit_link for filled form:', recentEditLink);
       return recentEditLink;
     } else {
-      console.log('❌ recent_edit_link not valid, reason:');
-      if (!recentEditLink) console.log('  - recentEditLink is falsy');
-      if (recentEditLink === '#') console.log('  - recentEditLink is "#"');
-      if (recentEditLink === null) console.log('  - recentEditLink is null');
-      if (recentEditLink === undefined) console.log('  - recentEditLink is undefined');
-      if (recentEditLink && recentEditLink.trim() === '') console.log('  - recentEditLink is empty string');
     }
 
     // Priority 2: Use fillout_form_id if form is empty (no existing submission)
@@ -58,13 +41,11 @@ export function FormView() {
         filloutFormId !== null &&
         filloutFormId !== undefined &&
         filloutFormId.trim() !== '') {
-      console.log('✅ Using fillout_form_id for empty form:', filloutFormId);
       return filloutFormId;
     }
 
     // Fallback: Use the original filloutFormUrl or form link
     const fallbackUrl = filloutFormUrl || formData?.link;
-    console.log('✅ Using fallback URL:', fallbackUrl);
     return fallbackUrl;
   };
 
@@ -95,20 +76,8 @@ export function FormView() {
       </AdminLayout>;
   }
 
-  console.log('🔍 FormView - Full location.state:', location.state);
-  console.log('🔍 FormView - Individual state values:');
-  console.log('  - location.state?.recentEditLink:', location.state?.recentEditLink);
-  console.log('  - location.state?.filloutFormId:', location.state?.filloutFormId);
-  console.log('  - location.state?.filloutFormUrl:', location.state?.filloutFormUrl);
 
   const selectedUrl = getFormUrl();
-  console.log('FormView Debug Info:');
-  console.log('- recentEditLink:', recentEditLink);
-  console.log('- filloutFormId:', filloutFormId);
-  console.log('- filloutFormUrl:', filloutFormUrl);
-  console.log('- formData.link:', formData?.link);
-  console.log('- selected URL:', selectedUrl);
-  console.log('- Form Data:', formData);
   return <AdminLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">

@@ -84,7 +84,6 @@ export function ParentManagement() {
           id: cls.id,
           name: cls.name
         })));
-        console.log('Parent details received:', parentDetails);
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
             const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
@@ -113,11 +112,9 @@ export function ParentManagement() {
               signupStatus: detail.isSigned ? 'Complete' : 'Invited'
             } satisfies Parent;
           });
-          console.log('Mapped parents:', mappedParents);
           setParents(mappedParents);
         }
       } catch (error) {
-        console.warn('Failed to load parent management data', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -172,7 +169,6 @@ export function ParentManagement() {
         resetInviteForm();
         setIsInviteDialogOpen(false);
       } catch (error) {
-        console.error('Failed to invite parent:', error);
       }
     }
   };
@@ -206,7 +202,6 @@ export function ParentManagement() {
         resetAddChildForm();
         setIsAddChildDialogOpen(false);
       } catch (error) {
-        console.error('Failed to add child:', error);
       }
     }
   };

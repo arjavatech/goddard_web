@@ -30,8 +30,6 @@ export function ClassroomManagement() {
           throw new Error('Unable to determine school context for this admin.');
         }
         const [rawClassrooms, enrollmentStats] = await Promise.all([fetchClassrooms(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
-        console.log('Raw Classrooms:', rawClassrooms);
-        console.log('Enrollment Stats:', enrollmentStats);
         if (!isMounted) return;
         if (rawClassrooms.length === 0) {
           return;
@@ -48,16 +46,13 @@ export function ClassroomManagement() {
         });
         const mapped: Classroom[] = rawClassrooms.map(classroom => {
           const stats = statsByName.get(classroom.name);
-          console.log('Applying stats for classroom:', classroom.name, stats);
           return {
             ...classroom,
             studentsCount: stats?.students ?? 0
           };
         });
-        console.log('Final mapped classrooms:', mapped);
         setClassrooms(mapped);
       } catch (err) {
-        console.warn('Failed to load classroom data', err);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -88,7 +83,6 @@ export function ClassroomManagement() {
         setNewClassroomName('');
         setIsAddDialogOpen(false);
       } catch (error) {
-        console.error('Failed to create classroom:', error);
       }
     }
   };
@@ -105,7 +99,6 @@ export function ClassroomManagement() {
         setNewClassroomName('');
         setIsEditDialogOpen(false);
       } catch (error) {
-        console.error('Failed to rename classroom:', error);
       }
     }
   };
@@ -117,7 +110,6 @@ export function ClassroomManagement() {
           await deleteClassroom(selectedClassroom.id, user.schoolId);
         }
       } catch (error) {
-        console.error('Failed to delete classroom:', error);
       }
       // Remove from local state regardless of API success
       setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));

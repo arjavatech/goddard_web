@@ -124,7 +124,6 @@ export function ParentDetails() {
           };
         }
         if (!parentRecord) {
-          console.warn('Parent not found:', parentId);
           return;
         }
         const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
@@ -152,14 +151,6 @@ export function ParentDetails() {
                 filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
               } satisfies Form;
 
-              console.log('🔍 ParentDetails - Form creation debug:');
-              console.log('- Form ID:', form.formId);
-              console.log('- Form Name:', form.formName);
-              console.log('- Raw recent_edit_link:', form.recent_edit_link);
-              console.log('- Raw fillout_form_id:', form.fillout_form_id);
-              console.log('- Created formObj.recentEditLink:', formObj.recentEditLink);
-              console.log('- Created formObj.filloutFormId:', formObj.filloutFormId);
-              console.log('- Created formObj.link:', formObj.link);
 
 
               return formObj;
@@ -204,7 +195,6 @@ export function ParentDetails() {
           setSelectedChildId(processedChildren[0].id);
         }
       } catch (error) {
-        console.error('Failed to load parent details', error);
         if (isMounted) {
           setError('Failed to load parent details. Please try again.');
           addToast({
@@ -274,7 +264,6 @@ export function ParentDetails() {
         });
       }
     } catch (error) {
-      console.error('Error during form review:', error);
       addToast({
         type: 'error',
         title: 'Review Error',

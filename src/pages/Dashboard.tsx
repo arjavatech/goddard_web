@@ -93,22 +93,17 @@ export function Dashboard() {
     setLoading(true);
     (async () => {
       try {
-        console.log('Dashboard: Starting data fetch...');
         const user = await fetchUserContext();
-        console.log('Dashboard: User context:', user);
         
         if (!user.schoolId) {
           throw new Error('School context not available for the current user.');
         }
         
-        console.log('Dashboard: Fetching data for school ID:', user.schoolId, 'parent ID:', user.parentId);
         const [enrollmentChildren, formTemplates] = await Promise.all([
           fetchEnrollmentChildren(user.schoolId, user.parentId || undefined), 
           fetchFormTemplates(user.schoolId)
         ]);
         
-        console.log('Dashboard: Enrollment children received:', enrollmentChildren);
-        console.log('Dashboard: Form templates received:', formTemplates);
         const templatesForSchool = formTemplates.filter(template => !template.schoolId || template.schoolId === user.schoolId);
         const templateMap = new Map<string, FormTemplate>();
         templatesForSchool.forEach(template => {
@@ -116,7 +111,6 @@ export function Dashboard() {
           templateMap.set(template.formName.toLowerCase(), template);
         });
         const processedChildren = enrollmentChildren.map(child => normalizeChild(child, templateMap));
-        console.log('Dashboard: Processed children:', processedChildren);
         
         const childFormsData = processedChildren.map(child => ({
           childName: child.name,
@@ -130,11 +124,6 @@ export function Dashboard() {
         }));
         if (!isMounted) return;
         
-        console.log('Dashboard: Setting state with:', {
-          childrenCount: processedChildren.length,
-          childFormsCount: childFormsData.length,
-          familyFormsCount: familyFormData.length
-        });
         
         setChildren(processedChildren);
         setChildSpecificForms(childFormsData);
@@ -178,10 +167,6 @@ export function Dashboard() {
       disabled: true
     }];
   }, [selectedChild]);
-  console.log('Processed children:', children);
-  console.log('Child specific forms:', childSpecificForms);
-  console.log('Family forms:', familyForms);
-  console.log('Selected child:', selectedChild);
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">

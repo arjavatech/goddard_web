@@ -29,27 +29,20 @@ export function Login() {
 
       // Fetch user context to determine role-based redirect
       const userContext = await fetchUserContext();
-      console.log('User context fetched:', userContext);
-      console.log('User role:', userContext.role);
 
       let redirectTo = location.state?.from?.pathname;
-      console.log('Location state redirect:', redirectTo);
 
       // If no specific redirect path, use role-based default
       if (!redirectTo) {
         // Check role case-insensitively (API returns 'Admin' with capital A)
         const isAdmin = userContext.role && userContext.role.toLowerCase() === 'admin';
         redirectTo = isAdmin ? '/admin' : '/';
-        console.log('Role check - userContext.role:', userContext.role, 'isAdmin:', isAdmin);
-        console.log('Role-based redirect path:', redirectTo);
       }
 
-      console.log('Final redirect path:', redirectTo);
       navigate(redirectTo, {
         replace: true
       });
     } catch (err) {
-      console.error('Login error:', err);
       alert((err as Error).message);
     }
   };

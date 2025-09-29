@@ -65,7 +65,6 @@ export function FormsManagement() {
         }));
         setForms(mappedForms);
       } catch (error) {
-        console.warn('Failed to load forms', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -98,7 +97,6 @@ export function FormsManagement() {
         resetFormFields();
         setIsAddDialogOpen(false);
       } catch (error) {
-        console.error('Failed to add form:', error);
       }
     }
   };
@@ -117,7 +115,6 @@ export function FormsManagement() {
         resetFormFields();
         setIsEditDialogOpen(false);
       } catch (error) {
-        console.error('Failed to update form:', error);
       }
     }
   };
@@ -128,7 +125,6 @@ export function FormsManagement() {
         if (!user.schoolId) return;
         await deleteForm(selectedForm.id, user.schoolId);
       } catch (error) {
-        console.error('Failed to delete form:', error);
       }
       // Remove from local state regardless of API success
       setForms(forms.filter((form: Form) => form.id !== selectedForm.id));

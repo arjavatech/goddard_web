@@ -195,7 +195,6 @@ export function ClassroomDetails() {
           students: students.length > 0 ? students : DEFAULT_CLASSROOM.students
         });
       } catch (error) {
-        console.warn('Failed to load classroom details', error);
       }
     })();
     return () => {

@@ -39,7 +39,6 @@ export function Signup() {
         replace: true
       });
     } catch (err) {
-      console.error('Signup error:', err);
       alert((err as Error).message);
     }
   };

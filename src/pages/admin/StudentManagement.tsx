@@ -68,7 +68,6 @@ export function StudentManagement() {
         setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) {
-          console.warn('No school ID found for user');
           setStudents([]);
           return;
         }
@@ -80,19 +79,13 @@ export function StudentManagement() {
         
         const enrollments = enrollmentData.enrollments || [];
         if (!isMounted) return;
-        console.log('Setting students with data from API');
-        console.log('API Response - Enrollments:', enrollments);
-        console.log('API Response - Classrooms:', classrooms);
-        console.log('API Response - Templates:', templates);
         if (!enrollments || enrollments.length === 0) {
-          console.log('No enrollments found');
           setStudents([]);
           return;
         }
         const classroomMap = new Map(classrooms.map(cls => [cls.name?.toLowerCase(), cls]));
         const templateMap = new Map(templates.map(template => [template.id, template]));
         const mappedStudents: Student[] = enrollments.map((enrollment: EnrollmentData, index: number) => {
-          console.log('Processing enrollment:', enrollment);
           const studentId = enrollment.child_id || `student-${index}`;
           const firstName = enrollment.child_first_name || 'Unknown';
           const lastName = enrollment.child_last_name || 'Student';
@@ -140,16 +133,13 @@ export function StudentManagement() {
           };
           return student;
         });
-        console.log('Final mapped students:', mappedStudents);
         if (mappedStudents.length > 0) {
           setStudents(mappedStudents);
         }
       } catch (error) {
-        console.error('Failed to load student management data:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
-          console.log('Loading complete, students count:', students.length);
         }
       }
     };

@@ -20,7 +20,6 @@ export function AdminLayout({
         replace: true
       });
     } catch (err) {
-      console.error('Error during logout', err);
     }
   };
   const currentPath = location.pathname;
