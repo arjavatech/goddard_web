@@ -8,7 +8,7 @@ type UseAuth = {
   isBypassed: boolean;
   loading: boolean;
   signInWithPassword: (email: string, password: string) => Promise<void>;
-  signUpWithPassword: (email: string, password: string) => Promise<{
+  signUpWithPassword: (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => Promise<{
     user: User | null;
     session: Session | null;
     needsConfirmation: boolean;
@@ -73,7 +73,7 @@ export function useAuth(): UseAuth {
     });
     if (error) throw error as AuthError;
   }, []);
-  const signUpWithPassword = useCallback(async (email: string, password: string) => {
+  const signUpWithPassword = useCallback(async (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => {
     if (isAuthBypassed) {
       return undefined;
     }
@@ -87,7 +87,13 @@ export function useAuth(): UseAuth {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm`
+        emailRedirectTo: `${window.location.origin}/auth/confirm`,
+        data: {
+          first_name: firstName || '',
+          last_name: lastName || '',
+          school_id: schoolId || '',
+          role: role || 'Admin'
+        }
       }
     });
     if (error) {

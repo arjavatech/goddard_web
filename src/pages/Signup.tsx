@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
@@ -27,7 +27,14 @@ export function Signup() {
       return;
     }
     try {
-      const result = await signUpWithPassword(formData.email, formData.password);
+      const result = await signUpWithPassword(
+        formData.email,
+        formData.password,
+        formData.firstName,
+        formData.lastName,
+        '8863a33c-ab95-4ab9-8b47-24e33bc52849', // school_id
+        'Admin' // role
+      );
       if (result?.needsConfirmation) {
         alert('Please confirm your email to continue.');
         navigate('/login', {
