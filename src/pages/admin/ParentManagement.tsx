@@ -63,6 +63,7 @@ export function ParentManagement() {
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
+  const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
@@ -76,12 +77,10 @@ export function ParentManagement() {
         if (!user.schoolId) return;
         const [parentDetails, enrollments, classroomList] = await Promise.all([fetchParentDetails(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => [])]);
         if (!isMounted) return;
-        if (classroomList.length > 0) {
-          setClassrooms(classroomList.map(cls => ({
-            id: cls.id,
-            name: cls.name
-          })));
-        }
+        setClassrooms(classroomList.map(cls => ({
+          id: cls.id,
+          name: cls.name
+        })));
         console.log('Parent details received:', parentDetails);
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
@@ -130,7 +129,7 @@ export function ParentManagement() {
     return matchesSearch && matchesStatus && matchesSignup;
   }), [parents, searchQuery, statusFilter, signupFilter]);
   const handleInviteParent = async () => {
-    if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childClassroom) {
+    if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childGender && childClassroom) {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
@@ -140,7 +139,8 @@ export function ParentManagement() {
           parentEmail,
           childFullName: `${childFirstName} ${childLastName}`,
           childDob,
-          classroomId: childClassroom
+          classroomId: childClassroom,
+          gender: childGender
         });
         const classroom = classrooms.find(c => c.id === childClassroom);
         const newParent: Parent = {
@@ -210,6 +210,7 @@ export function ParentManagement() {
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
+    setChildGender('');
     setChildClassroom('');
   };
   const resetAddChildForm = () => {
@@ -435,6 +436,20 @@ export function ParentManagement() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
+                      Gender
+                    </label>
+                    <Select value={childGender} onValueChange={setChildGender}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">
                       Classroom
                     </label>
                     <Select value={childClassroom} onValueChange={setChildClassroom}>
@@ -456,7 +471,7 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childClassroom}>
+            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom}>
               <Mail className="h-4 w-4 mr-2" />
               Send Invitation
             </Button>

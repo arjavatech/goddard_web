@@ -147,7 +147,7 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
       });
       return {
         id: item.id || item.classroom_id || `classroom-${index}`,
-        name: item.name || item.classroom_name || `Classroom ${index + 1}`,
+        name: item.name || item.class_name || item.classroom_name || `Classroom ${index + 1}`,
         studentsCount: item.student_count || item.studentsCount || item.total_children || 0,
         formsCount: assignedForms.length,
         assignedForms
@@ -340,10 +340,10 @@ export async function deleteClassroom(classroomId: string, schoolId: string): Pr
     url: `/classrooms?classroom_id=${classroomId}&school_id=${schoolId}`
   }, z.object({}));
 }
-export async function deleteForm(classroomId: string, formId: string): Promise<void> {
+export async function deleteForm(formId: string, schoolId: string): Promise<void> {
   await authedFetch({
     method: 'DELETE',
-    url: `/classrooms/${classroomId}/forms/${formId}`
+    url: `/form-templates?form_id=${encodeURIComponent(formId)}&school_id=${encodeURIComponent(schoolId)}`
   }, z.object({}));
 }
 export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string): Promise<void> {
@@ -351,6 +351,7 @@ export async function createFormTemplate(formName: string, filloutFormId: string
     method: 'POST',
     url: '/form-templates',
     body: {
+      id: crypto.randomUUID(),
       school_id: schoolId,
       form_name: formName,
       fillout_form_id: filloutFormId
@@ -362,13 +363,10 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
     method: 'PUT',
     url: '/form-templates',
     body: {
+      id: formId,
       school_id: schoolId,
-      form_id: formId,
       form_name: formName,
-      display_order: 6,
-      fillout_form_url: filloutFormUrl,
-      fillout_form_id: "qcp48GcDx3FQOfcZ",
-      is_required: true
+      fillout_form_url: filloutFormUrl
     }
   }, z.object({}));
 }
@@ -379,18 +377,24 @@ export async function inviteParent(schoolId: string, parentData: {
   childFullName: string;
   childDob: string;
   classroomId: string;
+  gender: string;
 }): Promise<void> {
+  const [childFirstName, ...childLastNameParts] = parentData.childFullName.split(' ');
+  const childLastName = childLastNameParts.join(' ');
+  
   await authedFetch({
     method: 'POST',
     url: '/enrollments/parent-invite',
     body: {
       school_id: schoolId,
-      child_full_name: parentData.childFullName,
-      child_dob: parentData.childDob,
-      classroom_id: parentData.classroomId,
+      child_first_name: childFirstName || parentData.childFullName,
+      child_last_name: childLastName || '',
+      child_birth_date: parentData.childDob,
+      class_id: parentData.classroomId,
       parent_email: parentData.parentEmail,
       parent_first_name: parentData.parentFirstName,
-      parent_last_name: parentData.parentLastName
+      parent_last_name: parentData.parentLastName,
+      gender: parentData.gender
     }
   }, z.union([z.object({}), z.string()]));
 }

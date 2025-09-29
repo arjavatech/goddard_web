@@ -9,10 +9,23 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchChildrenForms, fetchClassrooms } from '../../services/api/admin';
+import { fetchClassrooms } from '../../services/api/admin';
+import { authedFetch, z } from '../../services/api/common';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
+
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
+
+interface EnrollmentData {
+  child_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  class_name: string;
+  primary_email: string;
+  form_status: string;
+  forms: Record<string, string>;
+  additional_parent_email?: string | null;
+}
 interface Student {
   id: string;
   firstName: string;
@@ -59,7 +72,13 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const [enrollments, classrooms, templates] = await Promise.all([fetchChildrenForms(user.schoolId), fetchClassrooms(user.schoolId), fetchFormTemplates(user.schoolId)]);
+        const [enrollmentData, classrooms, templates] = await Promise.all([
+          authedFetch({ method: 'GET', url: `/enrollments?school_id=${encodeURIComponent(user.schoolId)}` }, z.any()),
+          fetchClassrooms(user.schoolId),
+          fetchFormTemplates(user.schoolId)
+        ]);
+        
+        const enrollments = enrollmentData.enrollments || [];
         if (!isMounted) return;
         console.log('Setting students with data from API');
         console.log('API Response - Enrollments:', enrollments);
@@ -72,36 +91,44 @@ export function StudentManagement() {
         }
         const classroomMap = new Map(classrooms.map(cls => [cls.name?.toLowerCase(), cls]));
         const templateMap = new Map(templates.map(template => [template.id, template]));
-        const mappedStudents: Student[] = enrollments.map((enrollment, index) => {
+        const mappedStudents: Student[] = enrollments.map((enrollment: EnrollmentData, index: number) => {
           console.log('Processing enrollment:', enrollment);
-          const studentId = enrollment.childId || `student-${index}`;
-          const fullName = enrollment.childFullName || 'Unknown Student';
-          const [firstName, ...lastNameParts] = fullName.split(' ');
-          const lastName = lastNameParts.join(' ') || 'Student';
-          const formsArray = enrollment.forms.map(form => ({
-            id: form.formId,
-            name: form.formName,
-            status: form.status || 'Not Started'
-          }));
-          const completed = formsArray.filter(form => COMPLETION_STATUSES.has(normalizeFormStatus(form.status))).length;
+          const studentId = enrollment.child_id || `student-${index}`;
+          const firstName = enrollment.child_first_name || 'Unknown';
+          const lastName = enrollment.child_last_name || 'Student';
+          
+          // Since forms is empty object, create default form status
+          const formsArray = Object.keys(enrollment.forms || {}).length > 0 
+            ? Object.entries(enrollment.forms).map(([key, value]) => ({
+                id: key,
+                name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+                status: value || 'Not Started'
+              }))
+            : [{ id: 'default', name: 'Enrollment Form', status: enrollment.form_status || 'active' }];
+          
+          const completed = formsArray.filter(form => 
+            form.status === 'completed' || form.status === 'active'
+          ).length;
           const total = Math.max(formsArray.length, 1);
-          const progress = Math.round(completed / total * 100);
-          const classroomName = enrollment.classroomName;
+          const progress = enrollment.form_status === 'active' ? 50 : 0;
+          
+          const classroomName = enrollment.class_name;
           const classroom = classroomName ? classroomMap.get(classroomName.toLowerCase()) : null;
-          const parentEmail = 'parent@example.com';
-          const parentName = 'Parent';
-          console.log('Child DOB from enrollment:', enrollment.childDob);
+          
+          const parentEmail = enrollment.primary_email || 'parent@example.com';
+          const parentName = parentEmail.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          
           const student = {
             id: studentId,
-            firstName: firstName || 'Unknown',
-            lastName: lastName,
-            dateOfBirth: enrollment.childDob,
+            firstName,
+            lastName,
+            dateOfBirth: undefined, // API doesn't provide DOB
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: enrollment.classroomId || classroom?.id || 'unassigned',
+              id: classroom?.id || 'unassigned',
               name: classroomName || 'Unassigned'
             },
             parent: {
@@ -111,7 +138,6 @@ export function StudentManagement() {
             },
             assignedForms: formsArray
           };
-          console.log('Mapped student with DOB:', student.dateOfBirth, student);
           return student;
         });
         console.log('Final mapped students:', mappedStudents);

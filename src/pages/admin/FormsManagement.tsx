@@ -117,7 +117,9 @@ export function FormsManagement() {
   const handleDeleteForm = async () => {
     if (selectedForm) {
       try {
-        await deleteForm('3aa886b5-2c95-4595-a079-29f4e7c18f93', selectedForm.id);
+        const user = await fetchUserContext();
+        if (!user.schoolId) return;
+        await deleteForm(selectedForm.id, user.schoolId);
       } catch (error) {
         console.error('Failed to delete form:', error);
       }
