@@ -21,32 +21,82 @@ export type FormTemplate = {
   createdAt: string | null;
 };
 const enrollmentChildSchema = z.object({
-  child_id: z.string(),
-  child_full_name: z.string(),
+  child_id: z.string().optional(),
+  childId: z.string().optional(),
+  id: z.string().optional(),
+  child_full_name: z.string().optional(),
+  full_name: z.string().optional(),
+  name: z.string().optional(),
+  first_name: z.string().optional(),
+  firstName: z.string().optional(),
+  last_name: z.string().optional(),
+  lastName: z.string().optional(),
   child_dob: z.string().optional(),
+  dob: z.string().optional(),
+  date_of_birth: z.string().optional(),
   classroom_name: z.string().optional(),
+  class_name: z.string().optional(),
+  classroom: z.string().optional(),
   enrollment_id: z.string().optional(),
+  enrollmentId: z.string().optional(),
   forms: z.array(z.object({
-    form_id: z.string(),
+    form_id: z.string().optional(),
     form_name: z.string(),
     status: z.string(),
-    is_required: z.boolean()
+    is_required: z.boolean().optional()
   })).optional(),
   form_status: z.string().optional(),
+  formStatus: z.string().optional(),
+  status: z.string().optional(),
   primary_email: z.string().optional(),
   additional_parent_email: z.string().optional()
-});
-export async function fetchEnrollmentChildren(schoolId: string): Promise<EnrollmentChild[]> {
+}).passthrough();
+export async function fetchEnrollmentChildren(schoolId: string, parentId?: string): Promise<EnrollmentChild[]> {
   try {
     if (!schoolId || !schoolId.trim()) {
       throw new Error('School ID is required to fetch enrollment children');
     }
-    const data = await authedFetch({
-      method: 'GET',
-      url: `/enrollments?school_id=${encodeURIComponent(schoolId)}`
-      // url: `/enrollments/children-forms`
-    }, z.any());
-    console.log('Raw enrollment children response:', data);
+    
+    console.log('Fetching enrollment children for school ID:', schoolId, 'parent ID:', parentId);
+    
+    // Try multiple endpoints to get parent's children
+    const endpoints = [
+      parentId ? `/parents/${encodeURIComponent(parentId)}/children` : null,
+      parentId && parentId.includes('@') ? `/enrollments?parent_email=${encodeURIComponent(parentId)}` : null,
+      `/enrollments?school_id=${encodeURIComponent(schoolId)}`,
+      `/enrollments/children-forms?school_id=${encodeURIComponent(schoolId)}`
+    ].filter(Boolean);
+    
+    let data = null;
+    let lastError = null;
+    
+    for (const url of endpoints) {
+      try {
+        console.log('🔄 Trying API endpoint:', url);
+        data = await authedFetch({
+          method: 'GET',
+          url: url!
+        }, z.any());
+        console.log('✅ Success with endpoint:', url);
+        console.log('📊 Response data:', data);
+        break;
+      } catch (error) {
+        console.log('❌ Failed with endpoint:', url);
+        console.log('📋 Error details:', error);
+        lastError = error;
+        continue;
+      }
+    }
+    
+    if (!data) {
+      console.error('🚫 No data received from any API endpoint');
+      throw lastError || new Error('All API endpoints failed');
+    }
+    
+    console.log('📊 Raw enrollment children response:', JSON.stringify(data, null, 2));
+    console.log('🔍 Response type:', typeof data);
+    console.log('📜 Is array:', Array.isArray(data));
+    console.log('📈 Data keys:', data && typeof data === 'object' ? Object.keys(data) : 'N/A');
 
     // Handle various response formats
     let children: any[] = [];
@@ -66,31 +116,80 @@ export async function fetchEnrollmentChildren(schoolId: string): Promise<Enrollm
     const processedChildren: EnrollmentChild[] = [];
     for (const child of children) {
       if (!child || typeof child !== 'object') continue;
+      
+      console.log('Raw child data:', child);
+      
       const parseResult = enrollmentChildSchema.safeParse(child);
       if (!parseResult.success) {
-        console.warn('Invalid child record, skipping:', child, parseResult.error);
-        continue;
+        console.warn('Schema validation failed, but continuing with raw data:', parseResult.error);
+        // Continue with raw data if schema fails
       }
-      const validChild = parseResult.data;
-      const [firstName = '', lastName = ''] = validChild.child_full_name.split(' ');
-      const formsObject: Record<string, string> = {};
-      if (validChild.forms) {
-        validChild.forms.forEach(form => {
-          formsObject[form.form_name] = form.status;
-        });
-      }
-      processedChildren.push({
-        childId: validChild.child_id,
+      
+      const validChild = parseResult.success ? parseResult.data : child;
+      
+      // Extract child ID from various possible fields
+      const childId = validChild.child_id || validChild.childId || validChild.id || '';
+      
+      // Extract names from various possible fields
+      const fullName = validChild.child_full_name || validChild.full_name || validChild.name || 
+                      `${validChild.first_name || validChild.firstName || ''} ${validChild.last_name || validChild.lastName || ''}`.trim();
+      
+      const firstName = validChild.first_name || validChild.firstName || fullName.split(' ')[0] || '';
+      const lastName = validChild.last_name || validChild.lastName || fullName.split(' ').slice(1).join(' ') || '';
+      
+      // Extract other fields
+      const dob = validChild.child_dob || validChild.dob || validChild.date_of_birth;
+      const className = validChild.classroom_name || validChild.class_name || validChild.classroom;
+      const formStatus = validChild.form_status || validChild.formStatus || validChild.status;
+      
+      console.log('Processing child:', {
+        childId,
+        fullName,
         firstName,
         lastName,
-        dob: validChild.child_dob ?? null,
-        className: validChild.classroom_name ?? null,
-        formStatus: null,
+        dob,
+        className,
+        formStatus,
+        forms: validChild.forms
+      });
+      
+      // Skip if no valid child ID or name
+      if (!childId || (!firstName && !fullName)) {
+        console.warn('Skipping child with missing ID or name:', validChild);
+        continue;
+      }
+      const formsObject: Record<string, string> = {};
+      if (validChild.forms && Array.isArray(validChild.forms)) {
+        validChild.forms.forEach((form: any) => {
+          const formName = form?.form_name || form?.formName || form?.name;
+          if (form && formName) {
+            formsObject[formName] = form.status || 'Unknown';
+          }
+        });
+      }
+      
+      processedChildren.push({
+        childId,
+        firstName,
+        lastName,
+        dob: dob ?? null,
+        className: className ?? null,
+        formStatus: formStatus ?? null,
         forms: formsObject,
-        primaryEmail: null,
-        additionalParentEmail: null
+        primaryEmail: validChild.primary_email ?? null,
+        additionalParentEmail: validChild.additional_parent_email ?? null
       });
     }
+    console.log('Processed children count:', processedChildren.length);
+    
+    // If no children found and we used parent endpoint, try fallback to school endpoint
+    if (processedChildren.length === 0 && parentId) {
+      console.log('No children found with parent endpoint, trying school endpoint as fallback...');
+      return fetchEnrollmentChildren(schoolId); // Recursive call without parentId
+    }
+    
+
+    
     return processedChildren;
   } catch (error) {
     console.error('Failed to fetch enrollment children:', error);
@@ -98,6 +197,16 @@ export async function fetchEnrollmentChildren(schoolId: string): Promise<Enrollm
     // Re-throw authentication and validation errors
     if (error instanceof Error && (error.message.includes('Authentication') || error.message.includes('School ID is required'))) {
       throw error;
+    }
+
+    // If we were trying parent endpoint and it failed, try school endpoint
+    if (parentId && error instanceof Error && (error as any).status === 404) {
+      console.log('Parent endpoint failed, trying school endpoint as fallback...');
+      try {
+        return fetchEnrollmentChildren(schoolId); // Recursive call without parentId
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError);
+      }
     }
 
     // For other errors, throw a user-friendly message
@@ -136,7 +245,7 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
       console.warn('Form templates data is not an array:', templates);
       return [];
     }
-    return templates.filter(template => template && typeof template === 'object').map(template => {
+    const processedTemplates = templates.filter(template => template && typeof template === 'object').map(template => {
       const normalized: FormTemplate = {
         id: String(template.id || template.form_id || template.templateId || ''),
         schoolId: template.school_id || template.schoolId || null,
@@ -155,6 +264,10 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
       }
       return normalized;
     }).filter((template): template is FormTemplate => template !== null);
+    
+
+    
+    return processedTemplates;
   } catch (error) {
     console.error('Failed to fetch form templates:', error);
 
@@ -163,7 +276,6 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
       throw error;
     }
 
-    // Return empty array for other errors to allow graceful degradation
     return [];
   }
 }

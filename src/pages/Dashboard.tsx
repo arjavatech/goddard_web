@@ -93,11 +93,22 @@ export function Dashboard() {
     setLoading(true);
     (async () => {
       try {
+        console.log('Dashboard: Starting data fetch...');
         const user = await fetchUserContext();
+        console.log('Dashboard: User context:', user);
+        
         if (!user.schoolId) {
           throw new Error('School context not available for the current user.');
         }
-        const [enrollmentChildren, formTemplates] = await Promise.all([fetchEnrollmentChildren(user.schoolId), fetchFormTemplates(user.schoolId)]);
+        
+        console.log('Dashboard: Fetching data for school ID:', user.schoolId, 'parent ID:', user.parentId);
+        const [enrollmentChildren, formTemplates] = await Promise.all([
+          fetchEnrollmentChildren(user.schoolId, user.parentId || undefined), 
+          fetchFormTemplates(user.schoolId)
+        ]);
+        
+        console.log('Dashboard: Enrollment children received:', enrollmentChildren);
+        console.log('Dashboard: Form templates received:', formTemplates);
         const templatesForSchool = formTemplates.filter(template => !template.schoolId || template.schoolId === user.schoolId);
         const templateMap = new Map<string, FormTemplate>();
         templatesForSchool.forEach(template => {
@@ -105,6 +116,8 @@ export function Dashboard() {
           templateMap.set(template.formName.toLowerCase(), template);
         });
         const processedChildren = enrollmentChildren.map(child => normalizeChild(child, templateMap));
+        console.log('Dashboard: Processed children:', processedChildren);
+        
         const childFormsData = processedChildren.map(child => ({
           childName: child.name,
           forms: child.forms
@@ -116,6 +129,13 @@ export function Dashboard() {
           status: normalizeFormStatus(template.status)
         }));
         if (!isMounted) return;
+        
+        console.log('Dashboard: Setting state with:', {
+          childrenCount: processedChildren.length,
+          childFormsCount: childFormsData.length,
+          familyFormsCount: familyFormData.length
+        });
+        
         setChildren(processedChildren);
         setChildSpecificForms(childFormsData);
         setFamilyForms(familyFormData);
@@ -202,8 +222,14 @@ export function Dashboard() {
                     <ImportantInfo fallbackMessage="School announcements, deadlines, and contacts will appear here once they are shared." />
                   </div>
                 </div>
-              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-8 text-center text-sm text-muted-foreground">
-                Add a child to get started. We were unable to load any enrollment records for this parent.
+              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-8 text-center">
+                <div className="text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
+                <div className="text-sm text-muted-foreground mb-4">
+                  We were unable to load any enrollment records for this parent account.
+                </div>
+                <div className="text-xs text-gray-500">
+                  If you believe this is an error, please contact your school administrator.
+                </div>
               </div>}
           </>}
       </main>
