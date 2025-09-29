@@ -143,7 +143,7 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
         formName: template.form_name || template.formName || template.name || '',
         status: template.status || null,
         formType: template.form_type || template.formType || template.type || null,
-        filloutFormUrl: template.fillout_form_url || template.filloutFormUrl || template.url || null,
+        filloutFormUrl: template.fillout_form_id || template.fillout_form_id || template.fillout_form_id || null,
         isRequired: template.is_required ?? template.isRequired ?? null,
         createdAt: template.created_at || template.createdAt || template.dateCreated || null
       };
