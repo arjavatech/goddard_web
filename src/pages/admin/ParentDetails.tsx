@@ -444,6 +444,7 @@ export function ParentDetails() {
                       form,
                       childId: selectedChild?.id,
                       childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
+                      classDetails: selectedChild?.classroom?.name || 'Unassigned',
                       parentId: parent.id,
                       returnPath: `/admin/parents/${parentId}`,
                       filloutFormUrl: form.link,

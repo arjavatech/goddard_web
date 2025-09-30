@@ -18,6 +18,14 @@ export function FormView() {
 
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
+
+  // Check if form is reviewable (only when status is in_progress or submitted)
+  // Handle both normalized and raw status values
+  const isReviewable = formData?.status === 'In Progress' ||
+                       formData?.status === 'Submitted' ||
+                       formData?.status === 'in_progress' ||
+                       formData?.status === 'in progress' ||
+                       formData?.status === 'submitted';
   const childName = location.state?.childName;
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
@@ -138,8 +146,9 @@ export function FormView() {
                 <div className="flex gap-2">
                   <Button
                     onClick={handleApprove}
-                    className="bg-green-600 hover:bg-green-700 text-white"
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     size="sm"
+                    disabled={!isReviewable}
                   >
                     <CheckCircle className="h-4 w-4 mr-1" />
                     Approve
@@ -148,6 +157,7 @@ export function FormView() {
                     onClick={handleReject}
                     variant="destructive"
                     size="sm"
+                    disabled={!isReviewable}
                   >
                     <XCircle className="h-4 w-4 mr-1" />
                     Reject
