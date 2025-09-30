@@ -1,7 +1,22 @@
 import React from 'react';
+import { LogOut } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 export function Header() {
   const { userData } = useUserContext();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/login', {
+        replace: true
+      });
+    } catch (err) {
+    }
+  };
   return <header className="bg-white shadow-sm border-b border-gray-100 py-4 px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
@@ -36,6 +51,13 @@ export function Header() {
               : 'Parent User'}
           </span>
         </div>
+        <button
+          onClick={handleLogout}
+          className="flex items-center space-x-2 px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          <span className="text-sm">Logout</span>
+        </button>
       </div>
     </header>;
 }
