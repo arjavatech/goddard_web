@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users } from 'lucide-react';
+import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
@@ -26,6 +26,7 @@ interface Form {
   recentEditLink: string | null;
   filloutFormId: string;
   studentFormAssignmentId: string | null;
+  recentPdfLink: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -89,6 +90,7 @@ export function ParentDetails() {
   const [formAction, setFormAction] = useState<'approve' | 'reject' | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingAction, setLoadingAction] = useState<{formId: string, action: 'download' | 'print'} | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const {
     addToast
@@ -140,17 +142,20 @@ export function ParentDetails() {
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
               // Find template by matching form ID or name
-              const template = templates.find(t => t.id === form.formId || t.formName === form.formName || (t as any).form_name === form.formName);
+              const formId = form.form_id || form.formId;
+              const formName = form.form_name || form.formName;
+              const template = templates.find(t => t.id === formId || t.formName === formName || (t as any).form_name === formName);
               const formObj = {
-                id: form.formId,
-                title: form.formName,
+                id: formId,
+                title: formName,
                 description: template?.formType || (template as any)?.form_type || 'Enrollment form',
                 lastUpdated: template?.createdAt ? new Date(template.createdAt).toLocaleDateString() : '—',
                 status: mapToFormStatus(form.status),
                 link: form.recent_edit_link || form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
                 recentEditLink: form.recent_edit_link || null,
                 filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
-                studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null
+                studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
+                recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null
               } satisfies Form;
 
 
@@ -221,6 +226,117 @@ export function ParentDetails() {
     setFormAction(action);
     setReviewNotes('');
     setIsReviewDialogOpen(true);
+  };
+
+  const handleDownload = async (form: Form) => {
+    if (!form.recentPdfLink) return;
+
+    setLoadingAction({ formId: form.id, action: 'download' });
+
+    try {
+      // Fetch the PDF as a blob
+      const response = await fetch(form.recentPdfLink);
+      if (!response.ok) throw new Error('Failed to download PDF');
+
+      const blob = await response.blob();
+
+      // Create a download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${form.title.replace(/\s+/g, '_')}_${selectedChild?.firstName}_${selectedChild?.lastName}.pdf`;
+
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      addToast({
+        type: 'success',
+        title: 'Download Started',
+        description: `${form.title} is downloading...`
+      });
+    } catch (error) {
+      console.error('Download failed:', error);
+      addToast({
+        type: 'error',
+        title: 'Download Failed',
+        description: 'Unable to download the PDF. Please try again.'
+      });
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handlePrint = async (form: Form) => {
+    if (!form.recentPdfLink) return;
+
+    setLoadingAction({ formId: form.id, action: 'print' });
+
+    try {
+      // Fetch the PDF as a blob first
+      const response = await fetch(form.recentPdfLink);
+      if (!response.ok) throw new Error('Failed to fetch PDF');
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      // Open in new window and trigger print
+      const printWindow = window.open(blobUrl, '_blank');
+
+      if (printWindow) {
+        // Wait for the PDF to load in the new window
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+
+            // Close the window after print dialog is closed
+            printWindow.onafterprint = () => {
+              printWindow.close();
+              window.URL.revokeObjectURL(blobUrl);
+            };
+          }, 1000);
+        };
+
+        // Set timeout to clean up
+        setTimeout(() => {
+          setLoadingAction(null);
+          window.URL.revokeObjectURL(blobUrl);
+        }, 3000);
+
+        addToast({
+          type: 'info',
+          title: 'Print Dialog Opening',
+          description: 'Print dialog will open in a new window.'
+        });
+      } else {
+        throw new Error('Popup blocked');
+      }
+
+    } catch (error) {
+      console.error('Print failed:', error);
+
+      // Fallback: Open PDF in new tab for manual print
+      const printWindow = window.open(form.recentPdfLink, '_blank');
+      if (printWindow) {
+        addToast({
+          type: 'info',
+          title: 'PDF Opened',
+          description: 'Please use Ctrl+P (or Cmd+P) to print the document.'
+        });
+      } else {
+        addToast({
+          type: 'error',
+          title: 'Print Failed',
+          description: 'Please enable popups or download the PDF to print.'
+        });
+      }
+
+      setLoadingAction(null);
+    }
   };
   const handleFormReview = async () => {
     if (!selectedForm || !formAction || !selectedChild) return;
@@ -442,6 +558,38 @@ export function ParentDetails() {
                             </p>
                           </div>
                           <div className="flex space-x-2">
+                            {form.status === 'Approved' && form.recentPdfLink && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  onClick={() => handleDownload(form)}
+                                  disabled={loadingAction?.formId === form.id}
+                                  title="Download PDF"
+                                >
+                                  {loadingAction?.formId === form.id && loadingAction?.action === 'download' ? (
+                                    <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                                  ) : (
+                                    <Download className="h-4 w-4" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
+                                  onClick={() => handlePrint(form)}
+                                  disabled={loadingAction?.formId === form.id}
+                                  title="Print PDF"
+                                >
+                                  {loadingAction?.formId === form.id && loadingAction?.action === 'print' ? (
+                                    <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
+                                  ) : (
+                                    <Printer className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </>
+                            )}
                             <Link to={`/admin/forms/view/${form.id}`} state={{
                       form,
                       childId: selectedChild?.id,
