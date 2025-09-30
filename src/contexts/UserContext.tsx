@@ -39,7 +39,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadUserData();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user?.id]); // Use user.id instead of the whole user object
 
   return (
     <UserContext.Provider value={{ userData, loading, error, refreshUserData: loadUserData }}>

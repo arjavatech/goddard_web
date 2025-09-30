@@ -9,9 +9,9 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchStudentEnrollments } from '../../services/api/admin';
 
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
+import { fetchStudentEnrollments } from '@/services/api/admin';
 
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 

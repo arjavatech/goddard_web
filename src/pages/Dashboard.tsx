@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
@@ -7,8 +7,9 @@ import { QuickActions } from '../components/dashboard/QuickActions';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
-import { fetchEnrollmentChildren, fetchFormTemplates, type EnrollmentChild, type FormTemplate } from '../services/api/dashboard';
-import { fetchUserContext } from '../services/api/user';
+import { fetchSingleParent } from '../services/api/admin';
+import { useUserContext } from '../contexts/UserContext';
+import { useAuth } from '../services/auth/useAuth';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
 type FormStatus = NormalizedFormStatus;
 type ChildFormCard = {
@@ -49,30 +50,35 @@ function formatDate(input: string | null | undefined): string {
     year: 'numeric'
   });
 }
-function normalizeChild(child: EnrollmentChild, templateMap: Map<string, FormTemplate>): DashboardChild {
-  const formEntries = Object.entries(child.forms ?? {});
-  const forms = formEntries.map(([rawTitle, rawStatus]) => {
-    const template = templateMap.get(rawTitle.toLowerCase());
-    const status = normalizeFormStatus(rawStatus);
+function normalizeChildFromParent(child: any): DashboardChild {
+  const forms = (child.forms || []).map((form: any) => {
+    const status = normalizeFormStatus(form.status);
     return {
-      title: template?.formName ?? rawTitle,
-      description: template?.formType ? `${template.formType} form` : 'Form details unavailable',
-      lastUpdated: formatDate(template?.createdAt),
+      title: form.formName || form.form_name || 'Unknown Form',
+      description: 'Enrollment form',
+      lastUpdated: formatDate(null),
       status
     } satisfies ChildFormCard;
   });
-  const completedCount = forms.filter(form => COMPLETION_STATUSES.has(form.status)).length;
+
+  const completedCount = forms.filter((form: ChildFormCard) => COMPLETION_STATUSES.has(form.status)).length;
   const totalForms = forms.length;
-  const pendingForm = forms.find(form => !COMPLETION_STATUSES.has(form.status)) ?? null;
-  const fallbackStatus = normalizeFormStatus(child.formStatus);
-  const enrollmentProgress = totalForms > 0 ? Math.round(completedCount / totalForms * 100) : fallbackStatus === 'Approved' ? 100 : 0;
+  const pendingForm = forms.find((form: ChildFormCard) => !COMPLETION_STATUSES.has(form.status)) ?? null;
+  const enrollmentProgress = totalForms > 0 ? Math.round(completedCount / totalForms * 100) : 0;
   const currentStep = pendingForm?.title ?? (enrollmentProgress === 100 ? 'Enrollment complete' : 'Start enrollment');
+
+  // Extract name from childFullName or fallback to empty string
+  const fullName = child.childFullName || '';
+  const nameParts = fullName.split(' ');
+  const firstName = nameParts[0] || '';
+  const lastName = nameParts.slice(1).join(' ') || '';
+
   return {
-    id: child.childId,
-    name: `${child.firstName} ${child.lastName}`.trim(),
-    initials: getInitials(child.firstName, child.lastName),
+    id: child.childId || '',
+    name: fullName,
+    initials: getInitials(firstName, lastName),
     age: '—',
-    dob: formatDate(child.dob) || '—',
+    dob: formatDate(child.childDob) || '—',
     enrollmentProgress,
     formsCompleted: completedCount,
     totalForms,
@@ -82,70 +88,82 @@ function normalizeChild(child: EnrollmentChild, templateMap: Map<string, FormTem
   };
 }
 export function Dashboard() {
+  const { userData, loading: userLoading } = useUserContext();
+  const { user } = useAuth();
   const [children, setChildren] = useState<DashboardChild[]>([]);
   const [childSpecificForms, setChildSpecificForms] = useState<ChildSpecificFormGroup[]>([]);
   const [familyForms, setFamilyForms] = useState<FamilyFormCard[]>([]);
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
+    // Wait for user data to be loaded
+    if (userLoading) {
+      return;
+    }
+
+    // Check if we have the necessary data
+    if (!userData?.schoolId) {
+      setError('School context not available for the current user.');
+      setLoading(false);
+      return;
+    }
+
+    const parentId = userData.parentId || user?.id;
+    if (!parentId) {
+      setError('Parent ID not available.');
+      setLoading(false);
+      return;
+    }
+
     let isMounted = true;
     setLoading(true);
-    (async () => {
-      try {
-        const user = await fetchUserContext();
-        
-        if (!user.schoolId) {
-          throw new Error('School context not available for the current user.');
+
+    // Fetch parent data with children and forms in a single API call
+    fetchSingleParent(parentId, userData.schoolId)
+      .then(parentData => {
+        if (!isMounted) return;
+
+        if (!parentData) {
+          throw new Error('Unable to fetch parent data.');
         }
-        
-        const [enrollmentChildren, formTemplates] = await Promise.all([
-          fetchEnrollmentChildren(user.schoolId, user.parentId || undefined), 
-          fetchFormTemplates(user.schoolId)
-        ]);
-        
-        const templatesForSchool = formTemplates.filter(template => !template.schoolId || template.schoolId === user.schoolId);
-        const templateMap = new Map<string, FormTemplate>();
-        templatesForSchool.forEach(template => {
-          if (!template.formName) return;
-          templateMap.set(template.formName.toLowerCase(), template);
-        });
-        const processedChildren = enrollmentChildren.map(child => normalizeChild(child, templateMap));
-        
+
+        // Process children from the parent response
+        const processedChildren = (parentData.children || []).map(child => normalizeChildFromParent(child));
+
+        // Extract forms for each child
         const childFormsData = processedChildren.map(child => ({
           childName: child.name,
           forms: child.forms
         }));
-        const familyFormData = templatesForSchool.map(template => ({
-          title: template.formName,
-          description: template.formType ? `${template.formType} form` : 'Form template',
-          lastUpdated: formatDate(template.createdAt),
-          status: normalizeFormStatus(template.status)
-        }));
-        if (!isMounted) return;
-        
-        
+
+        // For now, we'll use an empty array for family forms since the API doesn't provide them
+        const familyFormData: FamilyFormCard[] = [];
+
         setChildren(processedChildren);
         setChildSpecificForms(childFormsData);
         setFamilyForms(familyFormData);
         setError(null);
-      } catch (err) {
+      })
+      .catch(err => {
         if (!isMounted) return;
         setChildren([]);
         setChildSpecificForms([]);
         setFamilyForms([]);
         const message = err instanceof Error ? err.message : null;
         setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load your dashboard details right now. Please try again shortly.");
-      } finally {
+      })
+      .finally(() => {
         if (isMounted) {
           setLoading(false);
         }
-      }
-    })();
+      });
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [userData, userLoading, user?.id]);
   useEffect(() => {
     if (children.length === 0) {
       setSelectedChildId(null);

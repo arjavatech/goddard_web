@@ -256,12 +256,24 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
 //     }
 //   }, z.any());
 // }
+export async function fetchStudentEnrollments(schoolId: string): Promise<any> {
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/enrollments?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
+    return data;
+  } catch (error) {
+    console.error('fetchStudentEnrollments error:', error);
+    return { enrollments: [] };
+  }
+}
 
 export async function fetchSingleParent(parentId: string, schoolId: string): Promise<ParentDetail | null> {
   try {
     const data = await authedFetch({
       method: 'GET',
-      url: `/parents/${encodeURIComponent(parentId)}?school_id=${encodeURIComponent(schoolId)}`
+      url: `/parent/${encodeURIComponent(parentId)}?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     if (!data) return null;
     return {

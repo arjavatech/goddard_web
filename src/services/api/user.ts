@@ -21,12 +21,11 @@ const userContextSchema = z.object({
   lastName: z.string().optional()
 }).passthrough(); // Allow additional fields
 export async function fetchUserContext(): Promise<UserContext> {
-  console.log('Fetching user context from /users/me');
   const data = await authedFetch({
     method: 'GET',
     url: '/users/me'
   }, userContextSchema);
-  console.log('Raw user context data:', JSON.stringify(data, null, 2));
+
   const result = {
     role: data.role,
     schoolId: data.school_id || data.schoolId || null,
@@ -34,11 +33,9 @@ export async function fetchUserContext(): Promise<UserContext> {
     firstName: data.first_name || data.firstName,
     lastName: data.last_name || data.lastName
   };
-  console.log('Processed user context:', result);
 
   // If we don't have a parentId but have an email, use email as identifier
   if (!result.parentId && data.email) {
-    console.log('Using email as parent identifier:', data.email);
     result.parentId = data.email;
   }
 
