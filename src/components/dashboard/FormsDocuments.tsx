@@ -130,32 +130,46 @@ export function FormsDocuments({
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
 
-  // Combine all forms into a single list
+  // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
     return [
       ...familyForms.map((form, index) => ({
         ...form,
         childName: undefined,
-        _key: `family-${index}`
+        _key: `family-${index}`,
+        rawData: null as any
       })),
       ...childSpecificForms.flatMap((child, childIndex) =>
         child.forms.map((form, formIndex) => ({
           ...form,
           childName: child.childName,
           _key: `child-${childIndex}-form-${formIndex}`,
-          rawData: rawFormData?.children?.[childIndex]?.forms?.[formIndex]
+          rawData: rawFormData?.children?.[childIndex]?.forms?.[formIndex] || null
         }))
       )
     ];
   }, [familyForms, childSpecificForms, rawFormData]);
 
   const handleView = (form: any) => {
-    // Determine which URL to use for viewing
-    const formUrl = form.rawData?.recent_edit_link ||
-                    form.rawData?.fillout_form_id ||
-                    form.recentEditLink ||
-                    form.filloutFormId ||
-                    '#';
+    let formUrl = '#';
+
+    const isApproved = form.status === 'Approved';
+
+    if (isApproved) {
+      // For approved forms, prioritize recent_edit_link for viewing
+      formUrl = form.rawData?.recent_edit_link ||
+                form.recentEditLink ||
+                form.rawData?.recent_pdf_link ||
+                form.recentPdfLink ||
+                '#';
+    } else {
+      // For non-approved forms, use recent_edit_link first, then fillout_form_id
+      formUrl = form.rawData?.recent_edit_link ||
+                form.recentEditLink ||
+                form.rawData?.fillout_form_id ||
+                form.filloutFormId ||
+                '#';
+    }
 
     setSelectedForm({
       ...form,

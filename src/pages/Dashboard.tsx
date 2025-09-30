@@ -17,6 +17,10 @@ type ChildFormCard = {
   description: string;
   lastUpdated: string;
   status: FormStatus;
+  formId?: string;
+  recentPdfLink?: string | null;
+  recentEditLink?: string | null;
+  filloutFormId?: string | null;
 };
 type ChildSpecificFormGroup = {
   childName: string;
@@ -57,7 +61,11 @@ function normalizeChildFromParent(child: any): DashboardChild {
       title: form.formName || form.form_name || 'Unknown Form',
       description: 'Enrollment form',
       lastUpdated: formatDate(null),
-      status
+      status,
+      formId: form.form_id || form.formId,
+      recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
+      recentEditLink: form.recent_edit_link || form.recentEditLink || null,
+      filloutFormId: form.fillout_form_id || form.filloutFormId || null
     } satisfies ChildFormCard;
   });
 
