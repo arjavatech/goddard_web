@@ -488,3 +488,33 @@ export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollm
     return [];
   }
 }
+
+export async function reviewStudentFormAssignment(
+  assignmentId: string,
+  status: 'approved' | 'rejected',
+  notes: string,
+  approvedBy: string
+): Promise<void> {
+  const requestBody = {
+    assignment_id: assignmentId,
+    status,
+    notes,
+    approved_by: approvedBy
+  };
+
+  const responseSchema = z.object({
+    success: z.boolean().optional(),
+    message: z.string().optional()
+  }).passthrough();
+
+  try {
+    await authedFetch({
+      method: 'PUT',
+      url: '/student-form-assignments/review',
+      body: requestBody
+    }, responseSchema);
+  } catch (error) {
+    console.error('Error reviewing form assignment:', error);
+    throw new Error('Failed to review form assignment');
+  }
+}

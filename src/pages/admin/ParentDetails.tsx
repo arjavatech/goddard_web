@@ -25,6 +25,7 @@ interface Form {
   link: string;
   recentEditLink: string | null;
   filloutFormId: string;
+  studentFormAssignmentId: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -148,7 +149,8 @@ export function ParentDetails() {
                 status: mapToFormStatus(form.status),
                 link: form.recent_edit_link || form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
                 recentEditLink: form.recent_edit_link || null,
-                filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#'
+                filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
+                studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null
               } satisfies Form;
 
 
@@ -449,7 +451,8 @@ export function ParentDetails() {
                       returnPath: `/admin/parents/${parentId}`,
                       filloutFormUrl: form.link,
                       recentEditLink: form.recentEditLink,
-                      filloutFormId: form.filloutFormId
+                      filloutFormId: form.filloutFormId,
+                      studentFormAssignmentId: form.studentFormAssignmentId
                     }}>
                               <Button variant="outline" size="sm">
                                 <Eye className="h-4 w-4 mr-1" />

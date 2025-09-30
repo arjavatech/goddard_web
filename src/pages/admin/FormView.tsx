@@ -7,11 +7,17 @@ import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle } from 'lucid
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
+import { reviewStudentFormAssignment } from '../../services/api/admin';
+import { useAuth } from '../../services/auth/useAuth';
+import { useToast } from '../../components/ui/toast';
 
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [isFrameLoading, setIsFrameLoading] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
@@ -32,6 +38,7 @@ export function FormView() {
   const filloutFormUrl = location.state?.filloutFormUrl;
   const recentEditLink = location.state?.recentEditLink;
   const filloutFormId = location.state?.filloutFormId;
+  const studentFormAssignmentId = location.state?.studentFormAssignmentId;
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
@@ -67,17 +74,114 @@ export function FormView() {
   };
 
   // Handle form approval
-  const handleApprove = () => {
-    // TODO: Implement approval logic
-    console.log('Form approved with notes:', notes);
-    alert(`Form approved${notes ? ` with notes: ${notes}` : ''}`);
+  const handleApprove = async () => {
+    if (!studentFormAssignmentId) {
+      toast({
+        title: 'Error',
+        description: 'Unable to approve form: Assignment ID is missing',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'Unable to approve form: User not authenticated',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await reviewStudentFormAssignment(
+        studentFormAssignmentId,
+        'approved',
+        notes,
+        user.id
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Form has been approved successfully',
+        variant: 'success'
+      });
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate(returnPath);
+      }, 1500);
+    } catch (error) {
+      console.error('Error approving form:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to approve form. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Handle form rejection
-  const handleReject = () => {
-    // TODO: Implement rejection logic
-    console.log('Form rejected with notes:', notes);
-    alert(`Form rejected${notes ? ` with notes: ${notes}` : ''}`);
+  const handleReject = async () => {
+    if (!studentFormAssignmentId) {
+      toast({
+        title: 'Error',
+        description: 'Unable to reject form: Assignment ID is missing',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: 'Error',
+        description: 'Unable to reject form: User not authenticated',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    if (!notes.trim()) {
+      toast({
+        title: 'Error',
+        description: 'Please provide notes when rejecting a form',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    try {
+      await reviewStudentFormAssignment(
+        studentFormAssignmentId,
+        'rejected',
+        notes,
+        user.id
+      );
+
+      toast({
+        title: 'Success',
+        description: 'Form has been rejected with notes',
+        variant: 'success'
+      });
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate(returnPath);
+      }, 1500);
+    } catch (error) {
+      console.error('Error rejecting form:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to reject form. Please try again.',
+        variant: 'destructive'
+      });
+    } finally {
+      setIsProcessing(false);
+    }
   };
   if (!formData) {
     return <AdminLayout>
@@ -148,19 +252,37 @@ export function FormView() {
                     onClick={handleApprove}
                     className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     size="sm"
-                    disabled={!isReviewable}
+                    disabled={!isReviewable || isProcessing}
                   >
-                    <CheckCircle className="h-4 w-4 mr-1" />
-                    Approve
+                    {isProcessing ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </>
+                    )}
                   </Button>
                   <Button
                     onClick={handleReject}
                     variant="destructive"
                     size="sm"
-                    disabled={!isReviewable}
+                    disabled={!isReviewable || isProcessing}
                   >
-                    <XCircle className="h-4 w-4 mr-1" />
-                    Reject
+                    {isProcessing ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
