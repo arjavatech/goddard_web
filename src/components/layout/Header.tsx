@@ -1,7 +1,7 @@
 import React from 'react';
-import { Bell, User, Shield } from 'lucide-react';
-import { Button } from '../ui/button';
+import { useUserContext } from '../../contexts/UserContext';
 export function Header() {
+  const { userData } = useUserContext();
   return <header className="bg-white shadow-sm border-b border-gray-100 py-4 px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2">
         <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
@@ -24,13 +24,18 @@ export function Header() {
         </Button>
        </nav> */}
       <div className="flex items-center space-x-4">
-        <Button variant="ghost" size="icon" className="relative hover:bg-gray-50">
-          <Bell size={20} className="two-tone-icon" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-amazon-orange rounded-full"></span>
-        </Button>
-        <Button variant="ghost" size="icon" className="hover:bg-gray-50">
-          <User size={20} className="two-tone-icon" />
-        </Button>
+        <div className="flex items-center space-x-2">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
+            {userData?.firstName && userData?.lastName
+              ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
+              : 'P'}
+          </div>
+          <span className="text-sm font-medium">
+            {userData?.firstName && userData?.lastName
+              ? `${userData.firstName} ${userData.lastName}`
+              : 'Parent User'}
+          </span>
+        </div>
       </div>
     </header>;
 }

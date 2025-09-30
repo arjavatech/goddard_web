@@ -1,7 +1,8 @@
-import React from 'react';
-import { Home, School, FileText, Users, Bell, LogOut, GraduationCap } from 'lucide-react';
+import React, { ReactNode } from 'react';
+import { Home, School, FileText, Users, LogOut, GraduationCap } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
+import { useUserContext } from '../../contexts/UserContext';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -13,6 +14,7 @@ export function AdminLayout({
   const {
     signOut
   } = useAuth();
+  const { userData } = useUserContext();
   const handleLogout = async () => {
     try {
       await signOut();
@@ -77,15 +79,17 @@ export function AdminLayout({
             Admin Portal
           </h1>
           <div className="flex items-center space-x-4">
-            <button className="relative hover:bg-gray-50 p-2 rounded-full">
-              <Bell size={20} className="text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-amazon-orange rounded-full"></span>
-            </button>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
-                AD
+                {userData?.firstName && userData?.lastName
+                  ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
+                  : 'AD'}
               </div>
-              <span className="text-sm font-medium">Admin User</span>
+              <span className="text-sm font-medium">
+                {userData?.firstName && userData?.lastName
+                  ? `${userData.firstName} ${userData.lastName}`
+                  : 'Admin User'}
+              </span>
             </div>
           </div>
         </header>
