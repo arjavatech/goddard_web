@@ -96,6 +96,7 @@ export function Dashboard() {
   const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [parentData, setParentData] = useState<any>(null);
 
   useEffect(() => {
     // Wait for user data to be loaded
@@ -128,6 +129,9 @@ export function Dashboard() {
         if (!parentData) {
           throw new Error('Unable to fetch parent data.');
         }
+
+        // Store raw parent data for form viewing
+        setParentData(parentData);
 
         // Process children from the parent response
         const processedChildren = (parentData.children || []).map(child => normalizeChildFromParent(child));
@@ -205,7 +209,11 @@ export function Dashboard() {
                   <div className="section-fade-in" style={{
               animationDelay: '0.2s'
             }}>
-                    <FormsDocuments childSpecificForms={childSpecificForms} familyForms={familyForms} />
+                    <FormsDocuments
+                      childSpecificForms={childSpecificForms}
+                      familyForms={familyForms}
+                      rawFormData={parentData}
+                    />
                   </div>
                 </div>
                 <div className="space-y-6">
