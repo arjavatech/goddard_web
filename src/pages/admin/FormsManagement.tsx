@@ -11,7 +11,7 @@ import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
-import { fetchClassEnrollmentStats, deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
+import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -47,21 +47,16 @@ export function FormsManagement() {
         setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const [templates, classStats] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
+        const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
         if (!isMounted) return;
         if (templates.length === 0) return;
-        const classCounts = new Map<string, number>();
-        classStats.forEach(stat => {
-          Object.keys(stat.forms).forEach(formId => {
-            classCounts.set(formId, (classCounts.get(formId) ?? 0) + 1);
-          });
-        });
+        
         const mappedForms: Form[] = templates.map(template => ({
           id: template.id,
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
-          classroomsCount: classCounts.get(template.id) ?? 0
+          classroomsCount: 0
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -87,7 +82,7 @@ export function FormsManagement() {
         if (!user.schoolId) return;
         await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
         const newForm: Form = {
-          id: (forms.length + 1).toString(),
+          id: crypto.randomUUID(),
           name: formName.trim(),
           link: formLink.trim(),
           status: formStatus,

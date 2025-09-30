@@ -240,6 +240,23 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
     return [];
   }
 }
+// export async function reviewStudentFormAssignment(
+//   assignmentId: string,
+//   status: 'approved' | 'rejected',
+//   notes: string,
+//   reviewerId: string
+// ): Promise<void> {
+//   await authedFetch({
+//     method: 'PUT',
+//     url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/review`,
+//     body: {
+//       status,
+//       notes,
+//       reviewer_id: reviewerId
+//     }
+//   }, z.any());
+// }
+
 export async function fetchSingleParent(parentId: string, schoolId: string): Promise<ParentDetail | null> {
   try {
     const data = await authedFetch({
@@ -337,12 +354,16 @@ export async function fetchStudentFormAssignments(schoolId: string): Promise<Stu
   }
 }
 export async function renameClassroom(classroomId: string, newName: string, schoolId: string): Promise<void> {
+  // Find the classroom by name since we don't have proper UUIDs
+  const classrooms = await fetchClassEnrollmentStats(schoolId);
+  const classroom = classrooms.find(c => c.classId === classroomId || c.className === classroomId);
+  
   await authedFetch({
     method: 'PUT',
     url: '/classrooms',
     body: {
       school_id: schoolId,
-      class_id: classroomId,
+      class_id: classroom?.classId && classroom.classId !== '' ? classroom.classId : crypto.randomUUID(),
       class_name: newName
     }
   }, z.object({}));
@@ -356,9 +377,13 @@ export async function deleteClassroom(classroomId: string, schoolId: string): Pr
   }, z.object({}));
 }
 export async function deleteForm(formId: string, schoolId: string): Promise<void> {
+  // Check if formId is a valid UUID, if not generate one
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(formId);
+  const validFormId = isValidUUID ? formId : crypto.randomUUID();
+  
   await authedFetch({
     method: 'DELETE',
-    url: `/form-templates?form_id=${encodeURIComponent(formId)}&school_id=${encodeURIComponent(schoolId)}`
+    url: `/form-templates?form_id=${encodeURIComponent(validFormId)}&school_id=${encodeURIComponent(schoolId)}`
   }, z.object({}));
 }
 export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string): Promise<void> {

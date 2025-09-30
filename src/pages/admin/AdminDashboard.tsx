@@ -5,7 +5,7 @@ import { School, FileText, Users, Clock, AlertCircle, CheckCircle } from 'lucide
 import { Progress } from '../../components/ui/progress';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchParentDetails, fetchSchoolEnrollments } from '../../services/api/admin';
+import { fetchClassrooms, fetchParentDetails, fetchSchoolEnrollments } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 type StatCard = {
@@ -49,7 +49,7 @@ export function AdminDashboard() {
           throw new Error('Unable to determine school context for the current admin.');
         }
         const schoolId = user.schoolId;
-        const [classrooms, classStats, forms, parents, enrollments] = await Promise.all([fetchClassrooms(schoolId).catch(() => []), fetchClassEnrollmentStats(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchParentDetails(schoolId).catch(() => []), fetchSchoolEnrollments(schoolId).catch(() => [])]);
+        const [classrooms, forms, parents, enrollments] = await Promise.all([fetchClassrooms(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchParentDetails(schoolId).catch(() => []), fetchSchoolEnrollments(schoolId).catch(() => [])]);
         const totalClassrooms = classrooms.length;
         const activeForms = forms.filter(template => (template.status ?? '').toLowerCase() === 'active').length;
         const registeredParents = parents.length;
@@ -79,12 +79,6 @@ export function AdminDashboard() {
           completed: number;
           total: number;
         }>();
-        classStats.forEach(stat => {
-          completionsByClass.set(stat.className, {
-            completed: 0,
-            total: stat.studentCount
-          });
-        });
         enrollments.forEach(child => {
           const className = child.className ?? 'Unassigned';
           if (!completionsByClass.has(className)) {

@@ -10,7 +10,7 @@ import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassEnrollmentStats, fetchClassrooms, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,28 +29,21 @@ export function ClassroomManagement() {
         if (!user.schoolId) {
           throw new Error('Unable to determine school context for this admin.');
         }
-        const [rawClassrooms, enrollmentStats] = await Promise.all([fetchClassrooms(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
+        const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId).catch(() => []);
         if (!isMounted) return;
-        if (rawClassrooms.length === 0) {
-          return;
-        }
-        const statsByName = new Map<string, {
-          students: number;
-          forms: Record<string, string>;
-        }>();
-        enrollmentStats.forEach(stat => {
-          statsByName.set(stat.className, {
-            students: stat.studentCount,
-            forms: stat.forms ?? {}
-          });
-        });
-        const mapped: Classroom[] = rawClassrooms.map(classroom => {
-          const stats = statsByName.get(classroom.name);
-          return {
-            ...classroom,
-            studentsCount: stats?.students ?? 0
-          };
-        });
+        
+        const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+          id: stat.classId || crypto.randomUUID(),
+          name: stat.className,
+          studentsCount: stat.studentCount,
+          formsCount: Object.keys(stat.forms ?? {}).length,
+          assignedForms: Object.entries(stat.forms ?? {}).map(([formName, status]) => ({
+            id: formName,
+            name: formName.replace(/[-_]/g, ' '),
+            status: status as any
+          }))
+        }));
+        
         setClassrooms(mapped);
       } catch (err) {
       } finally {
@@ -91,7 +84,7 @@ export function ClassroomManagement() {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        await renameClassroom(selectedClassroom.id, newClassroomName.trim(), user.schoolId);
+        await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
         setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
           ...classroom,
           name: newClassroomName.trim()

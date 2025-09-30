@@ -9,9 +9,8 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms } from '../../services/api/admin';
-import { authedFetch, z } from '../../services/api/common';
-import { fetchFormTemplates } from '../../services/api/dashboard';
+import { fetchStudentEnrollments } from '../../services/api/admin';
+
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
 
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
@@ -71,11 +70,7 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const [enrollmentData, classrooms, templates] = await Promise.all([
-          authedFetch({ method: 'GET', url: `/enrollments?school_id=${encodeURIComponent(user.schoolId)}` }, z.any()),
-          fetchClassrooms(user.schoolId),
-          fetchFormTemplates(user.schoolId)
-        ]);
+        const enrollmentData = await fetchStudentEnrollments(user.schoolId);
         
         const enrollments = enrollmentData.enrollments || [];
         if (!isMounted) return;
@@ -83,8 +78,6 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const classroomMap = new Map(classrooms.map(cls => [cls.name?.toLowerCase(), cls]));
-        const templateMap = new Map(templates.map(template => [template.id, template]));
         const mappedStudents: Student[] = enrollments.map((enrollment: EnrollmentData, index: number) => {
           const studentId = enrollment.child_id || `student-${index}`;
           const firstName = enrollment.child_first_name || 'Unknown';
@@ -106,7 +99,6 @@ export function StudentManagement() {
           const progress = enrollment.form_status === 'active' ? 50 : 0;
           
           const classroomName = enrollment.class_name;
-          const classroom = classroomName ? classroomMap.get(classroomName.toLowerCase()) : null;
           
           const parentEmail = enrollment.primary_email || 'parent@example.com';
           const parentName = parentEmail.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
@@ -121,7 +113,7 @@ export function StudentManagement() {
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: classroom?.id || 'unassigned',
+              id: 'unassigned',
               name: classroomName || 'Unassigned'
             },
             parent: {

@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
+import { fetchParentDetails, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Complete' | 'Pending' | 'Invited';
 interface Child {
@@ -78,12 +78,8 @@ export function ParentManagement() {
         setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const [parentDetails, enrollments, classroomList] = await Promise.all([fetchParentDetails(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => [])]);
+        const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
         if (!isMounted) return;
-        setClassrooms(classroomList.map(cls => ({
-          id: cls.id,
-          name: cls.name
-        })));
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
             const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
