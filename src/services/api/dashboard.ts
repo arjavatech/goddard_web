@@ -221,11 +221,6 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
     }
     const data = await authedFetch({
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': 'test-owner-key-2024'
-
-      },
       url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
     console.log('Raw form templates response:', data);

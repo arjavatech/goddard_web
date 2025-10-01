@@ -13,11 +13,6 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
     ...(req.headers ?? {})
   };
 
-  // Add X-API-Key header for all requests except /users/me
-  if (!req.url.includes('/users/me')) {
-    headers['X-API-Key'] = 'test-owner-key-2024';
-  }
-
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
   const start = isDev ? performance.now() : 0;
   const res = await fetch(url, {
