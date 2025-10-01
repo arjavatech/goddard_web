@@ -69,6 +69,7 @@ export function ParentManagement() {
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildDob, setNewChildDob] = useState('');
+  const [newChildGender, setNewChildGender] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
   useEffect(() => {
@@ -78,8 +79,23 @@ export function ParentManagement() {
         setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
+
+        // Fetch both parent details and classrooms
+        const [parentDetails, classroomData] = await Promise.all([
+          fetchParentDetails(user.schoolId).catch(() => []),
+          fetchClassrooms(user.schoolId).catch(() => [])
+        ]);
+
         if (!isMounted) return;
+
+        // Set classrooms for the dropdowns
+        if (classroomData.length > 0) {
+          const classroomList = classroomData.map(classroom => ({
+            id: classroom.id,
+            name: classroom.name
+          }));
+          setClassrooms(classroomList);
+        }
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
             const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
@@ -169,16 +185,19 @@ export function ParentManagement() {
     }
   };
   const handleAddChild = async () => {
-    if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildClassroom) {
+    if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildGender && newChildClassroom) {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         // Use first child's enrollment ID or generate one
         const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
         await addChild(user.schoolId, enrollmentId, {
-          childFullName: `${newChildFirstName} ${newChildLastName}`,
+          childFirstName: newChildFirstName,
+          childLastName: newChildLastName,
           childDob: newChildDob,
-          classroomId: newChildClassroom
+          gender: newChildGender,
+          classroomId: newChildClassroom,
+          parentId: selectedParent.id
         });
         const classroom = classrooms.find(c => c.id === newChildClassroom);
         const newChild: Child = {
@@ -215,6 +234,7 @@ export function ParentManagement() {
     setNewChildFirstName('');
     setNewChildLastName('');
     setNewChildDob('');
+    setNewChildGender('');
     setNewChildClassroom('');
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
@@ -510,6 +530,21 @@ export function ParentManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
+                Gender
+              </label>
+              <Select value={newChildGender} onValueChange={setNewChildGender}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="others">Others</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
                 Classroom
               </label>
               <Select value={newChildClassroom} onValueChange={setNewChildClassroom}>
@@ -528,7 +563,7 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newChildFirstName || !newChildLastName || !newChildDob || !newChildClassroom}>
+            <Button onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom}>
               Add Child
             </Button>
           </DialogFooter>

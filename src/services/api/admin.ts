@@ -450,20 +450,25 @@ export async function inviteParent(schoolId: string, parentData: {
     }
   }, z.union([z.object({}), z.string()]));
 }
-export async function addChild(schoolId: string, enrollmentId: string, childData: {
-  childFullName: string;
+export async function addChild(schoolId: string, _enrollmentId: string, childData: {
+  childFirstName: string;
+  childLastName: string;
   childDob: string;
+  gender: string;
   classroomId: string;
+  parentId: string;
 }): Promise<void> {
   await authedFetch({
     method: 'POST',
     url: '/enrollments/add-child',
     body: {
       school_id: schoolId,
-      enrollment_id: enrollmentId,
-      child_full_name: childData.childFullName,
-      child_dob: childData.childDob,
-      classroom_id: childData.classroomId
+      child_first_name: childData.childFirstName,
+      child_last_name: childData.childLastName,
+      child_birth_date: childData.childDob,
+      gender: childData.gender,
+      class_id: childData.classroomId,
+      parent_id: childData.parentId
     }
   }, z.union([z.object({}), z.string()]));
 }
