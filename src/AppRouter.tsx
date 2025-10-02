@@ -5,6 +5,7 @@ import { ToastProvider } from './components/ui/toast';
 import { UserProvider } from './contexts/UserContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
+import { SetPassword } from './pages/SetPassword';
 // Admin pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ClassroomManagement } from './pages/admin/ClassroomManagement';
@@ -26,6 +27,7 @@ export function AppRouter() {
               </ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/set-password" element={<SetPassword />} />
           {/* Admin Routes (protected parent) */}
           <Route element={<ProtectedRoute>
                 <Outlet />
