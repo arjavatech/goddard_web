@@ -65,15 +65,6 @@ export function ChildSelector({
                     {child.id === selectedChildId && <Check className="w-4 h-4 text-amazon-teal" />}
                   </div>)}
               </div>
-              <div className="border-t mt-2 pt-2 px-4">
-                <div className="text-amazon-teal text-sm font-medium cursor-pointer hover:text-amazon-teal/80 transition-colors" onClick={e => {
-              e.stopPropagation();
-              setIsOpen(false);
-              // This would navigate to add child page
-            }}>
-                  + Add another child
-                </div>
-              </div>
             </Card>}
         </div>
       </div>

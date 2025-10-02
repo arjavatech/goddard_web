@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Progress } from '../ui/progress';
 interface Child {
@@ -36,13 +35,10 @@ export function ChildrenOverview({
   }
   return <Card className="glass-card">
       <CardContent className="p-6">
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4">
           <h2 className="text-xl font-semibold text-foreground">
             Children Overview
           </h2>
-          <a href="#" className="text-amazon-teal text-sm font-medium hover:text-amazon-teal/80 transition-colors flex items-center">
-            Add child <ChevronRight className="h-4 w-4 ml-1" />
-          </a>
         </div>
         <div className="space-y-4">
           {children.map(child => <div key={child.id} className={`p-4 rounded-lg border transition-all cursor-pointer ${child.id === selectedChildId ? 'border-amazon-teal/50 bg-amazon-teal/5' : 'border-gray-100 hover:border-gray-200 hover:bg-gray-50'}`} onClick={() => onSelectChild(child.id)}>
