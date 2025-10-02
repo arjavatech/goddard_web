@@ -459,6 +459,12 @@ export async function resendParentConfirmation(parentId: string): Promise<void> 
     }
   }, z.any());
 }
+export async function deactivateParent(parentId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/parent/${parentId}`
+  }, z.any());
+}
 export async function addChild(schoolId: string, _enrollmentId: string, childData: {
   childFirstName: string;
   childLastName: string;

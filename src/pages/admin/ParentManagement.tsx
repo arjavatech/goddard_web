@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation } from '../../services/api/admin';
+import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
 interface Child {
@@ -73,6 +73,8 @@ export function ParentManagement() {
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
+  const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
+  const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -249,6 +251,20 @@ export function ParentManagement() {
       setResendingParentId(null);
     }
   };
+  const handleDeactivateParent = async () => {
+    if (!parentToDeactivate) return;
+    setDeactivatingParentId(parentToDeactivate.id);
+    setParentToDeactivate(null);
+    try {
+      await deactivateParent(parentToDeactivate.id);
+      setParents(parents.filter(p => p.id !== parentToDeactivate.id));
+      alert(`${parentToDeactivate.firstName} ${parentToDeactivate.lastName} has been deactivated successfully`);
+    } catch (error) {
+      alert('Failed to deactivate parent. Please try again.');
+    } finally {
+      setDeactivatingParentId(null);
+    }
+  };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Signed':
@@ -409,7 +425,10 @@ export function ParentManagement() {
                                 <RefreshCw className="h-4 w-4 mr-2" />
                                 Resend
                               </DropdownMenuItem>
-                              <DropdownMenuItem className="text-red-600 focus:text-red-600">
+                              <DropdownMenuItem
+                                className="text-red-600 focus:text-red-600"
+                                onClick={() => setParentToDeactivate(parent)}
+                              >
                                 <XCircle className="h-4 w-4 mr-2" />
                                 Deactivate
                               </DropdownMenuItem>
@@ -592,11 +611,49 @@ export function ParentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Loading Dialog */}
+      {/* Resend Loading Dialog */}
       <Dialog open={resendingParentId !== null} onOpenChange={() => {}}>
         <DialogContent className="sm:max-w-[200px] p-8 border-0 shadow-none outline-none" hideCloseButton>
           <div className="flex items-center justify-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amazon-teal"></div>
+          </div>
+        </DialogContent>
+      </Dialog>
+      {/* Deactivate Confirmation Dialog */}
+      <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Deactivate Parent</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to deactivate{' '}
+              <span className="font-semibold text-foreground">
+                {parentToDeactivate?.firstName} {parentToDeactivate?.lastName}
+              </span>
+              ? This action will remove their access.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setParentToDeactivate(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeactivateParent}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Deactivate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Deactivate Loading Dialog */}
+      <Dialog open={deactivatingParentId !== null} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[200px] p-8 border-0 shadow-none outline-none" hideCloseButton>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
           </div>
         </DialogContent>
       </Dialog>
