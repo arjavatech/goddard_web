@@ -10,7 +10,7 @@ import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { fetchUserContext } from '../../services/api/user';
 
-import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
+import { normalizeFormStatus } from '../../lib/formStatus';
 import { fetchStudentEnrollments } from '@/services/api/admin';
 
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
@@ -90,7 +90,7 @@ export function StudentManagement() {
                 name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                 status: value || 'Not Started'
               }))
-            : [{ id: 'default', name: 'Enrollment Form', status: enrollment.form_status || 'incomplete' }];
+            : [];
 
           // Count forms with 'approved' status as completed
           const completed = formsArray.filter(form => {
@@ -98,7 +98,7 @@ export function StudentManagement() {
             return normalized === 'Approved';
           }).length;
 
-          const total = Math.max(formsArray.length, 1);
+          const total = formsArray.length;
 
           // Calculate progress based on completed forms
           const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
