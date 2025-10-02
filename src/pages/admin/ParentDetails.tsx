@@ -113,7 +113,7 @@ export function ParentDetails() {
             email: passedParentData.email,
             firstName: passedParentData.firstName,
             lastName: passedParentData.lastName,
-            isSigned: passedParentData.signupStatus === 'Complete',
+            signedStatus: passedParentData.signupStatus === 'Signed' ? 'signed' : 'not signed',
             createdAt: null,
             children: passedParentData.children.map((child: any) => ({
               childId: child.id,

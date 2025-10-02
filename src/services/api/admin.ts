@@ -23,7 +23,7 @@ export type ParentDetail = {
   email: string;
   firstName?: string;
   lastName?: string;
-  isSigned: boolean;
+  signedStatus: string;
   createdAt: string | null;
   children?: {
     childId: string;
@@ -211,7 +211,7 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
       email: item.parent_email || item.email || '',
       firstName: item.parent_first_name || item.firstName,
       lastName: item.parent_last_name || item.lastName,
-      isSigned: item.is_signed || false,
+      signedStatus: item.signed_status || 'not signed',
       createdAt: item.created_at || item.createdAt || null,
       children: (item.children || []).map((child: any) => ({
         childId: child.child_id || child.childId || '',
@@ -281,7 +281,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
       email: data.parent_email || data.email || '',
       firstName: data.parent_first_name || data.firstName,
       lastName: data.parent_last_name || data.lastName,
-      isSigned: data.is_signed || false,
+      signedStatus: data.signed_status || 'not signed',
       createdAt: data.created_at || data.createdAt || null,
       children: (data.children || []).map((child: any) => ({
         childId: child.child_id || child.childId || '',

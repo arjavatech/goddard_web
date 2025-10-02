@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState, Children } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Calendar, Users, Clock } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Calendar, Users, Clock, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -13,7 +13,7 @@ import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
-type SignupStatus = 'Complete' | 'Pending' | 'Invited';
+type SignupStatus = 'Signed' | 'Not Signed';
 interface Child {
   id: string;
   firstName: string;
@@ -121,7 +121,7 @@ export function ParentManagement() {
               email: detail.email,
               children,
               status: hasCompletedForms ? 'Active' : 'Archive',
-              signupStatus: detail.isSigned ? 'Complete' : 'Invited'
+              signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
             } satisfies Parent;
           });
           setParents(mappedParents);
@@ -175,7 +175,7 @@ export function ParentManagement() {
             }
           }],
           status: 'Active',
-          signupStatus: 'Invited'
+          signupStatus: 'Not Signed'
         };
         setParents([...parents, newParent]);
         resetInviteForm();
@@ -239,11 +239,9 @@ export function ParentManagement() {
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
-      case 'Complete':
+      case 'Signed':
         return 'success';
-      case 'Pending':
-        return 'secondary';
-      case 'Invited':
+      case 'Not Signed':
         return 'outline';
       default:
         return 'default';
@@ -285,9 +283,8 @@ export function ParentManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Signup Statuses</SelectItem>
-                  <SelectItem value="Complete">Complete</SelectItem>
-                  <SelectItem value="Pending">Pending</SelectItem>
-                  <SelectItem value="Invited">Invited</SelectItem>
+                  <SelectItem value="Signed">Signed</SelectItem>
+                  <SelectItem value="Not Signed">Not Signed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -325,11 +322,17 @@ export function ParentManagement() {
                               {parent.lastName.charAt(0)}
                             </div>
                             <div>
-                              <Link to={`/admin/parents/${parent.id}`} state={{
+                              {parent.signupStatus === 'Signed' ? (
+                                <Link to={`/admin/parents/${parent.id}`} state={{
                           parentData: parent
                         }} className="font-medium text-amazon-teal hover:underline">
-                                {parent.firstName} {parent.lastName}
-                              </Link>
+                                  {parent.firstName} {parent.lastName}
+                                </Link>
+                              ) : (
+                                <span className="font-medium text-gray-400 cursor-not-allowed">
+                                  {parent.firstName} {parent.lastName}
+                                </span>
+                              )}
                               <div className={`text-xs ${parent.status === 'Active' ? 'text-green-600' : 'text-gray-500'}`}>
                                 {parent.status === 'Active' ? 'Verified' : 'Archived'}
                               </div>
@@ -357,9 +360,8 @@ export function ParentManagement() {
                         </td>
                         <td className="py-3 px-4 text-center">
                           <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto">
-                            {parent.signupStatus === 'Complete' && <CheckCircle className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus === 'Invited' && <Calendar className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus === 'Pending' && <Clock className="h-4 w-4 mr-1" />}
+                            {parent.signupStatus === 'Signed' && <CheckCircle className="h-4 w-4 mr-1" />}
+                            {parent.signupStatus === 'Not Signed' && <XCircle className="h-4 w-4 mr-1" />}
                             {parent.signupStatus}
                           </Badge>
                         </td>
@@ -371,7 +373,7 @@ export function ParentManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild>
+                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed'}>
                                 <Link to={`/admin/parents/${parent.id}`} state={{
                             parentData: parent
                           }}>
@@ -379,12 +381,24 @@ export function ParentManagement() {
                                   View Details
                                 </Link>
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {
+                              <DropdownMenuItem
+                                disabled={parent.signupStatus === 'Not Signed'}
+                                onClick={() => {
                           setSelectedParent(parent);
                           setIsAddChildDialogOpen(true);
                         }}>
                                 <UserCircle className="h-4 w-4 mr-2" />
                                 Add Child
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                disabled={parent.signupStatus === 'Signed'}
+                                onClick={() => {
+                                  // TODO: Implement resend invitation logic
+                                  console.log('Resend invitation to:', parent.email);
+                                }}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Resend
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600 focus:text-red-600">
                                 <XCircle className="h-4 w-4 mr-2" />
