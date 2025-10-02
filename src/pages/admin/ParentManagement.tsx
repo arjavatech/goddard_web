@@ -403,14 +403,10 @@ export function ParentManagement() {
                                 Add Child
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                                disabled={parent.signupStatus === 'Signed'}
                                 onClick={() => handleResendConfirmation(parent.id, parent.email)}
                               >
-                                {resendingParentId === parent.id ? (
-                                  <span className="animate-spin h-4 w-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full inline-block" />
-                                ) : (
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                )}
+                                <RefreshCw className="h-4 w-4 mr-2" />
                                 Resend
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600 focus:text-red-600">
@@ -594,6 +590,14 @@ export function ParentManagement() {
               Add Child
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Loading Dialog */}
+      <Dialog open={resendingParentId !== null} onOpenChange={() => {}}>
+        <DialogContent className="sm:max-w-[200px] p-8 border-0 shadow-none outline-none" hideCloseButton>
+          <div className="flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amazon-teal"></div>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>;
