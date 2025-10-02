@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { FileText, Download, Printer, Eye, ChevronLeft } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
@@ -121,16 +121,29 @@ interface FormsDocumentsProps {
   }[];
   familyForms: FormData[];
   rawFormData?: any; // Raw parent data to access form URLs
+  selectedChildName?: string; // Name of the currently selected child
+  onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
 }
 export function FormsDocuments({
   childSpecificForms,
   familyForms,
-  rawFormData
+  rawFormData,
+  selectedChildName,
+  onChildSelect
 }: FormsDocumentsProps) {
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>(selectedChildName || 'all');
+  const previousChildNameRef = useRef<string | undefined>(selectedChildName);
+
+  // Sync activeTab with selectedChildName only when it actually changes
+  useEffect(() => {
+    if (selectedChildName && selectedChildName !== previousChildNameRef.current) {
+      setActiveTab(selectedChildName);
+      previousChildNameRef.current = selectedChildName;
+    }
+  }, [selectedChildName]);
 
   // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
@@ -324,7 +337,13 @@ export function FormsDocuments({
           Forms & Documents
         </h2>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={(value) => {
+          setActiveTab(value);
+          // If a child tab is clicked, notify parent to update selected child
+          if (value !== 'all' && value !== 'family' && onChildSelect) {
+            onChildSelect(value);
+          }
+        }}>
           <TabsList className="mb-4">
             <TabsTrigger value="all">All Forms</TabsTrigger>
             {familyForms.length > 0 && (

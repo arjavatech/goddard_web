@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
-import { ImportantInfo } from '../components/dashboard/ImportantInfo';
-import { QuickActions } from '../components/dashboard/QuickActions';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
@@ -189,14 +187,6 @@ export function Dashboard() {
     if (!selectedChildId) return children[0] ?? null;
     return children.find(child => child.id === selectedChildId) ?? children[0] ?? null;
   }, [children, selectedChildId]);
-  const quickActions = useMemo(() => {
-    if (!selectedChild) return [];
-    return [{
-      label: selectedChild.nextActionLabel,
-      helperText: selectedChild.totalForms > 0 ? `${selectedChild.formsCompleted}/${selectedChild.totalForms} forms complete` : 'Awaiting form assignments',
-      disabled: true
-    }];
-  }, [selectedChild]);
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -207,12 +197,12 @@ export function Dashboard() {
             Loading parent dashboard...
           </div> : <>
             <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
+            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
+                <div className="lg:col-span-7 space-y-6">
                   <div className="section-fade-in" style={{
               animationDelay: '0.1s'
             }}>
-                    <EnrollmentProgress childName={selectedChild.name} completedSteps={selectedChild.formsCompleted} totalSteps={selectedChild.totalForms} currentStep={selectedChild.currentStep} />
+                    <EnrollmentProgress childName={selectedChild.name} forms={selectedChild.forms} />
                   </div>
                   <div className="section-fade-in" style={{
               animationDelay: '0.2s'
@@ -221,24 +211,21 @@ export function Dashboard() {
                       childSpecificForms={childSpecificForms}
                       familyForms={familyForms}
                       rawFormData={parentData}
+                      selectedChildName={selectedChild.name}
+                      onChildSelect={(childName) => {
+                        const child = children.find(c => c.name === childName);
+                        if (child) {
+                          setSelectedChildId(child.id);
+                        }
+                      }}
                     />
                   </div>
                 </div>
-                <div className="space-y-6">
+                <div className="lg:col-span-3">
                   <div className="section-fade-in" style={{
               animationDelay: '0.3s'
             }}>
-                    <QuickActions actions={quickActions} />
-                  </div>
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.4s'
-            }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
-                  </div>
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.5s'
-            }}>
-                    <ImportantInfo fallbackMessage="School announcements, deadlines, and contacts will appear here once they are shared." />
                   </div>
                 </div>
               </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-8 text-center">

@@ -4,7 +4,7 @@ const SUBMITTED_TERMS = new Set(['submitted', 'received']);
 const IN_PROGRESS_TERMS = new Set(['in progress', 'in_progress']);
 const NEEDS_REVISION_TERMS = new Set(['needs revision', 'needs review', 'rejected', 'returned', 'changes requested', 'declined']);
 const DRAFT_TERMS = new Set(['draft', 'not started', 'new', 'incomplete']);
-export const COMPLETION_STATUSES: ReadonlySet<NormalizedFormStatus> = new Set(['Approved', 'Submitted']);
+export const COMPLETION_STATUSES: ReadonlySet<NormalizedFormStatus> = new Set(['Approved', 'Submitted', 'In Progress']);
 export function normalizeFormStatus(raw: string | null | undefined): NormalizedFormStatus {
   if (!raw) return 'In Progress';
   const normalized = raw.toLowerCase().replace(/[_-]/g, ' ');
