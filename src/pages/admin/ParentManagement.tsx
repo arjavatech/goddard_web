@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchParentDetails, fetchClassrooms, inviteParent, addChild } from '../../services/api/admin';
+import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
 interface Child {
@@ -72,6 +72,7 @@ export function ParentManagement() {
   const [newChildGender, setNewChildGender] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
+  const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -237,6 +238,17 @@ export function ParentManagement() {
     setNewChildGender('');
     setNewChildClassroom('');
   };
+  const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
+    setResendingParentId(parentId);
+    try {
+      await resendParentConfirmation(parentId);
+      alert(`Confirmation email resent successfully to ${parentEmail}`);
+    } catch (error) {
+      alert('Failed to resend confirmation email. Please try again.');
+    } finally {
+      setResendingParentId(null);
+    }
+  };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Signed':
@@ -391,13 +403,14 @@ export function ParentManagement() {
                                 Add Child
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed'}
-                                onClick={() => {
-                                  // TODO: Implement resend invitation logic
-                                  console.log('Resend invitation to:', parent.email);
-                                }}
+                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                                onClick={() => handleResendConfirmation(parent.id, parent.email)}
                               >
-                                <RefreshCw className="h-4 w-4 mr-2" />
+                                {resendingParentId === parent.id ? (
+                                  <span className="animate-spin h-4 w-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full inline-block" />
+                                ) : (
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                )}
                                 Resend
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600 focus:text-red-600">

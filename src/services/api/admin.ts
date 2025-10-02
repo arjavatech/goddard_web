@@ -450,6 +450,15 @@ export async function inviteParent(schoolId: string, parentData: {
     }
   }, z.union([z.object({}), z.string()]));
 }
+export async function resendParentConfirmation(parentId: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/enrollments/resend-confirmation',
+    body: {
+      parent_id: parentId
+    }
+  }, z.any());
+}
 export async function addChild(schoolId: string, _enrollmentId: string, childData: {
   childFirstName: string;
   childLastName: string;
