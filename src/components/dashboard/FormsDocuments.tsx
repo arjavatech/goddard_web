@@ -3,8 +3,8 @@ import { FileText, Download, Printer, Eye, ChevronLeft } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
-import { Loading } from '../ui/loading';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
+import { Loading } from '../ui/loading';
 interface FormCardProps {
   title: string;
   description: string;
@@ -123,19 +123,25 @@ interface FormsDocumentsProps {
   rawFormData?: any; // Raw parent data to access form URLs
   selectedChildName?: string; // Name of the currently selected child
   onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
+  onViewForm: (form: any) => void; // Callback to view a form
+  formToOpen?: any; // Form to automatically open
+  onFormOpened?: () => void; // Callback when form is opened
 }
 export function FormsDocuments({
   childSpecificForms,
   familyForms,
   rawFormData,
   selectedChildName,
-  onChildSelect
+  onChildSelect,
+  onViewForm,
+  formToOpen,
+  onFormOpened
 }: FormsDocumentsProps) {
-  const [selectedForm, setSelectedForm] = useState<any>(null);
-  const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildName || 'all');
   const previousChildNameRef = useRef<string | undefined>(selectedChildName);
+  const [selectedForm, setSelectedForm] = useState<any>(null);
+  const [isFrameLoading, setIsFrameLoading] = useState(false);
 
   // Sync activeTab with selectedChildName only when it actually changes
   useEffect(() => {
@@ -164,18 +170,6 @@ export function FormsDocuments({
       )
     ];
   }, [familyForms, childSpecificForms, rawFormData]);
-
-  // Get forms for the selected tab
-  const getFormsForTab = (tabValue: string) => {
-    if (tabValue === 'all') {
-      return allForms;
-    } else if (tabValue === 'family') {
-      return allForms.filter(form => !form.childName);
-    } else {
-      // Individual child tab
-      return allForms.filter(form => form.childName === tabValue);
-    }
-  };
 
   const handleView = (form: any) => {
     let formUrl = '#';
@@ -218,7 +212,38 @@ export function FormsDocuments({
       viewUrl: formUrl
     });
     setIsFrameLoading(true);
+    onViewForm(form); // Still call the parent callback for scroll behavior
   };
+
+  // Auto-open form when formToOpen is set
+  useEffect(() => {
+    if (formToOpen) {
+      // Find the matching form in allForms with rawData, matching both title and childName
+      const matchingForm = allForms.find(f =>
+        f.title === formToOpen.title &&
+        f.childName === selectedChildName
+      );
+      if (matchingForm) {
+        handleView(matchingForm);
+      }
+      if (onFormOpened) {
+        onFormOpened();
+      }
+    }
+  }, [formToOpen, allForms, selectedChildName]);
+
+  // Get forms for the selected tab
+  const getFormsForTab = (tabValue: string) => {
+    if (tabValue === 'all') {
+      return allForms;
+    } else if (tabValue === 'family') {
+      return allForms.filter(form => !form.childName);
+    } else {
+      // Individual child tab
+      return allForms.filter(form => form.childName === tabValue);
+    }
+  };
+
 
   const handleDownload = async (form: any) => {
     const pdfLink = form.rawData?.recent_pdf_link || form.recentPdfLink;
@@ -267,7 +292,7 @@ export function FormsDocuments({
     }
   };
 
-  // If a form is selected for viewing, show iframe
+  // If a form is selected for viewing, show iframe in this section
   if (selectedForm) {
     return (
       <div>
@@ -330,7 +355,7 @@ export function FormsDocuments({
     );
   }
 
-  // Normal forms grid view with tabs
+  // Forms grid view with tabs
   return <div>
       <div className="mb-6">
         <h2 className="text-xl font-semibold text-foreground mb-4">

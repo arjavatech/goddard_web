@@ -187,6 +187,21 @@ export function Dashboard() {
     if (!selectedChildId) return children[0] ?? null;
     return children.find(child => child.id === selectedChildId) ?? children[0] ?? null;
   }, [children, selectedChildId]);
+
+  // State to hold the form that should be opened
+  const [formToOpen, setFormToOpen] = useState<any>(null);
+
+  // Shared handleViewForm function - sets the form to open and scrolls to Forms & Documents
+  const handleViewForm = (form: any) => {
+    setFormToOpen(form);
+    // Scroll to Forms & Documents section after a brief delay to allow state to update
+    setTimeout(() => {
+      const formsSection = document.querySelector('[data-forms-section]');
+      if (formsSection) {
+        formsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
@@ -202,11 +217,15 @@ export function Dashboard() {
                   <div className="section-fade-in" style={{
               animationDelay: '0.1s'
             }}>
-                    <EnrollmentProgress childName={selectedChild.name} forms={selectedChild.forms} />
+                    <EnrollmentProgress
+                      childName={selectedChild.name}
+                      forms={selectedChild.forms}
+                      onContinue={handleViewForm}
+                    />
                   </div>
                   <div className="section-fade-in" style={{
               animationDelay: '0.2s'
-            }}>
+            }} data-forms-section>
                     <FormsDocuments
                       childSpecificForms={childSpecificForms}
                       familyForms={familyForms}
@@ -218,6 +237,9 @@ export function Dashboard() {
                           setSelectedChildId(child.id);
                         }
                       }}
+                      onViewForm={handleViewForm}
+                      formToOpen={formToOpen}
+                      onFormOpened={() => setFormToOpen(null)}
                     />
                   </div>
                 </div>

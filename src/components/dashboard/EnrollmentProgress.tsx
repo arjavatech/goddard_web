@@ -12,11 +12,13 @@ interface FormItem {
 interface EnrollmentProgressProps {
   childName: string;
   forms: FormItem[];
+  onContinue?: (form: any) => void;
 }
 
 export function EnrollmentProgress({
   childName,
-  forms
+  forms,
+  onContinue
 }: EnrollmentProgressProps) {
   // Sort forms: Approved/Submitted first, then In Progress, then others
   const sortedForms = [...forms].sort((a, b) => {
@@ -71,6 +73,11 @@ export function EnrollmentProgress({
       <Button
         className="bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors"
         disabled={progressPercentage === 100}
+        onClick={() => {
+          if (incompleteForm && onContinue) {
+            onContinue(incompleteForm);
+          }
+        }}
       >
         {progressPercentage === 100 ? 'Enrollment Complete' : `Continue ${currentStep}`}
         {progressPercentage < 100 && <ChevronRight className="ml-1 h-4 w-4" />}
