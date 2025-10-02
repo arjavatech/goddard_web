@@ -82,27 +82,32 @@ export function StudentManagement() {
           const studentId = enrollment.child_id || `student-${index}`;
           const firstName = enrollment.child_first_name || 'Unknown';
           const lastName = enrollment.child_last_name || 'Student';
-          
-          // Since forms is empty object, create default form status
-          const formsArray = Object.keys(enrollment.forms || {}).length > 0 
+
+          // Map forms from API response
+          const formsArray = Object.keys(enrollment.forms || {}).length > 0
             ? Object.entries(enrollment.forms).map(([key, value]) => ({
                 id: key,
                 name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
                 status: value || 'Not Started'
               }))
-            : [{ id: 'default', name: 'Enrollment Form', status: enrollment.form_status || 'active' }];
-          
-          const completed = formsArray.filter(form => 
-            form.status === 'completed' || form.status === 'active'
-          ).length;
+            : [{ id: 'default', name: 'Enrollment Form', status: enrollment.form_status || 'incomplete' }];
+
+          // Count forms with 'approved' status as completed
+          const completed = formsArray.filter(form => {
+            const normalized = normalizeFormStatus(form.status);
+            return normalized === 'Approved';
+          }).length;
+
           const total = Math.max(formsArray.length, 1);
-          const progress = enrollment.form_status === 'active' ? 50 : 0;
-          
+
+          // Calculate progress based on completed forms
+          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
           const classroomName = enrollment.class_name;
-          
+
           const parentEmail = enrollment.primary_email || 'parent@example.com';
           const parentName = parentEmail.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-          
+
           const student = {
             id: studentId,
             firstName,

@@ -4,6 +4,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Loading } from '../ui/loading';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 interface FormCardProps {
   title: string;
   description: string;
@@ -129,6 +130,7 @@ export function FormsDocuments({
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<string>('all');
 
   // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
@@ -150,6 +152,18 @@ export function FormsDocuments({
     ];
   }, [familyForms, childSpecificForms, rawFormData]);
 
+  // Get forms for the selected tab
+  const getFormsForTab = (tabValue: string) => {
+    if (tabValue === 'all') {
+      return allForms;
+    } else if (tabValue === 'family') {
+      return allForms.filter(form => !form.childName);
+    } else {
+      // Individual child tab
+      return allForms.filter(form => form.childName === tabValue);
+    }
+  };
+
   const handleView = (form: any) => {
     let formUrl = '#';
 
@@ -163,12 +177,27 @@ export function FormsDocuments({
                 form.recentPdfLink ||
                 '#';
     } else {
-      // For non-approved forms, use recent_edit_link first, then fillout_form_id
-      formUrl = form.rawData?.recent_edit_link ||
-                form.recentEditLink ||
-                form.rawData?.fillout_form_id ||
-                form.filloutFormId ||
-                '#';
+      // For non-approved forms, use recent_edit_link first, then construct fillout URL
+      const recentEditLink = form.rawData?.recent_edit_link || form.recentEditLink;
+      const studentFormAssignmentId = form.rawData?.student_form_assignment_id || form.rawData?.studentFormAssignmentId;
+      const filloutFormId = form.rawData?.fillout_form_id || form.filloutFormId;
+
+      if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
+        formUrl = recentEditLink;
+      } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
+        // Construct proper Fillout URL with student_form_assignment_id parameter
+        formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${studentFormAssignmentId}`;
+      } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
+        // If filloutFormId is already a full URL, use it directly
+        if (filloutFormId.startsWith('http')) {
+          formUrl = filloutFormId;
+        } else {
+          // Otherwise treat it as an ID and construct the URL
+          formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${filloutFormId}`;
+        }
+      } else {
+        formUrl = '#';
+      }
     }
 
     setSelectedForm({
@@ -288,30 +317,105 @@ export function FormsDocuments({
     );
   }
 
-  // Normal forms grid view
+  // Normal forms grid view with tabs
   return <div>
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-foreground">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-foreground mb-4">
           Forms & Documents
         </h2>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="mb-4">
+            <TabsTrigger value="all">All Forms</TabsTrigger>
+            {familyForms.length > 0 && (
+              <TabsTrigger value="family">Family Forms</TabsTrigger>
+            )}
+            {childSpecificForms.map((child) => (
+              <TabsTrigger key={child.childName} value={child.childName}>
+                {child.childName}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value="all">
+            {allForms.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+                No forms available yet. This section will populate once assignments are available from the backend service.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getFormsForTab('all').map(form => (
+                  <FormCard
+                    key={form._key}
+                    title={form.title}
+                    description={form.description}
+                    lastUpdated={form.lastUpdated}
+                    status={form.status}
+                    childName={form.childName}
+                    formId={form.formId || form._key}
+                    recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                    onView={() => handleView(form)}
+                    onDownload={() => handleDownload(form)}
+                    onPrint={() => handlePrint(form)}
+                    isLoading={loadingAction}
+                  />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {familyForms.length > 0 && (
+            <TabsContent value="family">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {getFormsForTab('family').map(form => (
+                  <FormCard
+                    key={form._key}
+                    title={form.title}
+                    description={form.description}
+                    lastUpdated={form.lastUpdated}
+                    status={form.status}
+                    childName={form.childName}
+                    formId={form.formId || form._key}
+                    recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                    onView={() => handleView(form)}
+                    onDownload={() => handleDownload(form)}
+                    onPrint={() => handlePrint(form)}
+                    isLoading={loadingAction}
+                  />
+                ))}
+              </div>
+            </TabsContent>
+          )}
+
+          {childSpecificForms.map((child) => (
+            <TabsContent key={child.childName} value={child.childName}>
+              {getFormsForTab(child.childName).length === 0 ? (
+                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+                  No forms available for {child.childName} yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getFormsForTab(child.childName).map(form => (
+                    <FormCard
+                      key={form._key}
+                      title={form.title}
+                      description={form.description}
+                      lastUpdated={form.lastUpdated}
+                      status={form.status}
+                      childName={form.childName}
+                      formId={form.formId || form._key}
+                      recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                      onView={() => handleView(form)}
+                      onDownload={() => handleDownload(form)}
+                      onPrint={() => handlePrint(form)}
+                      isLoading={loadingAction}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
-      {allForms.length === 0 ? <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
-          No forms available yet. This section will populate once assignments are available from the backend service.
-        </div> : <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {allForms.map(form => <FormCard
-            key={form._key}
-            title={form.title}
-            description={form.description}
-            lastUpdated={form.lastUpdated}
-            status={form.status}
-            childName={form.childName}
-            formId={form.formId || form._key}
-            recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-            onView={() => handleView(form)}
-            onDownload={() => handleDownload(form)}
-            onPrint={() => handlePrint(form)}
-            isLoading={loadingAction}
-          />)}
-        </div>}
     </div>;
 }
