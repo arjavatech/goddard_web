@@ -16,6 +16,7 @@ import { fetchStudentEnrollments } from '@/services/api/admin';
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 
 interface EnrollmentData {
+  parent_id: string;
   child_id: string;
   child_first_name: string;
   child_last_name: string;
@@ -107,6 +108,7 @@ export function StudentManagement() {
 
           const parentEmail = enrollment.primary_email || 'parent@example.com';
           const parentName = parentEmail.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const parentId = enrollment.parent_id;
 
           const student = {
             id: studentId,
@@ -122,7 +124,7 @@ export function StudentManagement() {
               name: classroomName || 'Unassigned'
             },
             parent: {
-              id: parentEmail,
+              id: parentId,
               name: parentName,
               email: parentEmail
             },
