@@ -21,6 +21,7 @@ type ChildFormCard = {
   filloutFormId?: string | null;
 };
 type ChildSpecificFormGroup = {
+  childId: string;
   childName: string;
   forms: ChildFormCard[];
 };
@@ -144,6 +145,7 @@ export function Dashboard() {
 
         // Extract forms for each child
         const childFormsData = processedChildren.map(child => ({
+          childId: child.id,
           childName: child.name,
           forms: child.forms
         }));
@@ -230,6 +232,7 @@ export function Dashboard() {
                       childSpecificForms={childSpecificForms}
                       familyForms={familyForms}
                       rawFormData={parentData}
+                      selectedChildId={selectedChild.id}
                       selectedChildName={selectedChild.name}
                       onChildSelect={(childName) => {
                         const child = children.find(c => c.name === childName);

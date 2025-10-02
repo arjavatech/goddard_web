@@ -116,11 +116,13 @@ interface FormData {
 
 interface FormsDocumentsProps {
   childSpecificForms: {
+    childId: string;
     childName: string;
     forms: FormData[];
   }[];
   familyForms: FormData[];
   rawFormData?: any; // Raw parent data to access form URLs
+  selectedChildId?: string; // ID of the currently selected child
   selectedChildName?: string; // Name of the currently selected child
   onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
   onViewForm: (form: any) => void; // Callback to view a form
@@ -131,6 +133,7 @@ export function FormsDocuments({
   childSpecificForms,
   familyForms,
   rawFormData,
+  selectedChildId,
   selectedChildName,
   onChildSelect,
   onViewForm,
@@ -138,24 +141,25 @@ export function FormsDocuments({
   onFormOpened
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>(selectedChildName || 'all');
-  const previousChildNameRef = useRef<string | undefined>(selectedChildName);
+  const [activeTab, setActiveTab] = useState<string>(selectedChildId || 'all');
+  const previousChildIdRef = useRef<string | undefined>(selectedChildId);
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
 
-  // Sync activeTab with selectedChildName only when it actually changes
+  // Sync activeTab with selectedChildId only when it actually changes
   useEffect(() => {
-    if (selectedChildName && selectedChildName !== previousChildNameRef.current) {
-      setActiveTab(selectedChildName);
-      previousChildNameRef.current = selectedChildName;
+    if (selectedChildId && selectedChildId !== previousChildIdRef.current) {
+      setActiveTab(selectedChildId);
+      previousChildIdRef.current = selectedChildId;
     }
-  }, [selectedChildName]);
+  }, [selectedChildId]);
 
   // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
     return [
       ...familyForms.map((form, index) => ({
         ...form,
+        childId: undefined,
         childName: undefined,
         _key: `family-${index}`,
         rawData: null as any
@@ -163,6 +167,7 @@ export function FormsDocuments({
       ...childSpecificForms.flatMap((child, childIndex) =>
         child.forms.map((form, formIndex) => ({
           ...form,
+          childId: child.childId,
           childName: child.childName,
           _key: `child-${childIndex}-form-${formIndex}`,
           rawData: rawFormData?.children?.[childIndex]?.forms?.[formIndex] || null
@@ -217,12 +222,9 @@ export function FormsDocuments({
 
   // Auto-open form when formToOpen is set
   useEffect(() => {
-    if (formToOpen) {
-      // Find the matching form in allForms with rawData, matching both title and childName
-      const matchingForm = allForms.find(f =>
-        f.title === formToOpen.title &&
-        f.childName === selectedChildName
-      );
+    if (formToOpen && formToOpen.formId) {
+      // Find the matching form in allForms by unique formId
+      const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
       if (matchingForm) {
         handleView(matchingForm);
       }
@@ -230,17 +232,17 @@ export function FormsDocuments({
         onFormOpened();
       }
     }
-  }, [formToOpen, allForms, selectedChildName]);
+  }, [formToOpen, allForms]);
 
   // Get forms for the selected tab
   const getFormsForTab = (tabValue: string) => {
     if (tabValue === 'all') {
       return allForms;
     } else if (tabValue === 'family') {
-      return allForms.filter(form => !form.childName);
+      return allForms.filter(form => !form.childId);
     } else {
-      // Individual child tab
-      return allForms.filter(form => form.childName === tabValue);
+      // Individual child tab - filter by childId (tab value is now childId)
+      return allForms.filter(form => form.childId === tabValue);
     }
   };
 
@@ -366,7 +368,11 @@ export function FormsDocuments({
           setActiveTab(value);
           // If a child tab is clicked, notify parent to update selected child
           if (value !== 'all' && value !== 'family' && onChildSelect) {
-            onChildSelect(value);
+            // Find the child by ID and pass their name to onChildSelect
+            const child = childSpecificForms.find(c => c.childId === value);
+            if (child) {
+              onChildSelect(child.childName);
+            }
           }
         }}>
           <TabsList className="mb-4">
@@ -375,7 +381,7 @@ export function FormsDocuments({
               <TabsTrigger value="family">Family Forms</TabsTrigger>
             )}
             {childSpecificForms.map((child) => (
-              <TabsTrigger key={child.childName} value={child.childName}>
+              <TabsTrigger key={child.childId} value={child.childId}>
                 {child.childName}
               </TabsTrigger>
             ))}
@@ -432,14 +438,14 @@ export function FormsDocuments({
           )}
 
           {childSpecificForms.map((child) => (
-            <TabsContent key={child.childName} value={child.childName}>
-              {getFormsForTab(child.childName).length === 0 ? (
+            <TabsContent key={child.childId} value={child.childId}>
+              {getFormsForTab(child.childId).length === 0 ? (
                 <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
                   No forms available for {child.childName} yet.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {getFormsForTab(child.childName).map(form => (
+                  {getFormsForTab(child.childId).map(form => (
                     <FormCard
                       key={form._key}
                       title={form.title}
