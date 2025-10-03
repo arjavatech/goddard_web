@@ -361,9 +361,6 @@ export function ParentManagement() {
                                   {parent.firstName} {parent.lastName}
                                 </span>
                               )}
-                              <div className={`text-xs ${parent.status === 'Active' ? 'text-green-600' : 'text-gray-500'}`}>
-                                {parent.status === 'Active' ? 'Verified' : 'Archived'}
-                              </div>
                             </div>
                           </div>
                         </td>

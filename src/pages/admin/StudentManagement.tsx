@@ -306,10 +306,6 @@ export function StudentManagement() {
                               <div className="font-medium">
                                 {student.firstName} {student.lastName}
                               </div>
-                              <div className="text-xs text-gray-500">
-                                DOB:{' '}
-                                {student.dateOfBirth ? new Date(student.dateOfBirth).toLocaleDateString() : '2019-06-18 (test)'}
-                              </div>
                             </div>
                           </div>
                         </td>
