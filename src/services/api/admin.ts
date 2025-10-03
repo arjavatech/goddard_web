@@ -410,7 +410,7 @@ export async function createFormTemplate(formName: string, filloutFormId: string
     }
   }, z.object({}));
 }
-export async function updateFormTemplate(formId: string, formName: string, filloutFormUrl: string, schoolId: string): Promise<void> {
+export async function updateFormTemplate(formId: string, formName: string, filloutFormId: string, schoolId: string, status?: string): Promise<void> {
   await authedFetch({
     method: 'PUT',
     url: '/form-templates',
@@ -418,7 +418,8 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
       id: formId,
       school_id: schoolId,
       form_name: formName,
-      fillout_form_url: filloutFormUrl
+      fillout_form_id: filloutFormId,
+      status: status
     }
   }, z.object({}));
 }

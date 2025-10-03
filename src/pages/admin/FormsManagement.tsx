@@ -100,7 +100,15 @@ export function FormsManagement() {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId);
+        // Map UI status to API status values
+        const statusMap: Record<FormStatus, string> = {
+          'Default': 'school_default',
+          'Active': 'active',
+          'Inactive': 'inactive',
+          'Archive': 'archived'
+        };
+        const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
+        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
         setForms(forms.map((form: Form) => form.id === selectedForm.id ? {
           ...form,
           name: formName.trim(),
