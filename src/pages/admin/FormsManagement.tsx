@@ -216,9 +216,7 @@ export function FormsManagement() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">
                       Form Link
                     </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
-                      Assigned To
-                    </th>
+
                     <th className="text-right py-3 px-4 font-medium text-gray-600">
                       Actions
                     </th>
@@ -244,12 +242,7 @@ export function FormsManagement() {
                               </a> : <span className="text-gray-400">Not provided</span>}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-center text-sm text-gray-500">
-                          <div className="flex items-center justify-center gap-1">
-                            <School className="h-4 w-4 text-gray-400" />
-                            {form.classroomsCount}
-                          </div>
-                        </td>
+                        
                         <td className="py-3 px-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
