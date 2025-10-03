@@ -579,3 +579,57 @@ export async function reviewStudentFormAssignment(
     throw new Error('Failed to review form assignment');
   }
 }
+
+export type DashboardMetrics = {
+  schoolId: string;
+  totalClassrooms: number;
+  totalActiveParents: number;
+  totalActiveChildren: number;
+  totalForms: number;
+  classwiseMetrics: {
+    classroomId: string;
+    classroomName: string;
+    totalEnrollments: number;
+    completedEnrollments: number;
+  }[];
+};
+
+const dashboardMetricsSchema = z.object({
+  school_id: z.string(),
+  total_classrooms: z.number(),
+  total_active_parents: z.number(),
+  total_active_children: z.number(),
+  total_forms: z.number(),
+  classwise_metrics: z.array(z.object({
+    classroom_id: z.string(),
+    classroom_name: z.string(),
+    total_enrollments: z.number(),
+    completed_enrollments: z.number()
+  }))
+});
+
+export async function fetchDashboardMetrics(schoolId: string): Promise<DashboardMetrics> {
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/admin/dashboard-metrics?school_id=${encodeURIComponent(schoolId)}`
+    }, dashboardMetricsSchema);
+
+    return {
+      schoolId: data.school_id,
+      totalClassrooms: data.total_classrooms,
+      totalActiveParents: data.total_active_parents,
+      totalActiveChildren: data.total_active_children,
+      totalForms: data.total_forms,
+      classwiseMetrics: data.classwise_metrics.map(metric => ({
+        classroomId: metric.classroom_id,
+        classroomName: metric.classroom_name,
+        totalEnrollments: metric.total_enrollments,
+        completedEnrollments: metric.completed_enrollments
+      }))
+    };
+  } catch (error) {
+    console.error('fetchDashboardMetrics error:', error);
+    throw error;
+  }
+}
