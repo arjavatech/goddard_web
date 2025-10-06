@@ -144,14 +144,6 @@ export function ParentDetails() {
           // Only use the child's specific forms array - no fallback to templates
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
-              // Debug: Log the raw form data to verify approved_on field
-              console.log('Form data:', {
-                formName: form.form_name || form.formName,
-                approved_on: form.approved_on,
-                approvedOn: form.approvedOn,
-                status: form.status
-              });
-
               // Find template by matching form ID or name
               const formId = form.form_id || form.formId;
               const formName = form.form_name || form.formName;
@@ -234,14 +226,13 @@ export function ParentDetails() {
   }, [parentId]);
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
-  // Extract all available years from forms - prefer approved_on, fallback to current year
+  // Extract all available years from forms based on approved_on date
   const availableYears = useMemo(() => {
     if (!parent) return [];
     const yearsSet = new Set<number>();
 
     parent.children.forEach(child => {
       child.forms.forEach(form => {
-        // Extract year from approved_on if available
         if (form.approvedOn) {
           try {
             const date = new Date(form.approvedOn);
@@ -249,7 +240,6 @@ export function ParentDetails() {
               yearsSet.add(date.getFullYear());
             }
           } catch (e) {
-            // If date parsing fails, try to extract year directly from format like "2024-09-30T07:46:46.482467"
             const yearMatch = form.approvedOn.match(/\d{4}/);
             if (yearMatch) {
               yearsSet.add(parseInt(yearMatch[0]));
@@ -263,9 +253,6 @@ export function ParentDetails() {
     const currentYear = new Date().getFullYear();
     yearsSet.add(currentYear);
 
-    console.log('Available years:', Array.from(yearsSet));
-
-    // Sort years in descending order (most recent first)
     return Array.from(yearsSet).sort((a, b) => b - a);
   }, [parent]);
   const openReviewDialog = (form: Form, action: 'approve' | 'reject') => {
@@ -648,7 +635,6 @@ export function ParentDetails() {
                               Last updated: {form.lastUpdated}
                             </p>
                             {(() => {
-                              // Always show "Approved on" field for every form
                               if (!form.approvedOn) {
                                 return (
                                   <p className="text-xs text-gray-500 mt-1">
@@ -667,7 +653,7 @@ export function ParentDetails() {
                                   );
                                 }
                               } catch (e) {
-                                console.error('Error parsing approvedOn date:', form.approvedOn, e);
+                                // Silently fail and show raw value
                               }
 
                               return (
