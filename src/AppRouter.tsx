@@ -1,7 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { App } from './App';
-import { ToastProvider } from './components/ui/toast';
+
 import { UserProvider } from './contexts/UserContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -18,8 +18,7 @@ import { StudentManagement } from './pages/admin/StudentManagement';
 import { FormView } from './pages/admin/FormView';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
-  return <ToastProvider>
-      <UserProvider>
+  return <UserProvider>
         <BrowserRouter>
           <Routes>
           <Route path="/" element={<ProtectedRoute>
@@ -44,6 +43,5 @@ export function AppRouter() {
           </Route>
         </Routes>
       </BrowserRouter>
-    </UserProvider>
-  </ToastProvider>;
+    </UserProvider>;
 }

@@ -506,6 +506,18 @@ export async function createClassroom(schoolId: string, className: string): Prom
     }
   }, z.union([z.object({}), z.string()]));
 }
+
+export async function assignFormToClassroom(schoolId: string, classroomId: string, formTemplateId: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/class-form-overrides',
+    body: {
+      school_id: schoolId,
+      classroom_id: classroomId,
+      form_template_id: formTemplateId
+    }
+  }, z.union([z.object({}), z.string()]));
+}
 export type ChildEnrollment = {
   childId: string;
   childFullName: string;

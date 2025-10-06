@@ -10,7 +10,7 @@ import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
-import { useToast } from '../../components/ui/toast';
+import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
@@ -96,9 +96,12 @@ export function ParentDetails() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<{formId: string, action: 'download' | 'print'} | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const {
-    addToast
-  } = useToast();
+  const [toast, setToast] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ open: false, type: 'info', title: '', message: '' });
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -210,10 +213,11 @@ export function ParentDetails() {
       } catch (error) {
         if (isMounted) {
           setError('Failed to load parent details. Please try again.');
-          addToast({
+          setToast({
+            open: true,
             type: 'error',
-            title: 'Loading Error',
-            description: 'Failed to load parent details. Please refresh the page.'
+            title: '',
+            message: 'Failed to load parent details'
           });
         }
       } finally {
@@ -290,17 +294,19 @@ export function ParentDetails() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      addToast({
+      setToast({
+        open: true,
         type: 'success',
-        title: 'Download Started',
-        description: `${form.title} is downloading...`
+        title: '',
+        message: `${form.title} downloading...`
       });
     } catch (error) {
       console.error('Download failed:', error);
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Download Failed',
-        description: 'Unable to download the PDF. Please try again.'
+        title: '',
+        message: 'Download failed'
       });
     } finally {
       setLoadingAction(null);
@@ -343,10 +349,11 @@ export function ParentDetails() {
           window.URL.revokeObjectURL(blobUrl);
         }, 3000);
 
-        addToast({
+        setToast({
+          open: true,
           type: 'info',
-          title: 'Print Dialog Opening',
-          description: 'Print dialog will open in a new window.'
+          title: '',
+          message: 'Print dialog opening...'
         });
       } else {
         throw new Error('Popup blocked');
@@ -358,16 +365,18 @@ export function ParentDetails() {
       // Fallback: Open PDF in new tab for manual print
       const printWindow = window.open(form.recentPdfLink, '_blank');
       if (printWindow) {
-        addToast({
+        setToast({
+          open: true,
           type: 'info',
-          title: 'PDF Opened',
-          description: 'Please use Ctrl+P (or Cmd+P) to print the document.'
+          title: '',
+          message: 'Use Ctrl+P to print'
         });
       } else {
-        addToast({
+        setToast({
+          open: true,
           type: 'error',
-          title: 'Print Failed',
-          description: 'Please enable popups or download the PDF to print.'
+          title: '',
+          message: 'Print failed - enable popups'
         });
       }
 
@@ -405,23 +414,26 @@ export function ParentDetails() {
             }))
           };
         });
-        addToast({
+        setToast({
+          open: true,
           type: 'success',
-          title: 'Form Review Completed',
-          description: result.message
+          title: '',
+          message: 'Form review completed'
         });
       } else {
-        addToast({
+        setToast({
+          open: true,
           type: 'error',
-          title: 'Form Review Failed',
-          description: result.message
+          title: '',
+          message: 'Form review failed'
         });
       }
     } catch (error) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Review Error',
-        description: 'Failed to review form. Please try again.'
+        title: '',
+        message: 'Failed to review form'
       });
     } finally {
       setIsReviewing(false);
@@ -813,5 +825,13 @@ export function ParentDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+      />
     </AdminLayout>;
 }

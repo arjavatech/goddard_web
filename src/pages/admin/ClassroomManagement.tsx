@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { AsyncButton } from '../../components/ui/async-button';
 import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -60,54 +61,49 @@ export function ClassroomManagement() {
     return classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [classrooms, searchQuery]);
   const handleAddClassroom = async () => {
-    if (newClassroomName.trim()) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        await createClassroom(user.schoolId, newClassroomName.trim());
-        const newClassroom: Classroom = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          name: newClassroomName.trim(),
-          studentsCount: 0,
-          formsCount: 0,
-          assignedForms: []
-        };
-        setClassrooms([...classrooms, newClassroom]);
-        setNewClassroomName('');
-        setIsAddDialogOpen(false);
-      } catch (error) {
-      }
-    }
+    if (!newClassroomName.trim()) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    await createClassroom(user.schoolId, newClassroomName.trim());
+    
+    const newClassroom: Classroom = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      name: newClassroomName.trim(),
+      studentsCount: 0,
+      formsCount: 0,
+      assignedForms: []
+    };
+    setClassrooms([...classrooms, newClassroom]);
+    setNewClassroomName('');
+    setIsAddDialogOpen(false);
   };
   const handleEditClassroom = async () => {
-    if (selectedClassroom && newClassroomName.trim()) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
-        setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
-          ...classroom,
-          name: newClassroomName.trim()
-        } : classroom));
-        setNewClassroomName('');
-        setIsEditDialogOpen(false);
-      } catch (error) {
-      }
-    }
+    if (!selectedClassroom || !newClassroomName.trim()) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
+    
+    setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
+      ...classroom,
+      name: newClassroomName.trim()
+    } : classroom));
+    setNewClassroomName('');
+    setIsEditDialogOpen(false);
   };
   const handleDeleteClassroom = async () => {
-    if (selectedClassroom) {
-      try {
-        const user = await fetchUserContext();
-        if (user.schoolId) {
-          await deleteClassroom(selectedClassroom.id, user.schoolId);
-        }
-      } catch (error) {
-      }
-      // Remove from local state regardless of API success
-      setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
-      setIsDeleteDialogOpen(false);
-    }
+    if (!selectedClassroom) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    await deleteClassroom(selectedClassroom.id, user.schoolId);
+    
+    setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
+    setIsDeleteDialogOpen(false);
   };
   const openEditDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
@@ -250,9 +246,9 @@ export function ClassroomManagement() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newClassroomName.trim()}>
+            <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newClassroomName.trim()}>
               Add Classroom
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -272,9 +268,9 @@ export function ClassroomManagement() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newClassroomName.trim()}>
+            <AsyncButton onClick={handleEditClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newClassroomName.trim()}>
               Save Changes
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -303,9 +299,9 @@ export function ClassroomManagement() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteClassroom}>
+            <AsyncButton variant="destructive" onClick={handleDeleteClassroom}>
               Delete Classroom
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
