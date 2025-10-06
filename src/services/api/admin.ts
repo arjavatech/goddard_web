@@ -638,3 +638,14 @@ export async function fetchDashboardMetrics(schoolId: string): Promise<Dashboard
     throw error;
   }
 }
+
+export async function updateChildStatus(
+  childId: string,
+  status: 'active' | 'archive'
+): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: `/children/${encodeURIComponent(childId)}/status`,
+    body: { status }
+  }, z.object({}));
+}

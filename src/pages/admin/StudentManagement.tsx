@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, Children } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -8,10 +8,11 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { fetchUserContext } from '../../services/api/user';
 
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { fetchStudentEnrollments } from '@/services/api/admin';
+import { fetchStudentEnrollments, updateChildStatus } from '@/services/api/admin';
 
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 
@@ -25,6 +26,7 @@ interface EnrollmentData {
   form_status: string;
   forms: Record<string, string>;
   additional_parent_email?: string | null;
+  child_status?: string;
 }
 interface Student {
   id: string;
@@ -49,6 +51,7 @@ interface Student {
     name: string;
     status: string;
   }[];
+  childStatus: 'active' | 'archive';
 }
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -61,7 +64,12 @@ export function StudentManagement() {
   const [searchQuery, setSearchQuery] = useState('');
   const [formFilter, setFormFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [childStatusFilter, setChildStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [newStatus, setNewStatus] = useState<'active' | 'archive'>('active');
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   // Reset status filter when form filter changes
   const handleFormFilterChange = (value: string) => {
@@ -135,7 +143,8 @@ export function StudentManagement() {
               name: parentName,
               email: parentEmail
             },
-            assignedForms: formsArray
+            assignedForms: formsArray,
+            childStatus: (enrollment.child_status || 'active') as 'active' | 'archive'
           };
           return student;
         });
@@ -196,8 +205,11 @@ export function StudentManagement() {
       }
     }
 
-    return matchesSearch && matchesForm && matchesStatus;
-  }), [students, searchQuery, formFilter, statusFilter]);
+    // Filter by child status
+    const matchesChildStatus = childStatusFilter === 'all' || student.childStatus === childStatusFilter;
+
+    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus;
+  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter]);
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
@@ -228,6 +240,26 @@ export function StudentManagement() {
     }
   };
   const toggleFilters = () => setShowFilters(prev => !prev);
+
+  const handleStatusChange = async () => {
+    if (!selectedStudent) return;
+
+    try {
+      setIsUpdatingStatus(true);
+      await updateChildStatus(selectedStudent.id, newStatus);
+
+      // Update local state
+      setStudents(students.map(s =>
+        s.id === selectedStudent.id ? { ...s, childStatus: newStatus } : s
+      ));
+
+      setIsStatusDialogOpen(false);
+    } catch (error) {
+      console.error('Error updating child status:', error);
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
   if (loading) {
     return <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -344,6 +376,18 @@ export function StudentManagement() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="w-full md:w-48">
+                    <Select value={childStatusFilter} onValueChange={setChildStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Child Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Children</SelectItem>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="archive">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </>}
             </div>
             <div className="overflow-x-auto">
@@ -361,6 +405,9 @@ export function StudentManagement() {
                     </th>
                     <th className="text-center py-3 px-4 font-medium text-gray-600">
                       Status
+                    </th>
+                    <th className="text-center py-3 px-4 font-medium text-gray-600">
+                      Child Status
                     </th>
                     <th className="text-center py-3 px-4 font-medium text-gray-600">
                       Forms
@@ -441,6 +488,25 @@ export function StudentManagement() {
                           })()}
                         </td>
                         <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setNewStatus(student.childStatus);
+                              setIsStatusDialogOpen(true);
+                            }}
+                            className={`
+                              px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer
+                              transition-all duration-200 hover:shadow-md
+                              ${student.childStatus === 'active'
+                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
+                                : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
+                              }
+                            `}
+                          >
+                            {student.childStatus === 'active' ? '● Active' : '⊗ Archived'}
+                          </button>
+                        </td>
+                        <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center">
                             <FileText className="h-4 w-4 mr-1 text-gray-500" />
                             <span>
@@ -467,7 +533,7 @@ export function StudentManagement() {
                           </div>
                         </td>
                       </tr>) : <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500">
+                      <td colSpan={7} className="py-8 text-center text-gray-500">
                         No students found matching your search criteria.
                       </td>
                     </tr>}
@@ -477,5 +543,36 @@ export function StudentManagement() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Child Status Change Dialog */}
+      <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Child Status</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="mb-4">
+              Change status for <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong> to:
+            </p>
+            <Select value={newStatus} onValueChange={(v) => setNewStatus(v as 'active' | 'archive')}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="archive">Archive</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>
+              Cancel
+            </Button>
+            <Button onClick={handleStatusChange} disabled={isUpdatingStatus} className="bg-amazon-teal hover:bg-amazon-teal/90">
+              {isUpdatingStatus ? 'Updating...' : 'Confirm'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>;
 }
