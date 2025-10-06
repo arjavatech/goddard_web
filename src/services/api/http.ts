@@ -28,17 +28,31 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   }
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
+    let errorCode: string | undefined;
+
     if (typeof data === 'string') {
       message = data;
     } else if (data && typeof data === 'object') {
       const errorData = data as Record<string, unknown>;
+      errorCode = errorData.code as string | undefined;
       message = (errorData.message || errorData.error || errorData.detail) as string || message;
+
+      // Check for session expiration
+      if (errorCode === 'session_not_found') {
+        message = 'Your session has expired. Please log in again.';
+        // Redirect to login page
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
     }
 
     // Add more context for common HTTP errors
     switch (res.status) {
       case 401:
-        message = 'Authentication required. Please log in again.';
+        if (errorCode !== 'session_not_found') {
+          message = 'Authentication required. Please log in again.';
+        }
         break;
       case 403:
         message = 'Access denied. You do not have permission to perform this action.';
@@ -53,6 +67,7 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
     const error = new Error(message);
     (error as any).status = res.status;
     (error as any).response = data;
+    (error as any).code = errorCode;
     throw error;
   }
   return {
