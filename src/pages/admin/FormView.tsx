@@ -9,13 +9,18 @@ import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment } from '../../services/api/admin';
 import { useAuth } from '../../services/auth/useAuth';
-import { useToast } from '../../components/ui/toast';
+import { Toast } from '../../components/ui/toast';
 
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { addToast } = useToast();
+  const [toast, setToast] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ open: false, type: 'info', title: '', message: '' });
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -76,19 +81,21 @@ export function FormView() {
   // Handle form approval
   const handleApprove = async () => {
     if (!studentFormAssignmentId) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Unable to approve form: Assignment ID is missing'
+        title: '',
+        message: 'Unable to approve form: Assignment ID is missing'
       });
       return;
     }
 
     if (!user?.id) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Unable to approve form: User not authenticated'
+        title: '',
+        message: 'Unable to approve form: User not authenticated'
       });
       return;
     }
@@ -102,10 +109,11 @@ export function FormView() {
         user.id
       );
 
-      addToast({
+      setToast({
+        open: true,
         type: 'success',
-        title: 'Success',
-        description: 'Form has been approved successfully'
+        title: '',
+        message: 'Form approved successfully'
       });
 
       // Navigate back after a short delay
@@ -114,10 +122,11 @@ export function FormView() {
       }, 1500);
     } catch (error) {
       console.error('Error approving form:', error);
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Failed to approve form. Please try again.'
+        title: '',
+        message: 'Failed to approve form'
       });
     } finally {
       setIsProcessing(false);
@@ -127,28 +136,31 @@ export function FormView() {
   // Handle form rejection
   const handleReject = async () => {
     if (!studentFormAssignmentId) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Unable to reject form: Assignment ID is missing'
+        title: '',
+        message: 'Unable to reject form: Assignment ID is missing'
       });
       return;
     }
 
     if (!user?.id) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Unable to reject form: User not authenticated'
+        title: '',
+        message: 'Unable to reject form: User not authenticated'
       });
       return;
     }
 
     if (!notes.trim()) {
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Please provide notes when rejecting a form'
+        title: '',
+        message: 'Please provide notes when rejecting a form'
       });
       return;
     }
@@ -162,10 +174,11 @@ export function FormView() {
         user.id
       );
 
-      addToast({
+      setToast({
+        open: true,
         type: 'success',
-        title: 'Success',
-        description: 'Form has been rejected with notes'
+        title: '',
+        message: 'Form rejected with notes'
       });
 
       // Navigate back after a short delay
@@ -174,10 +187,11 @@ export function FormView() {
       }, 1500);
     } catch (error) {
       console.error('Error rejecting form:', error);
-      addToast({
+      setToast({
+        open: true,
         type: 'error',
-        title: 'Error',
-        description: 'Failed to reject form. Please try again.'
+        title: '',
+        message: 'Failed to reject form'
       });
     } finally {
       setIsProcessing(false);
@@ -327,5 +341,13 @@ export function FormView() {
           </CardContent>
         </Card>
       </div>
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+      />
     </AdminLayout>;
 }

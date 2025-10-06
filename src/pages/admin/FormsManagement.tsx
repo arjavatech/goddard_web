@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { AsyncButton } from '../../components/ui/async-button';
 import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -96,43 +97,40 @@ export function FormsManagement() {
     }
   };
   const handleEditForm = async () => {
-    if (selectedForm && formName.trim() && formLink.trim()) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        // Map UI status to API status values
-        const statusMap: Record<FormStatus, string> = {
-          'Default': 'school_default',
-          'Active': 'active',
-          'Inactive': 'inactive',
-          'Archive': 'archived'
-        };
-        const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
-        await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
-        setForms(forms.map((form: Form) => form.id === selectedForm.id ? {
-          ...form,
-          name: formName.trim(),
-          link: formLink.trim(),
-          status: formStatus
-        } : form));
-        resetFormFields();
-        setIsEditDialogOpen(false);
-      } catch (error) {
-      }
-    }
+    if (!selectedForm || !formName.trim() || !formLink.trim()) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    const statusMap: Record<FormStatus, string> = {
+      'Default': 'school_default',
+      'Active': 'active',
+      'Inactive': 'inactive',
+      'Archive': 'archived'
+    };
+    const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
+    
+    await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
+    
+    setForms(forms.map((form: Form) => form.id === selectedForm.id ? {
+      ...form,
+      name: formName.trim(),
+      link: formLink.trim(),
+      status: formStatus
+    } : form));
+    resetFormFields();
+    setIsEditDialogOpen(false);
   };
   const handleDeleteForm = async () => {
-    if (selectedForm) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        await deleteForm(selectedForm.id, user.schoolId);
-      } catch (error) {
-      }
-      // Remove from local state regardless of API success
-      setForms(forms.filter((form: Form) => form.id !== selectedForm.id));
-      setIsDeleteDialogOpen(false);
-    }
+    if (!selectedForm) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    await deleteForm(selectedForm.id, user.schoolId);
+    
+    setForms(forms.filter((form: Form) => form.id !== selectedForm.id));
+    setIsDeleteDialogOpen(false);
   };
   const resetFormFields = () => {
     setFormName('');
@@ -355,9 +353,9 @@ export function FormsManagement() {
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleEditForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim()}>
+            <AsyncButton onClick={handleEditForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim()}>
               Save Changes
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -386,9 +384,9 @@ export function FormsManagement() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleDeleteForm}>
+            <AsyncButton variant="destructive" onClick={handleDeleteForm}>
               Delete Form
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

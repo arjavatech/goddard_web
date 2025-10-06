@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, Children } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { AsyncButton } from '../../components/ui/async-button';
 import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Calendar, Users, Clock, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -10,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
+import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
@@ -72,9 +74,13 @@ export function ParentManagement() {
   const [newChildGender, setNewChildGender] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
-  const [resendingParentId, setResendingParentId] = useState<string | null>(null);
-  const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
+  const [toast, setToast] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ open: false, type: 'info', title: '', message: '' });
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -148,80 +154,106 @@ export function ParentManagement() {
     return matchesSearch && matchesStatus && matchesSignup;
   }), [parents, searchQuery, statusFilter, signupFilter]);
   const handleInviteParent = async () => {
-    if (parentFirstName && parentLastName && parentEmail && childFirstName && childLastName && childDob && childGender && childClassroom) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        await inviteParent(user.schoolId, {
-          parentFirstName,
-          parentLastName,
-          parentEmail,
-          childFullName: `${childFirstName} ${childLastName}`,
-          childDob,
-          classroomId: childClassroom,
-          gender: childGender
-        });
-        const classroom = classrooms.find(c => c.id === childClassroom);
-        const newParent: Parent = {
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          firstName: parentFirstName,
-          lastName: parentLastName,
-          email: parentEmail,
-          children: [{
-            id: Math.random().toString(36).substring(2, 9),
-            firstName: childFirstName,
-            lastName: childLastName,
-            dob: childDob,
-            classroom: {
-              id: childClassroom,
-              name: classroom?.name || 'Unassigned'
-            }
-          }],
-          status: 'Active',
-          signupStatus: 'Not Signed'
-        };
-        setParents([...parents, newParent]);
-        resetInviteForm();
-        setIsInviteDialogOpen(false);
-      } catch (error) {
+    if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    try {
+      await inviteParent(user.schoolId, {
+        parentFirstName,
+        parentLastName,
+        parentEmail,
+        childFullName: `${childFirstName} ${childLastName}`,
+        childDob,
+        classroomId: childClassroom,
+        gender: childGender
+      });
+      
+      // Success - update UI and show success notification
+      const classroom = classrooms.find(c => c.id === childClassroom);
+      const newParent: Parent = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        firstName: parentFirstName,
+        lastName: parentLastName,
+        email: parentEmail,
+        children: [{
+          id: Math.random().toString(36).substring(2, 9),
+          firstName: childFirstName,
+          lastName: childLastName,
+          dob: childDob,
+          classroom: {
+            id: childClassroom,
+            name: classroom?.name || 'Unassigned'
+          }
+        }],
+        status: 'Active',
+        signupStatus: 'Not Signed'
+      };
+      setParents([...parents, newParent]);
+      resetInviteForm();
+      setIsInviteDialogOpen(false);
+      
+      setToast({
+        open: true,
+        type: 'success',
+        title: '',
+        message: `Invitation sent to ${parentEmail}`
+      });
+      
+    } catch (error: any) {
+      // Handle specific error cases and show notification
+      let errorTitle = 'Invitation Failed';
+      let errorMessage = 'Failed to send invitation. Please try again.';
+      
+      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+          (error?.message && error.message.includes('User with this email already exists'))) {
+        errorMessage = 'Email already exists';
       }
+      
+      setToast({
+        open: true,
+        type: 'error',
+        title: '',
+        message: errorMessage
+      });
+      
+      throw new Error(errorMessage);
     }
   };
   const handleAddChild = async () => {
-    if (selectedParent && newChildFirstName && newChildLastName && newChildDob && newChildGender && newChildClassroom) {
-      try {
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        // Use first child's enrollment ID or generate one
-        const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
-        await addChild(user.schoolId, enrollmentId, {
-          childFirstName: newChildFirstName,
-          childLastName: newChildLastName,
-          childDob: newChildDob,
-          gender: newChildGender,
-          classroomId: newChildClassroom,
-          parentId: selectedParent.id
-        });
-        const classroom = classrooms.find(c => c.id === newChildClassroom);
-        const newChild: Child = {
-          id: Math.random().toString(36).substring(2, 9),
-          firstName: newChildFirstName,
-          lastName: newChildLastName,
-          dob: newChildDob,
-          classroom: {
-            id: newChildClassroom,
-            name: classroom?.name || 'Unassigned'
-          }
-        };
-        setParents(parents.map(parent => parent.id === selectedParent.id ? {
-          ...parent,
-          children: [...parent.children, newChild]
-        } : parent));
-        resetAddChildForm();
-        setIsAddChildDialogOpen(false);
-      } catch (error) {
+    if (!selectedParent || !newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
+    await addChild(user.schoolId, enrollmentId, {
+      childFirstName: newChildFirstName,
+      childLastName: newChildLastName,
+      childDob: newChildDob,
+      gender: newChildGender,
+      classroomId: newChildClassroom,
+      parentId: selectedParent.id
+    });
+    
+    const classroom = classrooms.find(c => c.id === newChildClassroom);
+    const newChild: Child = {
+      id: Math.random().toString(36).substring(2, 9),
+      firstName: newChildFirstName,
+      lastName: newChildLastName,
+      dob: newChildDob,
+      classroom: {
+        id: newChildClassroom,
+        name: classroom?.name || 'Unassigned'
       }
-    }
+    };
+    setParents(parents.map(parent => parent.id === selectedParent.id ? {
+      ...parent,
+      children: [...parent.children, newChild]
+    } : parent));
+    resetAddChildForm();
+    setIsAddChildDialogOpen(false);
   };
   const resetInviteForm = () => {
     setParentFirstName('');
@@ -241,29 +273,28 @@ export function ParentManagement() {
     setNewChildClassroom('');
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
-    setResendingParentId(parentId);
-    try {
-      await resendParentConfirmation(parentId);
-      alert(`Confirmation email resent successfully to ${parentEmail}`);
-    } catch (error) {
-      alert('Failed to resend confirmation email. Please try again.');
-    } finally {
-      setResendingParentId(null);
-    }
+    await resendParentConfirmation(parentId);
+    setToast({
+      open: true,
+      type: 'success',
+      title: '',
+      message: `Confirmation email resent to ${parentEmail}`
+    });
   };
   const handleDeactivateParent = async () => {
     if (!parentToDeactivate) return;
-    setDeactivatingParentId(parentToDeactivate.id);
+    
+    const parentName = `${parentToDeactivate.firstName} ${parentToDeactivate.lastName}`;
+    await deactivateParent(parentToDeactivate.id);
+    
+    setParents(parents.filter(p => p.id !== parentToDeactivate.id));
     setParentToDeactivate(null);
-    try {
-      await deactivateParent(parentToDeactivate.id);
-      setParents(parents.filter(p => p.id !== parentToDeactivate.id));
-      alert(`${parentToDeactivate.firstName} ${parentToDeactivate.lastName} has been deactivated successfully`);
-    } catch (error) {
-      alert('Failed to deactivate parent. Please try again.');
-    } finally {
-      setDeactivatingParentId(null);
-    }
+    setToast({
+      open: true,
+      type: 'success',
+      title: '',
+      message: `${parentName} deactivated`
+    });
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
@@ -415,12 +446,16 @@ export function ParentManagement() {
                                 <UserCircle className="h-4 w-4 mr-2" />
                                 Add Child
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed'}
-                                onClick={() => handleResendConfirmation(parent.id, parent.email)}
-                              >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Resend
+                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Signed'}>
+                                <AsyncButton
+                                  variant="ghost"
+                                  size="sm"
+                                  className="w-full justify-start p-2 h-auto font-normal"
+                                  onClick={() => handleResendConfirmation(parent.id, parent.email)}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-2" />
+                                  Resend
+                                </AsyncButton>
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
@@ -532,10 +567,10 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom}>
+            <AsyncButton onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom}>
               <Mail className="h-4 w-4 mr-2" />
               Send Invitation
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -602,20 +637,13 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom}>
+            <AsyncButton onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom}>
               Add Child
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Resend Loading Dialog */}
-      <Dialog open={resendingParentId !== null} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-[200px] p-8 border-0 shadow-none outline-none" hideCloseButton>
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amazon-teal"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
+
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
         <DialogContent>
@@ -635,24 +663,24 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setParentToDeactivate(null)}>
               Cancel
             </Button>
-            <Button
+            <AsyncButton
               variant="destructive"
               onClick={handleDeactivateParent}
               className="bg-red-600 hover:bg-red-700"
             >
               <XCircle className="h-4 w-4 mr-2" />
               Deactivate
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Deactivate Loading Dialog */}
-      <Dialog open={deactivatingParentId !== null} onOpenChange={() => {}}>
-        <DialogContent className="sm:max-w-[200px] p-8 border-0 shadow-none outline-none" hideCloseButton>
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+      />
     </AdminLayout>;
 }
