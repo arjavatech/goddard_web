@@ -37,10 +37,10 @@ export function ClassroomManagement() {
           name: stat.className,
           studentsCount: stat.studentCount,
           formsCount: Object.keys(stat.forms ?? {}).length,
-          assignedForms: Object.entries(stat.forms ?? {}).map(([formName, status]) => ({
-            id: formName,
-            name: formName.replace(/[-_]/g, ' '),
-            status: status as any
+          assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+            id: formId,
+            name: formName,
+            status: 'Active' as any
           }))
         }));
         
