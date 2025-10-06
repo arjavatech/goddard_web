@@ -41,6 +41,7 @@ interface ChildInfo {
   };
   forms: Form[];
   enrollmentProgress: number;
+  childStatus: 'active' | 'archive';
 }
 interface ParentDetailView {
   id: string;
@@ -181,7 +182,8 @@ export function ParentDetails() {
             dob: child.childDob || '—',
             classroom: classroomInfo,
             forms: formsArray,
-            enrollmentProgress: progress
+            enrollmentProgress: progress,
+            childStatus: (child.childStatus || 'active') as 'active' | 'archive'
           } satisfies ChildInfo;
         }) || [];
         // Create family forms from all unique forms across children
@@ -620,7 +622,17 @@ export function ParentDetails() {
                     });
 
                 return <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
-                  {filteredForms && filteredForms.length > 0 ? filteredForms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
+                  {child.childStatus === 'archive' ? (
+                    <div className="border border-amber-200 rounded-lg p-8 bg-amber-50 text-center">
+                      <AlertCircle className="h-12 w-12 mx-auto text-amber-600 mb-4" />
+                      <h3 className="font-semibold text-amber-900 mb-2 text-lg">
+                        The student is Archived
+                      </h3>
+                      <p className="text-sm text-amber-700">
+                        Form viewing is disabled for archived students.
+                      </p>
+                    </div>
+                  ) : filteredForms && filteredForms.length > 0 ? filteredForms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="flex items-center">
