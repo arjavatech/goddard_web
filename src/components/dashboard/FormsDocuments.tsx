@@ -198,17 +198,24 @@ export function FormsDocuments({
 
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
         formUrl = recentEditLink;
-      } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
-        // Construct proper Fillout URL with student_form_assignment_id parameter
-        formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${studentFormAssignmentId}`;
       } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
         // If filloutFormId is already a full URL, use it directly
         if (filloutFormId.startsWith('http')) {
           formUrl = filloutFormId;
+          // Add student_form_assignment_id if it's not already in the URL and we have it
+          if (studentFormAssignmentId && !formUrl.includes('student_form_assignment_id')) {
+            formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
+          }
         } else {
-          // Otherwise treat it as an ID and construct the URL
-          formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${filloutFormId}`;
+          // Otherwise treat it as a form path and construct the URL
+          const baseUrl = `https://goddard.fillout.com/${filloutFormId}`;
+          formUrl = studentFormAssignmentId
+            ? `${baseUrl}?student_form_assignment_id=${studentFormAssignmentId}`
+            : baseUrl;
         }
+      } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
+        // Fallback: if we only have student_form_assignment_id, use default form
+        formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${studentFormAssignmentId}`;
       } else {
         formUrl = '#';
       }
