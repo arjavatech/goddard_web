@@ -39,6 +39,10 @@ export type ParentDetail = {
       isRequired: boolean;
       filloutFormId: string;
       studentFormAssignmentId: string;
+      recent_edit_link?: string | null;
+      recent_pdf_link?: string | null;
+      approved_by?: string | null;
+      approved_on?: string | null;
     }[];
   }[];
 };
@@ -229,7 +233,8 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
           recent_edit_link: form.recent_edit_link || null,
           recent_pdf_link: form.recent_pdf_link || null,
-          fillout_form_id: form.fillout_form_id || form.filloutFormId || ''
+          approved_by: form.approved_by || null,
+          approved_on: form.approved_on || null
         }))
       }))
     }));

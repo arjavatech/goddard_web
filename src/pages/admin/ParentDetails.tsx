@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Link, useParams, useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -27,6 +28,7 @@ interface Form {
   filloutFormId: string;
   studentFormAssignmentId: string | null;
   recentPdfLink: string | null;
+  approvedOn: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -84,6 +86,7 @@ export function ParentDetails() {
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [reviewNotes, setReviewNotes] = useState('');
@@ -141,6 +144,14 @@ export function ParentDetails() {
           // Only use the child's specific forms array - no fallback to templates
           if (child.forms && Array.isArray(child.forms) && child.forms.length > 0) {
             formsArray = child.forms.map((form: any) => {
+              // Debug: Log the raw form data to verify approved_on field
+              console.log('Form data:', {
+                formName: form.form_name || form.formName,
+                approved_on: form.approved_on,
+                approvedOn: form.approvedOn,
+                status: form.status
+              });
+
               // Find template by matching form ID or name
               const formId = form.form_id || form.formId;
               const formName = form.form_name || form.formName;
@@ -155,7 +166,8 @@ export function ParentDetails() {
                 recentEditLink: form.recent_edit_link || null,
                 filloutFormId: form.fillout_form_id || form.filloutFormId || template?.filloutFormUrl || (template as any)?.fillout_form_url || '#',
                 studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
-                recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null
+                recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
+                approvedOn: form.approved_on || form.approvedOn || null
               } satisfies Form;
 
 
@@ -221,6 +233,41 @@ export function ParentDetails() {
     };
   }, [parentId]);
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
+
+  // Extract all available years from forms - prefer approved_on, fallback to current year
+  const availableYears = useMemo(() => {
+    if (!parent) return [];
+    const yearsSet = new Set<number>();
+
+    parent.children.forEach(child => {
+      child.forms.forEach(form => {
+        // Extract year from approved_on if available
+        if (form.approvedOn) {
+          try {
+            const date = new Date(form.approvedOn);
+            if (!isNaN(date.getTime())) {
+              yearsSet.add(date.getFullYear());
+            }
+          } catch (e) {
+            // If date parsing fails, try to extract year directly from format like "2024-09-30T07:46:46.482467"
+            const yearMatch = form.approvedOn.match(/\d{4}/);
+            if (yearMatch) {
+              yearsSet.add(parseInt(yearMatch[0]));
+            }
+          }
+        }
+      });
+    });
+
+    // Always include current year to ensure filter is always visible
+    const currentYear = new Date().getFullYear();
+    yearsSet.add(currentYear);
+
+    console.log('Available years:', Array.from(yearsSet));
+
+    // Sort years in descending order (most recent first)
+    return Array.from(yearsSet).sort((a, b) => b - a);
+  }, [parent]);
   const openReviewDialog = (form: Form, action: 'approve' | 'reject') => {
     setSelectedForm(form);
     setFormAction(action);
@@ -532,7 +579,27 @@ export function ParentDetails() {
         </div>
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle>Child Forms</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Child Forms</CardTitle>
+              {availableYears.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Select value={selectedYear} onValueChange={setSelectedYear}>
+                    <SelectTrigger className="w-[150px]">
+                      <SelectValue placeholder="Filter by year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Years</SelectItem>
+                      {availableYears.map(year => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={selectedChild?.id ?? ''} value={selectedChild?.id ?? ''} onValueChange={value => setSelectedChildId(value)}>
@@ -541,8 +608,32 @@ export function ParentDetails() {
                     {child.firstName} {child.lastName}
                   </TabsTrigger>)}
               </TabsList>
-              {parent.children.map(child => <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
-                  {child.forms && child.forms.length > 0 ? child.forms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
+              {parent.children.map(child => {
+                // Filter forms by selected year based on approvedOn date
+                const filteredForms = selectedYear === 'all'
+                  ? child.forms
+                  : child.forms.filter(form => {
+                      // Show forms that have approvedOn date matching the selected year
+                      // Forms without approvedOn will also be shown (they appear in all year filters)
+                      if (!form.approvedOn) return true; // Show non-approved forms in all year filters
+
+                      try {
+                        const date = new Date(form.approvedOn);
+                        if (!isNaN(date.getTime())) {
+                          return date.getFullYear().toString() === selectedYear;
+                        }
+                      } catch (e) {
+                        // Try to extract year from string format (e.g., "2024-10-02T15:59:46.009750")
+                        const yearMatch = form.approvedOn.match(/\d{4}/);
+                        if (yearMatch) {
+                          return yearMatch[0] === selectedYear;
+                        }
+                      }
+                      return true; // If parsing fails, show the form
+                    });
+
+                return <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
+                  {filteredForms && filteredForms.length > 0 ? filteredForms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="flex items-center">
@@ -556,6 +647,35 @@ export function ParentDetails() {
                             <p className="text-xs text-gray-500 mt-2">
                               Last updated: {form.lastUpdated}
                             </p>
+                            {(() => {
+                              // Always show "Approved on" field for every form
+                              if (!form.approvedOn) {
+                                return (
+                                  <p className="text-xs text-gray-500 mt-1">
+                                    Approved on: —
+                                  </p>
+                                );
+                              }
+
+                              try {
+                                const date = new Date(form.approvedOn);
+                                if (!isNaN(date.getTime())) {
+                                  return (
+                                    <p className="text-xs text-green-600 mt-1">
+                                      Approved on: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
+                                    </p>
+                                  );
+                                }
+                              } catch (e) {
+                                console.error('Error parsing approvedOn date:', form.approvedOn, e);
+                              }
+
+                              return (
+                                <p className="text-xs text-green-600 mt-1">
+                                  Approved on: {form.approvedOn}
+                                </p>
+                              );
+                            })()}
                           </div>
                           <div className="flex space-x-2">
                             {form.status === 'Approved' && form.recentPdfLink && (
@@ -625,11 +745,14 @@ export function ParentDetails() {
                         No Forms Available
                       </h3>
                       <p className="text-sm text-gray-500">
-                        No enrollment forms have been assigned to{' '}
-                        {child.firstName} {child.lastName} yet.
+                        {selectedYear === 'all'
+                          ? `No enrollment forms have been assigned to ${child.firstName} ${child.lastName} yet.`
+                          : `No forms found for ${child.firstName} ${child.lastName} in ${selectedYear}.`
+                        }
                       </p>
                     </div>}
-                </TabsContent>)}
+                </TabsContent>;
+              })}
             </Tabs>
           </CardContent>
         </Card>
