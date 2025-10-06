@@ -59,8 +59,15 @@ export function StudentManagement() {
   };
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [formFilter, setFormFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Reset status filter when form filter changes
+  const handleFormFilterChange = (value: string) => {
+    setFormFilter(value);
+    setStatusFilter('all'); // Reset status filter to avoid incompatible values
+  };
   useEffect(() => {
     let isMounted = true;
     const loadStudentData = async () => {
@@ -147,11 +154,50 @@ export function StudentManagement() {
       isMounted = false;
     };
   }, []);
+  // Extract all unique form names from students
+  const allFormNames = useMemo(() => {
+    const formNamesSet = new Set<string>();
+    students.forEach(student => {
+      student.assignedForms.forEach(form => {
+        formNamesSet.add(form.name);
+      });
+    });
+    return Array.from(formNamesSet).sort();
+  }, [students]);
+
   const filteredStudents = useMemo(() => students.filter(student => {
     const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || student.enrollmentStatus === statusFilter;
-    return matchesSearch && matchesStatus;
-  }), [students, searchQuery, statusFilter]);
+
+    // Filter by form - only show students who have the selected form
+    const matchesForm = formFilter === 'all' || student.assignedForms.some(form => form.name === formFilter);
+
+    // Filter by status - if a form is selected, filter by that form's status; otherwise by overall enrollment status
+    let matchesStatus = true;
+    if (statusFilter !== 'all') {
+      if (formFilter === 'all') {
+        // Overall enrollment status
+        matchesStatus = student.enrollmentStatus === statusFilter;
+      } else {
+        // Specific form status
+        const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+        if (selectedForm) {
+          const normalizedStatus = normalizeFormStatus(selectedForm.status);
+          // "Incomplete" filter should match both "incomplete" and "draft" statuses
+          if (statusFilter.toLowerCase() === 'incomplete') {
+            matchesStatus = normalizedStatus.toLowerCase() === 'incomplete' ||
+                           selectedForm.status.toLowerCase() === 'draft' ||
+                           normalizedStatus.toLowerCase() === 'draft';
+          } else {
+            matchesStatus = normalizedStatus.toLowerCase() === statusFilter.toLowerCase();
+          }
+        } else {
+          matchesStatus = false;
+        }
+      }
+    }
+
+    return matchesSearch && matchesForm && matchesStatus;
+  }), [students, searchQuery, formFilter, statusFilter]);
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
@@ -256,19 +302,49 @@ export function StudentManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input placeholder="Search students by name, parent, or classroom..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-              {showFilters && <div className="w-full md:w-48">
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Complete">Complete</SelectItem>
-                      <SelectItem value="In Progress">In Progress</SelectItem>
-                      <SelectItem value="Not Started">Not Started</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>}
+              {showFilters && <>
+                  <div className="w-full md:w-48">
+                    <Select value={formFilter} onValueChange={handleFormFilterChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by form" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Forms</SelectItem>
+                        {allFormNames.map(formName => (
+                          <SelectItem key={formName} value={formName}>
+                            {formName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="w-full md:w-48">
+                    <Select value={statusFilter} onValueChange={setStatusFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Statuses</SelectItem>
+                        {formFilter === 'all' ? (
+                          // Overall enrollment statuses
+                          <>
+                            <SelectItem value="Complete">Complete</SelectItem>
+                            <SelectItem value="In Progress">In Progress</SelectItem>
+                            <SelectItem value="Not Started">Not Started</SelectItem>
+                          </>
+                        ) : (
+                          // Form-specific statuses
+                          <>
+                            <SelectItem value="Approved">Approved</SelectItem>
+                            <SelectItem value="In Progress">In Progress</SelectItem>
+                            <SelectItem value="Incomplete">Incomplete</SelectItem>
+                            <SelectItem value="Rejected">Rejected</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>}
             </div>
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
@@ -324,12 +400,45 @@ export function StudentManagement() {
                           </div>
                         </td>
                         <td className="py-3 px-4 text-center">
-                          <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
-                            {getStatusIcon(student.enrollmentStatus)}
-                            <span className="ml-1">
-                              {student.enrollmentStatus}
-                            </span>
-                          </Badge>
+                          {(() => {
+                            // Show form-specific status if a form is selected
+                            if (formFilter !== 'all') {
+                              const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                              if (selectedForm) {
+                                const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                                // Treat "draft" as "Incomplete" for display
+                                const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
+                                const statusVariant =
+                                  displayStatus === 'Approved' ? 'success' :
+                                  displayStatus === 'Rejected' ? 'destructive' :
+                                  displayStatus === 'In Progress' ? 'secondary' :
+                                  'outline';
+                                const statusIcon =
+                                  displayStatus === 'Approved' ? <CheckCircle className="h-4 w-4 text-green-500" /> :
+                                  displayStatus === 'Rejected' ? <AlertCircle className="h-4 w-4 text-red-500" /> :
+                                  displayStatus === 'In Progress' ? <Clock className="h-4 w-4 text-amber-500" /> :
+                                  <AlertCircle className="h-4 w-4 text-gray-400" />;
+                                return (
+                                  <Badge variant={statusVariant as any} className="flex items-center w-fit mx-auto">
+                                    {statusIcon}
+                                    <span className="ml-1">
+                                      {displayStatus}
+                                    </span>
+                                  </Badge>
+                                );
+                              }
+                              return <span className="text-gray-400 text-sm">N/A</span>;
+                            }
+                            // Show overall enrollment status
+                            return (
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                                {getStatusIcon(student.enrollmentStatus)}
+                                <span className="ml-1">
+                                  {student.enrollmentStatus}
+                                </span>
+                              </Badge>
+                            );
+                          })()}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <div className="flex items-center justify-center">
