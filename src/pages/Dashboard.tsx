@@ -38,6 +38,7 @@ type DashboardChild = {
   currentStep: string;
   nextActionLabel: string;
   forms: ChildFormCard[];
+  childStatus: 'active' | 'archive';
 };
 function getInitials(firstName: string, lastName: string): string {
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -91,7 +92,8 @@ function normalizeChildFromParent(child: any): DashboardChild {
     totalForms,
     currentStep,
     nextActionLabel: pendingForm ? `Continue ${pendingForm.title}` : 'View enrollment summary',
-    forms
+    forms,
+    childStatus: (child.childStatus || 'active') as 'active' | 'archive'
   };
 }
 export function Dashboard() {
@@ -223,28 +225,32 @@ export function Dashboard() {
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
                       onContinue={handleViewForm}
+                      childStatus={selectedChild.childStatus}
                     />
                   </div>
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.2s'
-            }} data-forms-section>
-                    <FormsDocuments
-                      childSpecificForms={childSpecificForms}
-                      familyForms={familyForms}
-                      rawFormData={parentData}
-                      selectedChildId={selectedChild.id}
-                      selectedChildName={selectedChild.name}
-                      onChildSelect={(childName) => {
-                        const child = children.find(c => c.name === childName);
-                        if (child) {
-                          setSelectedChildId(child.id);
-                        }
-                      }}
-                      onViewForm={handleViewForm}
-                      formToOpen={formToOpen}
-                      onFormOpened={() => setFormToOpen(null)}
-                    />
-                  </div>
+                  {selectedChild.childStatus !== 'archive' && (
+                    <div className="section-fade-in" style={{
+                animationDelay: '0.2s'
+              }} data-forms-section>
+                      <FormsDocuments
+                        childSpecificForms={childSpecificForms}
+                        familyForms={familyForms}
+                        rawFormData={parentData}
+                        selectedChildId={selectedChild.id}
+                        selectedChildName={selectedChild.name}
+                        childStatus={selectedChild.childStatus}
+                        onChildSelect={(childName) => {
+                          const child = children.find(c => c.name === childName);
+                          if (child) {
+                            setSelectedChildId(child.id);
+                          }
+                        }}
+                        onViewForm={handleViewForm}
+                        formToOpen={formToOpen}
+                        onFormOpened={() => setFormToOpen(null)}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="lg:col-span-3">
                   <div className="section-fade-in" style={{

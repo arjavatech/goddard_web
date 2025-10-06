@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Check } from 'lucide-react';
+import { ChevronRight, Check, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 import { COMPLETION_STATUSES, type NormalizedFormStatus } from '../../lib/formStatus';
@@ -13,12 +13,14 @@ interface EnrollmentProgressProps {
   childName: string;
   forms: FormItem[];
   onContinue?: (form: any) => void;
+  childStatus?: 'active' | 'archive';
 }
 
 export function EnrollmentProgress({
   childName,
   forms,
-  onContinue
+  onContinue,
+  childStatus = 'active'
 }: EnrollmentProgressProps) {
   // Sort forms: Approved/Submitted first, then In Progress, then others
   const sortedForms = [...forms].sort((a, b) => {
@@ -46,6 +48,20 @@ export function EnrollmentProgress({
     name: form.title.length > 15 ? form.title.substring(0, 12) + '...' : form.title,
     completed: COMPLETION_STATUSES.has(form.status)
   }));
+  if (childStatus === 'archive') {
+    return <div className="glass-card bg-gradient-to-br from-amber-50 to-amber-100 text-foreground rounded-lg p-8 border-amber-200">
+        <div className="flex items-center justify-center flex-col text-center">
+          <AlertCircle className="h-16 w-16 text-amber-600 mb-4" />
+          <h2 className="text-2xl font-semibold mb-2 text-amber-900">
+            The student is Archived
+          </h2>
+          <p className="text-amber-700">
+            Enrollment forms are disabled for archived students.
+          </p>
+        </div>
+      </div>;
+  }
+
   return <div className="glass-card bg-gradient-to-br from-blue-50 to-blue-100 text-foreground rounded-lg p-8 border-blue-200">
       <h2 className="text-2xl font-semibold mb-2">
         Let's complete {childName}'s enrollment

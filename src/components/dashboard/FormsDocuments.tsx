@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
@@ -124,6 +124,7 @@ interface FormsDocumentsProps {
   rawFormData?: any; // Raw parent data to access form URLs
   selectedChildId?: string; // ID of the currently selected child
   selectedChildName?: string; // Name of the currently selected child
+  childStatus?: 'active' | 'archive'; // Status of the currently selected child
   onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
   onViewForm: (form: any) => void; // Callback to view a form
   formToOpen?: any; // Form to automatically open
@@ -135,6 +136,7 @@ export function FormsDocuments({
   rawFormData,
   selectedChildId,
   selectedChildName,
+  childStatus = 'active',
   onChildSelect,
   onViewForm,
   formToOpen,
@@ -355,6 +357,26 @@ export function FormsDocuments({
         </Card>
       </div>
     );
+  }
+
+  // Show archived message if child is archived
+  if (childStatus === 'archive') {
+    return <div>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
+            Forms & Documents
+          </h2>
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 text-center">
+            <AlertCircle className="h-12 w-12 mx-auto text-amber-600 mb-4" />
+            <h3 className="font-semibold text-amber-900 mb-2 text-lg">
+              The student is Archived
+            </h3>
+            <p className="text-sm text-amber-700">
+              Form viewing is disabled for archived students.
+            </p>
+          </div>
+        </div>
+      </div>;
   }
 
   // Forms grid view with tabs
