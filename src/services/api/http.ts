@@ -35,35 +35,18 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
     } else if (data && typeof data === 'object') {
       const errorData = data as Record<string, unknown>;
       errorCode = errorData.code as string | undefined;
-      message = (errorData.message || errorData.error || errorData.detail) as string || message;
+      const errorString = (errorData.error || errorData.message || errorData.detail) as string;
+      message = errorString || message;
 
-      // Check for session expiration
-      if (errorCode === 'session_not_found') {
-        message = 'Your session has expired. Please log in again.';
-        // Redirect to login page
+      // Check for session expiration - error_code is nested in the error string
+      if (errorCode === 'AUTHORIZATION_ERROR' && errorString && errorString.includes('session_not_found')) {
+        // Session expired - redirect to login page
         if (typeof window !== 'undefined') {
           window.location.href = '/login';
         }
       }
     }
 
-    // Add more context for common HTTP errors
-    switch (res.status) {
-      case 401:
-        if (errorCode !== 'session_not_found') {
-          message = 'Authentication required. Please log in again.';
-        }
-        break;
-      case 403:
-        message = 'Access denied. You do not have permission to perform this action.';
-        break;
-      case 404:
-        message = 'The requested resource was not found.';
-        break;
-      case 500:
-        message = 'Server error. Please try again later.';
-        break;
-    }
     const error = new Error(message);
     (error as any).status = res.status;
     (error as any).response = data;
