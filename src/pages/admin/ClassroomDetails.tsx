@@ -169,7 +169,7 @@ export function ClassroomDetails() {
           const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
           const email = child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com';
-          const parentId = parentByEmail.get(email.toLowerCase()) ?? child.childId;
+          const parentId = parentByEmail.get(email.toLowerCase()) ?? null;
           return {
             id: child.childId,
             firstName: child.firstName,
@@ -490,9 +490,7 @@ export function ClassroomDetails() {
                           </div>
                         </td>
                         <td className="py-3 px-4">
-                          <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:underline">
-                            {student.parent.name}
-                          </Link>
+                          <span className="text-gray-600">{student.parent.name}</span>
                           <div className="text-xs text-gray-500">
                             {student.parent.email}
                           </div>

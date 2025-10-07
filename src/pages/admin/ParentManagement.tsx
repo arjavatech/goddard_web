@@ -12,6 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { Toast } from '../../components/ui/toast';
+import { ValidatedInput } from '../../components/ui/validated-input';
+import { commonValidationRules } from '../../lib/validation';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
@@ -81,6 +83,7 @@ export function ParentManagement() {
     title: string;
     message: string;
   }>({ open: false, type: 'info', title: '', message: '' });
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -92,8 +95,14 @@ export function ParentManagement() {
         // Fetch both parent details and classrooms
         const [parentDetails, classroomData] = await Promise.all([
           fetchParentDetails(user.schoolId).catch(() => []),
-          fetchClassrooms(user.schoolId).catch(() => [])
+          fetchClassrooms(user.schoolId).catch((error) => {
+            console.error('fetchClassrooms failed:', error);
+            return [];
+          })
         ]);
+
+        console.log('Classroom data received:', classroomData);
+        console.log('School ID:', user.schoolId);
 
         if (!isMounted) return;
 
@@ -103,7 +112,10 @@ export function ParentManagement() {
             id: classroom.id,
             name: classroom.name
           }));
+          console.log('Setting classrooms:', classroomList);
           setClassrooms(classroomList);
+        } else {
+          console.warn('No classroom data available');
         }
         if (parentDetails.length > 0) {
           const mappedParents: Parent[] = parentDetails.map(detail => {
@@ -255,6 +267,19 @@ export function ParentManagement() {
     resetAddChildForm();
     setIsAddChildDialogOpen(false);
   };
+  const showToast = (message: string) => {
+    setToast({
+      open: true,
+      type: 'error',
+      title: '',
+      message
+    });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, open: false }));
+  };
+
   const resetInviteForm = () => {
     setParentFirstName('');
     setParentLastName('');
@@ -264,6 +289,7 @@ export function ParentManagement() {
     setChildDob('');
     setChildGender('');
     setChildClassroom('');
+
   };
   const resetAddChildForm = () => {
     setNewChildFirstName('');
@@ -493,19 +519,44 @@ export function ParentManagement() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <Input value={parentFirstName} onChange={e => setParentFirstName(e.target.value)} placeholder="Enter first name" className="w-full" />
+                    <ValidatedInput 
+                      value={parentFirstName} 
+                      onChange={e => setParentFirstName(e.target.value)} 
+                      placeholder="Enter first name" 
+                      className="w-full"
+                      validationRules={commonValidationRules.name}
+                      showToast={showToast}
+                      hideToast={hideToast}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <Input value={parentLastName} onChange={e => setParentLastName(e.target.value)} placeholder="Enter last name" className="w-full" />
+                    <ValidatedInput 
+                      value={parentLastName} 
+                      onChange={e => setParentLastName(e.target.value)} 
+                      placeholder="Enter last name" 
+                      className="w-full"
+                      validationRules={commonValidationRules.name}
+                      showToast={showToast}
+                      hideToast={hideToast}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Email
                     </label>
-                    <Input type="email" value={parentEmail} onChange={e => setParentEmail(e.target.value)} placeholder="Enter email address" className="w-full" />
+                    <ValidatedInput 
+                      type="email" 
+                      value={parentEmail} 
+                      onChange={e => setParentEmail(e.target.value)} 
+                      placeholder="Enter email address" 
+                      className="w-full"
+                      validationRules={commonValidationRules.email}
+                      showToast={showToast}
+                      hideToast={hideToast}
+                    />
                   </div>
                 </div>
               </div>
@@ -516,13 +567,29 @@ export function ParentManagement() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <Input value={childFirstName} onChange={e => setChildFirstName(e.target.value)} placeholder="Enter first name" className="w-full" />
+                    <ValidatedInput 
+                      value={childFirstName} 
+                      onChange={e => setChildFirstName(e.target.value)} 
+                      placeholder="Enter first name" 
+                      className="w-full"
+                      validationRules={commonValidationRules.name}
+                      showToast={showToast}
+                      hideToast={hideToast}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <Input value={childLastName} onChange={e => setChildLastName(e.target.value)} placeholder="Enter last name" className="w-full" />
+                    <ValidatedInput 
+                      value={childLastName} 
+                      onChange={e => setChildLastName(e.target.value)} 
+                      placeholder="Enter last name" 
+                      className="w-full"
+                      validationRules={commonValidationRules.name}
+                      showToast={showToast}
+                      hideToast={hideToast}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -588,13 +655,30 @@ export function ParentManagement() {
               <label className="block text-sm font-medium mb-2">
                 First Name
               </label>
-              <Input value={newChildFirstName} onChange={e => setNewChildFirstName(e.target.value)} placeholder="Enter first name" className="w-full" autoFocus />
+              <ValidatedInput 
+                value={newChildFirstName} 
+                onChange={e => setNewChildFirstName(e.target.value)} 
+                placeholder="Enter first name" 
+                className="w-full" 
+                validationRules={commonValidationRules.name}
+                showToast={showToast}
+                hideToast={hideToast}
+                autoFocus 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Last Name
               </label>
-              <Input value={newChildLastName} onChange={e => setNewChildLastName(e.target.value)} placeholder="Enter last name" className="w-full" />
+              <ValidatedInput 
+                value={newChildLastName} 
+                onChange={e => setNewChildLastName(e.target.value)} 
+                placeholder="Enter last name" 
+                className="w-full" 
+                validationRules={commonValidationRules.name}
+                showToast={showToast}
+                hideToast={hideToast}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">

@@ -10,6 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '../../components/ui/badge';
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
+import { ValidatedInput } from '../../components/ui/validated-input';
+import { commonValidationRules } from '../../lib/validation';
+import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 export function ClassroomManagement() {
@@ -21,6 +24,25 @@ export function ClassroomManagement() {
   const [newClassroomName, setNewClassroomName] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ open: false, type: 'info', title: '', message: '' });
+
+  const showToast = (message: string) => {
+    setToast({
+      open: true,
+      type: 'error',
+      title: '',
+      message
+    });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, open: false }));
+  };
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -240,7 +262,16 @@ export function ClassroomManagement() {
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>
-            <Input value={newClassroomName} onChange={e => setNewClassroomName(e.target.value)} placeholder="Enter classroom name" className="w-full" autoFocus />
+            <ValidatedInput 
+              value={newClassroomName} 
+              onChange={e => setNewClassroomName(e.target.value)} 
+              placeholder="Enter classroom name" 
+              className="w-full" 
+              validationRules={commonValidationRules.name}
+              showToast={showToast}
+              hideToast={hideToast}
+              autoFocus 
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
@@ -262,7 +293,16 @@ export function ClassroomManagement() {
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>
-            <Input value={newClassroomName} onChange={e => setNewClassroomName(e.target.value)} placeholder="Enter new classroom name" className="w-full" autoFocus />
+            <ValidatedInput 
+              value={newClassroomName} 
+              onChange={e => setNewClassroomName(e.target.value)} 
+              placeholder="Enter new classroom name" 
+              className="w-full" 
+              validationRules={commonValidationRules.name}
+              showToast={showToast}
+              hideToast={hideToast}
+              autoFocus 
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
@@ -305,5 +345,13 @@ export function ClassroomManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+      />
     </AdminLayout>;
 }

@@ -10,6 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
+import { ValidatedInput } from '../../components/ui/validated-input';
+import { commonValidationRules } from '../../lib/validation';
+import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
@@ -41,6 +44,25 @@ export function FormsManagement() {
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
+  const [toast, setToast] = useState<{
+    open: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message: string;
+  }>({ open: false, type: 'info', title: '', message: '' });
+
+  const showToast = (message: string) => {
+    setToast({
+      open: true,
+      type: 'error',
+      title: '',
+      message
+    });
+  };
+
+  const hideToast = () => {
+    setToast(prev => ({ ...prev, open: false }));
+  };
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -282,7 +304,16 @@ export function FormsManagement() {
               <label className="block text-sm font-medium mb-2">
                 Form Name
               </label>
-              <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="Enter form name" className="w-full" autoFocus />
+              <ValidatedInput 
+                value={formName} 
+                onChange={e => setFormName(e.target.value)} 
+                placeholder="Enter form name" 
+                className="w-full" 
+                validationRules={commonValidationRules.name}
+                showToast={showToast}
+                hideToast={hideToast}
+                autoFocus 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -326,7 +357,16 @@ export function FormsManagement() {
               <label className="block text-sm font-medium mb-2">
                 Form Name
               </label>
-              <Input value={formName} onChange={e => setFormName(e.target.value)} placeholder="Enter form name" className="w-full" autoFocus />
+              <ValidatedInput 
+                value={formName} 
+                onChange={e => setFormName(e.target.value)} 
+                placeholder="Enter form name" 
+                className="w-full" 
+                validationRules={commonValidationRules.name}
+                showToast={showToast}
+                hideToast={hideToast}
+                autoFocus 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -390,5 +430,13 @@ export function FormsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Toast Notification */}
+      <Toast
+        open={toast.open}
+        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        type={toast.type}
+        title={toast.title}
+        message={toast.message}
+      />
     </AdminLayout>;
 }

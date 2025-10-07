@@ -206,6 +206,11 @@ export function ClassroomFormAssignment() {
   const [formSearchQuery, setFormSearchQuery] = useState('');
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+
+  // Reset search query when component mounts
+  useEffect(() => {
+    setFormSearchQuery('');
+  }, []);
   const selectedClassroom = classrooms.find(c => c.id === selectedClassroomId) || classrooms[0];
   // Filter forms that are not already assigned to the selected classroom
   const availableForms = allForms.filter(form => !selectedClassroom?.assignedForms.some(f => f.id === form.id)).filter(form => form.name.toLowerCase().includes(formSearchQuery.toLowerCase()));
@@ -301,7 +306,10 @@ export function ClassroomFormAssignment() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input placeholder="Search forms..." className="pl-9 bg-white" value={formSearchQuery} onChange={e => setFormSearchQuery(e.target.value)} />
             </div>
-            <Button onClick={() => setIsAssignDialogOpen(true)} className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <Button onClick={() => {
+              setFormSearchQuery('');
+              setIsAssignDialogOpen(true);
+            }} className="bg-amazon-teal hover:bg-amazon-teal/90">
               <Plus className="h-4 w-4 mr-2" /> Assign Forms
             </Button>
           </div>
@@ -332,7 +340,10 @@ export function ClassroomFormAssignment() {
             <Card className="glass-card">
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>{selectedClassroom?.name}: Assigned Forms</CardTitle>
-                <Button onClick={() => setIsAssignDialogOpen(true)} className="bg-amazon-teal hover:bg-amazon-teal/90">
+                <Button onClick={() => {
+                  setFormSearchQuery('');
+                  setIsAssignDialogOpen(true);
+                }} className="bg-amazon-teal hover:bg-amazon-teal/90">
                   <Plus className="h-4 w-4 mr-2" /> Assign Forms
                 </Button>
               </CardHeader>
@@ -345,7 +356,10 @@ export function ClassroomFormAssignment() {
                 {selectedClassroom?.assignedForms.length === 0 ? <div className="text-center py-8 text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>No forms have been assigned to this classroom yet.</p>
-                    <Button onClick={() => setIsAssignDialogOpen(true)} variant="outline" className="mt-4">
+                    <Button onClick={() => {
+                      setFormSearchQuery('');
+                      setIsAssignDialogOpen(true);
+                    }} variant="outline" className="mt-4">
                       Assign Forms
                     </Button>
                   </div> : <div className="space-y-3">

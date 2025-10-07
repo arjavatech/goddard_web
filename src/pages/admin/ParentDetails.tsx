@@ -134,6 +134,9 @@ export function ParentDetails() {
           };
         }
         if (!parentRecord) {
+          if (isMounted) {
+            window.location.href = '/admin/parents';
+          }
           return;
         }
         const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
