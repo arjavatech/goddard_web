@@ -106,6 +106,7 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [parentData, setParentData] = useState<any>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     // Wait for user data to be loaded
@@ -177,7 +178,7 @@ export function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [userData, userLoading, user?.id]);
+  }, [userData, userLoading, user?.id, refreshTrigger]);
   useEffect(() => {
     if (children.length === 0) {
       setSelectedChildId(null);
@@ -205,6 +206,11 @@ export function Dashboard() {
         formsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     }, 100);
+  };
+
+  // Handle form completion - refresh data to update form status
+  const handleFormCompleted = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
@@ -248,6 +254,7 @@ export function Dashboard() {
                         onViewForm={handleViewForm}
                         formToOpen={formToOpen}
                         onFormOpened={() => setFormToOpen(null)}
+                        onFormCompleted={handleFormCompleted}
                       />
                     </div>
                   )}
