@@ -12,6 +12,7 @@ type LocationState = {
 };
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -24,6 +25,7 @@ export function Login() {
   const location = useLocation();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       await signInWithPassword(formData.email, formData.password);
 
@@ -44,6 +46,8 @@ export function Login() {
       });
     } catch (err) {
       alert((err as Error).message);
+    } finally {
+      setIsLoading(false);
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,8 +119,15 @@ export function Login() {
                 </Link>
               </div>
               {/* Sign In Button */}
-              <Button type="submit" className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium">
-                Sign In
+              <Button type="submit" disabled={isLoading} className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
               {/* Divider */}
               <div className="relative my-6">
