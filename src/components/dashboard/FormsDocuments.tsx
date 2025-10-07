@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Home } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
@@ -129,6 +129,7 @@ interface FormsDocumentsProps {
   onViewForm: (form: any) => void; // Callback to view a form
   formToOpen?: any; // Form to automatically open
   onFormOpened?: () => void; // Callback when form is opened
+  onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -140,19 +141,30 @@ export function FormsDocuments({
   onChildSelect,
   onViewForm,
   formToOpen,
-  onFormOpened
+  onFormOpened,
+  onFormCompleted
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || 'all');
   const previousChildIdRef = useRef<string | undefined>(selectedChildId);
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [countdown, setCountdown] = useState(15);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Sync activeTab with selectedChildId only when it actually changes
   useEffect(() => {
     if (selectedChildId && selectedChildId !== previousChildIdRef.current) {
       setActiveTab(selectedChildId);
       previousChildIdRef.current = selectedChildId;
+      // Close any open form when child changes
+      setSelectedForm(null);
+      setShowThankYou(false);
+      setIsFrameLoading(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
     }
   }, [selectedChildId]);
 
@@ -166,67 +178,88 @@ export function FormsDocuments({
         _key: `family-${index}`,
         rawData: null as any
       })),
-      ...childSpecificForms.flatMap((child, childIndex) =>
-        child.forms.map((form, formIndex) => ({
+      ...childSpecificForms.flatMap((child) => {
+        // Find the matching child in rawFormData by childId
+        const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
+        return child.forms.map((form, formIndex) => ({
           ...form,
           childId: child.childId,
           childName: child.childName,
-          _key: `child-${childIndex}-form-${formIndex}`,
-          rawData: rawFormData?.children?.[childIndex]?.forms?.[formIndex] || null
-        }))
-      )
+          _key: `child-${child.childId}-form-${formIndex}`,
+          rawData: rawChild?.forms?.[formIndex] || null
+        }));
+      })
     ];
   }, [familyForms, childSpecificForms, rawFormData]);
 
   const handleView = (form: any) => {
     let formUrl = '#';
+    
+    // Extract all possible URL sources from rawData and form object
+    const rawData = form.rawData || {};
+    const recentEditLink = rawData.recent_edit_link || form.recentEditLink;
+    const recentPdfLink = rawData.recent_pdf_link || form.recentPdfLink;
+    const filloutFormId = rawData.fillout_form_id || form.filloutFormId;
+    const studentFormAssignmentId = rawData.student_form_assignment_id || rawData.studentFormAssignmentId;
+    const formId = rawData.form_id || form.formId;
+    
+    console.log('Form data for URL construction:', {
+      status: form.status,
+      recentEditLink,
+      recentPdfLink,
+      filloutFormId,
+      studentFormAssignmentId,
+      formId,
+      rawData
+    });
 
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, prioritize recent_edit_link for viewing
-      formUrl = form.rawData?.recent_edit_link ||
-                form.recentEditLink ||
-                form.rawData?.recent_pdf_link ||
-                form.recentPdfLink ||
-                '#';
+      // For approved forms, prioritize recent_edit_link, then recent_pdf_link
+      if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
+        formUrl = recentEditLink;
+      } else if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+        formUrl = recentPdfLink;
+      }
     } else {
-      // For non-approved forms, use recent_edit_link first, then construct fillout URL
-      const recentEditLink = form.rawData?.recent_edit_link || form.recentEditLink;
-      const studentFormAssignmentId = form.rawData?.student_form_assignment_id || form.rawData?.studentFormAssignmentId;
-      const filloutFormId = form.rawData?.fillout_form_id || form.filloutFormId;
-
+      // For non-approved forms, prioritize recent_edit_link first
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
         formUrl = recentEditLink;
       } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
-        // If filloutFormId is already a full URL, use it directly
+        // Handle fillout form URL construction
         if (filloutFormId.startsWith('http')) {
+          // Already a full URL
           formUrl = filloutFormId;
-          // Add student_form_assignment_id if it's not already in the URL and we have it
+          // Add student_form_assignment_id if available and not already in URL
           if (studentFormAssignmentId && !formUrl.includes('student_form_assignment_id')) {
             formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
           }
         } else {
-          // Otherwise treat it as a form path and construct the URL
+          // Construct fillout URL
           const baseUrl = `https://goddard.fillout.com/${filloutFormId}`;
-          formUrl = studentFormAssignmentId
-            ? `${baseUrl}?student_form_assignment_id=${studentFormAssignmentId}`
-            : baseUrl;
+          if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
+            formUrl = `${baseUrl}?student_form_assignment_id=${studentFormAssignmentId}`;
+          } else {
+            formUrl = baseUrl;
+          }
         }
       } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
-        // Fallback: if we only have student_form_assignment_id, use default form
-        formUrl = `https://goddard.fillout.com/parent_handbook?student_form_assignment_id=${studentFormAssignmentId}`;
-      } else {
-        formUrl = '#';
+        // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
+        const defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+        console.log('Default form ID used:', defaultFormId)
+        formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
       }
     }
+    
+    console.log('Final form URL:', formUrl);
 
     setSelectedForm({
       ...form,
       viewUrl: formUrl
     });
     setIsFrameLoading(true);
-    onViewForm(form); // Still call the parent callback for scroll behavior
+    onViewForm(form);
   };
 
   // Auto-open form when formToOpen is set
@@ -303,6 +336,90 @@ export function FormsDocuments({
     }
   };
 
+  // Handle form completion detection and auto-redirect
+  useEffect(() => {
+    if (selectedForm && !isFrameLoading) {
+      let urlCheckInterval: NodeJS.Timeout;
+      
+      // Function to start thank you countdown
+      const startThankYouCountdown = () => {
+        setShowThankYou(true);
+        setCountdown(15);
+        
+        // Start countdown
+        countdownRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              // Auto redirect to home
+              setSelectedForm(null);
+              setShowThankYou(false);
+              setIsFrameLoading(false);
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              // Trigger refresh when auto-redirecting
+              if (onFormCompleted) onFormCompleted();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Fallback timeout in case countdown doesn't work
+        thankYouTimeoutRef.current = setTimeout(() => {
+          setSelectedForm(null);
+          setShowThankYou(false);
+          setIsFrameLoading(false);
+        }, 15000);
+      };
+      
+      // Listen for messages from iframe to detect form completion
+      const handleMessage = (event: MessageEvent) => {
+        // Check if message indicates form completion (thank you page)
+        if (event.data && typeof event.data === 'string' && 
+            (event.data.includes('thank') || event.data.includes('complete') || event.data.includes('submitted'))) {
+          startThankYouCountdown();
+        }
+      };
+      
+      // Monitor iframe URL changes for thank you page detection
+      const monitorIframeUrl = () => {
+        try {
+          const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
+          if (iframe && iframe.contentWindow) {
+            const currentUrl = iframe.contentWindow.location.href;
+            // Check if URL contains thank you indicators
+            if (currentUrl.includes('thank') || currentUrl.includes('success') || currentUrl.includes('complete')) {
+              startThankYouCountdown();
+              if (urlCheckInterval) clearInterval(urlCheckInterval);
+            }
+          }
+        } catch (error) {
+          // Cross-origin restrictions prevent URL access, this is expected
+          // We'll rely on message passing or user interaction
+        }
+      };
+      
+      // Check URL every 2 seconds
+      urlCheckInterval = setInterval(monitorIframeUrl, 2000);
+      
+      window.addEventListener('message', handleMessage);
+      
+      return () => {
+        window.removeEventListener('message', handleMessage);
+        if (urlCheckInterval) clearInterval(urlCheckInterval);
+        if (countdownRef.current) clearInterval(countdownRef.current);
+        if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+      };
+    }
+  }, [selectedForm, isFrameLoading]);
+
+  // Cleanup timers when component unmounts or form changes
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+    };
+  }, []);
+
   // If a form is selected for viewing, show iframe in this section
   if (selectedForm) {
     return (
@@ -315,6 +432,9 @@ export function FormsDocuments({
               onClick={() => {
                 setSelectedForm(null);
                 setIsFrameLoading(false);
+                setShowThankYou(false);
+                if (countdownRef.current) clearInterval(countdownRef.current);
+                if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
               }}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -328,7 +448,62 @@ export function FormsDocuments({
               </span>
             )}
           </div>
-          <StatusBadge status={selectedForm.status} />
+          <div className="flex items-center gap-2">
+            {showThankYou && (
+              <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+                <span className="text-sm text-green-700 font-medium">
+                  Form completed! Redirecting in {countdown}s
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-green-300 text-green-700 hover:bg-green-100"
+                  onClick={() => {
+                    setSelectedForm(null);
+                    setShowThankYou(false);
+                    setIsFrameLoading(false);
+                    if (countdownRef.current) clearInterval(countdownRef.current);
+                    if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+                    // Trigger refresh when returning to dashboard
+                    if (onFormCompleted) onFormCompleted();
+                  }}
+                >
+                  <Home className="h-4 w-4 mr-1" />
+                  Back to Dashboard
+                </Button>
+              </div>
+            )}
+            {!showThankYou && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-green-600 border-green-300 hover:bg-green-50"
+                onClick={() => {
+                  // Manual trigger for thank you state
+                  setShowThankYou(true);
+                  setCountdown(15);
+                  
+                  countdownRef.current = setInterval(() => {
+                    setCountdown(prev => {
+                      if (prev <= 1) {
+                        setSelectedForm(null);
+                        setShowThankYou(false);
+                        setIsFrameLoading(false);
+                        if (countdownRef.current) clearInterval(countdownRef.current);
+                        // Trigger refresh when auto-redirecting
+                        if (onFormCompleted) onFormCompleted();
+                        return 0;
+                      }
+                      return prev - 1;
+                    });
+                  }, 1000);
+                }}
+              >
+                Form Completed?
+              </Button>
+            )}
+            {!showThankYou && <StatusBadge status={selectedForm.status} />}
+          </div>
         </div>
 
         <Card className="glass-card">
@@ -352,7 +527,40 @@ export function FormsDocuments({
                   }}
                   title={selectedForm.title}
                   allow="fullscreen"
-                  onLoad={() => setIsFrameLoading(false)}
+                  onLoad={() => {
+                    setIsFrameLoading(false);
+                    // Add a manual trigger button after form loads
+                    setTimeout(() => {
+                      // Check if this might be a thank you page by looking at common indicators
+                      try {
+                        const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
+                        if (iframe && iframe.contentDocument) {
+                          const content = iframe.contentDocument.body.innerText.toLowerCase();
+                          if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
+                            setShowThankYou(true);
+                            setCountdown(15);
+                            
+                            countdownRef.current = setInterval(() => {
+                              setCountdown(prev => {
+                                if (prev <= 1) {
+                                  setSelectedForm(null);
+                                  setShowThankYou(false);
+                                  setIsFrameLoading(false);
+                                  if (countdownRef.current) clearInterval(countdownRef.current);
+                                  // Trigger refresh when auto-redirecting
+                                  if (onFormCompleted) onFormCompleted();
+                                  return 0;
+                                }
+                                return prev - 1;
+                              });
+                            }, 1000);
+                          }
+                        }
+                      } catch (error) {
+                        // Cross-origin restrictions, ignore
+                      }
+                    }, 1000);
+                  }}
                 />
               ) : (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500">
