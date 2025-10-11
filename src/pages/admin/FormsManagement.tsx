@@ -191,25 +191,25 @@ export function FormsManagement() {
   }, [forms]);
   return <AdminLayout>
       <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-foreground">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
             Forms Management
           </h1>
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
         <Card className="glass-card">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input placeholder="Search forms..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-              <div className="w-full md:w-48">
+              <div className="w-full sm:w-48">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger>
                     <SelectValue placeholder="Filter by status" />
@@ -223,7 +223,8 @@ export function FormsManagement() {
                 </Select>
               </div>
             </div>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -236,7 +237,6 @@ export function FormsManagement() {
                     <th className="text-left py-3 px-4 font-medium text-gray-600">
                       Form Link
                     </th>
-
                     <th className="text-right py-3 px-4 font-medium text-gray-600">
                       Actions
                     </th>
@@ -244,10 +244,10 @@ export function FormsManagement() {
                 </thead>
                 <tbody>
                   {loading ? <tr>
-                      <td colSpan={5} className="py-8">
+                      <td colSpan={4} className="py-8">
                         <Loading message="Loading forms..." size="sm" />
                       </td>
-                    </tr> : filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    </tr> : filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100">
                         <td className="py-3 px-4 font-medium">{form.name}</td>
                         <td className="py-3 px-4">
                           <Badge variant={getStatusBadgeVariant(form.status)}>
@@ -257,12 +257,11 @@ export function FormsManagement() {
                         <td className="py-3 px-4">
                           <div className="flex items-center space-x-2 text-amazon-teal">
                             <LinkIcon className="h-4 w-4" />
-                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline">
+                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate max-w-xs">
                                 {form.link}
                               </a> : <span className="text-gray-400">Not provided</span>}
                           </div>
                         </td>
-                        
                         <td className="py-3 px-4 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -283,12 +282,69 @@ export function FormsManagement() {
                           </DropdownMenu>
                         </td>
                       </tr>) : <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                      <td colSpan={4} className="py-8 text-center text-gray-500">
                         No forms match the current filters.
                       </td>
                     </tr>}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4 p-4">
+              {loading ? (
+                <div className="py-8">
+                  <Loading message="Loading forms..." size="sm" />
+                </div>
+              ) : filteredForms.length > 0 ? (
+                filteredForms.map(form => (
+                  <Card key={form.id} className="p-4 border border-gray-200">
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="font-semibold text-foreground text-base">{form.name}</h3>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <Badge variant={getStatusBadgeVariant(form.status)}>
+                          {form.status}
+                        </Badge>
+                      </div>
+                      
+                      <div className="flex items-center space-x-2 text-amazon-teal">
+                        <LinkIcon className="h-4 w-4 flex-shrink-0" />
+                        {form.link ? (
+                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-sm break-all">
+                            {form.link}
+                          </a>
+                        ) : (
+                          <span className="text-gray-400 text-sm">No link provided</span>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No forms match the current filters.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

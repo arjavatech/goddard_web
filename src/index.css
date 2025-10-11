@@ -82,9 +82,7 @@
   .glass-card {
     @apply bg-card shadow-sm border border-gray-100 transition-all duration-300 ease-in-out;
   }
-  .glass-card:hover {
-    @apply scale-[1.02] shadow-md;
-  }
+
   .section-fade-in {
     animation: fadeIn 0.6s ease-out forwards;
   }

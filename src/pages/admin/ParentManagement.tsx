@@ -11,10 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
-import { Toast } from '../../components/ui/toast';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
 import { fetchUserContext } from '../../services/api/user';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
@@ -77,12 +77,7 @@ export function ParentManagement() {
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'info', title: '', message: '' });
+  const { showToast } = useToast();
 
   useEffect(() => {
     let isMounted = true;
@@ -206,12 +201,7 @@ export function ParentManagement() {
       resetInviteForm();
       setIsInviteDialogOpen(false);
       
-      setToast({
-        open: true,
-        type: 'success',
-        title: '',
-        message: `Invitation sent to ${parentEmail}`
-      });
+      showToast('success', `Invitation sent to ${parentEmail}`);
       
     } catch (error: any) {
       // Handle specific error cases and show notification
@@ -223,12 +213,7 @@ export function ParentManagement() {
         errorMessage = 'Email already exists';
       }
       
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: errorMessage
-      });
+      showToast('error', errorMessage);
       
       throw new Error(errorMessage);
     }
@@ -236,48 +221,49 @@ export function ParentManagement() {
   const handleAddChild = async () => {
     if (!selectedParent || !newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
-    await addChild(user.schoolId, enrollmentId, {
-      childFirstName: newChildFirstName,
-      childLastName: newChildLastName,
-      childDob: newChildDob,
-      gender: newChildGender,
-      classroomId: newChildClassroom,
-      parentId: selectedParent.id
-    });
-    
-    const classroom = classrooms.find(c => c.id === newChildClassroom);
-    const newChild: Child = {
-      id: Math.random().toString(36).substring(2, 9),
-      firstName: newChildFirstName,
-      lastName: newChildLastName,
-      dob: newChildDob,
-      classroom: {
-        id: newChildClassroom,
-        name: classroom?.name || 'Unassigned'
-      }
-    };
-    setParents(parents.map(parent => parent.id === selectedParent.id ? {
-      ...parent,
-      children: [...parent.children, newChild]
-    } : parent));
-    resetAddChildForm();
-    setIsAddChildDialogOpen(false);
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
+      await addChild(user.schoolId, enrollmentId, {
+        childFirstName: newChildFirstName,
+        childLastName: newChildLastName,
+        childDob: newChildDob,
+        gender: newChildGender,
+        classroomId: newChildClassroom,
+        parentId: selectedParent.id
+      });
+      
+      const classroom = classrooms.find(c => c.id === newChildClassroom);
+      const newChild: Child = {
+        id: Math.random().toString(36).substring(2, 9),
+        firstName: newChildFirstName,
+        lastName: newChildLastName,
+        dob: newChildDob,
+        classroom: {
+          id: newChildClassroom,
+          name: classroom?.name || 'Unassigned'
+        }
+      };
+      setParents(parents.map(parent => parent.id === selectedParent.id ? {
+        ...parent,
+        children: [...parent.children, newChild]
+      } : parent));
+      resetAddChildForm();
+      setIsAddChildDialogOpen(false);
+      
+      showToast('success', `${newChildFirstName} ${newChildLastName} added successfully`);
+    } catch (error: any) {
+      showToast('error', 'Failed to add child. Please try again.');
+    }
   };
-  const showToast = (message: string) => {
-    setToast({
-      open: true,
-      type: 'error',
-      title: '',
-      message
-    });
+  const showValidationToast = (message: string) => {
+    showToast('error', message);
   };
 
-  const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }));
+  const hideValidationToast = () => {
+    // No-op since global toast handles auto-hide
   };
 
   const resetInviteForm = () => {
@@ -299,28 +285,26 @@ export function ParentManagement() {
     setNewChildClassroom('');
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
-    await resendParentConfirmation(parentId);
-    setToast({
-      open: true,
-      type: 'success',
-      title: '',
-      message: `Confirmation email resent to ${parentEmail}`
-    });
+    try {
+      await resendParentConfirmation(parentId);
+      showToast('success', `Confirmation email resent to ${parentEmail}`);
+    } catch (error: any) {
+      showToast('error', 'Failed to resend confirmation. Please try again.');
+    }
   };
   const handleDeactivateParent = async () => {
     if (!parentToDeactivate) return;
     
-    const parentName = `${parentToDeactivate.firstName} ${parentToDeactivate.lastName}`;
-    await deactivateParent(parentToDeactivate.id);
-    
-    setParents(parents.filter(p => p.id !== parentToDeactivate.id));
-    setParentToDeactivate(null);
-    setToast({
-      open: true,
-      type: 'success',
-      title: '',
-      message: `${parentName} deactivated`
-    });
+    try {
+      const parentName = `${parentToDeactivate.firstName} ${parentToDeactivate.lastName}`;
+      await deactivateParent(parentToDeactivate.id);
+      
+      setParents(parents.filter(p => p.id !== parentToDeactivate.id));
+      setParentToDeactivate(null);
+      showToast('success', `${parentName} deactivated`);
+    } catch (error: any) {
+      showToast('error', 'Failed to deactivate parent. Please try again.');
+    }
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
@@ -333,27 +317,27 @@ export function ParentManagement() {
     }
   };
   return <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-foreground">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
             Parent Management
           </h1>
           <Button onClick={() => {
           resetInviteForm();
           setIsInviteDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
           </Button>
         </div>
         <Card className="glass-card">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center md:space-x-3 space-y-3 md:space-y-0 mb-6">
+          <CardContent className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 mb-4 sm:mb-6">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input placeholder="Search parents..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full md:w-44">
+                <SelectTrigger className="w-full sm:w-44">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -363,7 +347,7 @@ export function ParentManagement() {
                 </SelectContent>
               </Select>
               <Select value={signupFilter} onValueChange={setSignupFilter}>
-                <SelectTrigger className="w-full md:w-44">
+                <SelectTrigger className="w-full sm:w-44">
                   <SelectValue placeholder="Signup status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -373,7 +357,8 @@ export function ParentManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -399,7 +384,7 @@ export function ParentManagement() {
                       <td colSpan={5} className="py-8">
                         <Loading message="Loading parents..." size="sm" />
                       </td>
-                    </tr> : filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    </tr> : filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100">
                         <td className="py-3 px-4">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
@@ -501,19 +486,136 @@ export function ParentManagement() {
                 </tbody>
               </table>
             </div>
+            
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-4">
+              {loading ? (
+                <div className="py-8">
+                  <Loading message="Loading parents..." size="sm" />
+                </div>
+              ) : filteredParents.length > 0 ? (
+                filteredParents.map(parent => (
+                  <Card key={parent.id} className="p-4 border border-gray-200">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                            {parent.firstName.charAt(0)}
+                            {parent.lastName.charAt(0)}
+                          </div>
+                          <div>
+                            {parent.signupStatus === 'Signed' ? (
+                              <Link to={`/admin/parents/${parent.id}`} state={{
+                                parentData: parent
+                              }} className="font-medium text-amazon-teal hover:underline">
+                                {parent.firstName} {parent.lastName}
+                              </Link>
+                            ) : (
+                              <span className="font-medium text-gray-400 cursor-not-allowed">
+                                {parent.firstName} {parent.lastName}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed'}>
+                              <Link to={`/admin/parents/${parent.id}`} state={{
+                                parentData: parent
+                              }}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={parent.signupStatus === 'Not Signed'}
+                              onClick={() => {
+                                setSelectedParent(parent);
+                                setIsAddChildDialogOpen(true);
+                              }}>
+                              <UserCircle className="h-4 w-4 mr-2" />
+                              Add Child
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Signed'}>
+                              <AsyncButton
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-start p-2 h-auto font-normal"
+                                onClick={() => handleResendConfirmation(parent.id, parent.email)}
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Resend
+                              </AsyncButton>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => setParentToDeactivate(parent)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center text-gray-700">
+                          <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
+                          <span className="break-all">{parent.email}</span>
+                        </div>
+                        
+                        <div className="flex items-center justify-between">
+                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center">
+                            {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                            {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                            {parent.signupStatus}
+                          </Badge>
+                        </div>
+                        
+                        {parent.children.length === 0 ? (
+                          <div className="text-gray-500 text-sm">No children linked yet</div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Children:</div>
+                            {parent.children.map(child => (
+                              <div key={child.id} className="flex items-center gap-2 text-sm">
+                                <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                                <span>{child.firstName} {child.lastName}</span>
+                                <Badge variant="secondary" className="text-xs">
+                                  {child.classroom.name}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Card>
+                ))
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  No parents match the current filters.
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
       {/* Invite Parent Dialog */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Invite New Parent</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="py-4 space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div>
-                <h3 className="text-lg font-medium mb-4">Parent Information</h3>
+                <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -525,8 +627,8 @@ export function ParentManagement() {
                       placeholder="Enter first name" 
                       className="w-full"
                       validationRules={commonValidationRules.name}
-                      showToast={showToast}
-                      hideToast={hideToast}
+                      showToast={showValidationToast}
+                      hideToast={hideValidationToast}
                     />
                   </div>
                   <div>
@@ -539,8 +641,8 @@ export function ParentManagement() {
                       placeholder="Enter last name" 
                       className="w-full"
                       validationRules={commonValidationRules.name}
-                      showToast={showToast}
-                      hideToast={hideToast}
+                      showToast={showValidationToast}
+                      hideToast={hideValidationToast}
                     />
                   </div>
                   <div>
@@ -554,14 +656,14 @@ export function ParentManagement() {
                       placeholder="Enter email address" 
                       className="w-full"
                       validationRules={commonValidationRules.email}
-                      showToast={showToast}
-                      hideToast={hideToast}
+                      showToast={showValidationToast}
+                      hideToast={hideValidationToast}
                     />
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-medium mb-4">Child Information</h3>
+                <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -573,8 +675,8 @@ export function ParentManagement() {
                       placeholder="Enter first name" 
                       className="w-full"
                       validationRules={commonValidationRules.name}
-                      showToast={showToast}
-                      hideToast={hideToast}
+                      showToast={showValidationToast}
+                      hideToast={hideValidationToast}
                     />
                   </div>
                   <div>
@@ -587,8 +689,8 @@ export function ParentManagement() {
                       placeholder="Enter last name" 
                       className="w-full"
                       validationRules={commonValidationRules.name}
-                      showToast={showToast}
-                      hideToast={hideToast}
+                      showToast={showValidationToast}
+                      hideToast={hideValidationToast}
                     />
                   </div>
                   <div>
@@ -643,7 +745,7 @@ export function ParentManagement() {
       </Dialog>
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               Add Child to {selectedParent?.firstName}{' '}
@@ -661,8 +763,8 @@ export function ParentManagement() {
                 placeholder="Enter first name" 
                 className="w-full" 
                 validationRules={commonValidationRules.name}
-                showToast={showToast}
-                hideToast={hideToast}
+                showToast={showValidationToast}
+                hideToast={hideValidationToast}
                 autoFocus 
               />
             </div>
@@ -676,8 +778,8 @@ export function ParentManagement() {
                 placeholder="Enter last name" 
                 className="w-full" 
                 validationRules={commonValidationRules.name}
-                showToast={showToast}
-                hideToast={hideToast}
+                showToast={showValidationToast}
+                hideToast={hideValidationToast}
               />
             </div>
             <div>
@@ -730,7 +832,7 @@ export function ParentManagement() {
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Deactivate Parent</DialogTitle>
           </DialogHeader>
@@ -758,13 +860,6 @@ export function ParentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }

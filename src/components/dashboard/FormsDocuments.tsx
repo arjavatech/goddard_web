@@ -150,7 +150,7 @@ export function FormsDocuments({
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(5);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -344,7 +344,7 @@ export function FormsDocuments({
       // Function to start thank you countdown
       const startThankYouCountdown = () => {
         setShowThankYou(true);
-        setCountdown(15);
+        setCountdown(5);
         
         // Start countdown
         countdownRef.current = setInterval(() => {
@@ -424,11 +424,12 @@ export function FormsDocuments({
   if (selectedForm) {
     return (
       <div>
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 space-y-3 sm:space-y-0">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
+              className="shrink-0"
               onClick={() => {
                 setSelectedForm(null);
                 setIsFrameLoading(false);
@@ -439,25 +440,28 @@ export function FormsDocuments({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <h2 className="text-xl font-semibold text-foreground">
-              {selectedForm.title}
-            </h2>
-            {selectedForm.childName && (
-              <span className="text-sm bg-gray-100 px-2 py-1 rounded-full text-gray-600">
-                {selectedForm.childName}
-              </span>
-            )}
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg sm:text-xl font-semibold text-foreground truncate">
+                {selectedForm.title}
+              </h2>
+              {selectedForm.childName && (
+                <span className="inline-block mt-1 text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
+                  {selectedForm.childName}
+                </span>
+              )}
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
             {showThankYou && (
-              <div className="flex items-center gap-2 bg-green-50 px-3 py-2 rounded-lg border border-green-200">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
                 <span className="text-sm text-green-700 font-medium">
                   Form completed! Redirecting in {countdown}s
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-green-300 text-green-700 hover:bg-green-100"
+                  className="border-green-300 text-green-700 hover:bg-green-100 shrink-0"
                   onClick={() => {
                     setSelectedForm(null);
                     setShowThankYou(false);
@@ -469,40 +473,44 @@ export function FormsDocuments({
                   }}
                 >
                   <Home className="h-4 w-4 mr-1" />
-                  Back to Dashboard
+                  <span className="hidden sm:inline">Back to Dashboard</span>
+                  <span className="sm:hidden">Dashboard</span>
                 </Button>
               </div>
             )}
             {!showThankYou && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-green-600 border-green-300 hover:bg-green-50"
-                onClick={() => {
-                  // Manual trigger for thank you state
-                  setShowThankYou(true);
-                  setCountdown(15);
-                  
-                  countdownRef.current = setInterval(() => {
-                    setCountdown(prev => {
-                      if (prev <= 1) {
-                        setSelectedForm(null);
-                        setShowThankYou(false);
-                        setIsFrameLoading(false);
-                        if (countdownRef.current) clearInterval(countdownRef.current);
-                        // Trigger refresh when auto-redirecting
-                        if (onFormCompleted) onFormCompleted();
-                        return 0;
-                      }
-                      return prev - 1;
-                    });
-                  }, 1000);
-                }}
-              >
-                Form Completed?
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-green-600 border-green-300 hover:bg-green-50 text-xs sm:text-sm"
+                  onClick={() => {
+                    // Manual trigger for thank you state
+                    setShowThankYou(true);
+                    setCountdown(5);
+                    
+                    countdownRef.current = setInterval(() => {
+                      setCountdown(prev => {
+                        if (prev <= 1) {
+                          setSelectedForm(null);
+                          setShowThankYou(false);
+                          setIsFrameLoading(false);
+                          if (countdownRef.current) clearInterval(countdownRef.current);
+                          // Trigger refresh when auto-redirecting
+                          if (onFormCompleted) onFormCompleted();
+                          return 0;
+                        }
+                        return prev - 1;
+                      });
+                    }, 1000);
+                  }}
+                >
+                  <span className="hidden sm:inline">Form Completed?</span>
+                  <span className="sm:hidden">Completed?</span>
+                </Button>
+                <StatusBadge status={selectedForm.status} />
+              </div>
             )}
-            {!showThankYou && <StatusBadge status={selectedForm.status} />}
           </div>
         </div>
 
@@ -519,12 +527,13 @@ export function FormsDocuments({
                   src={selectedForm.viewUrl}
                   style={{
                     width: '100%',
-                    height: '600px',
+                    height: '500px',
                     border: 'none',
                     borderRadius: '8px',
                     opacity: isFrameLoading ? 0 : 1,
                     transition: 'opacity 0.3s ease-in-out'
                   }}
+                  className="sm:h-[600px]"
                   title={selectedForm.title}
                   allow="fullscreen"
                   onLoad={() => {
@@ -538,7 +547,7 @@ export function FormsDocuments({
                           const content = iframe.contentDocument.body.innerText.toLowerCase();
                           if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
                             setShowThankYou(true);
-                            setCountdown(15);
+                            setCountdown(5);
                             
                             countdownRef.current = setInterval(() => {
                               setCountdown(prev => {
@@ -612,17 +621,20 @@ export function FormsDocuments({
             }
           }
         }}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="all">All Forms</TabsTrigger>
-            {familyForms.length > 0 && (
-              <TabsTrigger value="family">Family Forms</TabsTrigger>
-            )}
-            {childSpecificForms.map((child) => (
-              <TabsTrigger key={child.childId} value={child.childId}>
-                {child.childName}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="mb-4 overflow-x-auto ">
+            <TabsList className="w-max">
+              <TabsTrigger value="all">All Forms</TabsTrigger>
+              {familyForms.length > 0 && (
+                <TabsTrigger value="family">Family Forms</TabsTrigger>
+              )}
+              {childSpecificForms.map((child) => (
+                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap">
+                  <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
+                  <span className="hidden sm:inline">{child.childName}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           <TabsContent value="all">
             {allForms.length === 0 ? (
@@ -630,7 +642,7 @@ export function FormsDocuments({
                 No forms available yet. This section will populate once assignments are available from the backend service.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {getFormsForTab('all').map(form => (
                   <FormCard
                     key={form._key}
@@ -653,7 +665,7 @@ export function FormsDocuments({
 
           {familyForms.length > 0 && (
             <TabsContent value="family">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {getFormsForTab('family').map(form => (
                   <FormCard
                     key={form._key}
@@ -681,7 +693,7 @@ export function FormsDocuments({
                   No forms available for {child.childName} yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                   {getFormsForTab(child.childId).map(form => (
                     <FormCard
                       key={form._key}

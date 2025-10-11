@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { App } from './App';
 
 import { UserProvider } from './contexts/UserContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { SetPassword } from './pages/SetPassword';
@@ -19,6 +20,7 @@ import { FormView } from './pages/admin/FormView';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
   return <UserProvider>
+      <ToastProvider>
         <BrowserRouter>
           <Routes>
           <Route path="/" element={<ProtectedRoute>
@@ -43,5 +45,6 @@ export function AppRouter() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </UserProvider>;
 }

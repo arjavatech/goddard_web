@@ -214,16 +214,18 @@ export function Dashboard() {
   };
   return <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-4 py-8">
-        {error && <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <main className="flex-1 container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
+        {error && <div className="mb-3 sm:mb-4 rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-sm text-red-700">
             {error}
           </div>}
-        {loading ? <div className="py-12 text-center text-muted-foreground">
+        {loading ? <div className="py-8 sm:py-12 text-center text-muted-foreground">
             Loading parent dashboard...
           </div> : <>
-            <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
-                <div className="lg:col-span-7 space-y-6">
+            <div className="mb-3 sm:mb-4 md:mb-6">
+              <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
+            </div>
+            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
+                <div className="lg:col-span-2 xl:col-span-7 space-y-3 sm:space-y-4 md:space-y-6">
                   <div className="section-fade-in" style={{
               animationDelay: '0.1s'
             }}>
@@ -259,16 +261,16 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="lg:col-span-3">
+                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last">
                   <div className="section-fade-in" style={{
               animationDelay: '0.3s'
             }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
-              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-8 text-center">
-                <div className="text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
-                <div className="text-sm text-muted-foreground mb-4">
+              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-4 sm:p-6 md:p-8 text-center">
+                <div className="text-base sm:text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
+                <div className="text-sm text-muted-foreground mb-3 sm:mb-4">
                   We were unable to load any enrollment records for this parent account.
                 </div>
                 <div className="text-xs text-gray-500">

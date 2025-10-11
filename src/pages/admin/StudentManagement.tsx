@@ -271,71 +271,106 @@ export function StudentManagement() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">
-            Student Management
-          </h1>
-          <Button variant="outline" onClick={toggleFilters} className="flex items-center">
-            {showFilters ? <>
-                <X className="h-4 w-4 mr-2" /> Hide Filters
-              </> : <>
-                <Filter className="h-4 w-4 mr-2" /> Show Filters
-              </>}
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Student Management
+            </h1>
+            <p className="text-muted-foreground">
+              Manage student enrollments and track progress
+            </p>
+          </div>
+          <Button variant="outline" onClick={toggleFilters} className="flex items-center gap-2 self-start sm:self-center">
+            {showFilters ? (
+              <>
+                <X className="h-4 w-4" /> Hide Filters
+              </>
+            ) : (
+              <>
+                <Filter className="h-4 w-4" /> Show Filters
+              </>
+            )}
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <GraduationCap className="h-12 w-12 text-amazon-teal mr-4" />
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Total Students
-                  </p>
-                  <p className="text-3xl font-bold">{students.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Users className="h-12 w-12 text-amazon-teal mr-4" />
-                <div>
-                  <p className="text-sm text-muted-foreground">
-                    Completion Rate
-                  </p>
-                  <p className="text-3xl font-bold">{completionRate}%</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card">
+          <Card className="glass-card hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Forms Pending</p>
-                  <p className="text-3xl font-bold">
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Total Students
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">{students.length}</p>
+                </div>
+                <div className="p-3 bg-amazon-teal/10 rounded-full">
+                  <GraduationCap className="h-6 w-6 text-amazon-teal" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Completion Rate
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">{completionRate}%</p>
+                  <div className="w-24 mt-2">
+                    <Progress value={completionRate} className="h-2" />
+                  </div>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Forms Pending
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
                     {students.filter(student => student.enrollmentStatus !== 'Complete').length}
                   </p>
                 </div>
-                <div className="p-3 bg-gray-100 rounded-full">
-                  <AlertCircle className="h-5 w-5 text-gray-400" />
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <AlertCircle className="h-6 w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
         <Card className="glass-card">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row md:items-center space-y-2 md:space-y-0 md:space-x-2 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search students by name, parent, or classroom..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <CardContent className="p-0">
+            <div className="p-6 border-b bg-muted/20">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Student Directory</h2>
+                <div className="text-sm text-muted-foreground">
+                  {filteredStudents.length} of {students.length} students
+                </div>
               </div>
-              {showFilters && <>
-                  <div className="w-full md:w-48">
+              
+              {/* Search Bar */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Search students by name, parent, or classroom..." 
+                  className="pl-10 h-11 bg-background" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
+                />
+              </div>
+
+              {/* Filters */}
+              {showFilters && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-background rounded-lg border">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Form Type</label>
                     <Select value={formFilter} onValueChange={handleFormFilterChange}>
                       <SelectTrigger>
                         <SelectValue placeholder="Filter by form" />
@@ -350,7 +385,9 @@ export function StudentManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="w-full md:w-48">
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Filter by status" />
@@ -358,25 +395,27 @@ export function StudentManagement() {
                       <SelectContent>
                         <SelectItem value="all">All Statuses</SelectItem>
                         {formFilter === 'all' ? (
-                          // Overall enrollment statuses
                           <>
                             <SelectItem value="Complete">Complete</SelectItem>
                             <SelectItem value="In Progress">In Progress</SelectItem>
                             <SelectItem value="Not Started">Not Started</SelectItem>
                           </>
                         ) : (
-                          // Form-specific statuses
                           <>
                             <SelectItem value="Approved">Approved</SelectItem>
+                            <SelectItem value="Submitted">Submitted</SelectItem>
                             <SelectItem value="In Progress">In Progress</SelectItem>
+                            <SelectItem value="Needs Revision">Needs Revision</SelectItem>
+                            <SelectItem value="Draft">Draft</SelectItem>
                             <SelectItem value="Incomplete">Incomplete</SelectItem>
-                            <SelectItem value="Rejected">Rejected</SelectItem>
                           </>
                         )}
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="w-full md:w-48">
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Child Status</label>
                     <Select value={childStatusFilter} onValueChange={setChildStatusFilter}>
                       <SelectTrigger>
                         <SelectValue placeholder="Child Status" />
@@ -388,157 +427,226 @@ export function StudentManagement() {
                       </SelectContent>
                     </Select>
                   </div>
-                </>}
+                </div>
+              )}
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Student
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Classroom
-                    </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
-                      Parent
-                    </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
-                      Status
-                    </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
-                      Child Status
-                    </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
-                      Forms
-                    </th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">
-                      Progress
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredStudents.length > 0 ? filteredStudents.map((student, index) => <tr key={student.id || `row-${index}`} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
-                              {student.firstName.charAt(0)}
-                              {student.lastName.charAt(0)}
+
+            {/* Desktop Table View */}
+            <div className="hidden lg:block">
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1000px]">
+                  <thead className="bg-muted/30 border-b">
+                    <tr>
+                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[280px]">
+                        Student
+                      </th>
+                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[160px]">
+                        Classroom
+                      </th>
+                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[240px]">
+                        Parent
+                      </th>
+                      <th className="text-center py-4 px-4 font-semibold text-foreground w-[140px]">
+                        Status
+                      </th>
+                      <th className="text-center py-4 px-4 font-semibold text-foreground w-[120px]">
+                        Child Status
+                      </th>
+                      <th className="text-right py-4 px-4 font-semibold text-foreground w-[200px]">
+                        Progress
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
+                      <tr key={student.id || `row-${index}`} className="border-b hover:bg-muted/20 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-sm shadow-sm flex-shrink-0">
+                              {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                             </div>
-                            <div>
-                              <div className="font-medium">
+                            <div className="min-w-0 flex-1">
+                              <div className="font-semibold text-foreground truncate">
                                 {student.firstName} {student.lastName}
+                              </div>
+                              <div className="text-sm text-muted-foreground truncate">
+                                ID: {student.id.slice(0, 8)}...
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:underline">
-                            <School className="h-4 w-4 mr-1 text-gray-500" />
-                            {student.classroom.name}
+                        <td className="py-4 px-4">
+                          <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
+                            <School className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform flex-shrink-0" />
+                            <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
                           </Link>
                         </td>
-                        <td className="py-3 px-4">
-                          <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:underline">
-                            {student.parent.name}
-                          </Link>
-                          <div className="text-xs text-gray-500">
-                            {student.parent.email}
+                        <td className="py-4 px-4">
+                          <div className="min-w-0">
+                            <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate">
+                              {student.parent.name}
+                            </Link>
+                            <div className="text-sm text-muted-foreground mt-1 truncate">
+                              {student.parent.email}
+                            </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-center">
+                      <td className="py-4 px-4 text-center">
+                        <div className="flex justify-center">
                           {(() => {
-                            // Show form-specific status if a form is selected
                             if (formFilter !== 'all') {
                               const selectedForm = student.assignedForms.find(form => form.name === formFilter);
                               if (selectedForm) {
                                 const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                                // Treat "draft" as "Incomplete" for display
                                 const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
-                                const statusVariant =
-                                  displayStatus === 'Approved' ? 'success' :
-                                  displayStatus === 'Rejected' ? 'destructive' :
-                                  displayStatus === 'In Progress' ? 'secondary' :
-                                  'outline';
-                                const statusIcon =
-                                  displayStatus === 'Approved' ? <CheckCircle className="h-4 w-4 text-green-500" /> :
-                                  displayStatus === 'Rejected' ? <AlertCircle className="h-4 w-4 text-red-500" /> :
-                                  displayStatus === 'In Progress' ? <Clock className="h-4 w-4 text-amber-500" /> :
-                                  <AlertCircle className="h-4 w-4 text-gray-400" />;
+                                const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
+                                const statusIcon = displayStatus === 'Approved' ? <CheckCircle className="h-3 w-3" /> : displayStatus === 'In Progress' ? <Clock className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />;
                                 return (
-                                  <Badge variant={statusVariant as any} className="flex items-center w-fit mx-auto">
+                                  <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs px-2 py-1">
                                     {statusIcon}
-                                    <span className="ml-1">
-                                      {displayStatus}
-                                    </span>
+                                    <span className="truncate max-w-[80px]">{displayStatus}</span>
                                   </Badge>
                                 );
                               }
-                              return <span className="text-gray-400 text-sm">N/A</span>;
+                              return <span className="text-muted-foreground text-sm">N/A</span>;
                             }
-                            // Show overall enrollment status
+                            const statusIcon = student.enrollmentStatus === 'Complete' ? <CheckCircle className="h-3 w-3" /> : student.enrollmentStatus === 'In Progress' ? <Clock className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />;
                             return (
-                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
-                                {getStatusIcon(student.enrollmentStatus)}
-                                <span className="ml-1">
-                                  {student.enrollmentStatus}
-                                </span>
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center gap-1 text-xs px-2 py-1">
+                                {statusIcon}
+                                <span className="truncate max-w-[80px]">{student.enrollmentStatus}</span>
                               </Badge>
                             );
                           })()}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <button
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setNewStatus(student.childStatus);
-                              setIsStatusDialogOpen(true);
-                            }}
-                            className={`
-                              px-4 py-1.5 rounded-full text-xs font-semibold cursor-pointer
-                              transition-all duration-200 hover:shadow-md
-                              ${student.childStatus === 'active'
-                                ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:from-green-600 hover:to-emerald-600'
-                                : 'bg-gradient-to-r from-gray-400 to-gray-500 text-white hover:from-gray-500 hover:to-gray-600'
-                              }
-                            `}
-                          >
-                            {student.childStatus === 'active' ? '● Active' : '⊗ Archived'}
-                          </button>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center">
-                            <FileText className="h-4 w-4 mr-1 text-gray-500" />
-                            <span>
-                              {student.formsCompleted} / {student.totalForms}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex flex-wrap justify-center gap-1">
-                            {student.assignedForms.slice(0, 2).map((form, index) => <Badge key={`${student.id}-form-${form.id}-${index}`} variant="secondary" className="text-xs">
-                                  {form.name}
-                                </Badge>)}
-                            {student.assignedForms.length > 2 && <Badge key={`${student.id}-more-forms`} variant="outline" className="text-xs">
-                                +{student.assignedForms.length - 2} more
-                              </Badge>}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center justify-end">
-                            <div className="w-32 mr-2">
-                              <Progress value={student.enrollmentProgress} className="h-2" />
-                            </div>
-                            <span className="text-sm font-medium w-8 text-right">
-                              {student.enrollmentProgress}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>) : <tr>
-                      <td colSpan={7} className="py-8 text-center text-gray-500">
-                        No students found matching your search criteria.
+                        </div>
                       </td>
-                    </tr>}
-                </tbody>
-              </table>
+                      <td className="py-4 px-4 text-center">
+                        <button
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setNewStatus(student.childStatus);
+                            setIsStatusDialogOpen(true);
+                          }}
+                          className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                            student.childStatus === 'active'
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                        </button>
+                      </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center justify-end space-x-2">
+                            <div className="flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded whitespace-nowrap">
+                              <FileText className="h-3 w-3 mr-1" />
+                              {student.formsCompleted}/{student.totalForms}
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={student.enrollmentProgress} className="w-16 h-2" />
+                              <span className="text-xs font-semibold w-8 text-right text-foreground">
+                                {student.enrollmentProgress}%
+                              </span>
+                            </div>
+                          </div>
+                        </td>
+                    </tr>
+                    )) : (
+                      <tr>
+                        <td colSpan={6} className="py-16 text-center">
+                          <div className="flex flex-col items-center space-y-3">
+                            <GraduationCap className="h-12 w-12 text-muted-foreground/50" />
+                            <div className="text-muted-foreground">
+                              <p className="font-medium">No students found</p>
+                              <p className="text-sm">Try adjusting your search criteria</p>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-3 p-4">
+              {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
+                <Card key={student.id || `card-${index}`} className="p-3">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs">
+                        {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="font-medium text-foreground text-sm">
+                          {student.firstName} {student.lastName}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {student.classroom.name}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setNewStatus(student.childStatus);
+                        setIsStatusDialogOpen(true);
+                      }}
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        student.childStatus === 'active'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}
+                    >
+                      {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Parent:</span>
+                      <Link to={`/admin/parents/${student.parent.id}`} className="text-xs text-amazon-teal hover:underline">
+                        {student.parent.name}
+                      </Link>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Status:</span>
+                      {(() => {
+                        if (formFilter !== 'all') {
+                          const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                          if (selectedForm) {
+                            const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                            const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
+                            const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
+                            return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                          }
+                          return <span className="text-muted-foreground text-xs">N/A</span>;
+                        }
+                        return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
+                      })()}
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Forms:</span>
+                      <span className="text-xs">{student.formsCompleted}/{student.totalForms}</span>
+                    </div>
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground">Progress:</span>
+                      <div className="flex items-center space-x-1.5">
+                        <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                        <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              )) : (
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  No students found matching your search criteria.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
