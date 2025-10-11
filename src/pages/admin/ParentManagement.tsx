@@ -397,7 +397,7 @@ export function ParentManagement() {
                 <tbody>
                   {loading ? <tr>
                       <td colSpan={5} className="py-8">
-                        <Loading message="Loading parents..." size="sm" />
+                        <Loading message="Loading parents..." size="sm"/>
                       </td>
                     </tr> : filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
@@ -595,7 +595,14 @@ export function ParentManagement() {
                     <label className="block text-sm font-medium mb-2">
                       Date of Birth
                     </label>
-                    <Input type="date" value={childDob} onChange={e => setChildDob(e.target.value)} className="w-full" />
+                    <Input 
+                      type="date" 
+                      value={childDob} 
+                      onChange={e => setChildDob(e.target.value)} 
+                      className="w-full" 
+                      min="2000-01-01" 
+                      max="2020-12-31" 
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -684,7 +691,14 @@ export function ParentManagement() {
               <label className="block text-sm font-medium mb-2">
                 Date of Birth
               </label>
-              <Input type="date" value={newChildDob} onChange={e => setNewChildDob(e.target.value)} className="w-full" />
+              <Input 
+                type="date" 
+                value={newChildDob} 
+                onChange={e => setNewChildDob(e.target.value)} 
+                className="w-full" 
+                min="2000-01-01" 
+                max="2020-12-31" 
+              />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
