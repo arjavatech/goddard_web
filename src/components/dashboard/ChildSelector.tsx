@@ -59,7 +59,13 @@ export function ChildSelector({
                         {child.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Age: {child.age} • DOB: {child.dob}
+                        Age: {(() => {
+                          if (!child.dob || child.dob === '—') return '—';
+                          const birthDate = new Date(child.dob);
+                          if (isNaN(birthDate.getTime())) return '—';
+                          const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+                          return age >= 0 ? age : '—';
+                        })()} • DOB: {child.dob}
                       </p>
                     </div>
                     {child.id === selectedChildId && <Check className="w-4 h-4 text-amazon-teal" />}

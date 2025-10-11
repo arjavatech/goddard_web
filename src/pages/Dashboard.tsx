@@ -59,7 +59,7 @@ function normalizeChildFromParent(child: any): DashboardChild {
     const status = normalizeFormStatus(form.status);
     return {
       title: form.formName || form.form_name || 'Unknown Form',
-      description: 'Enrollment form',
+      description: form.formName || form.form_name || 'Unknown Form',
       lastUpdated: formatDate(null),
       status,
       formId: form.form_id || form.formId,
@@ -85,7 +85,13 @@ function normalizeChildFromParent(child: any): DashboardChild {
     id: child.childId || '',
     name: fullName,
     initials: getInitials(firstName, lastName),
-    age: '—',
+    age: (() => {
+      if (!child.childDob) return '—';
+      const birthDate = new Date(child.childDob);
+      if (isNaN(birthDate.getTime())) return '—';
+      const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      return age >= 0 ? age.toString() : '—';
+    })(),
     dob: formatDate(child.childDob) || '—',
     enrollmentProgress,
     formsCompleted: completedCount,
