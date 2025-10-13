@@ -664,3 +664,64 @@ export async function updateChildStatus(
     body: { status }
   }, z.object({}));
 }
+
+export type ClassBasedEnrollment = {
+  parent_id: string;
+  parent_first_name: string;
+  parent_last_name: string;
+  child_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_status: string;
+  class_name: string;
+  primary_email: string;
+  form_status: string;
+  forms: Record<string, string>;
+  additional_parent_email?: string | null;
+};
+
+export async function fetchClassBasedEnrollments(
+  schoolId: string,
+  classId: string
+): Promise<ClassBasedEnrollment[]> {
+  try {
+    console.log('Fetching class-based enrollments for school:', schoolId, 'class:', classId);
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/class-based-enrollments?school_id=${encodeURIComponent(schoolId)}&class_id=${encodeURIComponent(classId)}`
+    }, z.any());
+
+    console.log('Raw class-based enrollments response:', data);
+
+    if (typeof data === 'string') {
+      console.warn('API returned string for class-based enrollments:', data);
+      return [];
+    }
+
+    // Handle both {enrollments: [...]} and direct array response
+    const enrollmentsArray = data.enrollments || data;
+
+    if (!Array.isArray(enrollmentsArray)) {
+      console.warn('Class-based enrollments response is not an array:', enrollmentsArray);
+      return [];
+    }
+
+    return enrollmentsArray.map(item => ({
+      parent_id: item.parent_id || '',
+      parent_first_name: item.parent_first_name || '',
+      parent_last_name: item.parent_last_name || '',
+      child_id: item.child_id || '',
+      child_first_name: item.child_first_name || '',
+      child_last_name: item.child_last_name || '',
+      child_status: item.child_status || 'active',
+      class_name: item.class_name || '',
+      primary_email: item.primary_email || '',
+      form_status: item.form_status || '',
+      forms: item.forms || {},
+      additional_parent_email: item.additional_parent_email || null
+    }));
+  } catch (error) {
+    console.error('fetchClassBasedEnrollments error:', error);
+    return [];
+  }
+}

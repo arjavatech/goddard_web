@@ -9,7 +9,7 @@ import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom } from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom, fetchClassBasedEnrollments, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 interface Form {
   id: string;
@@ -167,40 +167,49 @@ export function ClassroomDetails() {
       try {
         const user = await fetchUserContext();
         if (!user.schoolId) return;
-        const [classrooms, classStats, enrollments, parents] = await Promise.all([fetchClassrooms(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchParentDetails(user.schoolId).catch(() => [])]);
-        const parentByEmail = new Map<string, string>();
-        parents.forEach(parent => {
-          parentByEmail.set(parent.email.toLowerCase(), parent.parentId);
-        });
+
+        // Fetch class-based enrollments using the new API
+        const [classrooms, classStats, classEnrollments] = await Promise.all([
+          fetchClassrooms(user.schoolId).catch(() => []),
+          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
+          fetchClassBasedEnrollments(user.schoolId, classroomId || '').catch(() => [])
+        ]);
+
         const targetClassroom = classrooms.find(cls => cls.id === classroomId) || classrooms.find(cls => cls.name === DEFAULT_CLASSROOM.name);
         if (!targetClassroom) return;
+
         const className = targetClassroom.name;
         const stats = classStats.find(stat => stat.className === className);
         const assignedForms = stats ? formsFromRecord(stats.forms) : [];
-        const classStudents = enrollments.filter(child => (child.className ?? '').toLowerCase() === className.toLowerCase());
-        const students: Student[] = classStudents.map(child => {
-          const entries = Object.entries(child.forms);
+
+        // Transform class-based enrollments to Student interface
+        const students: Student[] = classEnrollments.map((enrollment: ClassBasedEnrollment) => {
+          const entries = Object.entries(enrollment.forms || {});
           const completed = entries.filter(([, status]) => COMPLETION_STATUSES.has(normalizeFormStatus(status))).length;
           const total = entries.length || assignedForms.length || DEFAULT_CLASSROOM.students[0].totalForms;
           const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
-          const email = child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com';
-          const parentId = parentByEmail.get(email.toLowerCase()) ?? 'unknown';
+          const email = enrollment.primary_email || enrollment.additional_parent_email || 'guardian@example.com';
+
+          // Construct parent name from first and last name
+          const parentName = `${enrollment.parent_first_name || ''} ${enrollment.parent_last_name || ''}`.trim() || friendlyNameFromEmail(email);
+
           return {
-            id: child.childId,
-            firstName: child.firstName,
-            lastName: child.lastName,
+            id: enrollment.child_id,
+            firstName: enrollment.child_first_name,
+            lastName: enrollment.child_last_name,
             enrollmentProgress: progress,
             enrollmentStatus,
             formsCompleted: completed,
             totalForms: total,
             parent: {
-              id: parentId,
-              name: friendlyNameFromEmail(email),
+              id: enrollment.parent_id,
+              name: parentName,
               email
             }
           } satisfies Student;
         });
+
         if (!isMounted) return;
         setClassroom({
           id: targetClassroom.id,
@@ -211,6 +220,7 @@ export function ClassroomDetails() {
           students
         });
       } catch (error) {
+        console.error('Error loading classroom details:', error);
       }
     })();
     return () => {
