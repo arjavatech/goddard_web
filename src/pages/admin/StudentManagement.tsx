@@ -65,6 +65,7 @@ export function StudentManagement() {
   const [formFilter, setFormFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [childStatusFilter, setChildStatusFilter] = useState<string>('all');
+  const [classroomFilter, setClassroomFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -174,6 +175,17 @@ export function StudentManagement() {
     return Array.from(formNamesSet).sort();
   }, [students]);
 
+  // Extract all unique classroom names from students
+  const allClassrooms = useMemo(() => {
+    const classroomSet = new Set<string>();
+    students.forEach(student => {
+      if (student.classroom.name && student.classroom.name !== 'Unassigned') {
+        classroomSet.add(student.classroom.name);
+      }
+    });
+    return Array.from(classroomSet).sort();
+  }, [students]);
+
   const filteredStudents = useMemo(() => students.filter(student => {
     const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -208,8 +220,11 @@ export function StudentManagement() {
     // Filter by child status
     const matchesChildStatus = childStatusFilter === 'all' || student.childStatus === childStatusFilter;
 
-    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus;
-  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter]);
+    // Filter by classroom
+    const matchesClassroom = classroomFilter === 'all' || student.classroom.name === classroomFilter;
+
+    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom;
+  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter]);
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
@@ -352,6 +367,9 @@ export function StudentManagement() {
                 <h2 className="text-xl font-semibold">Student Directory</h2>
                 <div className="text-sm text-muted-foreground">
                   {filteredStudents.length} of {students.length} students
+                  {classroomFilter !== 'all' && (
+                    <span className="ml-2 text-amazon-teal">• {classroomFilter}</span>
+                  )}
                 </div>
               </div>
               
@@ -368,7 +386,7 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-background rounded-lg border">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">Form Type</label>
                     <Select value={formFilter} onValueChange={handleFormFilterChange}>
@@ -424,6 +442,23 @@ export function StudentManagement() {
                         <SelectItem value="all">All Children</SelectItem>
                         <SelectItem value="active">Active</SelectItem>
                         <SelectItem value="archive">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-muted-foreground">Classroom</label>
+                    <Select value={classroomFilter} onValueChange={setClassroomFilter}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Filter by classroom" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Classrooms</SelectItem>
+                        {allClassrooms.map(classroom => (
+                          <SelectItem key={classroom} value={classroom}>
+                            {classroom}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>

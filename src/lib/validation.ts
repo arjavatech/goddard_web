@@ -38,6 +38,9 @@ export const commonValidationRules = {
     { type: 'name' as ValidationType, message: 'Name cannot contain numbers' },
     { type: 'required' as ValidationType, message: 'This field is required' }
   ],
+  classroom: [
+    { type: 'required' as ValidationType, message: 'This field is required' }
+  ],
   email: [
     { type: 'email' as ValidationType, message: 'Please enter a valid email address' },
     { type: 'required' as ValidationType, message: 'Email is required' }

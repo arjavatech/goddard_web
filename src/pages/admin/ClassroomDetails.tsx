@@ -127,11 +127,20 @@ function inferFormStatus(value: string | null | undefined): Form['status'] {
   return 'Active';
 }
 function formsFromRecord(record: Record<string, string>): Form[] {
-  return Object.entries(record).map(([id, status]) => ({
-    id,
-    name: id.replace(/[-_]/g, ' '),
-    status: inferFormStatus(status)
-  }));
+  console.log('Forms from API:', record); // Debug log
+  
+  return Object.entries(record).map(([id, status], index) => {
+    // Always show the ID as the name for now to debug
+    const name = id || `Form ${index + 1}`;
+    
+    console.log(`Form ${index}: ID=${id}, Name=${name}, Status=${status}`); // Debug log
+    
+    return {
+      id,
+      name,
+      status: inferFormStatus(status)
+    };
+  });
 }
 function friendlyNameFromEmail(email: string): string {
   const local = email.split('@')[0];
@@ -143,7 +152,14 @@ export function ClassroomDetails() {
   } = useParams<{
     classroomId: string;
   }>();
-  const [classroom, setClassroom] = useState(DEFAULT_CLASSROOM);
+  const [classroom, setClassroom] = useState({
+    id: '',
+    name: '',
+    capacity: 0,
+    ageGroup: '',
+    assignedForms: [] as Form[],
+    students: [] as Student[]
+  });
   const [searchQuery, setSearchQuery] = useState('');
   useEffect(() => {
     let isMounted = true;
@@ -160,7 +176,7 @@ export function ClassroomDetails() {
         if (!targetClassroom) return;
         const className = targetClassroom.name;
         const stats = classStats.find(stat => stat.className === className);
-        const assignedForms = stats ? formsFromRecord(stats.forms) : DEFAULT_CLASSROOM.assignedForms;
+        const assignedForms = stats ? formsFromRecord(stats.forms) : [];
         const classStudents = enrollments.filter(child => (child.className ?? '').toLowerCase() === className.toLowerCase());
         const students: Student[] = classStudents.map(child => {
           const entries = Object.entries(child.forms);
@@ -169,7 +185,7 @@ export function ClassroomDetails() {
           const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
           const email = child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com';
-          const parentId = parentByEmail.get(email.toLowerCase()) ?? null;
+          const parentId = parentByEmail.get(email.toLowerCase()) ?? 'unknown';
           return {
             id: child.childId,
             firstName: child.firstName,
@@ -189,10 +205,10 @@ export function ClassroomDetails() {
         setClassroom({
           id: targetClassroom.id,
           name: className,
-          capacity: DEFAULT_CLASSROOM.capacity,
-          ageGroup: DEFAULT_CLASSROOM.ageGroup,
+          capacity: 20,
+          ageGroup: '3-4 years',
           assignedForms,
-          students: students.length > 0 ? students : DEFAULT_CLASSROOM.students
+          students
         });
       } catch (error) {
       }
@@ -262,9 +278,9 @@ export function ClassroomDetails() {
             </h1>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline">
+            {/* <Button variant="outline">
               Rename
-            </Button>
+            </Button> */}
             <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`}>
               <Button variant="outline" className="flex items-center">
                 <FileText className="h-4 w-4 mr-2" />
@@ -278,13 +294,11 @@ export function ClassroomDetails() {
           </div>
         </div>
         {/* Classroom Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Classroom Details</CardTitle>
-              <CardDescription>
-                Overview of capacity, age group, and staff
-              </CardDescription>
+          
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -338,37 +352,6 @@ export function ClassroomDetails() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-amazon-teal mr-3" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Upcoming Parent Meeting
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Schedule pending API support
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 text-amazon-teal mr-3" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Enrollment Completion Deadline
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Awaiting timeline endpoint
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
         {/* Tabs Section */}
         <Tabs defaultValue="overview" className="space-y-4">
@@ -415,9 +398,6 @@ export function ClassroomDetails() {
                 {classroom.assignedForms.map(form => <div key={form.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{form.name}</p>
-                      <p className="text-xs text-gray-500">
-                        Form ID: {form.id}
-                      </p>
                     </div>
                     <Badge variant="secondary">{form.status}</Badge>
                   </div>)}

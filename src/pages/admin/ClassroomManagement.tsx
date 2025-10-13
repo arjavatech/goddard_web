@@ -90,14 +90,21 @@ export function ClassroomManagement() {
     
     await createClassroom(user.schoolId, newClassroomName.trim());
     
-    const newClassroom: Classroom = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      name: newClassroomName.trim(),
-      studentsCount: 0,
-      formsCount: 0,
-      assignedForms: []
-    };
-    setClassrooms([...classrooms, newClassroom]);
+    // Refetch classrooms to get the actual server data
+    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+      id: stat.classId || crypto.randomUUID(),
+      name: stat.className,
+      studentsCount: stat.studentCount,
+      formsCount: Object.keys(stat.forms ?? {}).length,
+      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+        id: formId,
+        name: formName,
+        status: 'Active' as any
+      }))
+    }));
+    
+    setClassrooms(mapped);
     setNewClassroomName('');
     setIsAddDialogOpen(false);
   };
@@ -109,10 +116,21 @@ export function ClassroomManagement() {
     
     await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
     
-    setClassrooms(classrooms.map(classroom => classroom.id === selectedClassroom.id ? {
-      ...classroom,
-      name: newClassroomName.trim()
-    } : classroom));
+    // Refetch classrooms to get updated data
+    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+      id: stat.classId || crypto.randomUUID(),
+      name: stat.className,
+      studentsCount: stat.studentCount,
+      formsCount: Object.keys(stat.forms ?? {}).length,
+      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+        id: formId,
+        name: formName,
+        status: 'Active' as any
+      }))
+    }));
+    
+    setClassrooms(mapped);
     setNewClassroomName('');
     setIsEditDialogOpen(false);
   };
@@ -124,7 +142,21 @@ export function ClassroomManagement() {
     
     await deleteClassroom(selectedClassroom.id, user.schoolId);
     
-    setClassrooms(classrooms.filter(classroom => classroom.id !== selectedClassroom.id));
+    // Refetch classrooms after deletion
+    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+      id: stat.classId || crypto.randomUUID(),
+      name: stat.className,
+      studentsCount: stat.studentCount,
+      formsCount: Object.keys(stat.forms ?? {}).length,
+      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+        id: formId,
+        name: formName,
+        status: 'Active' as any
+      }))
+    }));
+    
+    setClassrooms(mapped);
     setIsDeleteDialogOpen(false);
   };
   const openEditDialog = (classroom: Classroom) => {
@@ -345,7 +377,7 @@ export function ClassroomManagement() {
               onChange={e => setNewClassroomName(e.target.value)} 
               placeholder="Enter classroom name" 
               className="w-full" 
-              validationRules={commonValidationRules.name}
+              validationRules={commonValidationRules.classroom}
               showToast={showToast}
               hideToast={hideToast}
               autoFocus 
@@ -376,7 +408,7 @@ export function ClassroomManagement() {
               onChange={e => setNewClassroomName(e.target.value)} 
               placeholder="Enter new classroom name" 
               className="w-full" 
-              validationRules={commonValidationRules.name}
+              validationRules={commonValidationRules.classroom}
               showToast={showToast}
               hideToast={hideToast}
               autoFocus 
