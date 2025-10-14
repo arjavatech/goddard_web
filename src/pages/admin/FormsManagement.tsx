@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -44,12 +44,13 @@ export function FormsManagement() {
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isAddingForm, setIsAddingForm] = useState(false);
   const [toast, setToast] = useState<{
     open: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
+    type: 'success' | 'error';
     title: string;
     message: string;
-  }>({ open: false, type: 'info', title: '', message: '' });
+  }>({ open: false, type: 'error', title: '', message: '' });
 
   const showToast = (message: string) => {
     setToast({
@@ -101,20 +102,15 @@ export function FormsManagement() {
   const handleAddForm = async () => {
     if (formName.trim() && formLink.trim()) {
       try {
+        setIsAddingForm(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
-        const newForm: Form = {
-          id: crypto.randomUUID(),
-          name: formName.trim(),
-          link: formLink.trim(),
-          status: formStatus,
-          classroomsCount: 0
-        };
-        setForms([...forms, newForm]);
         resetFormFields();
         setIsAddDialogOpen(false);
+        window.location.reload();
       } catch (error) {
+        setIsAddingForm(false);
       }
     }
   };
@@ -134,14 +130,9 @@ export function FormsManagement() {
     
     await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
     
-    setForms(forms.map((form: Form) => form.id === selectedForm.id ? {
-      ...form,
-      name: formName.trim(),
-      link: formLink.trim(),
-      status: formStatus
-    } : form));
     resetFormFields();
     setIsEditDialogOpen(false);
+    window.location.reload();
   };
   const handleDeleteForm = async () => {
     if (!selectedForm) return;
@@ -190,28 +181,100 @@ export function FormsManagement() {
     return Array.from(unique);
   }, [forms]);
   return <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-            Forms Management
-          </h1>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Forms Management
+            </h1>
+            <p className="text-muted-foreground">
+              Manage form templates and assignments
+            </p>
+          </div>
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
-        <Card className="glass-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search forms..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Total Forms
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">{forms.length}</p>
+                </div>
+                <div className="p-3 bg-amazon-teal/10 rounded-full">
+                  <FileText className="h-6 w-6 text-amazon-teal" />
+                </div>
               </div>
-              <div className="w-full sm:w-48">
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Active Forms
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {forms.filter(f => f.status === 'Active').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <FileText className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Default Forms
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {forms.filter(f => f.status === 'Default').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <FileText className="h-6 w-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <Card className="glass-card">
+          <CardContent className="p-0">
+            <div className="p-6 border-b bg-muted/20">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Form Directory</h2>
+                <div className="text-sm text-muted-foreground">
+                  {filteredForms.length} of {forms.length} forms
+                </div>
+              </div>
+              
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Search forms..." 
+                  className="pl-10 h-11 bg-background" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">Status Filter</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full md:w-48">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -224,20 +287,20 @@ export function FormsManagement() {
               </div>
             </div>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full border-collapse">
+            <div className="hidden lg:block">
+              <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
                       Form Name
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">
                       Status
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/2">
                       Form Link
                     </th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">
                       Actions
                     </th>
                   </tr>
@@ -248,21 +311,30 @@ export function FormsManagement() {
                         <Loading message="Loading forms..." size="sm" />
                       </td>
                     </tr> : filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4 font-medium">{form.name}</td>
-                        <td className="py-3 px-4">
-                          <Badge variant={getStatusBadgeVariant(form.status)}>
+                        <td className="py-3 px-3">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
+                              {form.name.charAt(0)}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground truncate">{form.name}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-2">
+                          <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
                             {form.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-2 text-amazon-teal">
-                            <LinkIcon className="h-4 w-4" />
-                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate max-w-xs">
+                        <td className="py-3 px-2">
+                          <div className="flex items-center text-amazon-teal min-w-0">
+                            <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate">
                                 {form.link}
                               </a> : <span className="text-gray-400">Not provided</span>}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -291,14 +363,14 @@ export function FormsManagement() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="md:hidden space-y-4 p-4">
+            <div className="lg:hidden space-y-3 p-4">
               {loading ? (
                 <div className="py-8">
                   <Loading message="Loading forms..." size="sm" />
                 </div>
               ) : filteredForms.length > 0 ? (
                 filteredForms.map(form => (
-                  <Card key={form.id} className="p-4 border border-gray-200">
+                  <Card key={form.id} className="p-3">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-semibold text-foreground text-base">{form.name}</h3>
                       <DropdownMenu>
@@ -341,8 +413,8 @@ export function FormsManagement() {
                   </Card>
                 ))
               ) : (
-                <div className="py-8 text-center text-gray-500">
-                  No forms match the current filters.
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  No forms found matching your search criteria.
                 </div>
               )}
             </div>
@@ -396,9 +468,9 @@ export function FormsManagement() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim()}>
-              Add Form
-            </Button>
+            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+              {isAddingForm ? 'Adding Form...' : 'Add Form'}
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -489,7 +561,7 @@ export function FormsManagement() {
       {/* Toast Notification */}
       <Toast
         open={toast.open}
-        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
         type={toast.type}
         title={toast.title}
         message={toast.message}

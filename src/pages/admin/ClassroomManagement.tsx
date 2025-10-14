@@ -169,34 +169,106 @@ export function ClassroomManagement() {
     setIsDeleteDialogOpen(true);
   };
   return <AdminLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-            Classroom Management
-          </h1>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Classroom Management
+            </h1>
+            <p className="text-muted-foreground">
+              Manage classrooms and student assignments
+            </p>
+          </div>
           <Button onClick={() => {
           setNewClassroomName('');
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
             <Plus className="h-4 w-4 mr-2" /> Add Classroom
           </Button>
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Total Classrooms
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">{classrooms.length}</p>
+                </div>
+                <div className="p-3 bg-amazon-teal/10 rounded-full">
+                  <Users className="h-6 w-6 text-amazon-teal" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Total Students
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {classrooms.reduce((sum, c) => sum + c.studentsCount, 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <Users className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Assigned Forms
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {classrooms.reduce((sum, c) => sum + c.formsCount, 0)}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <FileText className="h-6 w-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
         <Card className="glass-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex items-center space-x-2 mb-4 sm:mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search classrooms..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+          <CardContent className="p-0">
+            <div className="p-6 border-b bg-muted/20">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Classroom Directory</h2>
+                <div className="text-sm text-muted-foreground">
+                  {filteredClassrooms.length} of {classrooms.length} classrooms
+                </div>
+              </div>
+              
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Search classrooms..." 
+                  className="pl-10 h-11 bg-background" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
+                />
               </div>
             </div>
             {/* Mobile Card View */}
-            <div className="block md:hidden space-y-4">
+            <div className="lg:hidden space-y-3 p-4">
               {loading ? (
-                <Loading message="Loading classrooms..." size="sm" />
+                <div className="py-8">
+                  <Loading message="Loading classrooms..." size="sm" />
+                </div>
               ) : filteredClassrooms.length > 0 ? (
                 filteredClassrooms.map((classroom, index) => (
-                  <Card key={classroom.id || `classroom-${index}`} className="border border-gray-200">
-                    <CardContent className="p-4">
+                  <Card key={classroom.id || `classroom-${index}`} className="p-3">
+                    <CardContent className="p-0">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-sm">
@@ -258,26 +330,26 @@ export function ClassroomManagement() {
                   </Card>
                 ))
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  No classrooms found. Try a different search or add a new classroom.
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  No classrooms found matching your search criteria.
                 </div>
               )}
             </div>
             {/* Desktop Table View */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full border-collapse">
+            <div className="hidden lg:block">
+              <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/3">
                       Classroom
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">
                       Students
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">
                       Assigned Forms
                     </th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">
                       Actions
                     </th>
                   </tr>
@@ -288,39 +360,40 @@ export function ClassroomManagement() {
                         <Loading message="Loading classrooms..." size="sm" />
                       </td>
                     </tr> : filteredClassrooms.length > 0 ? filteredClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
                               {classroom.name.split(' ').map(word => word.charAt(0)).join('').slice(0, 2)}
                             </div>
-                            <div>
-                              <Link to={`/admin/classrooms/${classroom.id}`} className="text-base font-medium text-foreground hover:text-amazon-teal">
+                            <div className="min-w-0">
+                              <Link to={`/admin/classrooms/${classroom.id}`} className="font-medium text-amazon-teal hover:text-amazon-teal/80 transition-colors hover:underline block truncate">
                                 {classroom.name}
                               </Link>
-                              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Users className="h-3 w-3" />{' '}
-                                {classroom.studentsCount} student
-                                {classroom.studentsCount === 1 ? '' : 's'}
-                              </p>
+                              <div className="text-xs text-gray-500 truncate">
+                                {classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}
+                              </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-muted-foreground">
-                          {classroom.studentsCount}
+                        <td className="py-3 px-2">
+                          <div className="flex items-center text-gray-700">
+                            <Users className="h-4 w-4 mr-1 text-gray-400" />
+                            <span className="font-medium">{classroom.studentsCount}</span>
+                          </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex flex-wrap gap-1 max-w-md">
-                            {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 3).map(form => <Badge key={form.id} variant="secondary" className="text-xs">
+                        <td className="py-3 px-2">
+                          <div className="flex flex-wrap gap-1">
+                            {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 2).map(form => <Badge key={form.id} variant="secondary" className="text-xs">
                                     {form.name}
                                   </Badge>) : <span className="text-gray-400 text-sm">
                                 No forms assigned
                               </span>}
-                            {classroom.assignedForms.length > 3 && <Badge variant="outline" className="text-xs">
-                                +{classroom.assignedForms.length - 3} more
+                            {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-xs">
+                                +{classroom.assignedForms.length - 2} more
                               </Badge>}
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-3 text-right">
                           <div className="flex items-center justify-end space-x-2">
                             <Link to={`/admin/form-assignments?classroom=${classroom.id}`}>
                               <Button variant="outline" size="sm" className="hidden lg:flex items-center">

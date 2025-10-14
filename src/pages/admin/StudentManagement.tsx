@@ -468,94 +468,91 @@ export function StudentManagement() {
 
             {/* Desktop Table View */}
             <div className="hidden lg:block">
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1000px]">
-                  <thead className="bg-muted/30 border-b">
-                    <tr>
-                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[280px]">
-                        Student
-                      </th>
-                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[160px]">
-                        Classroom
-                      </th>
-                      <th className="text-left py-4 px-4 font-semibold text-foreground w-[240px]">
-                        Parent
-                      </th>
-                      <th className="text-center py-4 px-4 font-semibold text-foreground w-[140px]">
-                        Status
-                      </th>
-                      <th className="text-center py-4 px-4 font-semibold text-foreground w-[120px]">
-                        Child Status
-                      </th>
-                      <th className="text-right py-4 px-4 font-semibold text-foreground w-[200px]">
-                        Progress
-                      </th>
-                    </tr>
-                  </thead>
+              <table className="w-full table-fixed border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
+                      Student
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">
+                      Classroom
+                    </th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/5">
+                      Parent
+                    </th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
+                      Status
+                    </th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
+                      Child Status
+                    </th>
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">
+                      Progress
+                    </th>
+                  </tr>
+                </thead>
                   <tbody>
                     {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
-                      <tr key={student.id || `row-${index}`} className="border-b hover:bg-muted/20 transition-colors">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-sm shadow-sm flex-shrink-0">
+                      <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
+                        <td className="py-3 px-3">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
                               {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                             </div>
-                            <div className="min-w-0 flex-1">
-                              <div className="font-semibold text-foreground truncate">
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground truncate">
                                 {student.firstName} {student.lastName}
                               </div>
-                              <div className="text-sm text-muted-foreground truncate">
-                                ID: {student.id.slice(0, 8)}...
+                              <div className="text-xs text-gray-500 truncate">
+                                ID: {student.id.slice(0, 6)}...
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-3 px-2">
                           <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
-                            <School className="h-4 w-4 mr-2 group-hover:scale-110 transition-transform flex-shrink-0" />
+                            <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
                             <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
                           </Link>
                         </td>
-                        <td className="py-4 px-4">
+                        <td className="py-3 px-2">
                           <div className="min-w-0">
                             <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate">
                               {student.parent.name}
                             </Link>
-                            <div className="text-sm text-muted-foreground mt-1 truncate">
+                            <div className="text-xs text-gray-500 mt-1 truncate">
                               {student.parent.email}
                             </div>
                           </div>
                         </td>
-                      <td className="py-4 px-4 text-center">
-                        <div className="flex justify-center">
-                          {(() => {
-                            if (formFilter !== 'all') {
-                              const selectedForm = student.assignedForms.find(form => form.name === formFilter);
-                              if (selectedForm) {
-                                const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                                const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
-                                const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
-                                const statusIcon = displayStatus === 'Approved' ? <CheckCircle className="h-3 w-3" /> : displayStatus === 'In Progress' ? <Clock className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />;
-                                return (
-                                  <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs px-2 py-1">
-                                    {statusIcon}
-                                    <span className="truncate max-w-[80px]">{displayStatus}</span>
-                                  </Badge>
-                                );
-                              }
-                              return <span className="text-muted-foreground text-sm">N/A</span>;
+                      <td className="py-3 px-2 text-center">
+                        {(() => {
+                          if (formFilter !== 'all') {
+                            const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                            if (selectedForm) {
+                              const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                              const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
+                              const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
+                              const statusIcon = displayStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : displayStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                              return (
+                                <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                                  {statusIcon}
+                                  <span className="truncate">{displayStatus}</span>
+                                </Badge>
+                              );
                             }
-                            const statusIcon = student.enrollmentStatus === 'Complete' ? <CheckCircle className="h-3 w-3" /> : student.enrollmentStatus === 'In Progress' ? <Clock className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />;
-                            return (
-                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center gap-1 text-xs px-2 py-1">
-                                {statusIcon}
-                                <span className="truncate max-w-[80px]">{student.enrollmentStatus}</span>
-                              </Badge>
-                            );
-                          })()}
-                        </div>
+                            return <span className="text-gray-500 text-xs">N/A</span>;
+                          }
+                          const statusIcon = student.enrollmentStatus === 'Complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                          return (
+                            <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                              {statusIcon}
+                              <span className="truncate">{student.enrollmentStatus}</span>
+                            </Badge>
+                          );
+                        })()}
                       </td>
-                      <td className="py-4 px-4 text-center">
+                      <td className="py-3 px-2 text-center">
                         <button
                           onClick={() => {
                             setSelectedStudent(student);
@@ -571,15 +568,15 @@ export function StudentManagement() {
                           {student.childStatus === 'active' ? 'Active' : 'Archived'}
                         </button>
                       </td>
-                        <td className="py-4 px-4">
+                        <td className="py-3 px-3">
                           <div className="flex items-center justify-end space-x-2">
-                            <div className="flex items-center text-xs text-muted-foreground bg-muted/50 px-2 py-1 rounded whitespace-nowrap">
+                            <div className="flex items-center text-xs text-gray-600">
                               <FileText className="h-3 w-3 mr-1" />
                               {student.formsCompleted}/{student.totalForms}
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <Progress value={student.enrollmentProgress} className="w-16 h-2" />
-                              <span className="text-xs font-semibold w-8 text-right text-foreground">
+                            <div className="flex items-center space-x-1">
+                              <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                              <span className="text-xs font-semibold text-foreground w-8">
                                 {student.enrollmentProgress}%
                               </span>
                             </div>
@@ -588,20 +585,13 @@ export function StudentManagement() {
                     </tr>
                     )) : (
                       <tr>
-                        <td colSpan={6} className="py-16 text-center">
-                          <div className="flex flex-col items-center space-y-3">
-                            <GraduationCap className="h-12 w-12 text-muted-foreground/50" />
-                            <div className="text-muted-foreground">
-                              <p className="font-medium">No students found</p>
-                              <p className="text-sm">Try adjusting your search criteria</p>
-                            </div>
-                          </div>
+                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                          No students match the current filters.
                         </td>
                       </tr>
                     )}
                   </tbody>
                 </table>
-              </div>
             </div>
 
             {/* Mobile Card View */}

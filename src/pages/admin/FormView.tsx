@@ -17,10 +17,10 @@ export function FormView() {
   const { user } = useAuth();
   const [toast, setToast] = useState<{
     open: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
+    type: 'success' | 'error';
     title: string;
     message: string;
-  }>({ open: false, type: 'info', title: '', message: '' });
+  }>({ open: false, type: 'success', title: '', message: '' });
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -344,7 +344,7 @@ export function FormView() {
       {/* Toast Notification */}
       <Toast
         open={toast.open}
-        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
         type={toast.type}
         title={toast.title}
         message={toast.message}

@@ -317,64 +317,145 @@ export function ParentManagement() {
     }
   };
   return <AdminLayout>
-      <div className="space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">
-            Parent Management
-          </h1>
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Parent Management
+            </h1>
+            <p className="text-muted-foreground">
+              Manage parent accounts and family information
+            </p>
+          </div>
           <Button onClick={() => {
           resetInviteForm();
           setIsInviteDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
           </Button>
         </div>
-        <Card className="glass-card">
-          <CardContent className="p-4 sm:p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:space-x-3 space-y-3 sm:space-y-0 mb-4 sm:mb-6">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search parents..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Total Parents
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">{parents.length}</p>
+                </div>
+                <div className="p-3 bg-amazon-teal/10 rounded-full">
+                  <Users className="h-6 w-6 text-amazon-teal" />
+                </div>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-44">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Archive">Archive</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={signupFilter} onValueChange={setSignupFilter}>
-                <SelectTrigger className="w-full sm:w-44">
-                  <SelectValue placeholder="Signup status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Signup Statuses</SelectItem>
-                  <SelectItem value="Signed">Signed</SelectItem>
-                  <SelectItem value="Not Signed">Not Signed</SelectItem>
-                </SelectContent>
-              </Select>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Signed Up
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {parents.filter(p => p.signupStatus === 'Signed').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-green-100 rounded-full">
+                  <CheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                    Pending Signup
+                  </p>
+                  <p className="text-3xl font-bold text-foreground">
+                    {parents.filter(p => p.signupStatus === 'Not Signed').length}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-100 rounded-full">
+                  <Clock className="h-6 w-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        <Card className="glass-card">
+          <CardContent className="p-0">
+            <div className="p-6 border-b bg-muted/20">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Parent Directory</h2>
+                <div className="text-sm text-muted-foreground">
+                  {filteredParents.length} of {parents.length} parents
+                </div>
+              </div>
+              
+              {/* Search Bar */}
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Search parents by name or email..." 
+                  className="pl-10 h-11 bg-background" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
+                />
+              </div>
+
+              {/* Filters */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      <SelectItem value="Active">Active</SelectItem>
+                      <SelectItem value="Archive">Archive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Signup Status</label>
+                  <Select value={signupFilter} onValueChange={setSignupFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Signup status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Signup Statuses</SelectItem>
+                      <SelectItem value="Signed">Signed</SelectItem>
+                      <SelectItem value="Not Signed">Not Signed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
             {/* Desktop Table View */}
-            <div className="hidden lg:block overflow-x-auto">
-              <table className="w-full border-collapse">
+            <div className="hidden lg:block">
+              <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
                       Parent
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">
                       Email
                     </th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-600">
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">
                       Children
                     </th>
-                    <th className="text-center py-3 px-4 font-medium text-gray-600">
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
                       Signup Status
                     </th>
-                    <th className="text-right py-3 px-4 font-medium text-gray-600">
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">
                       Actions
                     </th>
                   </tr>
@@ -385,34 +466,34 @@ export function ParentManagement() {
                         <Loading message="Loading parents..." size="sm"/>
                       </td>
                     </tr> : filteredParents.length > 0 ? filteredParents.map(parent => <tr key={parent.id} className="border-b border-gray-100">
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-3">
                           <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
                               {parent.firstName.charAt(0)}
                               {parent.lastName.charAt(0)}
                             </div>
-                            <div>
+                            <div className="min-w-0">
                               {parent.signupStatus === 'Signed' ? (
                                 <Link to={`/admin/parents/${parent.id}`} state={{
                           parentData: parent
-                        }} className="font-medium text-amazon-teal hover:underline">
+                        }} className="font-medium text-amazon-teal hover:underline block truncate">
                                   {parent.firstName} {parent.lastName}
                                 </Link>
                               ) : (
-                                <span className="font-medium text-gray-400 cursor-not-allowed">
+                                <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
                                   {parent.firstName} {parent.lastName}
                                 </span>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center text-gray-700">
-                            <Mail className="h-4 w-4 mr-2" />
-                            {parent.email}
+                        <td className="py-3 px-2">
+                          <div className="flex items-center text-gray-700 min-w-0">
+                            <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
+                            <span className="truncate">{parent.email}</span>
                           </div>
                         </td>
-                        <td className="py-3 px-4 text-sm text-gray-600">
+                        <td className="py-3 px-2 text-sm text-gray-600">
                           {parent.children.length === 0 ? <span>No children linked yet</span> : <div className="space-y-1">
                               {parent.children.map(child => <div key={child.id} className="flex items-center gap-2">
                                   <Users className="h-4 w-4 text-gray-400" />
@@ -425,14 +506,14 @@ export function ParentManagement() {
                                 </div>)}
                             </div>}
                         </td>
-                        <td className="py-3 px-4 text-center">
+                        <td className="py-3 px-2 text-center">
                           <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto">
                             {parent.signupStatus === 'Signed' && <CheckCircle className="h-4 w-4 mr-1" />}
                             {parent.signupStatus === 'Not Signed' && <XCircle className="h-4 w-4 mr-1" />}
                             {parent.signupStatus}
                           </Badge>
                         </td>
-                        <td className="py-3 px-4 text-right">
+                        <td className="py-3 px-3 text-right">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
@@ -488,35 +569,37 @@ export function ParentManagement() {
             </div>
             
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-4">
+            <div className="lg:hidden space-y-3 p-4">
               {loading ? (
                 <div className="py-8">
                   <Loading message="Loading parents..." size="sm" />
                 </div>
               ) : filteredParents.length > 0 ? (
                 filteredParents.map(parent => (
-                  <Card key={parent.id} className="p-4 border border-gray-200">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
-                            {parent.firstName.charAt(0)}
-                            {parent.lastName.charAt(0)}
-                          </div>
-                          <div>
-                            {parent.signupStatus === 'Signed' ? (
-                              <Link to={`/admin/parents/${parent.id}`} state={{
-                                parentData: parent
-                              }} className="font-medium text-amazon-teal hover:underline">
-                                {parent.firstName} {parent.lastName}
-                              </Link>
-                            ) : (
-                              <span className="font-medium text-gray-400 cursor-not-allowed">
-                                {parent.firstName} {parent.lastName}
-                              </span>
-                            )}
+                  <Card key={parent.id} className="p-3">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs">
+                          {parent.firstName.charAt(0)}
+                          {parent.lastName.charAt(0)}
+                        </div>
+                        <div>
+                          {parent.signupStatus === 'Signed' ? (
+                            <Link to={`/admin/parents/${parent.id}`} state={{
+                              parentData: parent
+                            }} className="font-medium text-amazon-teal hover:underline text-sm">
+                              {parent.firstName} {parent.lastName}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-gray-400 cursor-not-allowed text-sm">
+                              {parent.firstName} {parent.lastName}
+                            </span>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {parent.email}
                           </div>
                         </div>
+                      </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -561,45 +644,36 @@ export function ParentManagement() {
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                      </div>
-                      
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center text-gray-700">
-                          <Mail className="h-4 w-4 mr-2 flex-shrink-0" />
-                          <span className="break-all">{parent.email}</span>
+                      <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-xs px-1.5 py-0.5">
+                        {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                        {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                        {parent.signupStatus}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-1.5">
+                      {parent.children.length === 0 ? (
+                        <div className="text-muted-foreground text-xs">No children linked yet</div>
+                      ) : (
+                        <div className="space-y-1">
+                          <div className="text-xs text-muted-foreground">Children:</div>
+                          {parent.children.map(child => (
+                            <div key={child.id} className="flex items-center gap-2 text-xs">
+                              <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                              <span>{child.firstName} {child.lastName}</span>
+                              <Badge variant="secondary" className="text-xs">
+                                {child.classroom.name}
+                              </Badge>
+                            </div>
+                          ))}
                         </div>
-                        
-                        <div className="flex items-center justify-between">
-                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center">
-                            {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                            {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
-                            {parent.signupStatus}
-                          </Badge>
-                        </div>
-                        
-                        {parent.children.length === 0 ? (
-                          <div className="text-gray-500 text-sm">No children linked yet</div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="text-xs font-medium text-gray-600 uppercase tracking-wide">Children:</div>
-                            {parent.children.map(child => (
-                              <div key={child.id} className="flex items-center gap-2 text-sm">
-                                <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                                <span>{child.firstName} {child.lastName}</span>
-                                <Badge variant="secondary" className="text-xs">
-                                  {child.classroom.name}
-                                </Badge>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      )}
                     </div>
                   </Card>
                 ))
               ) : (
-                <div className="py-8 text-center text-gray-500">
-                  No parents match the current filters.
+                <div className="py-8 text-center text-muted-foreground text-sm">
+                  No parents found matching your search criteria.
                 </div>
               )}
             </div>

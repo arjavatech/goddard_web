@@ -98,10 +98,10 @@ export function ParentDetails() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [toast, setToast] = useState<{
     open: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
+    type: 'success' | 'error';
     title: string;
     message: string;
-  }>({ open: false, type: 'info', title: '', message: '' });
+  }>({ open: false, type: 'success', title: '', message: '' });
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -354,7 +354,7 @@ export function ParentDetails() {
 
         setToast({
           open: true,
-          type: 'info',
+          type: 'success',
           title: '',
           message: 'Print dialog opening...'
         });
@@ -370,7 +370,7 @@ export function ParentDetails() {
       if (printWindow) {
         setToast({
           open: true,
-          type: 'info',
+          type: 'success',
           title: '',
           message: 'Use Ctrl+P to print'
         });
@@ -831,7 +831,7 @@ export function ParentDetails() {
       {/* Toast Notification */}
       <Toast
         open={toast.open}
-        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
         type={toast.type}
         title={toast.title}
         message={toast.message}
