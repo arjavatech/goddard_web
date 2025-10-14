@@ -126,21 +126,12 @@ function inferFormStatus(value: string | null | undefined): Form['status'] {
   if (normalized.includes('archive')) return 'Archive';
   return 'Active';
 }
-function formsFromRecord(record: Record<string, string>): Form[] {
-  console.log('Forms from API:', record); // Debug log
-  
-  return Object.entries(record).map(([id, status], index) => {
-    // Always show the ID as the name for now to debug
-    const name = id || `Form ${index + 1}`;
-    
-    console.log(`Form ${index}: ID=${id}, Name=${name}, Status=${status}`); // Debug log
-    
-    return {
-      id,
-      name,
-      status: inferFormStatus(status)
-    };
-  });
+function formsFromRecord(record: Record<string, string | null>): Form[] {
+  return Object.entries(record).map(([formId, formName]) => ({
+    id: formId,
+    name: formName || 'Unnamed Form',
+    status: 'Active' as Form['status']
+  }));
 }
 function friendlyNameFromEmail(email: string): string {
   const local = email.split('@')[0];
