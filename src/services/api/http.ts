@@ -40,9 +40,15 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
 
       // Check for session expiration - error_code is nested in the error string
       if (errorCode === 'AUTHORIZATION_ERROR' && errorString && errorString.includes('session_not_found')) {
-        // Session expired - redirect to login page
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login';
+        // Session expired - redirect to login page (only once)
+        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+          // Use a flag to prevent multiple redirects
+          if (!(window as any).__redirecting) {
+            (window as any).__redirecting = true;
+            setTimeout(() => {
+              window.location.href = '/login';
+            }, 100);
+          }
         }
       }
     }
