@@ -139,7 +139,7 @@ export function AdminLayout({
           </div>
         </header>
         {/* Page content */}
-        <main className="flex-1 p-6 pt-20 overflow-hidden bg-gray-50">{children}</main>
+        <main className="flex-1 sm:p-6 p-2 sm:pt-20 pt-20 overflow-hidden bg-gray-50">{children}</main>
       </div>
       
       {/* Logout Confirmation Modal */}

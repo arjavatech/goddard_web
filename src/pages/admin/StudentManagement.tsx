@@ -18,6 +18,8 @@ type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 
 interface EnrollmentData {
   parent_id: string;
+  parent_first_name: string;
+  parent_last_name: string;
   child_id: string;
   child_first_name: string;
   child_last_name: string;
@@ -123,7 +125,7 @@ export function StudentManagement() {
           const classroomName = enrollment.class_name;
 
           const parentEmail = enrollment.primary_email || 'parent@example.com';
-          const parentName = parentEmail.split('@')[0].replace(/[._+]/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
           const parentId = enrollment.parent_id;
 
           const student = {
@@ -286,7 +288,7 @@ export function StudentManagement() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="space-y-8">
+      <div className="space-y-6 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground mb-2">
@@ -308,53 +310,53 @@ export function StudentManagement() {
             )}
           </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Total Students
                   </p>
-                  <p className="text-3xl font-bold text-foreground">{students.length}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{students.length}</p>
                 </div>
-                <div className="p-3 bg-amazon-teal/10 rounded-full">
-                  <GraduationCap className="h-6 w-6 text-amazon-teal" />
+                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full">
+                  <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Completion Rate
                   </p>
-                  <p className="text-3xl font-bold text-foreground">{completionRate}%</p>
-                  <div className="w-24 mt-2">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{completionRate}%</p>
+                  <div className="w-20 sm:w-24 mt-2">
                     <Progress value={completionRate} className="h-2" />
                   </div>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Users className="h-6 w-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground mb-1">
                     Forms Pending
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {students.filter(student => student.enrollmentStatus !== 'Complete').length}
                   </p>
                 </div>
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <AlertCircle className="h-6 w-6 text-amber-600" />
+                <div className="p-2 sm:p-3 bg-amber-100 rounded-full">
+                  <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
@@ -362,9 +364,9 @@ export function StudentManagement() {
         </div>
         <Card className="glass-card">
           <CardContent className="p-0">
-            <div className="p-6 border-b bg-muted/20">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Student Directory</h2>
+            <div className="p-4 sm:p-6 border-b bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
                 <div className="text-sm text-muted-foreground">
                   {filteredStudents.length} of {students.length} students
                   {classroomFilter !== 'all' && (
@@ -386,7 +388,7 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-muted-foreground">Form Type</label>
                     <Select value={formFilter} onValueChange={handleFormFilterChange}>
@@ -595,9 +597,10 @@ export function StudentManagement() {
             </div>
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-3 p-4">
-              {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
-                <Card key={student.id || `card-${index}`} className="p-3">
+            <div className="lg:hidden p-4 sm:p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
+                  <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs">
@@ -666,12 +669,13 @@ export function StudentManagement() {
                       </div>
                     </div>
                   </div>
-                </Card>
-              )) : (
-                <div className="py-8 text-center text-muted-foreground text-sm">
-                  No students found matching your search criteria.
-                </div>
-              )}
+                  </Card>
+                )) : (
+                  <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
+                    No students found matching your search criteria.
+                  </div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

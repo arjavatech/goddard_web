@@ -240,6 +240,7 @@ export function Dashboard() {
                       forms={selectedChild.forms}
                       onContinue={handleViewForm}
                       childStatus={selectedChild.childStatus}
+                      childId={selectedChild.id}
                     />
                   </div>
                   {selectedChild.childStatus !== 'archive' && (

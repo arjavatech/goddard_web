@@ -90,15 +90,17 @@ function FormCard({
               </Button>
             </>
           )}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
-            onClick={onView}
-            title="View Form"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
+          {!isApproved && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+              onClick={onView}
+              title="View Form"
+            >
+              <Eye className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardFooter>
     </Card>;
@@ -112,6 +114,7 @@ interface FormData {
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
   filloutFormId?: string | null;
+  fromContinueButton?: boolean;
 }
 
 interface FormsDocumentsProps {
@@ -181,18 +184,42 @@ export function FormsDocuments({
       ...childSpecificForms.flatMap((child) => {
         // Find the matching child in rawFormData by childId
         const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
-        return child.forms.map((form, formIndex) => ({
-          ...form,
-          childId: child.childId,
-          childName: child.childName,
-          _key: `child-${child.childId}-form-${formIndex}`,
-          rawData: rawChild?.forms?.[formIndex] || null
-        }));
+        return child.forms.map((form, formIndex) => {
+          // Find the exact matching form in rawData by form_id
+          const matchingRawForm = rawChild?.forms?.find((rawForm: any) => 
+            rawForm.form_id === form.formId || rawForm.form_name === form.title
+          );
+          return {
+            ...form,
+            childId: child.childId,
+            childName: child.childName,
+            _key: `child-${child.childId}-form-${form.formId || formIndex}`,
+            rawData: matchingRawForm || null
+          };
+        });
       })
     ];
-  }, [familyForms, childSpecificForms, rawFormData]);
+  }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
 
   const handleView = (form: any) => {
+    console.log('Form ID:', form.formId || form._key);
+    console.log('Child ID form opening:', form.childId);
+    console.log('Selected Child ID:', selectedChildId);
+    console.log('Active Tab:', activeTab);
+    
+    // Skip validation for forms from Continue button
+    if (form.fromContinueButton) {
+      console.log('✓ Form from Continue button - bypassing child ID validation');
+    } else {
+      // Ensure we're using the correct child's data
+      if (form.childId && selectedChildId && form.childId !== selectedChildId) {
+        console.warn('Form child ID does not match selected child ID - blocking form open');
+        console.log('Expected child ID:', selectedChildId, 'Got child ID:', form.childId);
+        return;
+      }
+      console.log('✓ Child ID validation passed - opening form for correct child');
+    }
+    
     let formUrl = '#';
     
     // Extract all possible URL sources from rawData and form object
@@ -216,12 +243,8 @@ export function FormsDocuments({
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, prioritize recent_edit_link, then recent_pdf_link
-      if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
-        formUrl = recentEditLink;
-      } else if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
-        formUrl = recentPdfLink;
-      }
+      // For approved forms, don't allow viewing/editing - only download/print
+      return;
     } else {
       // For non-approved forms, prioritize recent_edit_link first
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
@@ -264,17 +287,28 @@ export function FormsDocuments({
 
   // Auto-open form when formToOpen is set
   useEffect(() => {
-    if (formToOpen && formToOpen.formId) {
-      // Find the matching form in allForms by unique formId
-      const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
-      if (matchingForm) {
-        handleView(matchingForm);
+    if (formToOpen) {
+      console.log('Auto-opening form:', formToOpen);
+      // If it's from Continue button, directly open it
+      if (formToOpen.fromContinueButton) {
+        handleView(formToOpen);
+      } else if (formToOpen.formId) {
+        // Find the matching form in allForms by unique formId
+        const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
+        if (matchingForm) {
+          // Only auto-open if it belongs to the selected child
+          if (!matchingForm.childId || matchingForm.childId === selectedChildId) {
+            handleView(matchingForm);
+          } else {
+            console.warn('Auto-open blocked: Form belongs to different child');
+          }
+        }
       }
       if (onFormOpened) {
         onFormOpened();
       }
     }
-  }, [formToOpen, allForms]);
+  }, [formToOpen, allForms, selectedChildId]);
 
   // Get forms for the selected tab
   const getFormsForTab = (tabValue: string) => {
@@ -283,8 +317,8 @@ export function FormsDocuments({
     } else if (tabValue === 'family') {
       return allForms.filter(form => !form.childId);
     } else {
-      // Individual child tab - filter by childId (tab value is now childId)
-      return allForms.filter(form => form.childId === tabValue);
+      // Individual child tab - filter by childId and ensure it matches selectedChildId
+      return allForms.filter(form => form.childId === tabValue && form.childId === selectedChildId);
     }
   };
 
@@ -653,7 +687,11 @@ export function FormsDocuments({
                     childName={form.childName}
                     formId={form.formId || form._key}
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                    onView={() => handleView(form)}
+                    onView={() => {
+                      console.log('Form ID:', form.formId || form._key);
+                      console.log('Child ID:', form.childId);
+                      handleView(form);
+                    }}
                     onDownload={() => handleDownload(form)}
                     onPrint={() => handlePrint(form)}
                     isLoading={loadingAction}
@@ -663,7 +701,7 @@ export function FormsDocuments({
             )}
           </TabsContent>
 
-          {familyForms.length > 0 && (
+          {/* {familyForms.length > 0 && (
             <TabsContent value="family">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {getFormsForTab('family').map(form => (
@@ -676,7 +714,11 @@ export function FormsDocuments({
                     childName={form.childName}
                     formId={form.formId || form._key}
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                    onView={() => handleView(form)}
+                    onView={() => {
+                      console.log('Form ID:', form.formId || form._key);
+                      console.log('Child ID:', form.childId);
+                      handleView(form);
+                    }}
                     onDownload={() => handleDownload(form)}
                     onPrint={() => handlePrint(form)}
                     isLoading={loadingAction}
@@ -684,7 +726,7 @@ export function FormsDocuments({
                 ))}
               </div>
             </TabsContent>
-          )}
+          )} */}
 
           {childSpecificForms.map((child) => (
             <TabsContent key={child.childId} value={child.childId}>
@@ -704,7 +746,11 @@ export function FormsDocuments({
                       childName={form.childName}
                       formId={form.formId || form._key}
                       recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                      onView={() => handleView(form)}
+                      onView={() => {
+                        console.log('Form ID:', form.formId || form._key);
+                        console.log('Child ID:', form.childId);
+                        handleView(form);
+                      }}
                       onDownload={() => handleDownload(form)}
                       onPrint={() => handlePrint(form)}
                       isLoading={loadingAction}
