@@ -55,7 +55,7 @@ function FormCard({
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-2">
         <span className="text-xs text-muted-foreground">
-          Last updated: {lastUpdated}
+          Approval date: {lastUpdated}
         </span>
         <div className="flex gap-1">
           {isApproved && recentPdfLink && (
@@ -116,6 +116,7 @@ interface FormData {
   filloutFormId?: string | null;
   fromContinueButton?: boolean;
 }
+
 
 interface FormsDocumentsProps {
   childSpecificForms: {
@@ -700,33 +701,6 @@ export function FormsDocuments({
               </div>
             )}
           </TabsContent>
-
-          {/* {familyForms.length > 0 && (
-            <TabsContent value="family">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                {getFormsForTab('family').map(form => (
-                  <FormCard
-                    key={form._key}
-                    title={form.title}
-                    description={form.description}
-                    lastUpdated={form.lastUpdated}
-                    status={form.status}
-                    childName={form.childName}
-                    formId={form.formId || form._key}
-                    recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                    onView={() => {
-                      console.log('Form ID:', form.formId || form._key);
-                      console.log('Child ID:', form.childId);
-                      handleView(form);
-                    }}
-                    onDownload={() => handleDownload(form)}
-                    onPrint={() => handlePrint(form)}
-                    isLoading={loadingAction}
-                  />
-                ))}
-              </div>
-            </TabsContent>
-          )} */}
 
           {childSpecificForms.map((child) => (
             <TabsContent key={child.childId} value={child.childId}>

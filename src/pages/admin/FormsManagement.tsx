@@ -16,6 +16,8 @@ import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -99,6 +101,18 @@ export function FormsManagement() {
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
     return matchesSearch && matchesStatus;
   }), [forms, searchQuery, statusFilter]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedForms,
+    itemsPerPage,
+    setCurrentPage
+  } = usePagination({ 
+    data: filteredForms,
+    itemsPerPage: 10,
+    mobileItemsPerPage: 5
+  });
   const handleAddForm = async () => {
     if (formName.trim() && formLink.trim()) {
       try {
@@ -310,7 +324,7 @@ export function FormsManagement() {
                       <td colSpan={4} className="py-8">
                         <Loading message="Loading forms..." size="sm" />
                       </td>
-                    </tr> : filteredForms.length > 0 ? filteredForms.map(form => <tr key={form.id} className="border-b border-gray-100">
+                    </tr> : paginatedForms.length > 0 ? paginatedForms.map(form => <tr key={form.id} className="border-b border-gray-100">
                         <td className="py-3 px-3">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
@@ -361,6 +375,15 @@ export function FormsManagement() {
                 </tbody>
               </table>
             </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredForms.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              className="hidden lg:flex"
+            />
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-3 p-4">
@@ -368,8 +391,8 @@ export function FormsManagement() {
                 <div className="py-8">
                   <Loading message="Loading forms..." size="sm" />
                 </div>
-              ) : filteredForms.length > 0 ? (
-                filteredForms.map(form => (
+              ) : paginatedForms.length > 0 ? (
+                paginatedForms.map(form => (
                   <Card key={form.id} className="p-3">
                     <div className="flex justify-between items-start mb-3">
                       <h3 className="font-semibold text-foreground text-base">{form.name}</h3>
@@ -417,6 +440,12 @@ export function FormsManagement() {
                   No forms found matching your search criteria.
                 </div>
               )}
+              
+              <MobilePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </CardContent>
         </Card>

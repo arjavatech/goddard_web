@@ -306,7 +306,11 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           filloutFormId: form.fillout_form_id || form.filloutFormId || '',
           studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
           recent_edit_link: form.recent_edit_link || null,
-          recent_pdf_link: form.recent_pdf_link || null
+          recent_pdf_link: form.recent_pdf_link || null,
+          approved_by: form.approved_by || null,
+          approved_on: form.approved_on || null,
+          updated_at: form.updated_at || null,
+          created_at: form.created_at || null
         }))
       }))
     };

@@ -15,6 +15,8 @@ import { commonValidationRules } from '../../lib/validation';
 import { Toast } from '../../components/ui/toast';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -82,6 +84,18 @@ export function ClassroomManagement() {
   const filteredClassrooms = useMemo(() => {
     return classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [classrooms, searchQuery]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedClassrooms,
+    itemsPerPage,
+    setCurrentPage
+  } = usePagination({ 
+    data: filteredClassrooms,
+    itemsPerPage: 10,
+    mobileItemsPerPage: 5
+  });
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
@@ -265,8 +279,8 @@ export function ClassroomManagement() {
                 <div className="py-8">
                   <Loading message="Loading classrooms..." size="sm" />
                 </div>
-              ) : filteredClassrooms.length > 0 ? (
-                filteredClassrooms.map((classroom, index) => (
+              ) : paginatedClassrooms.length > 0 ? (
+                paginatedClassrooms.map((classroom, index) => (
                   <Card key={classroom.id || `classroom-${index}`} className="p-3">
                     <CardContent className="p-0">
                       <div className="flex items-start justify-between mb-3">
@@ -334,6 +348,12 @@ export function ClassroomManagement() {
                   No classrooms found matching your search criteria.
                 </div>
               )}
+              
+              <MobilePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
             {/* Desktop Table View */}
             <div className="hidden lg:block">
@@ -359,7 +379,7 @@ export function ClassroomManagement() {
                       <td colSpan={4} className="py-8">
                         <Loading message="Loading classrooms..." size="sm" />
                       </td>
-                    </tr> : filteredClassrooms.length > 0 ? filteredClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100">
+                    </tr> : paginatedClassrooms.length > 0 ? paginatedClassrooms.map((classroom, index) => <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100">
                         <td className="py-3 px-3">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
@@ -432,6 +452,15 @@ export function ClassroomManagement() {
                 </tbody>
               </table>
             </div>
+            
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredClassrooms.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              className="hidden lg:flex"
+            />
           </CardContent>
         </Card>
       </div>

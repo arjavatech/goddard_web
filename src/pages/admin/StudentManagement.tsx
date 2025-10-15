@@ -9,7 +9,9 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { fetchUserContext } from '../../services/api/user';
+import { usePagination } from '../../hooks/usePagination';
 
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { fetchStudentEnrollments, updateChildStatus } from '@/services/api/admin';
@@ -74,10 +76,8 @@ export function StudentManagement() {
   const [newStatus, setNewStatus] = useState<'active' | 'archive'>('active');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Reset status filter when form filter changes
   const handleFormFilterChange = (value: string) => {
     setFormFilter(value);
-    setStatusFilter('all'); // Reset status filter to avoid incompatible values
   };
   useEffect(() => {
     let isMounted = true;
@@ -227,6 +227,15 @@ export function StudentManagement() {
 
     return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom;
   }), [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedStudents,
+    itemsPerPage,
+    isMobile,
+    setCurrentPage
+  } = usePagination({ data: filteredStudents });
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
@@ -288,27 +297,34 @@ export function StudentManagement() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="space-y-6 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
-              Student Management
-            </h1>
-            <p className="text-muted-foreground">
-              Manage student enrollments and track progress
-            </p>
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="space-y-6 p-4 sm:p-6">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">
+                Student Management
+              </h1>
+              <p className="text-sm sm:text-base text-muted-foreground">
+                Manage student enrollments and track progress
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={toggleFilters} 
+              className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start flex-shrink-0"
+            >
+              {showFilters ? (
+                <>
+                  <X className="h-4 w-4" /> Hide Filters
+                </>
+              ) : (
+                <>
+                  <Filter className="h-4 w-4" /> Show Filters
+                </>
+              )}
+            </Button>
           </div>
-          <Button variant="outline" onClick={toggleFilters} className="flex items-center gap-2 self-start sm:self-center">
-            {showFilters ? (
-              <>
-                <X className="h-4 w-4" /> Hide Filters
-              </>
-            ) : (
-              <>
-                <Filter className="h-4 w-4" /> Show Filters
-              </>
-            )}
-          </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
@@ -494,7 +510,7 @@ export function StudentManagement() {
                   </tr>
                 </thead>
                   <tbody>
-                    {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
+                    {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
                       <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
                         <td className="py-3 px-3">
                           <div className="flex items-center">
@@ -596,21 +612,30 @@ export function StudentManagement() {
                 </table>
             </div>
 
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredStudents.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              className="hidden lg:flex"
+            />
+
             {/* Mobile Card View */}
-            <div className="lg:hidden p-4 sm:p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-                {filteredStudents.length > 0 ? filteredStudents.map((student, index) => (
-                  <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs">
+            <div className="lg:hidden px-0 py-4 w-full overflow-hidden">
+              <div className="grid grid-cols-1 gap-3 w-full">
+                {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
+                  <Card key={student.id || `card-${index}`} className="p-3 w-full overflow-hidden">
+                  <div className="flex items-start justify-between mb-2 min-w-0">
+                    <div className="flex items-center space-x-2 min-w-0 flex-1">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
                         {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                       </div>
-                      <div>
-                        <div className="font-medium text-foreground text-sm">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-foreground text-sm truncate">
                           {student.firstName} {student.lastName}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-xs text-muted-foreground truncate">
                           {student.classroom.name}
                         </div>
                       </div>
@@ -621,7 +646,7 @@ export function StudentManagement() {
                         setNewStatus(student.childStatus);
                         setIsStatusDialogOpen(true);
                       }}
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                         student.childStatus === 'active'
                           ? 'bg-green-100 text-green-700'
                           : 'bg-gray-100 text-gray-700'
@@ -631,29 +656,33 @@ export function StudentManagement() {
                     </button>
                   </div>
                   
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Parent:</span>
-                      <Link to={`/admin/parents/${student.parent.id}`} className="text-xs text-amazon-teal hover:underline">
-                        {student.parent.name}
-                      </Link>
+                  <div className="space-y-1.5 w-full">
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground flex-shrink-0">Parent:</span>
+                      <div className="min-w-0 flex-1 ml-2">
+                        <Link to={`/admin/parents/${student.parent.id}`} className="text-xs text-amazon-teal hover:underline block truncate">
+                          {student.parent.name}
+                        </Link>
+                      </div>
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Status:</span>
-                      {(() => {
-                        if (formFilter !== 'all') {
-                          const selectedForm = student.assignedForms.find(form => form.name === formFilter);
-                          if (selectedForm) {
-                            const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                            const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
-                            const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
-                            return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground flex-shrink-0">Status:</span>
+                      <div className="ml-2 flex-shrink-0">
+                        {(() => {
+                          if (formFilter !== 'all') {
+                            const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                            if (selectedForm) {
+                              const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                              const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
+                              const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
+                              return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                            }
+                            return <span className="text-muted-foreground text-xs">N/A</span>;
                           }
-                          return <span className="text-muted-foreground text-xs">N/A</span>;
-                        }
-                        return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
-                      })()}
+                          return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
+                        })()}
+                      </div>
                     </div>
                     
                     <div className="flex items-center justify-between">
@@ -661,10 +690,10 @@ export function StudentManagement() {
                       <span className="text-xs">{student.formsCompleted}/{student.totalForms}</span>
                     </div>
                     
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Progress:</span>
-                      <div className="flex items-center space-x-1.5">
-                        <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                    <div className="flex items-center justify-between min-w-0">
+                      <span className="text-xs text-muted-foreground flex-shrink-0">Progress:</span>
+                      <div className="flex items-center space-x-1.5 ml-2">
+                        <Progress value={student.enrollmentProgress} className="w-10 h-1.5" />
                         <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
                       </div>
                     </div>
@@ -676,6 +705,12 @@ export function StudentManagement() {
                   </div>
                 )}
               </div>
+              
+              <MobilePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </CardContent>
         </Card>
@@ -711,5 +746,6 @@ export function StudentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>;
+    </div>
+  </AdminLayout>;
 }

@@ -60,7 +60,18 @@ function normalizeChildFromParent(child: any): DashboardChild {
     return {
       title: form.formName || form.form_name || 'Unknown Form',
       description: form.formName || form.form_name || 'Unknown Form',
-      lastUpdated: formatDate(null),
+      lastUpdated: (() => {
+        const approvedDate = form.approved_on || form.approvedOn;
+        if (approvedDate) {
+          try {
+            const date = new Date(approvedDate);
+            if (!isNaN(date.getTime())) {
+              return date.toLocaleDateString();
+            }
+          } catch (e) {}
+        }
+        return '—';
+      })(),
       status,
       formId: form.form_id || form.formId,
       recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
@@ -145,6 +156,7 @@ export function Dashboard() {
         if (!parentData) {
           throw new Error('Unable to fetch parent data.');
         }
+
 
         // Store raw parent data for form viewing
         setParentData(parentData);

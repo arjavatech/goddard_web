@@ -30,6 +30,7 @@ export function AdminLayout({
     setShowLogoutModal(false);
   };
   const currentPath = location.pathname;
+  const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const navigationItems = [{
     icon: <Home className="w-5 h-5" />,
     label: 'Dashboard',
@@ -139,7 +140,7 @@ export function AdminLayout({
           </div>
         </header>
         {/* Page content */}
-        <main className="flex-1 sm:p-6 p-2 sm:pt-20 pt-20 overflow-hidden bg-gray-50">{children}</main>
+        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 flex flex-col bg-gray-50`}>{children}</main>
       </div>
       
       {/* Logout Confirmation Modal */}
