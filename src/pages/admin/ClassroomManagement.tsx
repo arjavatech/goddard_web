@@ -185,7 +185,7 @@ export function ClassroomManagement() {
   return <AdminLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+          <div className="ml-4 sm:ml-0">
             <h1 className="text-2xl font-bold text-foreground mb-2">
               Classroom Management
             </h1>
@@ -196,7 +196,7 @@ export function ClassroomManagement() {
           <Button onClick={() => {
           setNewClassroomName('');
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 ml-4 sm:ml-0 self-start sm:self-center">
             <Plus className="h-4 w-4 mr-2" /> Add Classroom
           </Button>
         </div>

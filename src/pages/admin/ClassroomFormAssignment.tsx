@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Checkbox } from '../../components/ui/checkbox';
+import { Loading } from '../../components/ui/loading';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, assignFormToClassroom, deleteClassFormOverride } from '../../services/api/admin';
@@ -162,10 +163,12 @@ export function ClassroomFormAssignment() {
   const [allForms, setAllForms] = useState<Form[]>(DEFAULT_FORMS);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || '');
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
+        setLoading(true);
         const user = await fetchUserContext();
         if (!user.schoolId) return;
         const [templates, classroomList] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
@@ -201,6 +204,10 @@ export function ClassroomFormAssignment() {
           }
         }
       } catch (error) {
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     })();
     return () => {
@@ -493,7 +500,11 @@ export function ClassroomFormAssignment() {
                   </div>
                   
                   {/* Forms List */}
-                  {!selectedClassroom ? (
+                  {loading ? (
+                    <div className="text-center py-8 sm:py-12">
+                      <Loading message="Loading classrooms..." size="sm" />
+                    </div>
+                  ) : !selectedClassroom ? (
                     <div className="text-center py-8 sm:py-12 text-gray-500">
                       <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
                       <p className="text-base sm:text-lg font-medium mb-2">Select a Classroom</p>

@@ -82,7 +82,7 @@ export function FormsManagement() {
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
-          classroomsCount: 0
+          classroomsCount: template.classroomsCount ?? 0
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -206,7 +206,7 @@ export function FormsManagement() {
   return <AdminLayout>
       <div className="space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
+          <div className="ml-4 sm:ml-0">
             <h1 className="text-2xl font-bold text-foreground mb-2">
               Forms Management
             </h1>
@@ -217,7 +217,7 @@ export function FormsManagement() {
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 ml-4 sm:ml-0 self-start sm:self-center">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
@@ -577,14 +577,7 @@ export function FormsManagement() {
               <span className="font-medium">{selectedForm?.name}</span>? This
               action cannot be undone.
             </p>
-            {selectedForm?.classroomsCount && selectedForm.classroomsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-800">
-                  This form is assigned to {selectedForm?.classroomsCount}{' '}
-                  classroom{selectedForm?.classroomsCount !== 1 ? 's' : ''}.
-                  Deleting it will remove all assignments.
-                </p>
-              </div>}
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
