@@ -215,6 +215,9 @@ export function ClassroomFormAssignment() {
   const [formSearchQuery, setFormSearchQuery] = useState('');
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
   const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [formToDelete, setFormToDelete] = useState<Form | null>(null);
+  const [deleteStatus, setDeleteStatus] = useState<'idle' | 'deleting' | 'success' | 'error'>('idle');
 
   // Reset search query when component mounts
   useEffect(() => {
@@ -262,28 +265,57 @@ export function ClassroomFormAssignment() {
     setSelectedFormIds([]);
     setIsAssignDialogOpen(false);
   };
-  const handleRemoveForm = async (formId: string) => {
-    if (!selectedClassroom) return;
+  const handleRemoveForm = (formId: string) => {
+    const form = selectedClassroom?.assignedForms.find(f => f.id === formId);
+    if (!form) return;
+    
+    setFormToDelete(form);
+    setDeleteStatus('idle');
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteForm = async () => {
+    if (!selectedClassroom || !formToDelete) return;
+    
+    setDeleteStatus('deleting');
     
     try {
       const user = await fetchUserContext();
       if (!user.schoolId) throw new Error('School context not found');
       
-      await deleteClassFormOverride(formId, selectedClassroom.id);
+      await deleteClassFormOverride(formToDelete.id, selectedClassroom.id);
+      
+      // Update UI on success
+      setClassrooms(classrooms.map(classroom => {
+        if (classroom.id === selectedClassroom.id) {
+          return {
+            ...classroom,
+            assignedForms: classroom.assignedForms.filter(form => form.id !== formToDelete.id)
+          };
+        }
+        return classroom;
+      }));
+      
+      setDeleteStatus('success');
+      
+      // Close modal after showing success
+      setTimeout(() => {
+        setIsDeleteDialogOpen(false);
+        setFormToDelete(null);
+        setDeleteStatus('idle');
+      }, 1500);
+      
     } catch (error) {
       console.log('Failed to delete form override:', error);
+      setDeleteStatus('error');
+      
+      // Close modal after showing error
+      setTimeout(() => {
+        setIsDeleteDialogOpen(false);
+        setFormToDelete(null);
+        setDeleteStatus('idle');
+      }, 2000);
     }
-    
-    // Update UI regardless of API result
-    setClassrooms(classrooms.map(classroom => {
-      if (classroom.id === selectedClassroom.id) {
-        return {
-          ...classroom,
-          assignedForms: classroom.assignedForms.filter(form => form.id !== formId)
-        };
-      }
-      return classroom;
-    }));
   };
   const tabs = [{
     id: 'all',
@@ -545,27 +577,81 @@ export function ClassroomFormAssignment() {
         </div>
       </div>
       
+      {/* Delete Form Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">
+              {deleteStatus === 'success' ? 'Form Removed' : deleteStatus === 'error' ? 'Deletion Failed' : 'Remove Form'}
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="py-4">
+            {deleteStatus === 'idle' && (
+              <p className="text-sm text-gray-600">
+                Are you sure you want to remove <strong>{formToDelete?.name}</strong> from {selectedClassroom?.name}?
+              </p>
+            )}
+            {deleteStatus === 'deleting' && (
+              <div className="flex items-center justify-center py-4">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal"></div>
+                <span className="ml-3 text-sm">Removing form...</span>
+              </div>
+            )}
+            {deleteStatus === 'success' && (
+              <div className="flex items-center justify-center py-4 text-green-600">
+                <CheckCircle2 className="h-8 w-8 mr-3" />
+                <span className="text-sm font-medium">Form successfully removed!</span>
+              </div>
+            )}
+            {deleteStatus === 'error' && (
+              <div className="flex items-center justify-center py-4 text-red-600">
+                <X className="h-8 w-8 mr-3" />
+                <span className="text-sm font-medium">Failed to remove form. Please try again.</span>
+              </div>
+            )}
+          </div>
+          
+          {deleteStatus === 'idle' && (
+            <DialogFooter>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsDeleteDialogOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeleteForm}
+              >
+                Remove Form
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Manage Forms Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-0 m-2">
-          <DialogHeader className="px-4 sm:px-6 py-4 border-b">
-            <DialogTitle className="text-base sm:text-lg font-semibold pr-8">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] flex flex-col">
+          <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
+            <DialogTitle className="text-lg font-semibold">
               Manage Forms for {selectedClassroom?.name}
             </DialogTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               Select forms to add to this classroom
             </p>
           </DialogHeader>
           
-          <div className="px-4 sm:px-6 py-4 space-y-4 flex-1 overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
             {/* Search Bar */}
-            <div className="relative">
+            <div className="relative mb-4 flex-shrink-0">
               <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
                 formSearchQuery ? 'text-amazon-teal' : 'text-muted-foreground'
               }`} />
               <Input 
                 placeholder="Search forms..." 
-                className={`pl-9 text-sm transition-all ${
+                className={`pl-9 transition-all ${
                   formSearchQuery 
                     ? 'border-amazon-teal/30 ring-1 ring-amazon-teal/20 bg-amazon-teal/5' 
                     : ''
@@ -588,31 +674,33 @@ export function ClassroomFormAssignment() {
             </div>
             
             {/* Forms List */}
-            <div className="max-h-[50vh] sm:max-h-[400px] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto min-h-0 pr-2">
               {availableForms.length === 0 ? (
-                <div className="text-center py-6 sm:py-8 text-muted-foreground">
-                  <FileText className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-2 sm:mb-3 opacity-50" />
-                  <p className="font-medium mb-1 text-sm sm:text-base">No Available Forms</p>
-                  {formSearchQuery ? (
-                    <p className="text-xs sm:text-sm">
-                      No forms match your search.
-                    </p>
-                  ) : selectedClassroom?.assignedForms.length === allForms.length ? (
-                    <p className="text-xs sm:text-sm">
-                      All forms are already assigned.
-                    </p>
-                  ) : (
-                    <p className="text-xs sm:text-sm">
-                      No forms available for assignment.
-                    </p>
-                  )}
+                <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                    <p className="font-medium mb-1">No Available Forms</p>
+                    {formSearchQuery ? (
+                      <p className="text-sm">
+                        No forms match your search.
+                      </p>
+                    ) : selectedClassroom?.assignedForms.length === allForms.length ? (
+                      <p className="text-sm">
+                        All forms are already assigned.
+                      </p>
+                    ) : (
+                      <p className="text-sm">
+                        No forms available for assignment.
+                      </p>
+                    )}
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {availableForms.map(form => (
                     <div 
                       key={form.id} 
-                      className="flex items-center p-3 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted"
+                      className="flex items-center p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted min-h-[70px]"
                       onClick={() => {
                         const isSelected = selectedFormIds.includes(form.id);
                         if (isSelected) {
@@ -625,20 +713,20 @@ export function ClassroomFormAssignment() {
                       <Checkbox 
                         id={`form-${form.id}`} 
                         checked={selectedFormIds.includes(form.id)} 
-                        className="mr-3 flex-shrink-0" 
+                        className="mr-4 flex-shrink-0" 
                       />
                       
                       <div className="flex items-center flex-1 min-w-0">
-                        <div className="flex-shrink-0 w-8 h-8 bg-primary/10 rounded-md flex items-center justify-center mr-3">
-                          <FileText className="h-4 w-4 text-primary" />
+                        <div className="flex-shrink-0 w-10 h-10 bg-amazon-teal/10 rounded-lg flex items-center justify-center mr-4">
+                          <FileText className="h-5 w-5 text-amazon-teal" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <div className="font-medium text-sm truncate mb-1">
+                          <div className="font-medium text-base truncate mb-2">
                             {form.name}
                           </div>
                           <Badge 
                             variant={getStatusBadgeVariant(form.status)} 
-                            className="text-xs h-5"
+                            className="text-xs h-6 px-2"
                           >
                             {form.status}
                           </Badge>
@@ -651,30 +739,29 @@ export function ClassroomFormAssignment() {
             </div>
           </div>
           
-          <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t bg-muted/20 flex-shrink-0">
+          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-muted/20">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-              <div className="text-xs sm:text-sm text-muted-foreground text-center sm:text-left">
+              <div className="text-sm text-muted-foreground text-center sm:text-left">
                 {selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected
               </div>
-              <div className="flex gap-2 w-full sm:w-auto">
+              <div className="flex gap-3 w-full sm:w-auto">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsAssignDialogOpen(false);
                     setSelectedFormIds([]);
                   }}
-                  className="flex-1 sm:flex-none text-sm"
+                  className="flex-1 sm:flex-none"
                 >
                   Cancel
                 </Button>
                 <AsyncButton 
                   onClick={handleAssignForms} 
-                  className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none text-sm" 
+                  className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none" 
                   disabled={selectedFormIds.length === 0}
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Add {selectedFormIds.length > 0 ? selectedFormIds.length : ''} Form{selectedFormIds.length !== 1 ? 's' : ''}</span>
-                  <span className="sm:hidden">Add ({selectedFormIds.length})</span>
+                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                  Add {selectedFormIds.length > 0 ? selectedFormIds.length : ''} Form{selectedFormIds.length !== 1 ? 's' : ''}
                 </AsyncButton>
               </div>
             </div>
