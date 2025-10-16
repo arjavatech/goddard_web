@@ -14,7 +14,7 @@ import { fetchUserContext } from '../../services/api/user';
 import { usePagination } from '../../hooks/usePagination';
 
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { fetchStudentEnrollments, updateChildStatus } from '@/services/api/admin';
+import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms } from '@/services/api/admin';
 
 type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
 
@@ -89,7 +89,10 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const enrollmentData = await fetchStudentEnrollments(user.schoolId);
+        const [enrollmentData, classrooms] = await Promise.all([
+          fetchStudentEnrollments(user.schoolId),
+          fetchClassrooms(user.schoolId)
+        ]);
         
         const enrollments = enrollmentData.enrollments || [];
         if (!isMounted) return;
@@ -123,6 +126,9 @@ export function StudentManagement() {
           const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
           const classroomName = enrollment.class_name;
+          // Find the classroom ID by matching the name
+          const classroom = classrooms.find(c => c.name === classroomName);
+          const classroomId = classroom?.id || 'unassigned';
 
           const parentEmail = enrollment.primary_email || 'parent@example.com';
           const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
@@ -138,7 +144,7 @@ export function StudentManagement() {
             formsCompleted: completed,
             totalForms: total,
             classroom: {
-              id: 'unassigned',
+              id: classroomId,
               name: classroomName || 'Unassigned'
             },
             parent: {

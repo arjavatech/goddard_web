@@ -58,7 +58,7 @@ export function ClassroomManagement() {
         if (!isMounted) return;
         
         const mapped: Classroom[] = enrollmentStats.map((stat) => ({
-          id: stat.classId || crypto.randomUUID(),
+          id: stat.classId || stat.className.toLowerCase().replace(/\s+/g, '-'),
           name: stat.className,
           studentsCount: stat.studentCount,
           formsCount: Object.keys(stat.forms ?? {}).length,

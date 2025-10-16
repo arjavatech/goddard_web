@@ -362,17 +362,7 @@ export function ClassroomFormAssignment() {
                 )}
               </div>
               
-              <Button 
-                onClick={() => {
-                  setFormSearchQuery('');
-                  setIsAssignDialogOpen(true);
-                }} 
-                className="bg-amazon-teal hover:bg-amazon-teal/90 w-full lg:w-auto lg:min-w-[140px]"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" /> 
-                Assign Forms
-              </Button>
+             
             </div>
           </div>
           {/* Main Content Grid */}
@@ -492,7 +482,7 @@ export function ClassroomFormAssignment() {
                         size="sm"
                       >
                         <Plus className="h-4 w-4 mr-2" />
-                        Assign Forms
+                        Manage Forms
                       </Button>
                     </div>
                   ) : filteredForms.length === 0 ? (
@@ -555,15 +545,15 @@ export function ClassroomFormAssignment() {
         </div>
       </div>
       
-      {/* Assign Forms Dialog */}
+      {/* Manage Forms Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] p-0 m-2">
           <DialogHeader className="px-4 sm:px-6 py-4 border-b">
             <DialogTitle className="text-base sm:text-lg font-semibold pr-8">
-              Assign Forms to {selectedClassroom?.name}
+              Manage Forms for {selectedClassroom?.name}
             </DialogTitle>
             <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Select forms to assign to this classroom
+              Select forms to add to this classroom
             </p>
           </DialogHeader>
           
@@ -683,8 +673,8 @@ export function ClassroomFormAssignment() {
                   disabled={selectedFormIds.length === 0}
                 >
                   <CheckCircle2 className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Assign {selectedFormIds.length > 0 ? selectedFormIds.length : ''} Form{selectedFormIds.length !== 1 ? 's' : ''}</span>
-                  <span className="sm:hidden">Assign ({selectedFormIds.length})</span>
+                  <span className="hidden sm:inline">Add {selectedFormIds.length > 0 ? selectedFormIds.length : ''} Form{selectedFormIds.length !== 1 ? 's' : ''}</span>
+                  <span className="sm:hidden">Add ({selectedFormIds.length})</span>
                 </AsyncButton>
               </div>
             </div>

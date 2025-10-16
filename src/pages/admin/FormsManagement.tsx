@@ -156,7 +156,16 @@ export function FormsManagement() {
     
     await deleteForm(selectedForm.id, user.schoolId);
     
-    setForms(forms.filter((form: Form) => form.id !== selectedForm.id));
+    // Refetch forms from server to ensure consistency
+    const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+    const mappedForms: Form[] = templates.map(template => ({
+      id: template.id,
+      name: template.formName,
+      link: template.filloutFormUrl ?? '#',
+      status: mapStatus(template.status),
+      classroomsCount: 0
+    }));
+    setForms(mappedForms);
     setIsDeleteDialogOpen(false);
   };
   const resetFormFields = () => {

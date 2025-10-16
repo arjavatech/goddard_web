@@ -8,6 +8,8 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom, fetchClassBasedEnrollments, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
@@ -30,95 +32,7 @@ interface Student {
     email: string;
   };
 }
-const DEFAULT_CLASSROOM = {
-  id: '1',
-  name: 'Sunshine Room',
-  capacity: 20,
-  ageGroup: '3-4 years',
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Active'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Active'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Active'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Active'
-  }] as Form[],
-  students: [{
-    id: '1',
-    firstName: 'Emma',
-    lastName: 'Johnson',
-    enrollmentProgress: 85,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 3,
-    totalForms: 4,
-    parent: {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com'
-    }
-  }, {
-    id: '2',
-    firstName: 'Noah',
-    lastName: 'Smith',
-    enrollmentProgress: 100,
-    enrollmentStatus: 'Complete' as const,
-    formsCompleted: 4,
-    totalForms: 4,
-    parent: {
-      id: '2',
-      name: 'Michael Smith',
-      email: 'michael.smith@example.com'
-    }
-  }, {
-    id: '3',
-    firstName: 'Olivia',
-    lastName: 'Wilson',
-    enrollmentProgress: 50,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 2,
-    totalForms: 4,
-    parent: {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david.wilson@example.com'
-    }
-  }, {
-    id: '4',
-    firstName: 'Sophia',
-    lastName: 'Brown',
-    enrollmentProgress: 25,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 1,
-    totalForms: 4,
-    parent: {
-      id: '3',
-      name: 'Jennifer Brown',
-      email: 'jennifer.brown@example.com'
-    }
-  }, {
-    id: '5',
-    firstName: 'Liam',
-    lastName: 'Davis',
-    enrollmentProgress: 0,
-    enrollmentStatus: 'Not Started' as const,
-    formsCompleted: 0,
-    totalForms: 4,
-    parent: {
-      id: '5',
-      name: 'Robert Davis',
-      email: 'robert.davis@example.com'
-    }
-  }] as Student[]
-};
+
 function inferFormStatus(value: string | null | undefined): Form['status'] {
   const normalized = (value ?? '').toLowerCase();
   if (normalized.includes('default')) return 'Default';
@@ -224,8 +138,8 @@ export function ClassroomDetails() {
           setClassroom({
             id: targetClassroom?.id || '',
             name: className,
-            capacity: 20,
-            ageGroup: '3-4 years',
+            capacity: 0,
+            ageGroup: '',
             assignedForms,
             students
           });
@@ -255,6 +169,14 @@ export function ClassroomDetails() {
       return fullName.includes(query) || parentName.includes(query) || student.parent.email.toLowerCase().includes(query);
     });
   }, [classroom.students, searchQuery]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedStudents,
+    itemsPerPage,
+    setCurrentPage
+  } = usePagination({ data: filteredStudents });
   
   const enrollmentStats = useMemo(() => {
     const totalStudents = classroom.students.length;
@@ -482,7 +404,7 @@ export function ClassroomDetails() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4">
                               <div className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
@@ -531,6 +453,20 @@ export function ClassroomDetails() {
                           </tr>)}
                       </tbody>
                     </table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredStudents.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      className="hidden md:flex"
+                    />
+                    <MobilePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      className="md:hidden"
+                    />
                   </div>}
               </CardContent>
             </Card>
@@ -593,7 +529,7 @@ export function ClassroomDetails() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                             <td className="py-3 px-4">
                               <div className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
@@ -642,6 +578,20 @@ export function ClassroomDetails() {
                           </tr>)}
                       </tbody>
                     </table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredStudents.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      className="hidden md:flex"
+                    />
+                    <MobilePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      className="md:hidden"
+                    />
                   </div>}
               </CardContent>
             </Card>
