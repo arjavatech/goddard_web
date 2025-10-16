@@ -4,6 +4,9 @@ import { Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
+import { useToast } from '../contexts/ToastContext';
+import { AlertModal } from '../components/ui/alert-modal';
+import { useAlertModal } from '../hooks/useAlertModal';
 export function Signup() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -20,10 +23,12 @@ export function Signup() {
     signUpWithPassword
   } = useAuth();
   const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { alertState, showAlert, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert('Passwords do not match');
+      showToast('error', 'Please make sure both password fields match.', 'Passwords do not match');
       return;
     }
     try {
@@ -36,7 +41,7 @@ export function Signup() {
         'Admin' // role
       );
       if (result?.needsConfirmation) {
-        alert('Please confirm your email to continue.');
+        showToast('success', 'Please check your email and click the confirmation link to complete your registration.', 'Account Created Successfully');
         navigate('/login', {
           replace: true
         });
@@ -46,7 +51,7 @@ export function Signup() {
         replace: true
       });
     } catch (err) {
-      alert((err as Error).message);
+      showToast('error', (err as Error).message, 'Registration Failed');
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -166,6 +171,49 @@ export function Signup() {
               <Button type="submit" className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium" disabled={!formData.agreeToTerms}>
                 Create Account
               </Button>
+
+              {/* Test Notifications */}
+              <div className="space-y-2 pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center mb-2">Test Notifications:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showToast('error', 'Please make sure both password fields match.', 'Passwords do not match')}
+                    className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Toast Error
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showToast('success', 'Please check your email and click the confirmation link.', 'Account Created')}
+                    className="text-xs border-green-300 text-green-600 hover:bg-green-50"
+                  >
+                    Toast Success
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showAlert('error', 'This email address is already registered. Please use a different email or try logging in.', 'Email Already Exists')}
+                    className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Modal Error
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showAlert('success', 'Your account has been created successfully! Please check your email for verification.', 'Registration Complete')}
+                    className="text-xs border-green-300 text-green-600 hover:bg-green-50"
+                  >
+                    Modal Success
+                  </Button>
+                </div>
+              </div>
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
@@ -191,5 +239,14 @@ export function Signup() {
           <p>© 2024 Goddard School. All rights reserved.</p>
         </div>
       </div>
+      
+      {/* Alert Modal */}
+      <AlertModal
+        open={alertState.open}
+        onClose={hideAlert}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+      />
     </div>;
 }

@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
 import { fetchUserContext } from '../services/api/user';
-type LocationState = {
-  from?: {
-    pathname?: string;
-  };
-};
+import { useToast } from '../contexts/ToastContext';
+import { AlertModal } from '../components/ui/alert-modal';
+import { useAlertModal } from '../hooks/useAlertModal';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,6 +21,8 @@ export function Login() {
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
+  const { alertState, showAlert, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -45,7 +45,7 @@ export function Login() {
         replace: true
       });
     } catch (err) {
-      alert((err as Error).message);
+      showToast('error', (err as Error).message, 'Login Failed');
     } finally {
       setIsLoading(false);
     }
@@ -140,6 +140,56 @@ export function Login() {
                   </span>
                 </div>
               </div>
+              {/* Test Toast Notifications */}
+              <div className="space-y-2 pt-4 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center mb-2">Test Toast Notifications:</p>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showToast('error', 'Invalid email or password. Please try again.', 'Login Failed')}
+                    className="flex-1 text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Toast Error
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showToast('success', 'Welcome back! You have successfully signed in.', 'Login Successful')}
+                    className="flex-1 text-xs border-green-300 text-green-600 hover:bg-green-50"
+                  >
+                    Toast Success
+                  </Button>
+                </div>
+              </div>
+
+              {/* Test Alert Modals */}
+              <div className="space-y-2 pt-2">
+                <p className="text-xs text-muted-foreground text-center mb-2">Test Alert Modals:</p>
+                <div className="flex gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showAlert('error', 'Your session has expired. Please log in again to continue.', 'Session Expired')}
+                    className="flex-1 text-xs border-red-300 text-red-600 hover:bg-red-50"
+                  >
+                    Modal Error
+                  </Button>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => showAlert('success', 'Your account has been successfully verified and is now active.', 'Account Verified')}
+                    className="flex-1 text-xs border-green-300 text-green-600 hover:bg-green-50"
+                  >
+                    Modal Success
+                  </Button>
+                </div>
+              </div>
+
               {/* Sign Up Link */}
               <Link to="/signup">
                 <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5">
@@ -154,5 +204,14 @@ export function Login() {
           <p>© 2024 Goddard School. All rights reserved.</p>
         </div>
       </div>
+      
+      {/* Alert Modal */}
+      <AlertModal
+        open={alertState.open}
+        onClose={hideAlert}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+      />
     </div>;
 }

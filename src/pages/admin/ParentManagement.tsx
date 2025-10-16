@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState, Children } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Calendar, Users, Clock, RefreshCw } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -219,7 +219,6 @@ export function ParentManagement() {
       
     } catch (error: any) {
       // Handle specific error cases and show notification
-      let errorTitle = 'Invitation Failed';
       let errorMessage = 'Failed to send invitation. Please try again.';
       
       if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
