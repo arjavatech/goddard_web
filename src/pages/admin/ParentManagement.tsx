@@ -302,7 +302,18 @@ export function ParentManagement() {
       await resendParentConfirmation(parentId);
       showToast('success', `Confirmation email resent to ${parentEmail}`);
     } catch (error: any) {
-      showToast('error', 'Failed to resend confirmation. Please try again.');
+      console.error('Resend confirmation error:', error);
+      let errorMessage = 'Failed to resend confirmation. Please try again.';
+      
+      if (error?.response?.status === 404) {
+        errorMessage = 'Parent not found. Please refresh the page and try again.';
+      } else if (error?.response?.status === 400) {
+        errorMessage = 'Invalid request. Please check the parent information.';
+      } else if (error?.message) {
+        errorMessage = `Error: ${error.message}`;
+      }
+      
+      showToast('error', errorMessage);
     }
   };
   const handleDeactivateParent = async () => {
