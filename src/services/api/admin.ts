@@ -522,6 +522,13 @@ export async function assignFormToClassroom(schoolId: string, classroomId: strin
     }
   }, z.union([z.object({}), z.string()]));
 }
+
+export async function deleteClassFormOverride(formTemplateId: string, classroomId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/classrooms/${encodeURIComponent(classroomId)}/forms/${encodeURIComponent(formTemplateId)}`
+  }, z.union([z.object({}), z.string()]));
+}
 export type ChildEnrollment = {
   childId: string;
   childFullName: string;

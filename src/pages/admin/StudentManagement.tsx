@@ -439,11 +439,11 @@ export function StudentManagement() {
                         ) : (
                           <>
                             <SelectItem value="Approved">Approved</SelectItem>
-                            <SelectItem value="Submitted">Submitted</SelectItem>
+                            {/* <SelectItem value="Submitted">Submitted</SelectItem> */}
                             <SelectItem value="In Progress">In Progress</SelectItem>
                             <SelectItem value="Needs Revision">Needs Revision</SelectItem>
                             <SelectItem value="Draft">Draft</SelectItem>
-                            <SelectItem value="Incomplete">Incomplete</SelectItem>
+                            {/* <SelectItem value="Incomplete">Incomplete</SelectItem> */}
                           </>
                         )}
                       </SelectContent>

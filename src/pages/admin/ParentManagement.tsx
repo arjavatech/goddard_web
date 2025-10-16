@@ -423,20 +423,6 @@ export function ParentManagement() {
               {/* Filters */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Statuses</SelectItem>
-                      <SelectItem value="Active">Active</SelectItem>
-                      <SelectItem value="Archive">Archive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div className="space-y-2">
                   <label className="text-sm font-medium text-muted-foreground">Signup Status</label>
                   <Select value={signupFilter} onValueChange={setSignupFilter}>
                     <SelectTrigger>

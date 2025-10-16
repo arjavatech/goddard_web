@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Checkbox } from '../../components/ui/checkbox';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassEnrollmentStats, assignFormToClassroom } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, assignFormToClassroom, deleteClassFormOverride } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
@@ -262,18 +262,28 @@ export function ClassroomFormAssignment() {
     setSelectedFormIds([]);
     setIsAssignDialogOpen(false);
   };
-  const handleRemoveForm = (formId: string) => {
-    if (selectedClassroom) {
-      setClassrooms(classrooms.map(classroom => {
-        if (classroom.id === selectedClassroom.id) {
-          return {
-            ...classroom,
-            assignedForms: classroom.assignedForms.filter(form => form.id !== formId)
-          };
-        }
-        return classroom;
-      }));
+  const handleRemoveForm = async (formId: string) => {
+    if (!selectedClassroom) return;
+    
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      await deleteClassFormOverride(formId, selectedClassroom.id);
+    } catch (error) {
+      console.log('Failed to delete form override:', error);
     }
+    
+    // Update UI regardless of API result
+    setClassrooms(classrooms.map(classroom => {
+      if (classroom.id === selectedClassroom.id) {
+        return {
+          ...classroom,
+          assignedForms: classroom.assignedForms.filter(form => form.id !== formId)
+        };
+      }
+      return classroom;
+    }));
   };
   const tabs = [{
     id: 'all',
