@@ -22,7 +22,7 @@ export function Login() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
-  const { alertState, showAlert, hideAlert } = useAlertModal();
+  const { alertState, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -138,55 +138,6 @@ export function Login() {
                   <span className="bg-card px-4 text-muted-foreground">
                     Don't have an account?
                   </span>
-                </div>
-              </div>
-              {/* Test Toast Notifications */}
-              <div className="space-y-2 pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground text-center mb-2">Test Toast Notifications:</p>
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showToast('error', 'Invalid email or password. Please try again.', 'Login Failed')}
-                    className="flex-1 text-xs border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Toast Error
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showToast('success', 'Welcome back! You have successfully signed in.', 'Login Successful')}
-                    className="flex-1 text-xs border-green-300 text-green-600 hover:bg-green-50"
-                  >
-                    Toast Success
-                  </Button>
-                </div>
-              </div>
-
-              {/* Test Alert Modals */}
-              <div className="space-y-2 pt-2">
-                <p className="text-xs text-muted-foreground text-center mb-2">Test Alert Modals:</p>
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showAlert('error', 'Your session has expired. Please log in again to continue.', 'Session Expired')}
-                    className="flex-1 text-xs border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Modal Error
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showAlert('success', 'Your account has been successfully verified and is now active.', 'Account Verified')}
-                    className="flex-1 text-xs border-green-300 text-green-600 hover:bg-green-50"
-                  >
-                    Modal Success
-                  </Button>
                 </div>
               </div>
 
