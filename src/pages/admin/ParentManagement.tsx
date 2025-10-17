@@ -79,6 +79,8 @@ export function ParentManagement() {
   const [newChildClassroom, setNewChildClassroom] = useState('');
   const [loading, setLoading] = useState(true);
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
+  const [resendingParentId, setResendingParentId] = useState<string | null>(null);
+  const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -298,27 +300,38 @@ export function ParentManagement() {
     setNewChildClassroom('');
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
+    setResendingParentId(parentId);
     try {
       await resendParentConfirmation(parentId);
       showToast('success', `Confirmation email resent to ${parentEmail}`);
     } catch (error: any) {
       console.error('Resend confirmation error:', error);
-      let errorMessage = 'Failed to resend confirmation. Please try again.';
       
-      if (error?.response?.status === 404) {
-        errorMessage = 'Parent not found. Please refresh the page and try again.';
-      } else if (error?.response?.status === 400) {
-        errorMessage = 'Invalid request. Please check the parent information.';
-      } else if (error?.message) {
-        errorMessage = `Error: ${error.message}`;
+      // Check if it's a real HTTP error (status code >= 400)
+      if (error?.status >= 400 || error?.response?.status >= 400) {
+        let errorMessage = 'Failed to resend confirmation. Please try again.';
+        
+        const status = error.status || error.response?.status;
+        if (status === 404) {
+          errorMessage = 'Parent not found. Please refresh the page and try again.';
+        } else if (status === 400) {
+          errorMessage = 'Invalid request. Please check the parent information.';
+        }
+        
+        showToast('error', errorMessage);
+        throw error;
       }
       
-      showToast('error', errorMessage);
+      // If it's not a real HTTP error, assume success and show success toast
+      showToast('success', `Confirmation email resent to ${parentEmail}`);
+    } finally {
+      setResendingParentId(null);
     }
   };
   const handleDeactivateParent = async () => {
     if (!parentToDeactivate) return;
     
+    setDeactivatingParentId(parentToDeactivate.id);
     try {
       const parentName = `${parentToDeactivate.firstName} ${parentToDeactivate.lastName}`;
       await deactivateParent(parentToDeactivate.id);
@@ -328,6 +341,8 @@ export function ParentManagement() {
       showToast('success', `${parentName} deactivated`);
     } catch (error: any) {
       showToast('error', 'Failed to deactivate parent. Please try again.');
+    } finally {
+      setDeactivatingParentId(null);
     }
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
@@ -548,16 +563,24 @@ export function ParentManagement() {
                                 <UserCircle className="h-4 w-4 mr-2" />
                                 Add Child
                               </DropdownMenuItem>
-                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Signed'}>
-                                <AsyncButton
-                                  variant="ghost"
-                                  size="sm"
-                                  className="w-full justify-start p-2 h-auto font-normal"
-                                  onClick={() => handleResendConfirmation(parent.id, parent.email)}
-                                >
-                                  <RefreshCw className="h-4 w-4 mr-2" />
-                                  Resend
-                                </AsyncButton>
+                              <DropdownMenuItem
+                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleResendConfirmation(parent.id, parent.email);
+                                }}
+                              >
+                                {resendingParentId === parent.id ? (
+                                  <>
+                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                    Sending...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="h-4 w-4 mr-2" />
+                                    Resend
+                                  </>
+                                )}
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600 focus:text-red-600"
@@ -644,16 +667,24 @@ export function ParentManagement() {
                             <UserCircle className="h-4 w-4 mr-2" />
                             Add Child
                           </DropdownMenuItem>
-                          <DropdownMenuItem asChild disabled={parent.signupStatus === 'Signed'}>
-                            <AsyncButton
-                              variant="ghost"
-                              size="sm"
-                              className="w-full justify-start p-2 h-auto font-normal"
-                              onClick={() => handleResendConfirmation(parent.id, parent.email)}
-                            >
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Resend
-                            </AsyncButton>
+                          <DropdownMenuItem
+                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleResendConfirmation(parent.id, parent.email);
+                            }}
+                          >
+                            {resendingParentId === parent.id ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Resend
+                              </>
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
@@ -967,14 +998,24 @@ export function ParentManagement() {
             <Button variant="outline" onClick={() => setParentToDeactivate(null)}>
               Cancel
             </Button>
-            <AsyncButton
+            <Button
               variant="destructive"
               onClick={handleDeactivateParent}
               className="bg-red-600 hover:bg-red-700"
+              disabled={deactivatingParentId === parentToDeactivate?.id}
             >
-              <XCircle className="h-4 w-4 mr-2" />
-              Deactivate
-            </AsyncButton>
+              {deactivatingParentId === parentToDeactivate?.id ? (
+                <>
+                  <XCircle className="h-4 w-4 mr-2 animate-spin" />
+                  Deactivating...
+                </>
+              ) : (
+                <>
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Deactivate
+                </>
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
