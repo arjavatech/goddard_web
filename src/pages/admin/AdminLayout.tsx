@@ -5,6 +5,7 @@ import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
+import { AsyncButton } from '../../components/ui/async-button';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -13,6 +14,7 @@ export function AdminLayout({
 }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const {
@@ -20,14 +22,17 @@ export function AdminLayout({
   } = useAuth();
   const { userData } = useUserContext();
   const handleLogout = async () => {
+    setIsLoggingOut(true);
     try {
       await signOut();
       navigate('/login', {
         replace: true
       });
     } catch (err) {
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
     }
-    setShowLogoutModal(false);
   };
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
@@ -153,12 +158,12 @@ export function AdminLayout({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleLogout}>
+            <AsyncButton variant="destructive" onClick={handleLogout}>
               Logout
-            </Button>
+            </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

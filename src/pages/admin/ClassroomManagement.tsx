@@ -33,11 +33,11 @@ export function ClassroomManagement() {
     message: string;
   }>({ open: false, type: 'error', title: '', message: '' });
 
-  const showToast = (message: string) => {
+  const showToast = (type: 'success' | 'error', message: string, title?: string) => {
     setToast({
       open: true,
-      type: 'error',
-      title: '',
+      type,
+      title: title || '',
       message
     });
   };
@@ -99,79 +99,94 @@ export function ClassroomManagement() {
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    await createClassroom(user.schoolId, newClassroomName.trim());
-    
-    // Refetch classrooms to get the actual server data
-    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
-    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
-      id: stat.classId || crypto.randomUUID(),
-      name: stat.className,
-      studentsCount: stat.studentCount,
-      formsCount: Object.keys(stat.forms ?? {}).length,
-      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
-        id: formId,
-        name: formName,
-        status: 'Active' as any
-      }))
-    }));
-    
-    setClassrooms(mapped);
-    setNewClassroomName('');
-    setIsAddDialogOpen(false);
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      await createClassroom(user.schoolId, newClassroomName.trim());
+      
+      // Refetch classrooms to get the actual server data
+      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+        id: stat.classId || crypto.randomUUID(),
+        name: stat.className,
+        studentsCount: stat.studentCount,
+        formsCount: Object.keys(stat.forms ?? {}).length,
+        assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+          id: formId,
+          name: formName,
+          status: 'Active' as any
+        }))
+      }));
+      
+      setClassrooms(mapped);
+      setNewClassroomName('');
+      setIsAddDialogOpen(false);
+      showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
+    } catch (error) {
+      showToast('error', 'Failed to create classroom. Please try again.');
+    }
   };
   const handleEditClassroom = async () => {
     if (!selectedClassroom || !newClassroomName.trim()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
-    
-    // Refetch classrooms to get updated data
-    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
-    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
-      id: stat.classId || crypto.randomUUID(),
-      name: stat.className,
-      studentsCount: stat.studentCount,
-      formsCount: Object.keys(stat.forms ?? {}).length,
-      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
-        id: formId,
-        name: formName,
-        status: 'Active' as any
-      }))
-    }));
-    
-    setClassrooms(mapped);
-    setNewClassroomName('');
-    setIsEditDialogOpen(false);
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
+      
+      // Refetch classrooms to get updated data
+      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+        id: stat.classId || crypto.randomUUID(),
+        name: stat.className,
+        studentsCount: stat.studentCount,
+        formsCount: Object.keys(stat.forms ?? {}).length,
+        assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+          id: formId,
+          name: formName,
+          status: 'Active' as any
+        }))
+      }));
+      
+      setClassrooms(mapped);
+      setNewClassroomName('');
+      setIsEditDialogOpen(false);
+      showToast('success', `Classroom renamed to "${newClassroomName.trim()}" successfully`);
+    } catch (error) {
+      showToast('error', 'Failed to rename classroom. Please try again.');
+    }
   };
   const handleDeleteClassroom = async () => {
     if (!selectedClassroom) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    await deleteClassroom(selectedClassroom.id, user.schoolId);
-    
-    // Refetch classrooms after deletion
-    const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
-    const mapped: Classroom[] = enrollmentStats.map((stat) => ({
-      id: stat.classId || crypto.randomUUID(),
-      name: stat.className,
-      studentsCount: stat.studentCount,
-      formsCount: Object.keys(stat.forms ?? {}).length,
-      assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
-        id: formId,
-        name: formName,
-        status: 'Active' as any
-      }))
-    }));
-    
-    setClassrooms(mapped);
-    setIsDeleteDialogOpen(false);
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      await deleteClassroom(selectedClassroom.id, user.schoolId);
+      
+      // Refetch classrooms after deletion
+      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const mapped: Classroom[] = enrollmentStats.map((stat) => ({
+        id: stat.classId || crypto.randomUUID(),
+        name: stat.className,
+        studentsCount: stat.studentCount,
+        formsCount: Object.keys(stat.forms ?? {}).length,
+        assignedForms: Object.entries(stat.forms ?? {}).map(([formId, formName]) => ({
+          id: formId,
+          name: formName,
+          status: 'Active' as any
+        }))
+      }));
+      
+      setClassrooms(mapped);
+      setIsDeleteDialogOpen(false);
+      showToast('success', `Classroom "${selectedClassroom.name}" deleted successfully`);
+    } catch (error) {
+      showToast('error', 'Failed to delete classroom. Please try again.');
+    }
   };
   const openEditDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
@@ -480,7 +495,7 @@ export function ClassroomManagement() {
               placeholder="Enter classroom name" 
               className="w-full" 
               validationRules={commonValidationRules.classroom}
-              showToast={showToast}
+              showToast={(message) => showToast('error', message)}
               hideToast={hideToast}
               autoFocus 
             />
@@ -511,7 +526,7 @@ export function ClassroomManagement() {
               placeholder="Enter new classroom name" 
               className="w-full" 
               validationRules={commonValidationRules.classroom}
-              showToast={showToast}
+              showToast={(message) => showToast('error', message)}
               hideToast={hideToast}
               autoFocus 
             />

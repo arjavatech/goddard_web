@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -18,6 +18,7 @@ import { fetchUserContext } from '../../services/api/user';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
 interface Child {
@@ -81,6 +82,69 @@ export function ParentManagement() {
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('active');
+  const [deactivatedParents, setDeactivatedParents] = useState<Parent[]>([
+    {
+      id: 'deact-1',
+      firstName: 'Sarah',
+      lastName: 'Johnson',
+      email: 'sarah.johnson@email.com',
+      children: [
+        {
+          id: 'child-deact-1',
+          firstName: 'Emma',
+          lastName: 'Johnson',
+          dob: '2018-03-15',
+          classroom: { id: 'room-1', name: 'Toddlers' }
+        }
+      ],
+      status: 'Archive',
+      signupStatus: 'Signed'
+    },
+    {
+      id: 'deact-2',
+      firstName: 'Michael',
+      lastName: 'Davis',
+      email: 'michael.davis@email.com',
+      children: [
+        {
+          id: 'child-deact-2',
+          firstName: 'Alex',
+          lastName: 'Davis',
+          dob: '2017-08-22',
+          classroom: { id: 'room-2', name: 'Pre-K' }
+        },
+        {
+          id: 'child-deact-3',
+          firstName: 'Sophie',
+          lastName: 'Davis',
+          dob: '2019-11-10',
+          classroom: { id: 'room-1', name: 'Toddlers' }
+        }
+      ],
+      status: 'Archive',
+      signupStatus: 'Signed'
+    },
+    {
+      id: 'deact-3',
+      firstName: 'Lisa',
+      lastName: 'Wilson',
+      email: 'lisa.wilson@email.com',
+      children: [
+        {
+          id: 'child-deact-4',
+          firstName: 'Jake',
+          lastName: 'Wilson',
+          dob: '2018-12-05',
+          classroom: { id: 'room-3', name: 'Kindergarten' }
+        }
+      ],
+      status: 'Archive',
+      signupStatus: 'Not Signed'
+    }
+  ]);
+  const [parentToActivate, setParentToActivate] = useState<Parent | null>(null);
+  const [activatingParentId, setActivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -157,13 +221,16 @@ export function ParentManagement() {
       isMounted = false;
     };
   }, []);
-  const filteredParents = useMemo(() => parents.filter(parent => {
-    const fullName = `${parent.firstName} ${parent.lastName}`.toLowerCase();
-    const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || parent.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || parent.status === statusFilter;
-    const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
-    return matchesSearch && matchesStatus && matchesSignup;
-  }), [parents, searchQuery, statusFilter, signupFilter]);
+  const filteredParents = useMemo(() => {
+    const currentParents = activeTab === 'active' ? parents : deactivatedParents;
+    return currentParents.filter(parent => {
+      const fullName = `${parent.firstName} ${parent.lastName}`.toLowerCase();
+      const matchesSearch = fullName.includes(searchQuery.toLowerCase()) || parent.email.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || parent.status === statusFilter;
+      const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
+      return matchesSearch && matchesStatus && matchesSignup;
+    });
+  }, [parents, deactivatedParents, activeTab, searchQuery, statusFilter, signupFilter]);
 
   const {
     currentPage,
@@ -336,13 +403,38 @@ export function ParentManagement() {
       const parentName = `${parentToDeactivate.firstName} ${parentToDeactivate.lastName}`;
       await deactivateParent(parentToDeactivate.id);
       
+      // Move parent from active to deactivated
+      const deactivatedParent = { ...parentToDeactivate, status: 'Archive' as ParentStatus };
       setParents(parents.filter(p => p.id !== parentToDeactivate.id));
+      setDeactivatedParents([...deactivatedParents, deactivatedParent]);
       setParentToDeactivate(null);
       showToast('success', `${parentName} deactivated`);
     } catch (error: any) {
       showToast('error', 'Failed to deactivate parent. Please try again.');
     } finally {
       setDeactivatingParentId(null);
+    }
+  };
+
+  const handleActivateParent = async () => {
+    if (!parentToActivate) return;
+    
+    setActivatingParentId(parentToActivate.id);
+    try {
+      const parentName = `${parentToActivate.firstName} ${parentToActivate.lastName}`;
+      // Simulate API call - replace with actual API when available
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Move parent from deactivated to active
+      const activatedParent = { ...parentToActivate, status: 'Active' as ParentStatus };
+      setDeactivatedParents(deactivatedParents.filter(p => p.id !== parentToActivate.id));
+      setParents([...parents, activatedParent]);
+      setParentToActivate(null);
+      showToast('success', `${parentName} activated`);
+    } catch (error: any) {
+      showToast('error', 'Failed to activate parent. Please try again.');
+    } finally {
+      setActivatingParentId(null);
     }
   };
   const getSignupStatusBadge = (status: SignupStatus): 'success' | 'secondary' | 'outline' | 'default' => {
@@ -431,9 +523,17 @@ export function ParentManagement() {
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold">Parent Directory</h2>
                 <div className="text-sm text-muted-foreground">
-                  {filteredParents.length} of {parents.length} parents
+                  {filteredParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
                 </div>
               </div>
+              
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="active">Active Parents ({parents.length})</TabsTrigger>
+                  <TabsTrigger value="deactivated">Deactivated Parents ({deactivatedParents.length})</TabsTrigger>
+                </TabsList>
+              </Tabs>
               
               {/* Search Bar */}
               <div className="relative mb-4">
@@ -582,13 +682,23 @@ export function ParentManagement() {
                                   </>
                                 )}
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600"
-                                onClick={() => setParentToDeactivate(parent)}
-                              >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Deactivate
-                              </DropdownMenuItem>
+                              {activeTab === 'active' ? (
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600"
+                                  onClick={() => setParentToDeactivate(parent)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Deactivate
+                                </DropdownMenuItem>
+                              ) : (
+                                <DropdownMenuItem
+                                  className="text-green-600 focus:text-green-600"
+                                  onClick={() => setParentToActivate(parent)}
+                                >
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Activate
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -686,13 +796,23 @@ export function ParentManagement() {
                               </>
                             )}
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
-                            onClick={() => setParentToDeactivate(parent)}
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Deactivate
-                          </DropdownMenuItem>
+                          {activeTab === 'active' ? (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-600"
+                              onClick={() => setParentToDeactivate(parent)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="text-green-600 focus:text-green-600"
+                              onClick={() => setParentToActivate(parent)}
+                            >
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Activate
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1013,6 +1133,46 @@ export function ParentManagement() {
                 <>
                   <XCircle className="h-4 w-4 mr-2" />
                   Deactivate
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Activate Confirmation Dialog */}
+      <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Activate Parent</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to activate{' '}
+              <span className="font-semibold text-foreground">
+                {parentToActivate?.firstName} {parentToActivate?.lastName}
+              </span>
+              ? This will restore their access.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setParentToActivate(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleActivateParent}
+              className="bg-green-600 hover:bg-green-700"
+              disabled={activatingParentId === parentToActivate?.id}
+            >
+              {activatingParentId === parentToActivate?.id ? (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2 animate-spin" />
+                  Activating...
+                </>
+              ) : (
+                <>
+                  <UserCheck className="h-4 w-4 mr-2" />
+                  Activate
                 </>
               )}
             </Button>
