@@ -195,7 +195,7 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
     return [];
   }
 }
-export async function fetchParentDetails(schoolId: string): Promise<ParentDetail[]> {
+export async function fetchParentDetails(schoolId: string): Promise<{ activeParents: ParentDetail[], inactiveParents: ParentDetail[] }> {
   try {
     console.log('Fetching parent details for school ID:', schoolId);
     const data = await authedFetch({
@@ -205,13 +205,11 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
     console.log('Raw parent details response:', data);
     if (typeof data === 'string') {
       console.warn('API returned string for parent details:', data);
-      return [];
+      return { activeParents: [], inactiveParents: [] };
     }
-    if (!Array.isArray(data)) {
-      console.warn('Parent details response is not an array:', data);
-      return [];
-    }
-    const result = data.map(item => ({
+
+    // Helper function to map parent data
+    const mapParentData = (item: any): ParentDetail => ({
       parentId: item.parent_id || item.parentId || '',
       email: item.parent_email || item.email || '',
       firstName: item.parent_first_name || item.firstName,
@@ -239,12 +237,28 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           approved_on: form.approved_on || null
         }))
       }))
-    }));
-    console.log('Processed parent details:', result);
-    return result;
+    });
+
+    // Handle new response format with active_parents and inactive_parents
+    if (data.active_parents !== undefined || data.inactive_parents !== undefined) {
+      const activeParents = Array.isArray(data.active_parents) ? data.active_parents.map(mapParentData) : [];
+      const inactiveParents = Array.isArray(data.inactive_parents) ? data.inactive_parents.map(mapParentData) : [];
+      console.log('Processed parent details (new format):', { activeParents, inactiveParents });
+      return { activeParents, inactiveParents };
+    }
+
+    // Fallback for old format (simple array)
+    if (Array.isArray(data)) {
+      const activeParents = data.map(mapParentData);
+      console.log('Processed parent details (legacy format):', { activeParents, inactiveParents: [] });
+      return { activeParents, inactiveParents: [] };
+    }
+
+    console.warn('Parent details response has unexpected format:', data);
+    return { activeParents: [], inactiveParents: [] };
   } catch (error) {
     console.error('fetchParentDetails error:', error);
-    return [];
+    return { activeParents: [], inactiveParents: [] };
   }
 }
 // export async function reviewStudentFormAssignment(
@@ -476,6 +490,12 @@ export async function deactivateParent(parentId: string): Promise<void> {
   await authedFetch({
     method: 'DELETE',
     url: `/parent/${parentId}`
+  }, z.any());
+}
+export async function activateParent(parentId: string): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: `/parent/${parentId}/activate`
   }, z.any());
 }
 export async function addChild(schoolId: string, _enrollmentId: string, childData: {

@@ -17,7 +17,7 @@ import { commonValidationRules } from '../../lib/validation';
 import { fetchUserContext } from '../../services/api/user';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
-import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent } from '../../services/api/admin';
+import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
@@ -83,66 +83,7 @@ export function ParentManagement() {
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('active');
-  const [deactivatedParents, setDeactivatedParents] = useState<Parent[]>([
-    {
-      id: 'deact-1',
-      firstName: 'Sarah',
-      lastName: 'Johnson',
-      email: 'sarah.johnson@email.com',
-      children: [
-        {
-          id: 'child-deact-1',
-          firstName: 'Emma',
-          lastName: 'Johnson',
-          dob: '2018-03-15',
-          classroom: { id: 'room-1', name: 'Toddlers' }
-        }
-      ],
-      status: 'Archive',
-      signupStatus: 'Signed'
-    },
-    {
-      id: 'deact-2',
-      firstName: 'Michael',
-      lastName: 'Davis',
-      email: 'michael.davis@email.com',
-      children: [
-        {
-          id: 'child-deact-2',
-          firstName: 'Alex',
-          lastName: 'Davis',
-          dob: '2017-08-22',
-          classroom: { id: 'room-2', name: 'Pre-K' }
-        },
-        {
-          id: 'child-deact-3',
-          firstName: 'Sophie',
-          lastName: 'Davis',
-          dob: '2019-11-10',
-          classroom: { id: 'room-1', name: 'Toddlers' }
-        }
-      ],
-      status: 'Archive',
-      signupStatus: 'Signed'
-    },
-    {
-      id: 'deact-3',
-      firstName: 'Lisa',
-      lastName: 'Wilson',
-      email: 'lisa.wilson@email.com',
-      children: [
-        {
-          id: 'child-deact-4',
-          firstName: 'Jake',
-          lastName: 'Wilson',
-          dob: '2018-12-05',
-          classroom: { id: 'room-3', name: 'Kindergarten' }
-        }
-      ],
-      status: 'Archive',
-      signupStatus: 'Not Signed'
-    }
-  ]);
+  const [deactivatedParents, setDeactivatedParents] = useState<Parent[]>([]);
   const [parentToActivate, setParentToActivate] = useState<Parent | null>(null);
   const [activatingParentId, setActivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
@@ -156,8 +97,8 @@ export function ParentManagement() {
         if (!user.schoolId) return;
 
         // Fetch both parent details and classrooms
-        const [parentDetails, classroomData] = await Promise.all([
-          fetchParentDetails(user.schoolId).catch(() => []),
+        const [parentDetailsResponse, classroomData] = await Promise.all([
+          fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] })),
           fetchClassrooms(user.schoolId).catch((error) => {
             console.error('fetchClassrooms failed:', error);
             return [];
@@ -180,35 +121,46 @@ export function ParentManagement() {
         } else {
           console.warn('No classroom data available');
         }
-        if (parentDetails.length > 0) {
-          const mappedParents: Parent[] = parentDetails.map(detail => {
-            const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
-            const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
-            const children: Child[] = detail.children?.map(child => {
-              const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
-              return {
-                id: child.childId,
-                firstName: childFirstName || 'Unknown',
-                lastName: childLastNameParts.join(' ') || 'Child',
-                dob: child.childDob || '—',
-                classroom: {
-                  id: child.classroomId || 'unassigned',
-                  name: child.classroomName || 'Unassigned'
-                }
-              };
-            }) || [];
-            const hasCompletedForms = detail.children?.some(child => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
+
+        // Helper function to map parent details to Parent type
+        const mapParentDetails = (detail: any): Parent => {
+          const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
+          const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
+          const children: Child[] = detail.children?.map((child: any) => {
+            const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
             return {
-              id: detail.parentId,
-              firstName,
-              lastName,
-              email: detail.email,
-              children,
-              status: hasCompletedForms ? 'Active' : 'Archive',
-              signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
-            } satisfies Parent;
-          });
-          setParents(mappedParents);
+              id: child.childId,
+              firstName: childFirstName || 'Unknown',
+              lastName: childLastNameParts.join(' ') || 'Child',
+              dob: child.childDob || '—',
+              classroom: {
+                id: child.classroomId || 'unassigned',
+                name: child.classroomName || 'Unassigned'
+              }
+            };
+          }) || [];
+          const hasCompletedForms = detail.children?.some((child: any) => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
+          return {
+            id: detail.parentId,
+            firstName,
+            lastName,
+            email: detail.email,
+            children,
+            status: hasCompletedForms ? 'Active' : 'Archive',
+            signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
+          } satisfies Parent;
+        };
+
+        // Map active parents
+        if (parentDetailsResponse.activeParents.length > 0) {
+          const mappedActiveParents = parentDetailsResponse.activeParents.map(mapParentDetails);
+          setParents(mappedActiveParents);
+        }
+
+        // Map inactive parents
+        if (parentDetailsResponse.inactiveParents.length > 0) {
+          const mappedInactiveParents = parentDetailsResponse.inactiveParents.map(mapParentDetails);
+          setDeactivatedParents(mappedInactiveParents);
         }
       } catch (error) {
       } finally {
@@ -418,13 +370,12 @@ export function ParentManagement() {
 
   const handleActivateParent = async () => {
     if (!parentToActivate) return;
-    
+
     setActivatingParentId(parentToActivate.id);
     try {
       const parentName = `${parentToActivate.firstName} ${parentToActivate.lastName}`;
-      // Simulate API call - replace with actual API when available
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
+      await activateParent(parentToActivate.id);
+
       // Move parent from deactivated to active
       const activatedParent = { ...parentToActivate, status: 'Active' as ParentStatus };
       setDeactivatedParents(deactivatedParents.filter(p => p.id !== parentToActivate.id));
@@ -646,7 +597,7 @@ export function ParentManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed'}>
+                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
                                 <Link to={`/admin/parents/${parent.id}`} state={{
                             parentData: parent
                           }}>
@@ -655,7 +606,7 @@ export function ParentManagement() {
                                 </Link>
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Not Signed'}
+                                disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
                                 onClick={() => {
                           setSelectedParent(parent);
                           setIsAddChildDialogOpen(true);
@@ -664,7 +615,7 @@ export function ParentManagement() {
                                 Add Child
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   handleResendConfirmation(parent.id, parent.email);
@@ -760,7 +711,7 @@ export function ParentManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed'}>
+                          <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
                             <Link to={`/admin/parents/${parent.id}`} state={{
                               parentData: parent
                             }}>
@@ -769,7 +720,7 @@ export function ParentManagement() {
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            disabled={parent.signupStatus === 'Not Signed'}
+                            disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
                             onClick={() => {
                               setSelectedParent(parent);
                               setIsAddChildDialogOpen(true);
@@ -778,7 +729,7 @@ export function ParentManagement() {
                             Add Child
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id}
+                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
                             onClick={(e) => {
                               e.preventDefault();
                               handleResendConfirmation(parent.id, parent.email);

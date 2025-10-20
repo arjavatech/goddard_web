@@ -111,8 +111,11 @@ export function ParentDetails() {
         const user = await fetchUserContext();
         if (!user.schoolId || !parentId) return;
         // Always fetch from parent details API which has the forms data
-        const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
-        let parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
+        const parentDetailsResponse = await fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
+        // Search in both active and inactive parents
+        let parentRecord = parentDetailsResponse.activeParents.find(detail => detail.parentId === parentId)
+          || parentDetailsResponse.inactiveParents.find(detail => detail.parentId === parentId)
+          || null;
         // If not found in parent details, use passed data as fallback
         if (!parentRecord && passedParentData) {
           parentRecord = {
