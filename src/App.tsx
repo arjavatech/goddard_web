@@ -13,7 +13,7 @@ export function App() {
       if (userData.role === 'Admin') {
         setShouldRedirect('/admin');
       } else if (userData.role === 'Parent') {
-        // Parent stays on the root dashboard
+        // Parent stays on the dashboard
         setShouldRedirect(null);
       }
     }
