@@ -515,34 +515,6 @@ export function FormsDocuments({
             )}
             {!showThankYou && (
               <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-green-600 border-green-300 hover:bg-green-50 text-xs sm:text-sm"
-                  onClick={() => {
-                    // Manual trigger for thank you state
-                    setShowThankYou(true);
-                    setCountdown(5);
-                    
-                    countdownRef.current = setInterval(() => {
-                      setCountdown(prev => {
-                        if (prev <= 1) {
-                          setSelectedForm(null);
-                          setShowThankYou(false);
-                          setIsFrameLoading(false);
-                          if (countdownRef.current) clearInterval(countdownRef.current);
-                          // Trigger refresh when auto-redirecting
-                          if (onFormCompleted) onFormCompleted();
-                          return 0;
-                        }
-                        return prev - 1;
-                      });
-                    }, 1000);
-                  }}
-                >
-                  <span className="hidden sm:inline">Form Completed?</span>
-                  <span className="sm:hidden">Completed?</span>
-                </Button>
                 <StatusBadge status={selectedForm.status} />
               </div>
             )}
