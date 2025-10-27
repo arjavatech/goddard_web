@@ -31,13 +31,24 @@ export function Signup() {
       showToast('error', 'Please make sure both password fields match.', 'Passwords do not match');
       return;
     }
+    
+    // Get selected school from localStorage
+    const selectedSchool = localStorage.getItem('selectedSchool');
+    const schoolId = selectedSchool ? JSON.parse(selectedSchool).id : null;
+    
+    if (!schoolId) {
+      showToast('error', 'Please select a school first.', 'School Required');
+      navigate('/select-school');
+      return;
+    }
+    
     try {
       const result = await signUpWithPassword(
         formData.email,
         formData.password,
         formData.firstName,
         formData.lastName,
-        '8863a33c-ab95-4ab9-8b47-24e33bc52849', // school_id
+        schoolId,
         'Admin' // role
       );
       if (result?.needsConfirmation) {
