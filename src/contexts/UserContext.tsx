@@ -31,15 +31,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setUserData(data);
     } catch (err) {
       console.error('Failed to fetch user context:', err);
-
-      // Check if it's a session expiration error
-      const errorCode = (err as any).code;
-      if (errorCode === 'session_not_found') {
-        // Session expired - error will be handled by http.ts redirect
-        setError('Session expired. Redirecting to login...');
-      } else {
-        setError(err instanceof Error ? err.message : 'Failed to load user data');
-      }
+      setError(err instanceof Error ? err.message : 'Failed to load user data');
     } finally {
       setLoading(false);
     }

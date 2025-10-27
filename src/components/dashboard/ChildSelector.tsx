@@ -33,7 +33,7 @@ export function ChildSelector({
   }
   const selectedChild = children.find(child => child.id === selectedChildId) || children[0];
   return <div className="mb-6">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2">
         <h1 className="text-2xl font-bold text-foreground">Parent Dashboard</h1>
         <div className="relative">
           <div className="flex items-center bg-white/80 rounded-full px-3 py-1 border border-gray-200 shadow-sm cursor-pointer" onClick={() => setIsOpen(!isOpen)}>
@@ -45,7 +45,7 @@ export function ChildSelector({
             </div>
             <ChevronDown className="w-4 h-4 ml-2 text-gray-500" />
           </div>
-          {isOpen && <Card className="glass-card absolute top-full right-0 mt-2 z-10 w-64 py-2 shadow-lg">
+          {isOpen && <Card className="glass-card absolute top-full right-0 mt-2 z-10 w-full min-w-[200px] max-w-[280px] py-2 shadow-lg">
               <div className="max-h-80 overflow-auto">
                 {children.map(child => <div key={child.id} className={cn('flex items-center gap-3 px-4 py-2 cursor-pointer hover:bg-gray-50', child.id === selectedChildId && 'bg-gray-50')} onClick={() => {
               onSelectChild(child.id);
@@ -59,7 +59,13 @@ export function ChildSelector({
                         {child.name}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Age: {child.age} • DOB: {child.dob}
+                        Age: {(() => {
+                          if (!child.dob || child.dob === '—') return '—';
+                          const birthDate = new Date(child.dob);
+                          if (isNaN(birthDate.getTime())) return '—';
+                          const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+                          return age >= 0 ? age : '—';
+                        })()} • DOB: {child.dob}
                       </p>
                     </div>
                     {child.id === selectedChildId && <Check className="w-4 h-4 text-amazon-teal" />}

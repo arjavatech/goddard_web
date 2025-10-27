@@ -10,7 +10,7 @@ interface AsyncButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   className?: string;
 }
 
-export function AsyncButton({ 
+export const AsyncButton = React.forwardRef<HTMLButtonElement, AsyncButtonProps>(({ 
   onClick, 
   children, 
   variant = 'default',
@@ -18,11 +18,11 @@ export function AsyncButton({
   className,
   disabled,
   ...props 
-}: AsyncButtonProps) {
+}, ref) => {
   const [state, setState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
 
   const handleClick = async () => {
-    if (state === 'loading') return;
+    if (state === 'loading' || state === 'success') return;
     
     setState('loading');
     try {
@@ -72,6 +72,7 @@ export function AsyncButton({
   return (
     <Button
       {...props}
+      ref={ref}
       variant={getVariant()}
       size={size}
       className={className}
@@ -81,4 +82,6 @@ export function AsyncButton({
       {getButtonContent()}
     </Button>
   );
-}
+});
+
+AsyncButton.displayName = 'AsyncButton';

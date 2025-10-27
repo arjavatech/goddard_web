@@ -123,19 +123,19 @@ export function SetPassword() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amazon-teal to-purple-600 p-4">
-        <Card className="w-full max-w-md">
+      <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md glass-card">
           <CardContent className="pt-6 text-center">
             <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle className="h-12 w-12 text-green-600" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            <h1 className="text-2xl font-bold text-foreground mb-2">
               Welcome to Goddard School! 🎉
             </h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
               Your password has been set successfully. You can now access your parent portal to manage your child's enrollment and view form assignments.
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-muted-foreground">
               Redirecting to login...
             </p>
           </CardContent>
@@ -145,37 +145,26 @@ export function SetPassword() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amazon-teal to-purple-600 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Header with Logo */}
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex justify-center">
             <img src="./images/gs_logo_lynnwood.png" alt="Goddard School Logo" className="h-16 sm:h-20 w-auto max-w-full" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-semibold text-foreground">
+              Set Your Password
+            </h1>
+            <p className="text-muted-foreground">
+              Welcome to Goddard School! Create a secure password to complete your account setup.
+            </p>
           </div>
         </div>
 
-        <Card className="w-full">
-        <CardHeader className="space-y-4">
-
-          {/* Step Indicator */}
-          <div className="flex justify-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-semibold">
-              1
-            </div>
-            <div className="w-8 h-8 rounded-full bg-amazon-teal text-white flex items-center justify-center text-sm font-semibold">
-              2
-            </div>
-            <div className="w-8 h-8 rounded-full bg-gray-300 text-gray-600 flex items-center justify-center text-sm font-semibold">
-              3
-            </div>
-          </div>
-
-          <CardTitle className="text-2xl font-bold text-center">
-            Set Your Password
-          </CardTitle>
-          <p className="text-center text-muted-foreground">
-            Welcome to Goddard School! Please create a secure password to complete your account setup.
-          </p>
+        <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="text-center">Create Password</CardTitle>
         </CardHeader>
 
         <CardContent>
@@ -194,22 +183,23 @@ export function SetPassword() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 New Password
               </label>
               <div className="relative">
-                <Input
+                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
-                  className="pr-10"
+                  className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -217,22 +207,23 @@ export function SetPassword() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
+              <label className="text-sm font-medium text-foreground">
                 Confirm Password
               </label>
               <div className="relative">
-                <Input
+                <Shield className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Confirm your password"
-                  className="pr-10"
+                  className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -240,15 +231,15 @@ export function SetPassword() {
             </div>
 
             {/* Password Requirements */}
-            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-              <h4 className="text-sm font-semibold text-gray-700 mb-2">
+            <div className="bg-muted/20 rounded-lg p-4 space-y-2">
+              <h4 className="text-sm font-semibold text-foreground mb-2">
                 Password Requirements:
               </h4>
               {requirements.map((req, index) => (
                 <div
                   key={index}
                   className={`flex items-center gap-2 text-sm ${
-                    req.valid ? 'text-green-600' : 'text-gray-600'
+                    req.valid ? 'text-green-600' : 'text-muted-foreground'
                   }`}
                 >
                   {req.valid ? (
@@ -263,20 +254,37 @@ export function SetPassword() {
 
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-amazon-teal to-purple-600 hover:from-amazon-teal/90 hover:to-purple-600/90"
+              className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!allRequirementsMet || loading || !sessionReady}
             >
-              {loading ? 'Setting Password...' : !sessionReady ? 'Authenticating...' : 'Set Password'}
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Setting Password...
+                </div>
+              ) : !sessionReady ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Authenticating...
+                </div>
+              ) : (
+                'Set Password'
+              )}
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t text-center">
+          <div className="mt-6 pt-6 border-t border-border text-center">
             <p className="text-sm text-muted-foreground">
               Need help? Contact your school administrator
             </p>
           </div>
         </CardContent>
       </Card>
+      
+      {/* Footer */}
+      <div className="text-center text-sm text-muted-foreground">
+        <p>© 2024 Goddard School. All rights reserved.</p>
+      </div>
       </div>
     </div>
   );

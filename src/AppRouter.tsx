@@ -1,8 +1,10 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { App } from './App';
+import SelectSchool from './SelectSchool';
 
 import { UserProvider } from './contexts/UserContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { SetPassword } from './pages/SetPassword';
@@ -19,9 +21,11 @@ import { FormView } from './pages/admin/FormView';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
   return <UserProvider>
+      <ToastProvider>
         <BrowserRouter>
           <Routes>
-          <Route path="/" element={<ProtectedRoute>
+          <Route path="/" element={<SelectSchool />} />
+          <Route path="/dashboard" element={<ProtectedRoute>
                 <App />
               </ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
@@ -43,5 +47,6 @@ export function AppRouter() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </ToastProvider>
     </UserProvider>;
 }

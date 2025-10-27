@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail, Phone, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer } from 'lucide-react';
+import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -98,10 +98,10 @@ export function ParentDetails() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [toast, setToast] = useState<{
     open: boolean;
-    type: 'success' | 'error' | 'warning' | 'info';
+    type: 'success' | 'error';
     title: string;
     message: string;
-  }>({ open: false, type: 'info', title: '', message: '' });
+  }>({ open: false, type: 'success', title: '', message: '' });
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -111,8 +111,11 @@ export function ParentDetails() {
         const user = await fetchUserContext();
         if (!user.schoolId || !parentId) return;
         // Always fetch from parent details API which has the forms data
-        const parentDetails = await fetchParentDetails(user.schoolId).catch(() => []);
-        let parentRecord = parentDetails.find(detail => detail.parentId === parentId) || null;
+        const parentDetailsResponse = await fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
+        // Search in both active and inactive parents
+        let parentRecord = parentDetailsResponse.activeParents.find(detail => detail.parentId === parentId)
+          || parentDetailsResponse.inactiveParents.find(detail => detail.parentId === parentId)
+          || null;
         // If not found in parent details, use passed data as fallback
         if (!parentRecord && passedParentData) {
           parentRecord = {
@@ -134,6 +137,9 @@ export function ParentDetails() {
           };
         }
         if (!parentRecord) {
+          if (isMounted) {
+            window.location.href = '/admin/parents';
+          }
           return;
         }
         const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
@@ -351,7 +357,7 @@ export function ParentDetails() {
 
         setToast({
           open: true,
-          type: 'info',
+          type: 'success',
           title: '',
           message: 'Print dialog opening...'
         });
@@ -367,7 +373,7 @@ export function ParentDetails() {
       if (printWindow) {
         setToast({
           open: true,
-          type: 'info',
+          type: 'success',
           title: '',
           message: 'Use Ctrl+P to print'
         });
@@ -497,13 +503,10 @@ export function ParentDetails() {
           </div>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Mail className="h-4 w-4" />
+              <MailIcon className="h-4 w-4" />
               {parent.email}
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Phone className="h-4 w-4" />
-              {parent.phone}
-            </div>
+            
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -564,13 +567,10 @@ export function ParentDetails() {
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
+                <MailIcon className="h-4 w-4 text-muted-foreground" />
                 {parent.email}
               </div>
-              <div className="flex items-center gap-2">
-                <Phone className="h-4 w-4" />
-                {parent.phone || '—'}
-              </div>
+              
               <div className="flex items-center gap-2">
                 <School className="h-4 w-4" />
                 Primary Guardian
@@ -828,7 +828,7 @@ export function ParentDetails() {
       {/* Toast Notification */}
       <Toast
         open={toast.open}
-        onOpenChange={(open) => setToast(prev => ({ ...prev, open }))}
+        onClose={() => setToast(prev => ({ ...prev, open: false }))}
         type={toast.type}
         title={toast.title}
         message={toast.message}

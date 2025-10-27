@@ -1,17 +1,16 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Shield, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
 import { fetchUserContext } from '../services/api/user';
-type LocationState = {
-  from?: {
-    pathname?: string;
-  };
-};
+import { useToast } from '../contexts/ToastContext';
+import { AlertModal } from '../components/ui/alert-modal';
+import { useAlertModal } from '../hooks/useAlertModal';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -22,8 +21,11 @@ export function Login() {
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
+  const { alertState, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsLoading(true);
     try {
       await signInWithPassword(formData.email, formData.password);
 
@@ -36,14 +38,16 @@ export function Login() {
       if (!redirectTo) {
         // Check role case-insensitively (API returns 'Admin' with capital A)
         const isAdmin = userContext.role && userContext.role.toLowerCase() === 'admin';
-        redirectTo = isAdmin ? '/admin' : '/';
+        redirectTo = isAdmin ? '/admin' : '/dashboard';
       }
 
       navigate(redirectTo, {
         replace: true
       });
     } catch (err) {
-      alert((err as Error).message);
+      showToast('error', (err as Error).message, 'Login Failed');
+    } finally {
+      setIsLoading(false);
     }
   };
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,8 +119,15 @@ export function Login() {
                 </Link>
               </div>
               {/* Sign In Button */}
-              <Button type="submit" className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium">
-                Sign In
+              <Button type="submit" disabled={isLoading} className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+                {isLoading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Signing In...
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
               {/* Divider */}
               <div className="relative my-6">
@@ -129,6 +140,7 @@ export function Login() {
                   </span>
                 </div>
               </div>
+
               {/* Sign Up Link */}
               <Link to="/signup">
                 <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5">
@@ -143,5 +155,14 @@ export function Login() {
           <p>© 2024 Goddard School. All rights reserved.</p>
         </div>
       </div>
+      
+      {/* Alert Modal */}
+      <AlertModal
+        open={alertState.open}
+        onClose={hideAlert}
+        type={alertState.type}
+        title={alertState.title}
+        message={alertState.message}
+      />
     </div>;
 }

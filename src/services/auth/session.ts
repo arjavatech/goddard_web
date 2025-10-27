@@ -1,6 +1,9 @@
 import { type User } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
+let isRefreshing = false;
+let refreshPromise: Promise<string | null> | null = null;
+
 export async function getAuthToken(): Promise<string | null> {
   if (isAuthBypassed) return 'bypass-token';
   if (!supabase) return null;
@@ -13,16 +16,31 @@ export async function getAuthToken(): Promise<string | null> {
     return sessionData.session.access_token;
   }
 
-  // If no session, try to refresh the session
-  const { data: refreshData, error } = await supabase.auth.refreshSession();
-
-  if (error || !refreshData.session?.access_token) {
-    // Session refresh failed - user needs to log in again
-    console.error('Failed to refresh session:', error);
-    return null;
+  // If already refreshing, wait for the existing refresh
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
   }
 
-  return refreshData.session.access_token;
+  // Start refresh process
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const { data: refreshData, error } = await supabase.auth.refreshSession();
+
+      if (error || !refreshData.session?.access_token) {
+        // Session refresh failed - user needs to log in again
+        console.error('Failed to refresh session:', error);
+        return null;
+      }
+
+      return refreshData.session.access_token;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
 }
 export async function getCurrentUser(): Promise<User | null> {
   if (isAuthBypassed) {

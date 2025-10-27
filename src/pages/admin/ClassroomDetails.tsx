@@ -8,8 +8,10 @@ import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, fetchParentDetails, renameClassroom } from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 interface Form {
   id: string;
@@ -30,95 +32,7 @@ interface Student {
     email: string;
   };
 }
-const DEFAULT_CLASSROOM = {
-  id: '1',
-  name: 'Sunshine Room',
-  capacity: 20,
-  ageGroup: '3-4 years',
-  assignedForms: [{
-    id: '1',
-    name: 'Admission Form',
-    status: 'Active'
-  }, {
-    id: '2',
-    name: 'Medical Authorization',
-    status: 'Active'
-  }, {
-    id: '3',
-    name: 'Emergency Contact Form',
-    status: 'Active'
-  }, {
-    id: '4',
-    name: 'Photo Release Form',
-    status: 'Active'
-  }] as Form[],
-  students: [{
-    id: '1',
-    firstName: 'Emma',
-    lastName: 'Johnson',
-    enrollmentProgress: 85,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 3,
-    totalForms: 4,
-    parent: {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.johnson@example.com'
-    }
-  }, {
-    id: '2',
-    firstName: 'Noah',
-    lastName: 'Smith',
-    enrollmentProgress: 100,
-    enrollmentStatus: 'Complete' as const,
-    formsCompleted: 4,
-    totalForms: 4,
-    parent: {
-      id: '2',
-      name: 'Michael Smith',
-      email: 'michael.smith@example.com'
-    }
-  }, {
-    id: '3',
-    firstName: 'Olivia',
-    lastName: 'Wilson',
-    enrollmentProgress: 50,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 2,
-    totalForms: 4,
-    parent: {
-      id: '4',
-      name: 'David Wilson',
-      email: 'david.wilson@example.com'
-    }
-  }, {
-    id: '4',
-    firstName: 'Sophia',
-    lastName: 'Brown',
-    enrollmentProgress: 25,
-    enrollmentStatus: 'In Progress' as const,
-    formsCompleted: 1,
-    totalForms: 4,
-    parent: {
-      id: '3',
-      name: 'Jennifer Brown',
-      email: 'jennifer.brown@example.com'
-    }
-  }, {
-    id: '5',
-    firstName: 'Liam',
-    lastName: 'Davis',
-    enrollmentProgress: 0,
-    enrollmentStatus: 'Not Started' as const,
-    formsCompleted: 0,
-    totalForms: 4,
-    parent: {
-      id: '5',
-      name: 'Robert Davis',
-      email: 'robert.davis@example.com'
-    }
-  }] as Student[]
-};
+
 function inferFormStatus(value: string | null | undefined): Form['status'] {
   const normalized = (value ?? '').toLowerCase();
   if (normalized.includes('default')) return 'Default';
@@ -126,11 +40,11 @@ function inferFormStatus(value: string | null | undefined): Form['status'] {
   if (normalized.includes('archive')) return 'Archive';
   return 'Active';
 }
-function formsFromRecord(record: Record<string, string>): Form[] {
-  return Object.entries(record).map(([id, status]) => ({
-    id,
-    name: id.replace(/[-_]/g, ' '),
-    status: inferFormStatus(status)
+function formsFromRecord(record: Record<string, string | null>): Form[] {
+  return Object.entries(record).map(([formId, formName]) => ({
+    id: formId,
+    name: formName || 'Unnamed Form',
+    status: 'Active' as Form['status']
   }));
 }
 function friendlyNameFromEmail(email: string): string {
@@ -143,64 +57,110 @@ export function ClassroomDetails() {
   } = useParams<{
     classroomId: string;
   }>();
-  const [classroom, setClassroom] = useState(DEFAULT_CLASSROOM);
+  const [classroom, setClassroom] = useState({
+    id: '',
+    name: '',
+    capacity: 0,
+    ageGroup: '',
+    assignedForms: [] as Form[],
+    students: [] as Student[]
+  });
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     let isMounted = true;
-    (async () => {
+    
+    const loadClassroomData = async () => {
+      if (!classroomId) return;
+      
       try {
+        setLoading(true);
+        setError(null);
+        
         const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        const [classrooms, classStats, enrollments, parents] = await Promise.all([fetchClassrooms(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => []), fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchParentDetails(user.schoolId).catch(() => [])]);
-        const parentByEmail = new Map<string, string>();
-        parents.forEach(parent => {
-          parentByEmail.set(parent.email.toLowerCase(), parent.parentId);
-        });
-        const targetClassroom = classrooms.find(cls => cls.id === classroomId) || classrooms.find(cls => cls.name === DEFAULT_CLASSROOM.name);
-        if (!targetClassroom) return;
-        const className = targetClassroom.name;
+        if (!user.schoolId) {
+          if (isMounted) {
+            setError('No school ID found');
+            setLoading(false);
+          }
+          return;
+        }
+
+        // Fetch class-based enrollments using the new API
+        const [classrooms, classStats, classEnrollments] = await Promise.all([
+          fetchClassrooms(user.schoolId).catch(() => []),
+          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
+          fetchClassBasedEnrollments(user.schoolId, classroomId).catch(() => [])
+        ]);
+
+        const targetClassroom = classrooms.find(cls => cls.id === classroomId);
+        if (!targetClassroom && isMounted) {
+          setError('Classroom not found');
+          setLoading(false);
+          return;
+        }
+
+        const className = targetClassroom?.name || '';
         const stats = classStats.find(stat => stat.className === className);
-        const assignedForms = stats ? formsFromRecord(stats.forms) : DEFAULT_CLASSROOM.assignedForms;
-        const classStudents = enrollments.filter(child => (child.className ?? '').toLowerCase() === className.toLowerCase());
-        const students: Student[] = classStudents.map(child => {
-          const entries = Object.entries(child.forms);
+        const assignedForms = stats ? formsFromRecord(stats.forms) : [];
+
+        // Transform class-based enrollments to Student interface
+        const students: Student[] = classEnrollments.map((enrollment: ClassBasedEnrollment) => {
+          const entries = Object.entries(enrollment.forms || {});
           const completed = entries.filter(([, status]) => COMPLETION_STATUSES.has(normalizeFormStatus(status))).length;
-          const total = entries.length || assignedForms.length || DEFAULT_CLASSROOM.students[0].totalForms;
+          const total = entries.length || assignedForms.length || 4;
           const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
-          const email = child.primaryEmail ?? child.additionalParentEmail ?? 'guardian@example.com';
-          const parentId = parentByEmail.get(email.toLowerCase()) ?? child.childId;
+          const email = enrollment.primary_email || enrollment.additional_parent_email || 'guardian@example.com';
+
+          // Construct parent name from first and last name
+          const parentName = `${enrollment.parent_first_name || ''} ${enrollment.parent_last_name || ''}`.trim() || friendlyNameFromEmail(email);
+
           return {
-            id: child.childId,
-            firstName: child.firstName,
-            lastName: child.lastName,
+            id: enrollment.child_id,
+            firstName: enrollment.child_first_name,
+            lastName: enrollment.child_last_name,
             enrollmentProgress: progress,
             enrollmentStatus,
             formsCompleted: completed,
             totalForms: total,
             parent: {
-              id: parentId,
-              name: friendlyNameFromEmail(email),
+              id: enrollment.parent_id,
+              name: parentName,
               email
             }
           } satisfies Student;
         });
-        if (!isMounted) return;
-        setClassroom({
-          id: targetClassroom.id,
-          name: className,
-          capacity: DEFAULT_CLASSROOM.capacity,
-          ageGroup: DEFAULT_CLASSROOM.ageGroup,
-          assignedForms,
-          students: students.length > 0 ? students : DEFAULT_CLASSROOM.students
-        });
+
+        if (isMounted) {
+          setClassroom({
+            id: targetClassroom?.id || '',
+            name: className,
+            capacity: 0,
+            ageGroup: '',
+            assignedForms,
+            students
+          });
+          setLoading(false);
+        }
       } catch (error) {
+        console.error('Error loading classroom details:', error);
+        if (isMounted) {
+          setError('Failed to load classroom details');
+          setLoading(false);
+        }
       }
-    })();
+    };
+
+    loadClassroomData();
+    
     return () => {
       isMounted = false;
     };
   }, [classroomId]);
+
   const filteredStudents = useMemo(() => {
     const query = searchQuery.toLowerCase();
     return classroom.students.filter(student => {
@@ -209,6 +169,15 @@ export function ClassroomDetails() {
       return fullName.includes(query) || parentName.includes(query) || student.parent.email.toLowerCase().includes(query);
     });
   }, [classroom.students, searchQuery]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedStudents,
+    itemsPerPage,
+    setCurrentPage
+  } = usePagination({ data: filteredStudents });
+  
   const enrollmentStats = useMemo(() => {
     const totalStudents = classroom.students.length;
     const complete = classroom.students.filter(s => s.enrollmentStatus === 'Complete').length;
@@ -224,6 +193,35 @@ export function ClassroomDetails() {
       averageProgress
     };
   }, [classroom.students]);
+
+  if (loading) {
+    return <AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-2"></div>
+          <p className="text-gray-500">Loading classroom details...</p>
+        </div>
+      </div>
+    </AdminLayout>;
+  }
+
+  if (error) {
+    return <AdminLayout>
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-2" />
+          <p className="text-red-600">{error}</p>
+          <Button 
+            onClick={() => window.location.reload()} 
+            className="mt-4"
+            variant="outline"
+          >
+            Retry
+          </Button>
+        </div>
+      </div>
+    </AdminLayout>;
+  }
   const getStatusBadgeVariant = (status: Student['enrollmentStatus']): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
       case 'Complete':
@@ -262,9 +260,9 @@ export function ClassroomDetails() {
             </h1>
           </div>
           <div className="flex space-x-2">
-            <Button variant="outline">
+            {/* <Button variant="outline">
               Rename
-            </Button>
+            </Button> */}
             <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`}>
               <Button variant="outline" className="flex items-center">
                 <FileText className="h-4 w-4 mr-2" />
@@ -278,13 +276,11 @@ export function ClassroomDetails() {
           </div>
         </div>
         {/* Classroom Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="glass-card">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Classroom Details</CardTitle>
-              <CardDescription>
-                Overview of capacity, age group, and staff
-              </CardDescription>
+          
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
@@ -306,7 +302,7 @@ export function ClassroomDetails() {
                 </div>
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
           <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Enrollment Status</CardTitle>
@@ -338,44 +334,13 @@ export function ClassroomDetails() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base">Timeline</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-amazon-teal mr-3" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Upcoming Parent Meeting
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Schedule pending API support
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  <Clock className="h-5 w-5 text-amazon-teal mr-3" />
-                  <div>
-                    <p className="text-sm font-medium">
-                      Enrollment Completion Deadline
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Awaiting timeline endpoint
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
         {/* Tabs Section */}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList>
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="forms">Forms</TabsTrigger>
-            <TabsTrigger value="activity">Activity</TabsTrigger>
+            <TabsTrigger value="activity">Students</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
             <Card className="glass-card">
@@ -402,6 +367,109 @@ export function ClassroomDetails() {
                 </div>
               </CardContent>
             </Card>
+            
+            <Card className="glass-card">
+              <CardHeader>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <CardTitle>Students</CardTitle>
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input placeholder="Search students..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {filteredStudents.length === 0 ? <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No students found matching your search.</p>
+                  </div> : <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            Student
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            Parent
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            Enrollment Status
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            Forms Completed
+                          </th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-600">
+                            Progress
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                  {student.firstName.charAt(0)}
+                                  {student.lastName.charAt(0)}
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {student.firstName} {student.lastName}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-gray-600">{student.parent.name}</span>
+                              <div className="text-xs text-gray-500">
+                                {student.parent.email}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                                {getStatusIcon(student.enrollmentStatus)}
+                                <span className="ml-1">
+                                  {student.enrollmentStatus}
+                                </span>
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center">
+                                <FileText className="h-4 w-4 mr-1 text-gray-500" />
+                                <span>
+                                  {student.formsCompleted} / {student.totalForms}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-end">
+                                <div className="w-32 mr-2">
+                                  <Progress value={student.enrollmentProgress} className="h-2" />
+                                </div>
+                                <span className="text-sm font-medium w-8 text-right">
+                                  {student.enrollmentProgress}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>)}
+                      </tbody>
+                    </table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredStudents.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      className="hidden md:flex"
+                    />
+                    <MobilePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      className="md:hidden"
+                    />
+                  </div>}
+              </CardContent>
+            </Card>
           </TabsContent>
           <TabsContent value="forms">
             <Card className="glass-card">
@@ -415,9 +483,6 @@ export function ClassroomDetails() {
                 {classroom.assignedForms.map(form => <div key={form.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div>
                       <p className="font-medium">{form.name}</p>
-                      <p className="text-xs text-gray-500">
-                        Form ID: {form.id}
-                      </p>
                     </div>
                     <Badge variant="secondary">{form.status}</Badge>
                   </div>)}
@@ -427,108 +492,112 @@ export function ClassroomDetails() {
           <TabsContent value="activity">
             <Card className="glass-card">
               <CardHeader>
-                <CardTitle>Classroom Activity</CardTitle>
-                <CardDescription>
-                  Recent submissions and updates will appear here.
-                </CardDescription>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                  <div>
+                    <CardTitle>Students</CardTitle>
+                    <CardDescription>Students enrolled in {classroom.name}</CardDescription>
+                  </div>
+                  <div className="relative w-full md:w-64">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                    <Input placeholder="Search students..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="text-sm text-gray-500">
-                Activity feed requires backend support.
+              <CardContent>
+                {filteredStudents.length === 0 ? <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
+                    <p>No students found matching your search.</p>
+                  </div> : <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200">
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            Student
+                          </th>
+                          <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            Parent
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            Enrollment Status
+                          </th>
+                          <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            Forms Completed
+                          </th>
+                          <th className="text-right py-3 px-4 font-medium text-gray-600">
+                            Progress
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                            <td className="py-3 px-4">
+                              <div className="flex items-center">
+                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                  {student.firstName.charAt(0)}
+                                  {student.lastName.charAt(0)}
+                                </div>
+                                <div>
+                                  <div className="font-medium">
+                                    {student.firstName} {student.lastName}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="text-gray-600">{student.parent.name}</span>
+                              <div className="text-xs text-gray-500">
+                                {student.parent.email}
+                              </div>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                                {getStatusIcon(student.enrollmentStatus)}
+                                <span className="ml-1">
+                                  {student.enrollmentStatus}
+                                </span>
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-4 text-center">
+                              <div className="flex items-center justify-center">
+                                <FileText className="h-4 w-4 mr-1 text-gray-500" />
+                                <span>
+                                  {student.formsCompleted} / {student.totalForms}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="flex items-center justify-end">
+                                <div className="w-32 mr-2">
+                                  <Progress value={student.enrollmentProgress} className="h-2" />
+                                </div>
+                                <span className="text-sm font-medium w-8 text-right">
+                                  {student.enrollmentProgress}%
+                                </span>
+                              </div>
+                            </td>
+                          </tr>)}
+                      </tbody>
+                    </table>
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      totalItems={filteredStudents.length}
+                      itemsPerPage={itemsPerPage}
+                      onPageChange={setCurrentPage}
+                      className="hidden md:flex"
+                    />
+                    <MobilePagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      className="md:hidden"
+                    />
+                  </div>}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-        {/* Student List */}
-        <Card className="glass-card">
-          <CardHeader>
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <CardTitle>Students</CardTitle>
-              <div className="relative w-full md:w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input placeholder="Search students..." className="pl-9 bg-white" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredStudents.length === 0 ? <div className="text-center py-8 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                <p>No students found matching your search.</p>
-              </div> : <div className="overflow-x-auto">
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Student
-                      </th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">
-                        Parent
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-600">
-                        Enrollment Status
-                      </th>
-                      <th className="text-center py-3 px-4 font-medium text-gray-600">
-                        Forms Completed
-                      </th>
-                      <th className="text-right py-3 px-4 font-medium text-gray-600">
-                        Progress
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
-                              {student.firstName.charAt(0)}
-                              {student.lastName.charAt(0)}
-                            </div>
-                            <div>
-                              <div className="font-medium">
-                                {student.firstName} {student.lastName}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:underline">
-                            {student.parent.name}
-                          </Link>
-                          <div className="text-xs text-gray-500">
-                            {student.parent.email}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
-                            {getStatusIcon(student.enrollmentStatus)}
-                            <span className="ml-1">
-                              {student.enrollmentStatus}
-                            </span>
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center">
-                            <FileText className="h-4 w-4 mr-1 text-gray-500" />
-                            <span>
-                              {student.formsCompleted} / {student.totalForms}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="flex items-center justify-end">
-                            <div className="w-32 mr-2">
-                              <Progress value={student.enrollmentProgress} className="h-2" />
-                            </div>
-                            <span className="text-sm font-medium w-8 text-right">
-                              {student.enrollmentProgress}%
-                            </span>
-                          </div>
-                        </td>
-                      </tr>)}
-                  </tbody>
-                </table>
-              </div>}
-          </CardContent>
-        </Card>
+
       </div>
     </AdminLayout>;
 }

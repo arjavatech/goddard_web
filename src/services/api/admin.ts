@@ -195,7 +195,7 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
     return [];
   }
 }
-export async function fetchParentDetails(schoolId: string): Promise<ParentDetail[]> {
+export async function fetchParentDetails(schoolId: string): Promise<{ activeParents: ParentDetail[], inactiveParents: ParentDetail[] }> {
   try {
     console.log('Fetching parent details for school ID:', schoolId);
     const data = await authedFetch({
@@ -205,13 +205,11 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
     console.log('Raw parent details response:', data);
     if (typeof data === 'string') {
       console.warn('API returned string for parent details:', data);
-      return [];
+      return { activeParents: [], inactiveParents: [] };
     }
-    if (!Array.isArray(data)) {
-      console.warn('Parent details response is not an array:', data);
-      return [];
-    }
-    const result = data.map(item => ({
+
+    // Helper function to map parent data
+    const mapParentData = (item: any): ParentDetail => ({
       parentId: item.parent_id || item.parentId || '',
       email: item.parent_email || item.email || '',
       firstName: item.parent_first_name || item.firstName,
@@ -239,12 +237,28 @@ export async function fetchParentDetails(schoolId: string): Promise<ParentDetail
           approved_on: form.approved_on || null
         }))
       }))
-    }));
-    console.log('Processed parent details:', result);
-    return result;
+    });
+
+    // Handle new response format with active_parents and inactive_parents
+    if (data.active_parents !== undefined || data.inactive_parents !== undefined) {
+      const activeParents = Array.isArray(data.active_parents) ? data.active_parents.map(mapParentData) : [];
+      const inactiveParents = Array.isArray(data.inactive_parents) ? data.inactive_parents.map(mapParentData) : [];
+      console.log('Processed parent details (new format):', { activeParents, inactiveParents });
+      return { activeParents, inactiveParents };
+    }
+
+    // Fallback for old format (simple array)
+    if (Array.isArray(data)) {
+      const activeParents = data.map(mapParentData);
+      console.log('Processed parent details (legacy format):', { activeParents, inactiveParents: [] });
+      return { activeParents, inactiveParents: [] };
+    }
+
+    console.warn('Parent details response has unexpected format:', data);
+    return { activeParents: [], inactiveParents: [] };
   } catch (error) {
     console.error('fetchParentDetails error:', error);
-    return [];
+    return { activeParents: [], inactiveParents: [] };
   }
 }
 // export async function reviewStudentFormAssignment(
@@ -306,7 +320,11 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           filloutFormId: form.fillout_form_id || form.filloutFormId || '',
           studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || '',
           recent_edit_link: form.recent_edit_link || null,
-          recent_pdf_link: form.recent_pdf_link || null
+          recent_pdf_link: form.recent_pdf_link || null,
+          approved_by: form.approved_by || null,
+          approved_on: form.approved_on || null,
+          updated_at: form.updated_at || null,
+          created_at: form.created_at || null
         }))
       }))
     };
@@ -474,6 +492,12 @@ export async function deactivateParent(parentId: string): Promise<void> {
     url: `/parent/${parentId}`
   }, z.any());
 }
+export async function activateParent(parentId: string): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: `/parent/${parentId}/activate`
+  }, z.any());
+}
 export async function addChild(schoolId: string, _enrollmentId: string, childData: {
   childFirstName: string;
   childLastName: string;
@@ -516,6 +540,13 @@ export async function assignFormToClassroom(schoolId: string, classroomId: strin
       classroom_id: classroomId,
       form_template_id: formTemplateId
     }
+  }, z.union([z.object({}), z.string()]));
+}
+
+export async function deleteClassFormOverride(formTemplateId: string, classroomId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/classrooms/${encodeURIComponent(classroomId)}/forms/${encodeURIComponent(formTemplateId)}`
   }, z.union([z.object({}), z.string()]));
 }
 export type ChildEnrollment = {
@@ -663,4 +694,65 @@ export async function updateChildStatus(
     url: `/children/${encodeURIComponent(childId)}/status`,
     body: { status }
   }, z.object({}));
+}
+
+export type ClassBasedEnrollment = {
+  parent_id: string;
+  parent_first_name: string;
+  parent_last_name: string;
+  child_id: string;
+  child_first_name: string;
+  child_last_name: string;
+  child_status: string;
+  class_name: string;
+  primary_email: string;
+  form_status: string;
+  forms: Record<string, string>;
+  additional_parent_email?: string | null;
+};
+
+export async function fetchClassBasedEnrollments(
+  schoolId: string,
+  classId: string
+): Promise<ClassBasedEnrollment[]> {
+  try {
+    console.log('Fetching class-based enrollments for school:', schoolId, 'class:', classId);
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/class-based-enrollments?school_id=${encodeURIComponent(schoolId)}&class_id=${encodeURIComponent(classId)}`
+    }, z.any());
+
+    console.log('Raw class-based enrollments response:', data);
+
+    if (typeof data === 'string') {
+      console.warn('API returned string for class-based enrollments:', data);
+      return [];
+    }
+
+    // Handle both {enrollments: [...]} and direct array response
+    const enrollmentsArray = data.enrollments || data;
+
+    if (!Array.isArray(enrollmentsArray)) {
+      console.warn('Class-based enrollments response is not an array:', enrollmentsArray);
+      return [];
+    }
+
+    return enrollmentsArray.map(item => ({
+      parent_id: item.parent_id || '',
+      parent_first_name: item.parent_first_name || '',
+      parent_last_name: item.parent_last_name || '',
+      child_id: item.child_id || '',
+      child_first_name: item.child_first_name || '',
+      child_last_name: item.child_last_name || '',
+      child_status: item.child_status || 'active',
+      class_name: item.class_name || '',
+      primary_email: item.primary_email || '',
+      form_status: item.form_status || '',
+      forms: item.forms || {},
+      additional_parent_email: item.additional_parent_email || null
+    }));
+  } catch (error) {
+    console.error('fetchClassBasedEnrollments error:', error);
+    return [];
+  }
 }
