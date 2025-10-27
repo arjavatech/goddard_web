@@ -38,7 +38,7 @@ export function Login() {
       if (!redirectTo) {
         // Check role case-insensitively (API returns 'Admin' with capital A)
         const isAdmin = userContext.role && userContext.role.toLowerCase() === 'admin';
-        redirectTo = isAdmin ? '/admin' : '/';
+        redirectTo = isAdmin ? '/admin' : '/dashboard';
       }
 
       navigate(redirectTo, {
