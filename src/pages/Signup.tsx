@@ -183,48 +183,6 @@ export function Signup() {
                 Create Account
               </Button>
 
-              {/* Test Notifications */}
-              <div className="space-y-2 pt-4 border-t border-border">
-                <p className="text-xs text-muted-foreground text-center mb-2">Test Notifications:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showToast('error', 'Please make sure both password fields match.', 'Passwords do not match')}
-                    className="text-xs border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Toast Error
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showToast('success', 'Please check your email and click the confirmation link.', 'Account Created')}
-                    className="text-xs border-green-300 text-green-600 hover:bg-green-50"
-                  >
-                    Toast Success
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showAlert('error', 'This email address is already registered. Please use a different email or try logging in.', 'Email Already Exists')}
-                    className="text-xs border-red-300 text-red-600 hover:bg-red-50"
-                  >
-                    Modal Error
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => showAlert('success', 'Your account has been created successfully! Please check your email for verification.', 'Registration Complete')}
-                    className="text-xs border-green-300 text-green-600 hover:bg-green-50"
-                  >
-                    Modal Success
-                  </Button>
-                </div>
-              </div>
               {/* Divider */}
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
