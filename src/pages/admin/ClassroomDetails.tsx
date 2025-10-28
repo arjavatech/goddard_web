@@ -2,17 +2,23 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock, Calendar } from 'lucide-react';
+import { AsyncButton } from '../../components/ui/async-button';
+import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock, Calendar, Mail } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { ValidatedInput } from '../../components/ui/validated-input';
 import { usePagination } from '../../hooks/usePagination';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, type ClassBasedEnrollment } from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+import { commonValidationRules } from '../../lib/validation';
+import { useToast } from '../../contexts/ToastContext';
 interface Form {
   id: string;
   name: string;
@@ -68,6 +74,20 @@ export function ClassroomDetails() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [parentFirstName, setParentFirstName] = useState('');
+  const [parentLastName, setParentLastName] = useState('');
+  const [parentEmail, setParentEmail] = useState('');
+  const [childFirstName, setChildFirstName] = useState('');
+  const [childLastName, setChildLastName] = useState('');
+  const [childDob, setChildDob] = useState('');
+  const [childGender, setChildGender] = useState('');
+  const [childClassroom, setChildClassroom] = useState('');
+  const [allClassrooms, setAllClassrooms] = useState<{id: string; name: string}[]>([]);
+  const { showToast } = useToast();
+  
+  const showValidationToast = (message: string) => showToast('error', message);
+  const hideValidationToast = () => {};
 
   useEffect(() => {
     let isMounted = true;
@@ -94,6 +114,12 @@ export function ClassroomDetails() {
           fetchClassEnrollmentStats(user.schoolId).catch(() => []),
           fetchClassBasedEnrollments(user.schoolId, classroomId).catch(() => [])
         ]);
+        
+        // Set all classrooms for the dropdown
+        if (isMounted) {
+          setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
+          setChildClassroom(classroomId || '');
+        }
 
         const targetClassroom = classrooms.find(cls => cls.id === classroomId);
         if (!targetClassroom && isMounted) {
@@ -193,6 +219,76 @@ export function ClassroomDetails() {
       averageProgress
     };
   }, [classroom.students]);
+  
+  const resetInviteForm = () => {
+    setParentFirstName('');
+    setParentLastName('');
+    setParentEmail('');
+    setChildFirstName('');
+    setChildLastName('');
+    setChildDob('');
+    setChildGender('');
+    setChildClassroom(classroomId || '');
+  };
+
+  const handleInviteParent = async () => {
+    if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
+    
+    const user = await fetchUserContext();
+    if (!user.schoolId) throw new Error('School context not found');
+    
+    try {
+      await inviteParent(user.schoolId, {
+        parentFirstName,
+        parentLastName,
+        parentEmail,
+        childFullName: `${childFirstName} ${childLastName}`,
+        childDob,
+        classroomId: childClassroom,
+        gender: childGender
+      });
+      
+      // Success - update UI and show success notification
+      const targetClassroom = allClassrooms.find(c => c.id === childClassroom);
+      const newStudent: Student = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        firstName: childFirstName,
+        lastName: childLastName,
+        enrollmentProgress: 0,
+        enrollmentStatus: 'Not Started',
+        formsCompleted: 0,
+        totalForms: classroom.assignedForms.length || 4,
+        parent: {
+          id: Math.random().toString(36).substring(2, 9),
+          name: `${parentFirstName} ${parentLastName}`,
+          email: parentEmail
+        }
+      };
+      
+      setClassroom(prev => ({
+        ...prev,
+        students: [...prev.students, newStudent]
+      }));
+      
+      resetInviteForm();
+      setIsInviteDialogOpen(false);
+      
+      showToast('success', `Invitation sent to ${parentEmail}`);
+      
+    } catch (error: any) {
+      // Handle specific error cases and show notification
+      let errorMessage = 'Failed to send invitation. Please try again.';
+      
+      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+          (error?.message && error.message.includes('User with this email already exists'))) {
+        errorMessage = 'Email already exists';
+      }
+      
+      showToast('error', errorMessage);
+      
+      throw new Error(errorMessage);
+    }
+  };
 
   if (loading) {
     return <AdminLayout>
@@ -248,35 +344,37 @@ export function ClassroomDetails() {
   };
   return <AdminLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center">
             <Link to="/admin/classrooms" className="mr-4">
               <Button variant="outline" size="icon">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate">
               {classroom.name}
             </h1>
           </div>
-          <div className="flex space-x-2">
-            {/* <Button variant="outline">
-              Rename
-            </Button> */}
-            <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`}>
-              <Button variant="outline" className="flex items-center">
+          <div className="flex gap-2">
+            <Link to={`/admin/form-assignments?classroom=${classroomId ?? classroom.id}`} className="flex-1 sm:flex-none">
+              <Button variant="outline" className="flex items-center justify-center w-full">
                 <FileText className="h-4 w-4 mr-2" />
-                Manage Forms
+                <span className="hidden sm:inline">Manage Forms</span>
+                <span className="sm:hidden">Forms</span>
               </Button>
             </Link>
-            <Button className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <Button 
+              className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none"
+              onClick={() => setIsInviteDialogOpen(true)}
+            >
               <UserPlus className="h-4 w-4 mr-2" />
-              Add Student
+              <span className="hidden sm:inline">Add Student</span>
+              <span className="sm:hidden">Add</span>
             </Button>
           </div>
         </div>
         {/* Classroom Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 gap-6">
           {/* <Card className="glass-card">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Classroom Details</CardTitle>
@@ -382,77 +480,135 @@ export function ClassroomDetails() {
                 {filteredStudents.length === 0 ? <div className="text-center py-8 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>No students found matching your search.</p>
-                  </div> : <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">
-                            Student
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">
-                            Parent
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-600">
-                            Enrollment Status
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-600">
-                            Forms Completed
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-600">
-                            Progress
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4">
+                  </div> : <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                              Student
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                              Parent
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                              Enrollment Status
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                              Forms Completed
+                            </th>
+                            <th className="text-right py-3 px-4 font-medium text-gray-600">
+                              Progress
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                    {student.firstName.charAt(0)}
+                                    {student.lastName.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {student.firstName} {student.lastName}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="text-gray-600">{student.parent.name}</span>
+                                <div className="text-xs text-gray-500">
+                                  {student.parent.email}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                                  {getStatusIcon(student.enrollmentStatus)}
+                                  <span className="ml-1">
+                                    {student.enrollmentStatus}
+                                  </span>
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex items-center justify-center">
+                                  <FileText className="h-4 w-4 mr-1 text-gray-500" />
+                                  <span>
+                                    {student.formsCompleted} / {student.totalForms}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center justify-end">
+                                  <div className="w-32 mr-2">
+                                    <Progress value={student.enrollmentProgress} className="h-2" />
+                                  </div>
+                                  <span className="text-sm font-medium w-8 text-right">
+                                    {student.enrollmentProgress}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>)}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {paginatedStudents.map(student => 
+                        <Card key={student.id} className="glass-card">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
                                   {student.firstName.charAt(0)}
                                   {student.lastName.charAt(0)}
                                 </div>
                                 <div>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-sm">
                                     {student.firstName} {student.lastName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {student.parent.name}
                                   </div>
                                 </div>
                               </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-gray-600">{student.parent.name}</span>
-                              <div className="text-xs text-gray-500">
-                                {student.parent.email}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center">
                                 {getStatusIcon(student.enrollmentStatus)}
-                                <span className="ml-1">
+                                <span className="ml-1 text-xs">
                                   {student.enrollmentStatus}
                                 </span>
                               </Badge>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="flex items-center justify-center">
-                                <FileText className="h-4 w-4 mr-1 text-gray-500" />
-                                <span>
-                                  {student.formsCompleted} / {student.totalForms}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center justify-end">
-                                <div className="w-32 mr-2">
-                                  <Progress value={student.enrollmentProgress} className="h-2" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-500">Forms</span>
+                                <div className="flex items-center">
+                                  <FileText className="h-3 w-3 mr-1 text-gray-500" />
+                                  <span>{student.formsCompleted} / {student.totalForms}</span>
                                 </div>
-                                <span className="text-sm font-medium w-8 text-right">
-                                  {student.enrollmentProgress}%
-                                </span>
                               </div>
-                            </td>
-                          </tr>)}
-                      </tbody>
-                    </table>
+                              
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-gray-500">Progress</span>
+                                  <span className="font-medium">{student.enrollmentProgress}%</span>
+                                </div>
+                                <Progress value={student.enrollmentProgress} className="h-2" />
+                              </div>
+                              
+                              <div className="text-xs text-gray-500 pt-1">
+                                {student.parent.email}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                    
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
@@ -467,7 +623,7 @@ export function ClassroomDetails() {
                       onPageChange={setCurrentPage}
                       className="md:hidden"
                     />
-                  </div>}
+                  </>}
               </CardContent>
             </Card>
           </TabsContent>
@@ -507,77 +663,135 @@ export function ClassroomDetails() {
                 {filteredStudents.length === 0 ? <div className="text-center py-8 text-gray-500">
                     <Users className="h-12 w-12 mx-auto mb-3 text-gray-300" />
                     <p>No students found matching your search.</p>
-                  </div> : <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">
-                            Student
-                          </th>
-                          <th className="text-left py-3 px-4 font-medium text-gray-600">
-                            Parent
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-600">
-                            Enrollment Status
-                          </th>
-                          <th className="text-center py-3 px-4 font-medium text-gray-600">
-                            Forms Completed
-                          </th>
-                          <th className="text-right py-3 px-4 font-medium text-gray-600">
-                            Progress
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-4">
+                  </div> : <>
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                      <table className="w-full border-collapse">
+                        <thead>
+                          <tr className="border-b border-gray-200">
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                              Student
+                            </th>
+                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                              Parent
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                              Enrollment Status
+                            </th>
+                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                              Forms Completed
+                            </th>
+                            <th className="text-right py-3 px-4 font-medium text-gray-600">
+                              Progress
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
+                              <td className="py-3 px-4">
+                                <div className="flex items-center">
+                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                    {student.firstName.charAt(0)}
+                                    {student.lastName.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <div className="font-medium">
+                                      {student.firstName} {student.lastName}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="text-gray-600">{student.parent.name}</span>
+                                <div className="text-xs text-gray-500">
+                                  {student.parent.email}
+                                </div>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                                  {getStatusIcon(student.enrollmentStatus)}
+                                  <span className="ml-1">
+                                    {student.enrollmentStatus}
+                                  </span>
+                                </Badge>
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                <div className="flex items-center justify-center">
+                                  <FileText className="h-4 w-4 mr-1 text-gray-500" />
+                                  <span>
+                                    {student.formsCompleted} / {student.totalForms}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center justify-end">
+                                  <div className="w-32 mr-2">
+                                    <Progress value={student.enrollmentProgress} className="h-2" />
+                                  </div>
+                                  <span className="text-sm font-medium w-8 text-right">
+                                    {student.enrollmentProgress}%
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>)}
+                        </tbody>
+                      </table>
+                    </div>
+                    
+                    {/* Mobile Card View */}
+                    <div className="md:hidden space-y-4">
+                      {paginatedStudents.map(student => 
+                        <Card key={student.id} className="glass-card">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
                                   {student.firstName.charAt(0)}
                                   {student.lastName.charAt(0)}
                                 </div>
                                 <div>
-                                  <div className="font-medium">
+                                  <div className="font-medium text-sm">
                                     {student.firstName} {student.lastName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {student.parent.name}
                                   </div>
                                 </div>
                               </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="text-gray-600">{student.parent.name}</span>
-                              <div className="text-xs text-gray-500">
-                                {student.parent.email}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
+                              <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center">
                                 {getStatusIcon(student.enrollmentStatus)}
-                                <span className="ml-1">
+                                <span className="ml-1 text-xs">
                                   {student.enrollmentStatus}
                                 </span>
                               </Badge>
-                            </td>
-                            <td className="py-3 px-4 text-center">
-                              <div className="flex items-center justify-center">
-                                <FileText className="h-4 w-4 mr-1 text-gray-500" />
-                                <span>
-                                  {student.formsCompleted} / {student.totalForms}
-                                </span>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center justify-end">
-                                <div className="w-32 mr-2">
-                                  <Progress value={student.enrollmentProgress} className="h-2" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-500">Forms</span>
+                                <div className="flex items-center">
+                                  <FileText className="h-3 w-3 mr-1 text-gray-500" />
+                                  <span>{student.formsCompleted} / {student.totalForms}</span>
                                 </div>
-                                <span className="text-sm font-medium w-8 text-right">
-                                  {student.enrollmentProgress}%
-                                </span>
                               </div>
-                            </td>
-                          </tr>)}
-                      </tbody>
-                    </table>
+                              
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-gray-500">Progress</span>
+                                  <span className="font-medium">{student.enrollmentProgress}%</span>
+                                </div>
+                                <Progress value={student.enrollmentProgress} className="h-2" />
+                              </div>
+                              
+                              <div className="text-xs text-gray-500 pt-1">
+                                {student.parent.email}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                    
                     <Pagination
                       currentPage={currentPage}
                       totalPages={totalPages}
@@ -592,11 +806,162 @@ export function ClassroomDetails() {
                       onPageChange={setCurrentPage}
                       className="md:hidden"
                     />
-                  </div>}
+                  </>}
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Invite Parent Dialog */}
+        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Invite New Parent</DialogTitle>
+            </DialogHeader>
+            <div className="py-4 space-y-4 sm:space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+                <div>
+                  <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        First Name
+                      </label>
+                      <ValidatedInput 
+                        value={parentFirstName} 
+                        onChange={e => setParentFirstName(e.target.value)} 
+                        placeholder="Enter first name" 
+                        className="w-full"
+                        validationRules={commonValidationRules.name}
+                        showToast={showValidationToast}
+                        hideToast={hideValidationToast}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Last Name
+                      </label>
+                      <ValidatedInput 
+                        value={parentLastName} 
+                        onChange={e => setParentLastName(e.target.value)} 
+                        placeholder="Enter last name" 
+                        className="w-full"
+                        validationRules={commonValidationRules.name}
+                        showToast={showValidationToast}
+                        hideToast={hideValidationToast}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Email
+                      </label>
+                      <ValidatedInput 
+                        type="email" 
+                        value={parentEmail} 
+                        onChange={e => setParentEmail(e.target.value)} 
+                        placeholder="Enter email address" 
+                        className="w-full"
+                        validationRules={commonValidationRules.email}
+                        showToast={showValidationToast}
+                        hideToast={hideValidationToast}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        First Name
+                      </label>
+                      <ValidatedInput 
+                        value={childFirstName} 
+                        onChange={e => setChildFirstName(e.target.value)} 
+                        placeholder="Enter first name" 
+                        className="w-full"
+                        validationRules={commonValidationRules.name}
+                        showToast={showValidationToast}
+                        hideToast={hideValidationToast}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Last Name
+                      </label>
+                      <ValidatedInput 
+                        value={childLastName} 
+                        onChange={e => setChildLastName(e.target.value)} 
+                        placeholder="Enter last name" 
+                        className="w-full"
+                        validationRules={commonValidationRules.name}
+                        showToast={showValidationToast}
+                        hideToast={hideValidationToast}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Date of Birth
+                      </label>
+                      <Input 
+                        type="date" 
+                        value={childDob} 
+                        onChange={e => setChildDob(e.target.value)} 
+                        className="w-full" 
+                        min="2000-01-01" 
+                        max="2020-12-31" 
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Gender
+                      </label>
+                      <Select value={childGender} onValueChange={setChildGender}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="male">Male</SelectItem>
+                          <SelectItem value="female">Female</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Classroom
+                      </label>
+                      <Select value={childClassroom} onValueChange={setChildClassroom}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a classroom" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {allClassrooms.map(classroom => 
+                            <SelectItem key={classroom.id} value={classroom.id}>
+                              {classroom.name}
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <AsyncButton 
+                onClick={handleInviteParent} 
+                className="bg-amazon-teal hover:bg-amazon-teal/90" 
+                disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Send Invitation
+              </AsyncButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </AdminLayout>;

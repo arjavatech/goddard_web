@@ -214,7 +214,23 @@ export function ParentDetails() {
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
-          setSelectedChildId(processedChildren[0].id);
+          // Check if there's a student query parameter to select specific child
+          const urlParams = new URLSearchParams(location.search);
+          const studentName = urlParams.get('student');
+          
+          if (studentName) {
+            // Find child by matching name
+            const targetChild = processedChildren.find(child => 
+              `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
+            );
+            if (targetChild) {
+              setSelectedChildId(targetChild.id);
+            } else {
+              setSelectedChildId(processedChildren[0].id);
+            }
+          } else {
+            setSelectedChildId(processedChildren[0].id);
+          }
         }
       } catch (error) {
         if (isMounted) {

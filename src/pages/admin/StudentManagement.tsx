@@ -524,9 +524,9 @@ export function StudentManagement() {
                               {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <div className="font-medium text-foreground truncate">
+                              <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10">
                                 {student.firstName} {student.lastName}
-                              </div>
+                              </Link>
                               <div className="text-xs text-gray-500 truncate">
                                 ID: {student.id.slice(0, 6)}...
                               </div>
@@ -638,9 +638,9 @@ export function StudentManagement() {
                         {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="font-medium text-foreground text-sm truncate">
+                        <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline text-sm block truncate relative z-10">
                           {student.firstName} {student.lastName}
-                        </div>
+                        </Link>
                         <div className="text-xs text-muted-foreground truncate">
                           {student.classroom.name}
                         </div>

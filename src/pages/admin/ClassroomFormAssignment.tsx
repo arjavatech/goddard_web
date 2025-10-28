@@ -26,128 +26,6 @@ interface Classroom {
   assignedForms: Form[];
   formCount: number;
 }
-const DEFAULT_FORMS: Form[] = [{
-  id: '1',
-  name: 'Admission Form',
-  status: 'Active'
-}, {
-  id: '2',
-  name: 'Medical Authorization',
-  status: 'Active'
-}, {
-  id: '3',
-  name: 'Emergency Contact Form',
-  status: 'Active'
-}, {
-  id: '4',
-  name: 'Photo Release Form',
-  status: 'Active'
-}, {
-  id: '5',
-  name: 'Field Trip Permission',
-  status: 'Inactive'
-}, {
-  id: '6',
-  name: 'Parent Handbook Acknowledgment',
-  status: 'Default'
-}, {
-  id: '7',
-  name: 'Meal Program Enrollment',
-  status: 'Archive'
-}];
-// const DEFAULT_CLASSROOMS: Classroom[] = [{
-//   id: '1',
-//   name: 'Sunshine Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }, {
-//     id: '3',
-//     name: 'Emergency Contact Form',
-//     status: 'Active'
-//   }, {
-//     id: '4',
-//     name: 'Photo Release Form',
-//     status: 'Active'
-//   }]
-// }, {
-//   id: '2',
-//   name: 'Rainbow Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }, {
-//     id: '3',
-//     name: 'Emergency Contact Form',
-//     status: 'Active'
-//   }]
-// }, {
-//   id: '3',
-//   name: 'Stars Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }]
-// }, {
-//   id: '4',
-//   name: 'Moon Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }, {
-//     id: '5',
-//     name: 'Field Trip Permission',
-//     status: 'Inactive'
-//   }]
-// }, {
-//   id: '5',
-//   name: 'Ocean Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }, {
-//     id: '6',
-//     name: 'Parent Handbook Acknowledgment',
-//     status: 'Default'
-//   }]
-// }, {
-//   id: '6',
-//   name: 'Mountain Room',
-//   assignedForms: [{
-//     id: '1',
-//     name: 'Admission Form',
-//     status: 'Active'
-//   }, {
-//     id: '2',
-//     name: 'Medical Authorization',
-//     status: 'Active'
-//   }]
-// }];
 const formStatusFromTemplate = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
   if (value.includes('default')) return 'Default';
@@ -160,7 +38,7 @@ export function ClassroomFormAssignment() {
   const navigate = useNavigate();
   const queryParams = new URLSearchParams(location.search);
   const classroomIdFromQuery = queryParams.get('classroom');
-  const [allForms, setAllForms] = useState<Form[]>(DEFAULT_FORMS);
+  const [allForms, setAllForms] = useState<Form[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || '');
   const [loading, setLoading] = useState(true);
@@ -186,7 +64,7 @@ export function ClassroomFormAssignment() {
             // Convert forms object to assignedForms array
             const assignedForms = Object.entries(classroom.forms || {}).map(([formId, formName]) => ({
               id: formId,
-              name: formName || 'Unknown Form',
+              name: formName,
               status: 'Active' as FormStatus
             })).filter(form => form.name !== null); // Filter out null form names
             

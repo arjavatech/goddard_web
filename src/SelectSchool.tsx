@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, School } from 'lucide-react';
+import { ChevronDown, School as SchoolIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -11,11 +11,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { fetchSchools, type School } from '@/services/api/schools';
 
 const SelectSchool = () => {
   const navigate = useNavigate();
+  const [schools, setSchools] = useState<School[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleSchoolSelect = () => {
+  useEffect(() => {
+    const loadSchools = async () => {
+      try {
+        const schoolsData = await fetchSchools();
+        setSchools(schoolsData);
+      } catch (error) {
+        console.error('Failed to load schools:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadSchools();
+  }, []);
+
+  const handleSchoolSelect = (school: School) => {
+    // Store selected school if needed
+    localStorage.setItem('selectedSchool', JSON.stringify(school));
     navigate('/login');
   };
 
@@ -37,7 +57,7 @@ const SelectSchool = () => {
         <Card className="glass-card">
           <CardHeader className="text-center pb-4">
             <CardTitle className="text-xl text-primary flex items-center justify-center gap-2">
-              <School className="h-5 w-5 text-amazon-teal" />
+              <SchoolIcon className="h-5 w-5 text-amazon-teal" />
               Choose Your School
             </CardTitle>
           </CardHeader>
@@ -49,35 +69,55 @@ const SelectSchool = () => {
                   className="w-full justify-between h-12 text-base border-2 hover:border-amazon-teal transition-colors"
                 >
                   <span className="flex items-center gap-3">
-                    <School className="h-5 w-5 text-amazon-teal" />
+                    <SchoolIcon className="h-5 w-5 text-amazon-teal" />
                     Select School Location
                   </span>
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)]">
+              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto" avoidCollisions={false}>
                 <DropdownMenuLabel className="text-amazon-teal font-semibold">
                   Available Locations
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem 
-                  onClick={handleSchoolSelect}
-                  className="cursor-pointer py-3 hover:bg-amazon-teal/10 focus:bg-amazon-teal/10 hover:text-foreground focus:text-foreground"
-                >
-                  <School className="mr-3 h-4 w-4 text-amazon-teal" />
-                  <div>
-                    <div className="font-medium">Goddard School - Lynnwood</div>
-                    <div className="text-sm text-muted-foreground hover:text-foreground/70">Main Campus</div>
-                  </div>
-                </DropdownMenuItem>
+                {loading ? (
+                  <DropdownMenuItem disabled className="py-3">
+                    <div className="flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-amazon-teal mr-3"></div>
+                      Loading schools...
+                    </div>
+                  </DropdownMenuItem>
+                ) : schools.length > 0 ? (
+                  schools.map((school) => (
+                    <DropdownMenuItem 
+                      key={school.id}
+                      onClick={() => handleSchoolSelect(school)}
+                      className="cursor-pointer py-3 hover:bg-amazon-teal/10 focus:bg-amazon-teal/10 hover:text-foreground focus:text-foreground"
+                    >
+                      <SchoolIcon className="mr-3 h-4 w-4 text-amazon-teal" />
+                      <div>
+                        <div className="font-medium">{school.name}</div>
+                        {school.location && (
+                          <div className="text-sm text-muted-foreground hover:text-foreground/70">{school.location}</div>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  ))
+                ) : (
+                  <DropdownMenuItem disabled className="py-3">
+                    <div className="text-muted-foreground">No schools available</div>
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
             
-            <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                More locations coming soon...
-              </p>
-            </div>
+            {!loading && schools.length === 0 && (
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground">
+                  No schools available at the moment.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
