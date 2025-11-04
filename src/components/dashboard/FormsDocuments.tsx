@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Home } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Home, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
@@ -34,7 +34,12 @@ function FormCard({
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
 
-  return <Card className="glass-card h-full">
+  const getBorderColor = () => {
+    if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
+    return 'border-red-500';
+  };
+
+  return <Card className={`glass-card h-full transition-shadow cursor-pointer hover:shadow-md ${getBorderColor()}`} onClick={onView}>
       <CardHeader className="pb-2">
         <div className="flex flex-col">
           <div className="flex items-center justify-between">
@@ -42,9 +47,6 @@ function FormCard({
               <FileText className="h-4 w-4 mr-2 text-amazon-teal" />
               <CardTitle className="text-base font-medium">{title}</CardTitle>
             </div>
-            {childName && <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600 font-medium">
-                {childName}
-              </span>}
           </div>
           <StatusBadge status={status} />
         </div>
@@ -58,44 +60,69 @@ function FormCard({
           Approval date: {lastUpdated}
         </span>
         <div className="flex gap-1">
-          {isApproved && recentPdfLink && (
+          {isApproved && (
             <>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-                onClick={onDownload}
-                disabled={isLoadingThis}
-                title="Download PDF"
+                className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.();
+                }}
+                title="View Form (Read-only)"
               >
-                {isLoadingThis && isLoading?.action === 'download' ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
+                <Eye className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
-                onClick={onPrint}
-                disabled={isLoadingThis}
-                title="Print PDF"
-              >
-                {isLoadingThis && isLoading?.action === 'print' ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
-                ) : (
-                  <Printer className="h-4 w-4" />
-                )}
-              </Button>
+              {recentPdfLink && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload?.();
+                    }}
+                    disabled={isLoadingThis}
+                    title="Download PDF"
+                  >
+                    {isLoadingThis && isLoading?.action === 'download' ? (
+                      <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPrint?.();
+                    }}
+                    disabled={isLoadingThis}
+                    title="Print PDF"
+                  >
+                    {isLoadingThis && isLoading?.action === 'print' ? (
+                      <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
+                    ) : (
+                      <Printer className="h-4 w-4" />
+                    )}
+                  </Button>
+                </>
+              )}
             </>
           )}
-          {!isApproved && (
+          {!isApproved && onView && (
             <Button
               variant="outline"
               size="icon"
               className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
-              onClick={onView}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView();
+              }}
               title="View Form"
             >
               <Eye className="h-4 w-4" />
@@ -154,7 +181,7 @@ export function FormsDocuments({
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -226,6 +253,7 @@ export function FormsDocuments({
     // Extract all possible URL sources from rawData and form object
     const rawData = form.rawData || {};
     const recentEditLink = rawData.recent_edit_link || form.recentEditLink;
+    const recentViewLink = rawData.recent_view_link || form.recentViewLink;
     const recentPdfLink = rawData.recent_pdf_link || form.recentPdfLink;
     const filloutFormId = rawData.fillout_form_id || form.filloutFormId;
     const studentFormAssignmentId = rawData.student_form_assignment_id || rawData.studentFormAssignmentId;
@@ -244,8 +272,15 @@ export function FormsDocuments({
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, don't allow viewing/editing - only download/print
-      return;
+      // For approved forms, prioritize read-only view URL
+      if (recentViewLink && recentViewLink !== '#' && recentViewLink.trim() !== '') {
+        formUrl = recentViewLink;
+      } else if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+        formUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(recentPdfLink)}&embedded=true`;
+      } else {
+        console.warn('No read-only view URL available for approved form');
+        return;
+      }
     } else {
       // For non-approved forms, prioritize recent_edit_link first
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
@@ -379,7 +414,7 @@ export function FormsDocuments({
       // Function to start thank you countdown
       const startThankYouCountdown = () => {
         setShowThankYou(true);
-        setCountdown(5);
+        setCountdown(4);
         
         // Start countdown
         countdownRef.current = setInterval(() => {
@@ -478,6 +513,9 @@ export function FormsDocuments({
             <div className="flex-1 min-w-0">
               <h2 className="text-lg sm:text-xl font-semibold text-foreground truncate">
                 {selectedForm.title}
+                {selectedForm.status === 'Approved' && (
+                  <span className="ml-2 text-sm font-normal text-green-600">(Read-only)</span>
+                )}
               </h2>
               {selectedForm.childName && (
                 <span className="inline-block mt-1 text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
@@ -487,38 +525,47 @@ export function FormsDocuments({
             </div>
           </div>
           
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
+          {/* <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
             {showThankYou && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
-                <span className="text-sm text-green-700 font-medium">
-                  Form completed! Redirecting in {countdown}s
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-green-300 text-green-700 hover:bg-green-100 shrink-0"
-                  onClick={() => {
-                    setSelectedForm(null);
-                    setShowThankYou(false);
-                    setIsFrameLoading(false);
-                    if (countdownRef.current) clearInterval(countdownRef.current);
-                    if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-                    // Trigger refresh when returning to dashboard
-                    if (onFormCompleted) onFormCompleted();
-                  }}
-                >
-                  <Home className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Back to Dashboard</span>
-                  <span className="sm:hidden">Dashboard</span>
-                </Button>
-              </div>
+              <Card className="glass-card border-amazon-teal/20 bg-amazon-teal/5">
+                <CardContent className="p-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="h-5 w-5 text-amazon-teal" />
+                      <span className="text-sm font-medium text-foreground">
+                        Form completed! Redirecting in {countdown}s
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="border-amazon-teal text-amazon-teal hover:bg-amazon-teal hover:text-white shrink-0"
+                      onClick={() => {
+                        setSelectedForm(null);
+                        setShowThankYou(false);
+                        setIsFrameLoading(false);
+                        if (countdownRef.current) clearInterval(countdownRef.current);
+                        if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+                        // Trigger refresh after a delay to avoid navigation issues
+                        setTimeout(() => {
+                          if (onFormCompleted) onFormCompleted();
+                        }, 100);
+                      }}
+                    >
+                      <Home className="h-4 w-4 mr-1" />
+                      <span className="hidden sm:inline">Back to Dashboard</span>
+                      <span className="sm:hidden">Dashboard</span>
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             )}
             {!showThankYou && (
               <div className="flex items-center gap-2">
                 <StatusBadge status={selectedForm.status} />
               </div>
             )}
-          </div>
+          </div> */}
         </div>
 
         <Card className="glass-card">
@@ -534,13 +581,13 @@ export function FormsDocuments({
                   src={selectedForm.viewUrl}
                   style={{
                     width: '100%',
-                    height: '500px',
+                    height: '1000px',
                     border: 'none',
                     borderRadius: '8px',
                     opacity: isFrameLoading ? 0 : 1,
                     transition: 'opacity 0.3s ease-in-out'
                   }}
-                  className="sm:h-[600px]"
+                  className="sm:h-[100px]"
                   title={selectedForm.title}
                   allow="fullscreen"
                   onLoad={() => {

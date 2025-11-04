@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -12,7 +12,7 @@ import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
@@ -47,24 +47,10 @@ export function FormsManagement() {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'error', title: '', message: '' });
-
-  const showToast = (message: string) => {
-    setToast({
-      open: true,
-      type: 'error',
-      title: '',
-      message
-    });
-  };
+  const { showToast } = useToast();
 
   const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }));
+    // No-op for compatibility with ValidatedInput
   };
   useEffect(() => {
     let isMounted = true;
@@ -82,7 +68,7 @@ export function FormsManagement() {
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
-          classroomsCount: template.classroomsCount ?? 0
+          classroomsCount: 0
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -365,11 +351,24 @@ export function FormsManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                              {form.link && (
+                                <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Form
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => openEditDialog(form)}
+                                disabled={form.status === 'Active'}
+                              >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
+                              <DropdownMenuItem 
+                                onClick={() => openDeleteDialog(form)} 
+                                className="text-red-600 focus:text-red-600"
+                                disabled={form.status === 'Active'}
+                              >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>
@@ -412,11 +411,24 @@ export function FormsManagement() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                          {form.link && (
+                            <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Form
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => openEditDialog(form)}
+                            disabled={form.status === 'Active'}
+                          >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
+                          <DropdownMenuItem 
+                            onClick={() => openDeleteDialog(form)} 
+                            className="text-red-600 focus:text-red-600"
+                            disabled={form.status === 'Active'}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -461,7 +473,7 @@ export function FormsManagement() {
       </div>
       {/* Add Form Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>Add New Form</DialogTitle>
           </DialogHeader>
@@ -476,7 +488,7 @@ export function FormsManagement() {
                 placeholder="Enter form name" 
                 className="w-full" 
                 validationRules={commonValidationRules.name}
-                showToast={showToast}
+                showToast={(message) => showToast('error', message)}
                 hideToast={hideToast}
                 autoFocus 
               />
@@ -514,7 +526,7 @@ export function FormsManagement() {
       </Dialog>
       {/* Edit Form Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>Edit Form</DialogTitle>
           </DialogHeader>
@@ -529,7 +541,7 @@ export function FormsManagement() {
                 placeholder="Enter form name" 
                 className="w-full" 
                 validationRules={commonValidationRules.name}
-                showToast={showToast}
+                showToast={(message) => showToast('error', message)}
                 hideToast={hideToast}
                 autoFocus 
               />
@@ -550,7 +562,6 @@ export function FormsManagement() {
                   <SelectItem value="Default">Default</SelectItem>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="Archive">Archive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -567,7 +578,7 @@ export function FormsManagement() {
       </Dialog>
       {/* Delete Form Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>Delete Form</DialogTitle>
           </DialogHeader>
@@ -589,13 +600,6 @@ export function FormsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onClose={() => setToast(prev => ({ ...prev, open: false }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }

@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
@@ -26,24 +26,10 @@ export function ClassroomManagement() {
   const [newClassroomName, setNewClassroomName] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'error', title: '', message: '' });
-
-  const showToast = (type: 'success' | 'error', message: string, title?: string) => {
-    setToast({
-      open: true,
-      type,
-      title: title || '',
-      message
-    });
-  };
+  const { showToast } = useToast();
 
   const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }));
+    // No-op for compatibility with ValidatedInput
   };
   useEffect(() => {
     let isMounted = true;
@@ -481,7 +467,7 @@ export function ClassroomManagement() {
       </div>
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Add New Classroom</DialogTitle>
           </DialogHeader>
@@ -512,7 +498,7 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Edit Classroom Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Rename Classroom</DialogTitle>
           </DialogHeader>
@@ -543,7 +529,7 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Delete Classroom Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Delete Classroom</DialogTitle>
           </DialogHeader>
@@ -572,13 +558,6 @@ export function ClassroomManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-        onClose={hideToast}
-      />
+
     </AdminLayout>;
 }

@@ -150,7 +150,7 @@ export function AdminLayout({
       
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
             <DialogDescription>

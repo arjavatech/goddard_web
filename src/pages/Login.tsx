@@ -73,9 +73,7 @@ export function Login() {
             <h1 className="text-2xl font-semibold text-foreground">
               Welcome Back
             </h1>
-            <p className="text-muted-foreground">
-              Sign in to your parent portal
-            </p>
+  
           </div>
         </div>
         {/* Login Form */}
@@ -130,23 +128,6 @@ export function Login() {
                 )}
               </Button>
               {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-card px-4 text-muted-foreground">
-                    Don't have an account?
-                  </span>
-                </div>
-              </div>
-
-              {/* Sign Up Link */}
-              <Link to="/signup">
-                <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5">
-                  Create Account
-                </Button>
-              </Link>
             </form>
           </CardContent>
         </Card>

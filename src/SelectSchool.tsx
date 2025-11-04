@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, School as SchoolIcon } from 'lucide-react';
+import { ChevronDown, School as SchoolIcon, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -17,6 +17,11 @@ const SelectSchool = () => {
   const navigate = useNavigate();
   const [schools, setSchools] = useState<School[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedState, setSelectedState] = useState<string>('');
+
+  const states = [
+   'Washington', 'West Virginia',
+  ];
 
   useEffect(() => {
     const loadSchools = async () => {
@@ -67,6 +72,38 @@ const SelectSchool = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-between h-12 text-base border-2 hover:border-amazon-teal transition-colors"
+                >
+                  <span className="flex items-center gap-3">
+                    <MapPin className="h-5 w-5 text-amazon-teal" />
+                    {selectedState || 'Select State'}
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-50" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto" avoidCollisions={false}>
+                <DropdownMenuLabel className="text-amazon-teal font-semibold">
+                  Select State
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {states.map((state) => (
+                  <DropdownMenuItem 
+                    key={state}
+                    onClick={() => setSelectedState(state)}
+                    className="cursor-pointer py-3 hover:bg-amazon-teal/10 focus:bg-amazon-teal/10 hover:text-foreground focus:text-foreground"
+                  >
+                    <MapPin className="mr-3 h-4 w-4 text-amazon-teal" />
+                    {state}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between h-12 text-base border-2 hover:border-amazon-teal transition-colors"
+                  disabled={!selectedState}
                 >
                   <span className="flex items-center gap-3">
                     <SchoolIcon className="h-5 w-5 text-amazon-teal" />

@@ -468,7 +468,7 @@ export function ClassroomFormAssignment() {
       
       {/* Delete Form Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md">
+        <DialogContent className="w-[95vw] max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">
               {deleteStatus === 'success' ? 'Form Removed' : deleteStatus === 'error' ? 'Deletion Failed' : 'Remove Form'}
@@ -522,7 +522,7 @@ export function ClassroomFormAssignment() {
 
       {/* Manage Forms Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] flex flex-col">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] flex flex-col" preventClose>
           <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
             <DialogTitle className="text-lg font-semibold">
               Manage Forms for {selectedClassroom?.name}

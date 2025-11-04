@@ -9,18 +9,13 @@ import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment } from '../../services/api/admin';
 import { useAuth } from '../../services/auth/useAuth';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'success', title: '', message: '' });
+  const { showToast } = useToast();
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -81,22 +76,12 @@ export function FormView() {
   // Handle form approval
   const handleApprove = async () => {
     if (!studentFormAssignmentId) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Unable to approve form: Assignment ID is missing'
-      });
+      showToast('error', 'Unable to approve form: Assignment ID is missing');
       return;
     }
 
     if (!user?.id) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Unable to approve form: User not authenticated'
-      });
+      showToast('error', 'Unable to approve form: User not authenticated');
       return;
     }
 
@@ -109,12 +94,7 @@ export function FormView() {
         user.id
       );
 
-      setToast({
-        open: true,
-        type: 'success',
-        title: '',
-        message: 'Form approved successfully'
-      });
+      showToast('success', 'Form approved successfully');
 
       // Navigate back after a short delay
       setTimeout(() => {
@@ -122,12 +102,7 @@ export function FormView() {
       }, 1500);
     } catch (error) {
       console.error('Error approving form:', error);
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Failed to approve form'
-      });
+      showToast('error', 'Failed to approve form');
     } finally {
       setIsProcessing(false);
     }
@@ -136,32 +111,17 @@ export function FormView() {
   // Handle form rejection
   const handleReject = async () => {
     if (!studentFormAssignmentId) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Unable to reject form: Assignment ID is missing'
-      });
+      showToast('error', 'Unable to reject form: Assignment ID is missing');
       return;
     }
 
     if (!user?.id) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Unable to reject form: User not authenticated'
-      });
+      showToast('error', 'Unable to reject form: User not authenticated');
       return;
     }
 
     if (!notes.trim()) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Please provide notes when rejecting a form'
-      });
+      showToast('error', 'Please provide notes when rejecting a form');
       return;
     }
 
@@ -174,12 +134,7 @@ export function FormView() {
         user.id
       );
 
-      setToast({
-        open: true,
-        type: 'success',
-        title: '',
-        message: 'Form rejected with notes'
-      });
+      showToast('success', 'Form rejected with notes');
 
       // Navigate back after a short delay
       setTimeout(() => {
@@ -187,12 +142,7 @@ export function FormView() {
       }, 1500);
     } catch (error) {
       console.error('Error rejecting form:', error);
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Failed to reject form'
-      });
+      showToast('error', 'Failed to reject form');
     } finally {
       setIsProcessing(false);
     }
@@ -341,13 +291,6 @@ export function FormView() {
           </CardContent>
         </Card>
       </div>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onClose={() => setToast(prev => ({ ...prev, open: false }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }

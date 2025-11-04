@@ -524,7 +524,11 @@ export function StudentManagement() {
                               {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10">
+                              <Link 
+                                to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                                state={{ fromStudents: true }}
+                                className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
+                              >
                                 {student.firstName} {student.lastName}
                               </Link>
                               <div className="text-xs text-gray-500 truncate">
@@ -541,7 +545,11 @@ export function StudentManagement() {
                         </td>
                         <td className="py-3 px-2">
                           <div className="min-w-0">
-                            <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate">
+                            <Link 
+                              to={`/admin/parents/${student.parent.id}`} 
+                              state={{ fromStudents: true }}
+                              className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                            >
                               {student.parent.name}
                             </Link>
                             <div className="text-xs text-gray-500 mt-1 truncate">
@@ -638,7 +646,11 @@ export function StudentManagement() {
                         {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline text-sm block truncate relative z-10">
+                        <Link 
+                          to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                          state={{ fromStudents: true }}
+                          className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline text-sm block truncate relative z-10"
+                        >
                           {student.firstName} {student.lastName}
                         </Link>
                         <div className="text-xs text-muted-foreground truncate">
@@ -666,7 +678,11 @@ export function StudentManagement() {
                     <div className="flex items-center justify-between min-w-0">
                       <span className="text-xs text-muted-foreground flex-shrink-0">Parent:</span>
                       <div className="min-w-0 flex-1 ml-2">
-                        <Link to={`/admin/parents/${student.parent.id}`} className="text-xs text-amazon-teal hover:underline block truncate">
+                        <Link 
+                          to={`/admin/parents/${student.parent.id}`} 
+                          state={{ fromStudents: true }}
+                          className="text-xs text-amazon-teal hover:underline block truncate"
+                        >
                           {student.parent.name}
                         </Link>
                       </div>
@@ -724,7 +740,7 @@ export function StudentManagement() {
 
       {/* Child Status Change Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>Change Child Status</DialogTitle>
           </DialogHeader>

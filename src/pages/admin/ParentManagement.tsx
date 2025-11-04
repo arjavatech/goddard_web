@@ -573,9 +573,16 @@ export function ParentManagement() {
                           {parent.children.length === 0 ? <span>No children linked yet</span> : <div className="space-y-1">
                               {parent.children.map(child => <div key={child.id} className="flex items-center gap-2">
                                   <Users className="h-4 w-4 text-gray-400" />
-                                  <span>
+                                  <Link 
+                                    to={`/admin/parents/${parent.id}`} 
+                                    state={{
+                                      parentData: parent,
+                                      selectedChildId: child.id
+                                    }} 
+                                    className="text-amazon-teal hover:underline cursor-pointer"
+                                  >
                                     {child.firstName} {child.lastName}
-                                  </span>
+                                  </Link>
                                   <Badge variant="secondary" className="text-xs">
                                     {child.classroom.name}
                                   </Badge>
@@ -784,7 +791,16 @@ export function ParentManagement() {
                           {parent.children.map(child => (
                             <div key={child.id} className="flex items-center gap-2 text-xs">
                               <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                              <span>{child.firstName} {child.lastName}</span>
+                              <Link 
+                                to={`/admin/parents/${parent.id}`} 
+                                state={{
+                                  parentData: parent,
+                                  selectedChildId: child.id
+                                }} 
+                                className="text-amazon-teal hover:underline cursor-pointer"
+                              >
+                                {child.firstName} {child.lastName}
+                              </Link>
                               <Badge variant="secondary" className="text-xs">
                                 {child.classroom.name}
                               </Badge>
@@ -814,7 +830,7 @@ export function ParentManagement() {
       </div>
       {/* Invite Parent Dialog */}
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" preventClose>
           <DialogHeader>
             <DialogTitle>Invite New Parent</DialogTitle>
           </DialogHeader>
@@ -958,7 +974,7 @@ export function ParentManagement() {
       </Dialog>
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto" preventClose>
           <DialogHeader>
             <DialogTitle>
               Add Child to {selectedParent?.firstName}{' '}
@@ -1052,7 +1068,7 @@ export function ParentManagement() {
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Deactivate Parent</DialogTitle>
           </DialogHeader>
@@ -1093,7 +1109,7 @@ export function ParentManagement() {
 
       {/* Activate Confirmation Dialog */}
       <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>Activate Parent</DialogTitle>
           </DialogHeader>

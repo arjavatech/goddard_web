@@ -7,10 +7,10 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
@@ -84,6 +84,7 @@ export function ParentDetails() {
     parentId: string;
   }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -96,12 +97,7 @@ export function ParentDetails() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<{formId: string, action: 'download' | 'print'} | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'success', title: '', message: '' });
+  const { showToast } = useToast();
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -214,33 +210,41 @@ export function ParentDetails() {
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
-          // Check if there's a student query parameter to select specific child
-          const urlParams = new URLSearchParams(location.search);
-          const studentName = urlParams.get('student');
+          // Check if there's a selectedChildId in route state first
+          const routeSelectedChildId = location.state?.selectedChildId;
           
-          if (studentName) {
-            // Find child by matching name
-            const targetChild = processedChildren.find(child => 
-              `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
-            );
+          if (routeSelectedChildId) {
+            // Find child by ID from route state
+            const targetChild = processedChildren.find(child => child.id === routeSelectedChildId);
             if (targetChild) {
               setSelectedChildId(targetChild.id);
             } else {
               setSelectedChildId(processedChildren[0].id);
             }
           } else {
-            setSelectedChildId(processedChildren[0].id);
+            // Fallback to student query parameter
+            const urlParams = new URLSearchParams(location.search);
+            const studentName = urlParams.get('student');
+            
+            if (studentName) {
+              // Find child by matching name
+              const targetChild = processedChildren.find(child => 
+                `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
+              );
+              if (targetChild) {
+                setSelectedChildId(targetChild.id);
+              } else {
+                setSelectedChildId(processedChildren[0].id);
+              }
+            } else {
+              setSelectedChildId(processedChildren[0].id);
+            }
           }
         }
       } catch (error) {
         if (isMounted) {
           setError('Failed to load parent details. Please try again.');
-          setToast({
-            open: true,
-            type: 'error',
-            title: '',
-            message: 'Failed to load parent details'
-          });
+          showToast('error', 'Failed to load parent details');
         }
       } finally {
         if (isMounted) {
@@ -316,20 +320,10 @@ export function ParentDetails() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      setToast({
-        open: true,
-        type: 'success',
-        title: '',
-        message: `${form.title} downloading...`
-      });
+      showToast('success', `${form.title} downloading...`);
     } catch (error) {
       console.error('Download failed:', error);
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Download failed'
-      });
+      showToast('error', 'Download failed');
     } finally {
       setLoadingAction(null);
     }
@@ -371,12 +365,7 @@ export function ParentDetails() {
           window.URL.revokeObjectURL(blobUrl);
         }, 3000);
 
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Print dialog opening...'
-        });
+        showToast('success', 'Print dialog opening...');
       } else {
         throw new Error('Popup blocked');
       }
@@ -387,19 +376,9 @@ export function ParentDetails() {
       // Fallback: Open PDF in new tab for manual print
       const printWindow = window.open(form.recentPdfLink, '_blank');
       if (printWindow) {
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Use Ctrl+P to print'
-        });
+        showToast('success', 'Use Ctrl+P to print');
       } else {
-        setToast({
-          open: true,
-          type: 'error',
-          title: '',
-          message: 'Print failed - enable popups'
-        });
+        showToast('error', 'Print failed - enable popups');
       }
 
       setLoadingAction(null);
@@ -436,27 +415,12 @@ export function ParentDetails() {
             }))
           };
         });
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Form review completed'
-        });
+        showToast('success', 'Form review completed');
       } else {
-        setToast({
-          open: true,
-          type: 'error',
-          title: '',
-          message: 'Form review failed'
-        });
+        showToast('error', 'Form review failed');
       }
     } catch (error) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Failed to review form'
-      });
+      showToast('error', 'Failed to review form');
     } finally {
       setIsReviewing(false);
     }
@@ -508,11 +472,22 @@ export function ParentDetails() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <Link to="/admin/parents" className="mr-4">
-              <Button variant="outline" size="icon">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="mr-4"
+              onClick={() => {
+                // Check if user came from students page
+                const referrer = document.referrer;
+                if (referrer.includes('/admin/students') || location.state?.fromStudents) {
+                  navigate('/admin/students');
+                } else {
+                  navigate('/admin/parents');
+                }
+              }}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
             <h1 className="text-2xl font-bold text-foreground">
               Parent Details
             </h1>
@@ -784,7 +759,7 @@ export function ParentDetails() {
         </Card>
       </div>
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-        <DialogContent>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>
               {formAction === 'approve' ? 'Approve Form' : 'Request Revision'}
@@ -841,13 +816,6 @@ export function ParentDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onClose={() => setToast(prev => ({ ...prev, open: false }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }
