@@ -50,9 +50,12 @@ export function AdminDashboard() {
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   const [isInvitingParent, setIsInvitingParent] = useState(false);
+  const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [isAddingClassroom, setIsAddingClassroom] = useState(false);
+  const [isClassroomDialogClosing, setIsClassroomDialogClosing] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -145,7 +148,9 @@ export function AdminDashboard() {
   }, []);
 
   const showValidationToast = (message: string) => {
-    console.error(message);
+    if (!isClassroomDialogClosing) {
+      console.error(message);
+    }
   };
 
   const hideValidationToast = () => {
@@ -175,8 +180,23 @@ export function AdminDashboard() {
     }
   };
 
+  const validateInviteForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!parentEmail.trim()) errors.parentEmail = 'Parent email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) errors.parentEmail = 'Please enter a valid email address';
+    if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
+    if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
+    if (!childDob) errors.childDob = 'Child date of birth is required';
+    if (!childGender) errors.childGender = 'Child gender is required';
+    if (!childClassroom) errors.childClassroom = 'Child classroom is required';
+    
+    setInviteFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleInviteParent = async () => {
-    if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
+    if (!validateInviteForm()) return;
 
     setIsInvitingParent(true);
     try {
@@ -202,6 +222,7 @@ export function AdminDashboard() {
       setChildDob('');
       setChildGender('');
       setChildClassroom('');
+      setInviteFormErrors({});
 
       // Refresh the page to show updated stats
       window.location.reload();
@@ -237,51 +258,51 @@ export function AdminDashboard() {
   };
 
   return <AdminLayout>
-    <div className="space-y-6 p-2 ">
-      <h1 className="text-2xl font-bold text-foreground">
+    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
         Dashboard Overview
       </h1>
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700">
         {error}
       </div>}
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
         {stats.map((stat, index) => <Card key={index} className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]" onClick={stat.onClick}>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-5 lg:p-6">
             <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
                   {stat.title}
                 </p>
-                <h3 className="text-3xl font-bold mt-2 text-foreground">
+                <h3 className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2 text-foreground">
                   {stat.value}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-xs text-muted-foreground mt-1 truncate">
                   {stat.change}
                 </p>
               </div>
-              <div className="p-3 bg-gray-50 rounded-full">{stat.icon}</div>
+              <div className="p-2 sm:p-3 bg-gray-50 rounded-full flex-shrink-0 ml-2">{stat.icon}</div>
             </div>
           </CardContent>
         </Card>)}
       </div>
 
       {/* Quick Actions & Enrollment Progress Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <Card className="glass-card lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Enrollment Progress by Classroom</CardTitle>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+        <Card className="glass-card lg:col-span-3 order-2 lg:order-1">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Enrollment Progress by Classroom</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {loading ? <Loading message="Loading enrollment data..." size="sm" /> : enrollmentProgress.length === 0 ? <div className="text-sm text-muted-foreground">
+          <CardContent className="pt-0">
+            <div className="space-y-3 sm:space-y-4">
+              {loading ? <Loading message="Loading enrollment data..." size="sm" /> : enrollmentProgress.length === 0 ? <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
                 No enrollment data available yet.
               </div> : enrollmentProgress.map((classroom, index) => <div key={`${classroom.classroom}-${index}`}>
                 <div className="flex justify-between items-center mb-1">
-                  <span className="font-medium text-sm">
+                  <span className="font-medium text-xs sm:text-sm truncate flex-1 mr-2">
                     {classroom.classroom}
                   </span>
-                  <span className="text-sm text-amazon-teal">
+                  <span className="text-xs sm:text-sm text-amazon-teal font-medium flex-shrink-0">
                     {classroom.total > 0 ? Math.round(classroom.completed / classroom.total * 100) : 0}%
                   </span>
                 </div>
@@ -294,42 +315,42 @@ export function AdminDashboard() {
           </CardContent>
         </Card>
         {/* Admin Actions */}
-        <Card className="glass-card lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
+        <Card className="glass-card lg:col-span-1 order-1 lg:order-2">
+          <CardHeader className="pb-3 sm:pb-4">
+            <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-1  gap-4 ">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
                 onClick={() => setIsAddDialogOpen(true)}
               >
-                <Plus className="h-6 w-6 text-amazon-teal" />
+                <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Add Form</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
                 onClick={() => setIsInviteDialogOpen(true)}
               >
-                <Mail className="h-6 w-6 text-amazon-teal" />
+                <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Invite Parent</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
                 onClick={() => setIsInviteDialogOpen(true)}
               >
-                <UserPlus className="h-6 w-6 text-amazon-teal" />
+                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Add Student</span>
               </Button>
               <Button
                 variant="outline"
-                className="h-20 flex-col gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
                 onClick={() => setIsAddClassroomDialogOpen(true)}
               >
-                <School className="h-6 w-6 text-amazon-teal" />
+                <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Add Classrooms</span>
               </Button>
             </div>
@@ -342,11 +363,11 @@ export function AdminDashboard() {
 
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Add New Form</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Name
@@ -355,7 +376,7 @@ export function AdminDashboard() {
                 value={formName}
                 onChange={e => setFormName(e.target.value)}
                 placeholder="Enter form name"
-                className="w-full"
+                className="w-full h-10 sm:h-11 text-sm sm:text-base"
                 autoFocus
               />
             </div>
@@ -363,12 +384,12 @@ export function AdminDashboard() {
               <label className="block text-sm font-medium mb-2">
                 Form Link
               </label>
-              <Input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://example.com/form" className="w-full" />
+              <Input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://example.com/form" className="w-full h-10 sm:h-11 text-sm sm:text-base" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
               <Select value={formStatus} onValueChange={setFormStatus}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -379,11 +400,11 @@ export function AdminDashboard() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+            <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
               {isAddingForm ? 'Adding Form...' : 'Add Form'}
             </Button>
           </DialogFooter>
@@ -393,12 +414,19 @@ export function AdminDashboard() {
 
 
 
-      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" preventClose>
+      <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsDialogClosing(true);
+          setInviteFormErrors({});
+          setTimeout(() => setIsDialogClosing(false), 100);
+        }
+        setIsInviteDialogOpen(open);
+      }}>
+        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] max-w-4xl max-h-[90vh] overflow-y-auto mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Invite New Parent</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Invite New Parent</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4 sm:space-y-6">
+          <div className="py-3 sm:py-4 space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               <div>
                 <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
@@ -407,44 +435,71 @@ export function AdminDashboard() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <ValidatedInput
-                      value={parentFirstName}
-                      onChange={e => setParentFirstName(e.target.value)}
-                      placeholder="Enter first name"
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                    <Input 
+                      value={parentFirstName} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setParentFirstName(value);
+                        if (inviteFormErrors.parentFirstName) {
+                          setInviteFormErrors(prev => ({...prev, parentFirstName: ''}));
+                        }
+                      }}
+                      placeholder="Enter first name" 
+                      className={`w-full ${inviteFormErrors.parentFirstName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.parentFirstName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentFirstName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <ValidatedInput
-                      value={parentLastName}
-                      onChange={e => setParentLastName(e.target.value)}
-                      placeholder="Enter last name"
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                    <Input 
+                      value={parentLastName} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setParentLastName(value);
+                        if (inviteFormErrors.parentLastName) {
+                          setInviteFormErrors(prev => ({...prev, parentLastName: ''}));
+                        }
+                      }}
+
+                      placeholder="Enter last name" 
+                      className={`w-full ${inviteFormErrors.parentLastName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.parentLastName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentLastName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Email
                     </label>
-                    <ValidatedInput
-                      type="email"
-                      value={parentEmail}
-                      onChange={e => setParentEmail(e.target.value)}
-                      placeholder="Enter email address"
-                      className="w-full"
-                      validationRules={commonValidationRules.email}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                    <Input 
+                      type="email" 
+                      value={parentEmail} 
+                      onChange={e => {
+                        setParentEmail(e.target.value);
+                        if (inviteFormErrors.parentEmail) {
+                          setInviteFormErrors(prev => ({...prev, parentEmail: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing) {
+                          if (!parentEmail.trim()) {
+                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Parent email is required'}));
+                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Please enter a valid email address'}));
+                          }
+                        }
+                      }}
+                      placeholder="Enter email address" 
+                      className={`w-full ${inviteFormErrors.parentEmail ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.parentEmail && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentEmail}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -455,49 +510,89 @@ export function AdminDashboard() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <ValidatedInput
-                      value={childFirstName}
-                      onChange={e => setChildFirstName(e.target.value)}
-                      placeholder="Enter first name"
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                    <Input 
+                      value={childFirstName} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setChildFirstName(value);
+                        if (inviteFormErrors.childFirstName) {
+                          setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing && !childFirstName.trim()) {
+                          setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
+                        }
+                      }}
+                      placeholder="Enter first name" 
+                      className={`w-full ${inviteFormErrors.childFirstName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.childFirstName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <ValidatedInput
-                      value={childLastName}
-                      onChange={e => setChildLastName(e.target.value)}
-                      placeholder="Enter last name"
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                    <Input 
+                      value={childLastName} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setChildLastName(value);
+                        if (inviteFormErrors.childLastName) {
+                          setInviteFormErrors(prev => ({...prev, childLastName: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing && !childLastName.trim()) {
+                          setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
+                        }
+                      }}
+                      placeholder="Enter last name" 
+                      className={`w-full ${inviteFormErrors.childLastName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.childLastName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Date of Birth
                     </label>
-                    <Input
-                      type="date"
-                      value={childDob}
-                      onChange={e => setChildDob(e.target.value)}
-                      className="w-full"
-                      min="2000-01-01"
-                      max="2020-12-31"
+                    <Input 
+                      type="date" 
+                      value={childDob} 
+                      onChange={e => {
+                        setChildDob(e.target.value);
+                        if (inviteFormErrors.childDob) {
+                          setInviteFormErrors(prev => ({...prev, childDob: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing && !childDob) {
+                          setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
+                        }
+                      }}
+                      className={`w-full ${inviteFormErrors.childDob ? 'border-red-500' : ''}`} 
+                      min="2000-01-01" 
+                      max="2020-12-31" 
                     />
+                    {inviteFormErrors.childDob && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Gender
                     </label>
-                    <Select value={childGender} onValueChange={setChildGender}>
-                      <SelectTrigger>
+                    <Select value={childGender} onValueChange={(value) => {
+                      setChildGender(value);
+                      if (inviteFormErrors.childGender) {
+                        setInviteFormErrors(prev => ({...prev, childGender: ''}));
+                      }
+                    }}>
+                      <SelectTrigger className={inviteFormErrors.childGender ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -505,13 +600,21 @@ export function AdminDashboard() {
                         <SelectItem value="female">Female</SelectItem>
                       </SelectContent>
                     </Select>
+                    {inviteFormErrors.childGender && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Classroom
                     </label>
-                    <Select value={childClassroom} onValueChange={setChildClassroom}>
-                      <SelectTrigger>
+                    <Select value={childClassroom} onValueChange={(value) => {
+                      setChildClassroom(value);
+                      if (inviteFormErrors.childClassroom) {
+                        setInviteFormErrors(prev => ({...prev, childClassroom: ''}));
+                      }
+                    }}>
+                      <SelectTrigger className={inviteFormErrors.childClassroom ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Select a classroom" />
                       </SelectTrigger>
                       <SelectContent>
@@ -522,6 +625,9 @@ export function AdminDashboard() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {inviteFormErrors.childClassroom && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -531,12 +637,12 @@ export function AdminDashboard() {
 
 
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom || isInvitingParent}>
-              <Mail className="h-4 w-4 mr-2" />
+            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || isInvitingParent}>
+              <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
               {isInvitingParent ? 'Sending Invitation...' : 'Send Invitation'}
             </Button>
           </DialogFooter>
@@ -545,12 +651,18 @@ export function AdminDashboard() {
 
 
 
-      <Dialog open={isAddClassroomDialogOpen} onOpenChange={setIsAddClassroomDialogOpen}>
-        <DialogContent className="sm:max-w-md" preventClose>
+      <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsClassroomDialogClosing(true);
+          setTimeout(() => setIsClassroomDialogClosing(false), 100);
+        }
+        setIsAddClassroomDialogOpen(open);
+      }}>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Add New Classroom</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-3 sm:py-4">
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>
@@ -558,18 +670,18 @@ export function AdminDashboard() {
               value={newClassroomName}
               onChange={e => setNewClassroomName(e.target.value)}
               placeholder="Enter classroom name"
-              className="w-full"
+              className="w-full h-10 sm:h-11 text-sm sm:text-base"
               validationRules={commonValidationRules.classroom}
-              showToast={(message) => showToast('error', message)}
+              showToast={showValidationToast}
               hideToast={hideValidationToast}
               autoFocus
             />
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" disabled={!newClassroomName.trim() || isAddingClassroom}>
+            <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim() || isAddingClassroom}>
               {isAddingClassroom ? 'Adding Classroom...' : 'Add Classroom'}
             </Button>
           </DialogFooter>

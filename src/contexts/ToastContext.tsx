@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
 import { Toast } from '../components/ui/toast'
 
 interface ToastState {
@@ -34,7 +34,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed top-4 right-4 z-[9999] space-y-2">
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] space-y-2">
         {toasts.map((toast, index) => (
           <Toast
             key={toast.id}

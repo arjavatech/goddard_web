@@ -44,6 +44,7 @@ export type ParentDetail = {
       recent_pdf_link?: string | null;
       approved_by?: string | null;
       approved_on?: string | null;
+      assigned_at?: string | null;
     }[];
   }[];
 };
@@ -195,6 +196,8 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
     return [];
   }
 }
+
+
 export async function fetchParentDetails(schoolId: string): Promise<{ activeParents: ParentDetail[], inactiveParents: ParentDetail[] }> {
   try {
     console.log('Fetching parent details for school ID:', schoolId);
@@ -323,6 +326,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           recent_pdf_link: form.recent_pdf_link || null,
           approved_by: form.approved_by || null,
           approved_on: form.approved_on || null,
+          assigned_at: form.assigned_at || null,
           updated_at: form.updated_at || null,
           created_at: form.created_at || null
         }))

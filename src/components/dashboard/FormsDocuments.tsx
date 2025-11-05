@@ -1,10 +1,11 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Home, CheckCircle } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Loading } from '../ui/loading';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 interface FormCardProps {
   title: string;
   description: string;
@@ -23,7 +24,6 @@ function FormCard({
   description,
   lastUpdated,
   status,
-  childName,
   recentPdfLink,
   onView,
   onDownload,
@@ -57,7 +57,7 @@ function FormCard({
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-2">
         <span className="text-xs text-muted-foreground">
-          Approval date: {lastUpdated}
+          Assigned date: {lastUpdated}
         </span>
         <div className="flex gap-1">
           {isApproved && (
@@ -79,7 +79,7 @@ function FormCard({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
+                    className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDownload?.();
@@ -88,7 +88,7 @@ function FormCard({
                     title="Download PDF"
                   >
                     {isLoadingThis && isLoading?.action === 'download' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
+                      <span className="animate-spin h-4 w-4 border-2 border-amazon-teal border-t-transparent rounded-full" />
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
@@ -96,7 +96,7 @@ function FormCard({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
+                    className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
                       onPrint?.();
@@ -105,7 +105,7 @@ function FormCard({
                     title="Print PDF"
                   >
                     {isLoadingThis && isLoading?.action === 'print' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
+                      <span className="animate-spin h-4 w-4 border-2 border-amazon-teal border-t-transparent rounded-full" />
                     ) : (
                       <Printer className="h-4 w-4" />
                     )}
@@ -161,19 +161,22 @@ interface FormsDocumentsProps {
   formToOpen?: any; // Form to automatically open
   onFormOpened?: () => void; // Callback when form is opened
   onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
+  yearFilter?: string; // Year filter value
+  onYearFilterChange?: (year: string) => void; // Callback to change year filter
 }
 export function FormsDocuments({
   childSpecificForms,
   familyForms,
   rawFormData,
   selectedChildId,
-  selectedChildName,
   childStatus = 'active',
   onChildSelect,
   onViewForm,
   formToOpen,
   onFormOpened,
-  onFormCompleted
+  onFormCompleted,
+  yearFilter = 'all',
+  onYearFilterChange
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || 'all');
@@ -213,7 +216,7 @@ export function FormsDocuments({
         // Find the matching child in rawFormData by childId
         const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
         return child.forms.map((form, formIndex) => {
-          // Find the exact matching form in rawData by form_id
+          // Find the exact matching form in rawData by form_id or form_name
           const matchingRawForm = rawChild?.forms?.find((rawForm: any) => 
             rawForm.form_id === form.formId || rawForm.form_name === form.title
           );
@@ -253,7 +256,6 @@ export function FormsDocuments({
     // Extract all possible URL sources from rawData and form object
     const rawData = form.rawData || {};
     const recentEditLink = rawData.recent_edit_link || form.recentEditLink;
-    const recentViewLink = rawData.recent_view_link || form.recentViewLink;
     const recentPdfLink = rawData.recent_pdf_link || form.recentPdfLink;
     const filloutFormId = rawData.fillout_form_id || form.filloutFormId;
     const studentFormAssignmentId = rawData.student_form_assignment_id || rawData.studentFormAssignmentId;
@@ -272,13 +274,12 @@ export function FormsDocuments({
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, prioritize read-only view URL
-      if (recentViewLink && recentViewLink !== '#' && recentViewLink.trim() !== '') {
-        formUrl = recentViewLink;
-      } else if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+      // For approved forms, use PDF link with embedded viewer to ensure non-editable viewing
+      if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+        // Use Google Docs viewer to display PDF inline without download
         formUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(recentPdfLink)}&embedded=true`;
       } else {
-        console.warn('No read-only view URL available for approved form');
+        // If no PDF link available, don't allow viewing
         return;
       }
     } else {
@@ -305,7 +306,12 @@ export function FormsDocuments({
         }
       } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
         // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
-        const defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+        let defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+        // Validate the default form ID - if it's invalid test data, use parent_handbook
+        const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
+        if (invalidFormIds.includes(defaultFormId.toLowerCase())) {
+          defaultFormId = 'parent_handbook';
+        }
         console.log('Default form ID used:', defaultFormId)
         formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
       }
@@ -493,13 +499,13 @@ export function FormsDocuments({
   // If a form is selected for viewing, show iframe in this section
   if (selectedForm) {
     return (
-      <div>
-        <div className="mb-4 space-y-3 sm:space-y-0">
+      <div className="px-2 sm:px-0">
+        <div className="mb-3 sm:mb-4 space-y-3 sm:space-y-0">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0"
+              className="shrink-0 h-8 w-8 sm:h-10 sm:w-10"
               onClick={() => {
                 setSelectedForm(null);
                 setIsFrameLoading(false);
@@ -508,13 +514,13 @@ export function FormsDocuments({
                 if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
               }}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-semibold text-foreground truncate">
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">
                 {selectedForm.title}
                 {selectedForm.status === 'Approved' && (
-                  <span className="ml-2 text-sm font-normal text-green-600">(Read-only)</span>
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-green-600">(Read-only)</span>
                 )}
               </h2>
               {selectedForm.childName && (
@@ -524,72 +530,34 @@ export function FormsDocuments({
               )}
             </div>
           </div>
-          
-          {/* <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
-            {showThankYou && (
-              <Card className="glass-card border-amazon-teal/20 bg-amazon-teal/5">
-                <CardContent className="p-4">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle className="h-5 w-5 text-amazon-teal" />
-                      <span className="text-sm font-medium text-foreground">
-                        Form completed! Redirecting in {countdown}s
-                      </span>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-amazon-teal text-amazon-teal hover:bg-amazon-teal hover:text-white shrink-0"
-                      onClick={() => {
-                        setSelectedForm(null);
-                        setShowThankYou(false);
-                        setIsFrameLoading(false);
-                        if (countdownRef.current) clearInterval(countdownRef.current);
-                        if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-                        // Trigger refresh after a delay to avoid navigation issues
-                        setTimeout(() => {
-                          if (onFormCompleted) onFormCompleted();
-                        }, 100);
-                      }}
-                    >
-                      <Home className="h-4 w-4 mr-1" />
-                      <span className="hidden sm:inline">Back to Dashboard</span>
-                      <span className="sm:hidden">Dashboard</span>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {!showThankYou && (
-              <div className="flex items-center gap-2">
-                <StatusBadge status={selectedForm.status} />
-              </div>
-            )}
-          </div> */}
         </div>
 
         <Card className="glass-card">
-          <CardContent className="p-6">
+          <CardContent className="p-2 sm:p-3 md:p-6">
             <div className="relative">
               {isFrameLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
-                  <Loading message="Loading form..." size="md" />
+                  <Loading message="Loading form..." size="sm" />
                 </div>
               )}
               {selectedForm.viewUrl && selectedForm.viewUrl !== '#' ? (
-                <iframe
-                  src={selectedForm.viewUrl}
-                  style={{
-                    width: '100%',
-                    height: '1000px',
-                    border: 'none',
-                    borderRadius: '8px',
-                    opacity: isFrameLoading ? 0 : 1,
-                    transition: 'opacity 0.3s ease-in-out'
-                  }}
-                  className="sm:h-[100px]"
-                  title={selectedForm.title}
-                  allow="fullscreen"
+                <>
+                  <style>{`
+                    @media (max-width: 640px) {
+                      .ndfHFb-c4YZDc-q77wGc,
+                      .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb {
+                        display: none !important;
+                      }
+                    }
+                  `}</style>
+                  <iframe
+                    src={selectedForm.viewUrl}
+                    className="w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[400px] sm:min-h-[500px] md:min-h-[1000px] border-none rounded-lg transition-opacity duration-300"
+                    style={{
+                      opacity: isFrameLoading ? 0 : 1
+                    }}
+                    title={selectedForm.title}
+
                   onLoad={() => {
                     setIsFrameLoading(false);
                     // Add a manual trigger button after form loads
@@ -625,6 +593,7 @@ export function FormsDocuments({
                     }, 1000);
                   }}
                 />
+                </>
               ) : (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500">
                   Unable to load form. Please check the form configuration.
@@ -639,17 +608,17 @@ export function FormsDocuments({
 
   // Show archived message if child is archived
   if (childStatus === 'archive') {
-    return <div>
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground mb-4">
+    return <div className="px-2 sm:px-0">
+        <div className="mb-3 sm:mb-4 md:mb-6">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-2 sm:mb-3 md:mb-4">
             Forms & Documents
           </h2>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-amber-600 mb-4" />
-            <h3 className="font-semibold text-amber-900 mb-2 text-lg">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4 md:p-8 text-center">
+            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 mx-auto text-amber-600 mb-2 sm:mb-3 md:mb-4" />
+            <h3 className="font-semibold text-amber-900 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg">
               The student is Archived
             </h3>
-            <p className="text-sm text-amber-700">
+            <p className="text-xs sm:text-sm text-amber-700">
               Form viewing is disabled for archived students.
             </p>
           </div>
@@ -658,11 +627,34 @@ export function FormsDocuments({
   }
 
   // Forms grid view with tabs
-  return <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
-          Forms & Documents
-        </h2>
+  return <div className="px-2 sm:px-0">
+      <div className="mb-3 sm:mb-4 md:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3 md:mb-4 gap-2 sm:gap-3 md:gap-4">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
+            Forms & Documents
+          </h2>
+          {onYearFilterChange && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Select value={yearFilter} onValueChange={onYearFilterChange}>
+                <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
+                  <SelectValue placeholder="Filter by year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                    const year = (new Date().getFullYear() - i).toString();
+                    return (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={(value) => {
           setActiveTab(value);
@@ -675,14 +667,14 @@ export function FormsDocuments({
             }
           }
         }}>
-          <div className="mb-4 overflow-x-auto ">
-            <TabsList className="w-max">
-              <TabsTrigger value="all">All Forms</TabsTrigger>
+          <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
+            <TabsList className="w-max h-8 sm:h-10">
+              <TabsTrigger value="all" className="text-xs sm:text-sm px-2 sm:px-3">All Forms</TabsTrigger>
               {familyForms.length > 0 && (
-                <TabsTrigger value="family">Family Forms</TabsTrigger>
+                <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
               )}
               {childSpecificForms.map((child) => (
-                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap">
+                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
                   <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
                   <span className="hidden sm:inline">{child.childName}</span>
                 </TabsTrigger>
@@ -692,12 +684,13 @@ export function FormsDocuments({
 
           <TabsContent value="all">
             {allForms.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
                 No forms available yet. This section will populate once assignments are available from the backend service.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 {getFormsForTab('all').map(form => (
+                  
                   <FormCard
                     key={form._key}
                     title={form.title}
@@ -724,11 +717,11 @@ export function FormsDocuments({
           {childSpecificForms.map((child) => (
             <TabsContent key={child.childId} value={child.childId}>
               {getFormsForTab(child.childId).length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
                   No forms available for {child.childName} yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {getFormsForTab(child.childId).map(form => (
                     <FormCard
                       key={form._key}

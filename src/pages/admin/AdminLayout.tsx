@@ -1,11 +1,12 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -106,12 +107,7 @@ export function AdminLayout({
               </li>)}
           </ul>
         </nav>
-        <div className="p-6 border-t border-gray-200">
-          <div onClick={() => setShowLogoutModal(true)} className="flex items-center space-x-4 px-4 py-3.5 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg cursor-pointer transition-all duration-200">
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">Logout</span>
-          </div>
-        </div>
+       
       </aside>
       
       {/* Main content */}
@@ -129,20 +125,44 @@ export function AdminLayout({
               Admin Portal
             </h1>
           </div>
-          <div className="flex items-center space-x-2 lg:space-x-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-xs lg:text-sm">
-                {userData?.firstName && userData?.lastName
-                  ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-                  : 'AD'}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                  {userData?.firstName && userData?.lastName
+                    ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
+                    : 'AD'}
+                </div>
+                
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
+              <div className="p-4 border-b border-gray-100">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                    <User className="w-5 h-5 text-gray-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {userData?.firstName && userData?.lastName
+                        ? `${userData.firstName} ${userData.lastName}`
+                        : 'Administrator'}
+                    </p>
+                    <p className="text-xs text-gray-500">System Administrator</p>
+                  </div>
+                </div>
               </div>
-              <span className="text-xs lg:text-sm font-medium">
-                {userData?.firstName && userData?.lastName
-                  ? `${userData.firstName} ${userData.lastName}`
-                  : 'Admin User'}
-              </span>
-            </div>
-          </div>
+              <div className="p-3">
+                <button 
+                  onClick={() => setShowLogoutModal(true)}
+                  className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </button>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         {/* Page content */}
         <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 flex flex-col bg-gray-50`}>{children}</main>

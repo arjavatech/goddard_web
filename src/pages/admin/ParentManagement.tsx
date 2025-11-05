@@ -12,8 +12,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
-import { ValidatedInput } from '../../components/ui/validated-input';
-import { commonValidationRules } from '../../lib/validation';
 import { fetchUserContext } from '../../services/api/user';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
@@ -195,8 +193,26 @@ export function ParentManagement() {
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
+  const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
+  const [isDialogClosing, setIsDialogClosing] = useState(false);
+
+  const validateInviteForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!parentEmail.trim()) errors.parentEmail = 'Parent email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) errors.parentEmail = 'Please enter a valid email address';
+    if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
+    if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
+    if (!childDob) errors.childDob = 'Child date of birth is required';
+    if (!childGender) errors.childGender = 'Child gender is required';
+    if (!childClassroom) errors.childClassroom = 'Child classroom is required';
+    
+    setInviteFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleInviteParent = async () => {
-    if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
+    if (!validateInviteForm()) return;
     
     const user = await fetchUserContext();
     if (!user.schoolId) throw new Error('School context not found');
@@ -252,8 +268,23 @@ export function ParentManagement() {
       throw new Error(errorMessage);
     }
   };
+  const [addChildFormErrors, setAddChildFormErrors] = useState<{[key: string]: string}>({});
+
+  const validateAddChildForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!newChildFirstName.trim()) errors.newChildFirstName = 'Child first name is required';
+    if (!newChildLastName.trim()) errors.newChildLastName = 'Child last name is required';
+    if (!newChildDob) errors.newChildDob = 'Child date of birth is required';
+    if (!newChildGender) errors.newChildGender = 'Child gender is required';
+    if (!newChildClassroom) errors.newChildClassroom = 'Child classroom is required';
+    
+    setAddChildFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleAddChild = async () => {
-    if (!selectedParent || !newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom) return;
+    if (!selectedParent || !validateAddChildForm()) return;
     
     try {
       const user = await fetchUserContext();
@@ -292,13 +323,7 @@ export function ParentManagement() {
       showToast('error', 'Failed to add child. Please try again.');
     }
   };
-  const showValidationToast = (message: string) => {
-    showToast('error', message);
-  };
 
-  const hideValidationToast = () => {
-    // No-op since global toast handles auto-hide
-  };
 
   const resetInviteForm = () => {
     setParentFirstName('');
@@ -309,7 +334,7 @@ export function ParentManagement() {
     setChildDob('');
     setChildGender('');
     setChildClassroom('');
-
+    setInviteFormErrors({});
   };
   const resetAddChildForm = () => {
     setNewChildFirstName('');
@@ -317,6 +342,7 @@ export function ParentManagement() {
     setNewChildDob('');
     setNewChildGender('');
     setNewChildClassroom('');
+    setAddChildFormErrors({});
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
     setResendingParentId(parentId);
@@ -399,110 +425,111 @@ export function ParentManagement() {
     }
   };
   return <AdminLayout>
-      <div className="space-y-8 ">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-2 sm:p-0 gap-4">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Parent Management
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Manage parent accounts and family information
             </p>
           </div>
           <Button onClick={() => {
           resetInviteForm();
+          setInviteFormErrors({});
           setIsInviteDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 self-start sm:self-center">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-2 sm:p-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Total Parents
                   </p>
-                  <p className="text-3xl font-bold text-foreground">{parents.length}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{parents.length}</p>
                 </div>
-                <div className="p-3 bg-amazon-teal/10 rounded-full">
-                  <Users className="h-6 w-6 text-amazon-teal" />
+                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Signed Up
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {parents.filter(p => p.signupStatus === 'Signed').length}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
+                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Pending Signup
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {parents.filter(p => p.signupStatus === 'Not Signed').length}
                   </p>
                 </div>
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <Clock className="h-6 w-6 text-amber-600" />
+                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
+                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-        <Card className="glass-card">
-          <CardContent className="p-0">
-            <div className="p-4 border-b bg-muted/20">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Parent Directory</h2>
-                <div className="text-sm text-muted-foreground">
+        <Card className="glass-card h-fit">
+          <CardContent className="p-0 overflow-hidden">
+            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold">Parent Directory</h2>
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {filteredParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
                 </div>
               </div>
               
               {/* Tabs */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="active">Active Parents ({parents.length})</TabsTrigger>
-                  <TabsTrigger value="deactivated">Deactivated Parents ({deactivatedParents.length})</TabsTrigger>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
+                <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
+                  <TabsTrigger value="active" className="text-xs sm:text-sm">Active ({parents.length})</TabsTrigger>
+                  <TabsTrigger value="deactivated" className="text-xs sm:text-sm">Deactivated ({deactivatedParents.length})</TabsTrigger>
                 </TabsList>
               </Tabs>
               
               {/* Search Bar */}
-              <div className="relative mb-4">
+              <div className="relative mb-3 sm:mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search parents by name or email..." 
-                  className="pl-10 h-11 bg-background" 
+                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
               </div>
 
               {/* Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-muted-foreground">Signup Status</label>
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Signup Status</label>
                   <Select value={signupFilter} onValueChange={setSignupFilter}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-10 sm:h-11">
                       <SelectValue placeholder="Signup status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -566,7 +593,7 @@ export function ParentManagement() {
                         <td className="py-3 px-2">
                           <div className="flex items-center text-gray-700 min-w-0">
                             <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate">{parent.email}</span>
+                            <span className="truncate text-sm max-w-[200px]">{parent.email}</span>
                           </div>
                         </td>
                         <td className="py-3 px-2 text-sm text-gray-600">
@@ -679,15 +706,15 @@ export function ParentManagement() {
             />
             
             {/* Mobile Card View */}
-            <div className="lg:hidden p-4 sm:p-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="lg:hidden p-3 sm:p-4">
+              <div className="space-y-2 sm:space-y-3">
               {loading ? (
-                <div className="py-8">
+                <div className="py-6 sm:py-8">
                   <Loading message="Loading parents..." size="sm" />
                 </div>
               ) : paginatedParents.length > 0 ? (
                 paginatedParents.map(parent => (
-                  <Card key={parent.id} className="p-3 sm:p-4 w-full max-w-md mx-auto">
+                  <Card key={parent.id} className="p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
@@ -706,7 +733,7 @@ export function ParentManagement() {
                               {parent.firstName} {parent.lastName}
                             </span>
                           )}
-                          <div className="text-xs text-muted-foreground truncate">
+                          <div className="text-xs text-muted-foreground truncate max-w-[150px]">
                             {parent.email}
                           </div>
                         </div>
@@ -829,10 +856,17 @@ export function ParentManagement() {
         </Card>
       </div>
       {/* Invite Parent Dialog */}
-      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" preventClose>
+      <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsDialogClosing(true);
+          setInviteFormErrors({});
+          setTimeout(() => setIsDialogClosing(false), 100);
+        }
+        setIsInviteDialogOpen(open);
+      }}>
+        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] max-w-4xl max-h-[85vh] overflow-y-auto mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Invite New Parent</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Invite New Parent</DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4 sm:space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
@@ -843,44 +877,64 @@ export function ParentManagement() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <ValidatedInput 
+                    <Input 
                       value={parentFirstName} 
-                      onChange={e => setParentFirstName(e.target.value)} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setParentFirstName(value);
+
+                      }}
+ 
                       placeholder="Enter first name" 
                       className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
                     />
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <ValidatedInput 
+                    <Input 
                       value={parentLastName} 
-                      onChange={e => setParentLastName(e.target.value)} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setParentLastName(value);
+
+                      }}
+ 
                       placeholder="Enter last name" 
                       className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
                     />
+
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Email
                     </label>
-                    <ValidatedInput 
+                    <Input 
                       type="email" 
                       value={parentEmail} 
-                      onChange={e => setParentEmail(e.target.value)} 
+                      onChange={e => {
+                        setParentEmail(e.target.value);
+                        if (inviteFormErrors.parentEmail) {
+                          setInviteFormErrors(prev => ({...prev, parentEmail: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing) {
+                          if (!parentEmail.trim()) {
+                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Parent email is required'}));
+                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Please enter a valid email address'}));
+                          }
+                        }
+                      }}
                       placeholder="Enter email address" 
-                      className="w-full"
-                      validationRules={commonValidationRules.email}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                      className={`w-full ${inviteFormErrors.parentEmail ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.parentEmail && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentEmail}</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -891,29 +945,51 @@ export function ParentManagement() {
                     <label className="block text-sm font-medium mb-2">
                       First Name
                     </label>
-                    <ValidatedInput 
+                    <Input 
                       value={childFirstName} 
-                      onChange={e => setChildFirstName(e.target.value)} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setChildFirstName(value);
+                        if (inviteFormErrors.childFirstName) {
+                          setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!childFirstName.trim()) {
+                          setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
+                        }
+                      }} 
                       placeholder="Enter first name" 
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                      className={`w-full ${inviteFormErrors.childFirstName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.childFirstName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Last Name
                     </label>
-                    <ValidatedInput 
+                    <Input 
                       value={childLastName} 
-                      onChange={e => setChildLastName(e.target.value)} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                        setChildLastName(value);
+                        if (inviteFormErrors.childLastName) {
+                          setInviteFormErrors(prev => ({...prev, childLastName: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!childLastName.trim()) {
+                          setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
+                        }
+                      }} 
                       placeholder="Enter last name" 
-                      className="w-full"
-                      validationRules={commonValidationRules.name}
-                      showToast={showValidationToast}
-                      hideToast={hideValidationToast}
+                      className={`w-full ${inviteFormErrors.childLastName ? 'border-red-500' : ''}`}
                     />
+                    {inviteFormErrors.childLastName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -922,18 +998,36 @@ export function ParentManagement() {
                     <Input 
                       type="date" 
                       value={childDob} 
-                      onChange={e => setChildDob(e.target.value)} 
-                      className="w-full" 
+                      onChange={e => {
+                        setChildDob(e.target.value);
+                        if (inviteFormErrors.childDob) {
+                          setInviteFormErrors(prev => ({...prev, childDob: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!childDob) {
+                          setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
+                        }
+                      }} 
+                      className={`w-full ${inviteFormErrors.childDob ? 'border-red-500' : ''}`} 
                       min="2000-01-01" 
                       max="2020-12-31" 
                     />
+                    {inviteFormErrors.childDob && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Gender
                     </label>
-                    <Select value={childGender} onValueChange={setChildGender}>
-                      <SelectTrigger>
+                    <Select value={childGender} onValueChange={(value) => {
+                      setChildGender(value);
+                      if (inviteFormErrors.childGender) {
+                        setInviteFormErrors(prev => ({...prev, childGender: ''}));
+                      }
+                    }}>
+                      <SelectTrigger className={inviteFormErrors.childGender ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Select gender" />
                       </SelectTrigger>
                       <SelectContent>
@@ -941,13 +1035,21 @@ export function ParentManagement() {
                         <SelectItem value="female">Female</SelectItem>
                       </SelectContent>
                     </Select>
+                    {inviteFormErrors.childGender && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">
                       Classroom
                     </label>
-                    <Select value={childClassroom} onValueChange={setChildClassroom}>
-                      <SelectTrigger>
+                    <Select value={childClassroom} onValueChange={(value) => {
+                      setChildClassroom(value);
+                      if (inviteFormErrors.childClassroom) {
+                        setInviteFormErrors(prev => ({...prev, childClassroom: ''}));
+                      }
+                    }}>
+                      <SelectTrigger className={inviteFormErrors.childClassroom ? 'border-red-500' : ''}>
                         <SelectValue placeholder="Select a classroom" />
                       </SelectTrigger>
                       <SelectContent>
@@ -956,16 +1058,26 @@ export function ParentManagement() {
                           </SelectItem>)}
                       </SelectContent>
                     </Select>
+                    {inviteFormErrors.childClassroom && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>
+                    )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsInviteDialogOpen(false);
+              setInviteFormErrors({});
+            }}>
               Cancel
             </Button>
-            <AsyncButton onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom}>
+            <AsyncButton 
+              onClick={handleInviteParent} 
+              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom}
+            >
               <Mail className="h-4 w-4 mr-2" />
               Send Invitation
             </AsyncButton>
@@ -974,9 +1086,9 @@ export function ParentManagement() {
       </Dialog>
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">
               Add Child to {selectedParent?.firstName}{' '}
               {selectedParent?.lastName}
             </DialogTitle>
@@ -986,30 +1098,42 @@ export function ParentManagement() {
               <label className="block text-sm font-medium mb-2">
                 First Name
               </label>
-              <ValidatedInput 
+              <Input 
                 value={newChildFirstName} 
-                onChange={e => setNewChildFirstName(e.target.value)} 
+                onChange={e => {
+                  const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setNewChildFirstName(value);
+                  if (addChildFormErrors.newChildFirstName) {
+                    setAddChildFormErrors(prev => ({...prev, newChildFirstName: ''}));
+                  }
+                }} 
                 placeholder="Enter first name" 
-                className="w-full" 
-                validationRules={commonValidationRules.name}
-                showToast={showValidationToast}
-                hideToast={hideValidationToast}
+                className={`w-full ${addChildFormErrors.newChildFirstName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
+              {addChildFormErrors.newChildFirstName && (
+                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildFirstName}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Last Name
               </label>
-              <ValidatedInput 
+              <Input 
                 value={newChildLastName} 
-                onChange={e => setNewChildLastName(e.target.value)} 
+                onChange={e => {
+                  const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setNewChildLastName(value);
+                  if (addChildFormErrors.newChildLastName) {
+                    setAddChildFormErrors(prev => ({...prev, newChildLastName: ''}));
+                  }
+                }} 
                 placeholder="Enter last name" 
-                className="w-full" 
-                validationRules={commonValidationRules.name}
-                showToast={showValidationToast}
-                hideToast={hideValidationToast}
+                className={`w-full ${addChildFormErrors.newChildLastName ? 'border-red-500' : ''}`} 
               />
+              {addChildFormErrors.newChildLastName && (
+                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildLastName}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -1018,18 +1142,31 @@ export function ParentManagement() {
               <Input 
                 type="date" 
                 value={newChildDob} 
-                onChange={e => setNewChildDob(e.target.value)} 
-                className="w-full" 
+                onChange={e => {
+                  setNewChildDob(e.target.value);
+                  if (addChildFormErrors.newChildDob) {
+                    setAddChildFormErrors(prev => ({...prev, newChildDob: ''}));
+                  }
+                }} 
+                className={`w-full ${addChildFormErrors.newChildDob ? 'border-red-500' : ''}`} 
                 min="2000-01-01" 
                 max="2020-12-31" 
               />
+              {addChildFormErrors.newChildDob && (
+                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildDob}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Gender
               </label>
-              <Select value={newChildGender} onValueChange={setNewChildGender}>
-                <SelectTrigger>
+              <Select value={newChildGender} onValueChange={(value) => {
+                setNewChildGender(value);
+                if (addChildFormErrors.newChildGender) {
+                  setAddChildFormErrors(prev => ({...prev, newChildGender: ''}));
+                }
+              }}>
+                <SelectTrigger className={addChildFormErrors.newChildGender ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1038,13 +1175,21 @@ export function ParentManagement() {
                   <SelectItem value="others">Others</SelectItem>
                 </SelectContent>
               </Select>
+              {addChildFormErrors.newChildGender && (
+                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildGender}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Classroom
               </label>
-              <Select value={newChildClassroom} onValueChange={setNewChildClassroom}>
-                <SelectTrigger>
+              <Select value={newChildClassroom} onValueChange={(value) => {
+                setNewChildClassroom(value);
+                if (addChildFormErrors.newChildClassroom) {
+                  setAddChildFormErrors(prev => ({...prev, newChildClassroom: ''}));
+                }
+              }}>
+                <SelectTrigger className={addChildFormErrors.newChildClassroom ? 'border-red-500' : ''}>
                   <SelectValue placeholder="Select a classroom" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1053,13 +1198,16 @@ export function ParentManagement() {
                     </SelectItem>)}
                 </SelectContent>
               </Select>
+              {addChildFormErrors.newChildClassroom && (
+                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildClassroom}</p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)}>
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!newChildFirstName || !newChildLastName || !newChildDob || !newChildGender || !newChildClassroom}>
+            <AsyncButton onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90">
               Add Child
             </AsyncButton>
           </DialogFooter>
@@ -1068,9 +1216,9 @@ export function ParentManagement() {
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent className="max-w-md" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Deactivate Parent</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Deactivate Parent</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">
@@ -1109,9 +1257,9 @@ export function ParentManagement() {
 
       {/* Activate Confirmation Dialog */}
       <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
-        <DialogContent className="max-w-md" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle>Activate Parent</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Activate Parent</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <p className="text-sm text-muted-foreground">

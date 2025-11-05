@@ -20,7 +20,7 @@ const SelectSchool = () => {
   const [selectedState, setSelectedState] = useState<string>('');
 
   const states = [
-   'Washington', 'West Virginia',
+   'Washington'
   ];
 
   useEffect(() => {
