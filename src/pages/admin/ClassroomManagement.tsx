@@ -478,7 +478,7 @@ export function ClassroomManagement() {
       </div>
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
           </DialogHeader>
@@ -514,7 +514,7 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Edit Classroom Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Rename Classroom</DialogTitle>
           </DialogHeader>
@@ -550,7 +550,7 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Delete Classroom Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Delete Classroom</DialogTitle>
           </DialogHeader>

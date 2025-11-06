@@ -173,45 +173,48 @@ export function FormView() {
 
   const selectedUrl = getFormUrl();
   return <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleBack} size="icon">
-              <ChevronLeft className="h-4 w-4" />
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex items-center space-x-3 sm:space-x-4">
+            <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
-            <div className="flex items-center">
-              {childName && <div className="flex items-center text-gray-600 mr-4">
-                  <User className="h-4 w-4 mr-2" />
-                  <span>{childName}</span>
-                  <span className="mx-1">•</span>
-                  <School className="h-4 w-4 mx-1" />
-                  <span>{classDetails}</span>
+            <div className="flex items-center min-w-0 flex-1">
+              {childName && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                    <User className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="text-sm sm:text-base truncate">{childName}</span>
+                  </div>
+                  <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                    <School className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                    <span className="text-sm sm:text-base truncate">{classDetails}</span>
+                  </div>
                 </div>}
             </div>
           </div>
-          <div className="flex flex-col items-end">
-            <div className="flex items-center text-sm text-muted-foreground">
-              <Calendar className="h-4 w-4 mr-1" />
-              Last updated: {formData.lastUpdated}
+          <div className="flex flex-col items-start sm:items-end gap-2">
+            <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              <span className="truncate">Last updated: {formData.lastUpdated}</span>
             </div>
-            <div className="mt-1">
+            <div>
               <StatusBadge status={formData.status} />
             </div>
           </div>
         </div>
         <Card className="glass-card">
           <CardContent className="p-6">
-            <div className="mb-4 flex justify-between items-start gap-4">
-              <h2 className="text-xl font-bold">{formData.title}</h2>
-              <div className="flex items-center gap-3">
+            <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+              <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                 <Textarea
                   placeholder="Add notes..."
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[60px] w-64 text-sm"
+                  className="min-h-[60px] w-full sm:w-64 text-sm"
                   rows={2}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full sm:w-auto">
                   <Button
                     onClick={handleApprove}
                     className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -266,12 +269,13 @@ export function FormView() {
                         src={selectedUrl}
                         style={{
                           width: '100%',
-                          height: '600px',
+                          height: '500px',
                           border: 'none',
                           borderRadius: '8px',
                           opacity: isFrameLoading ? 0 : 1,
                           transition: 'opacity 0.3s ease-in-out'
                         }}
+                        className="sm:h-[600px]"
                         title={formData.title}
                         allow="fullscreen"
                         onLoad={() => setIsFrameLoading(false)}

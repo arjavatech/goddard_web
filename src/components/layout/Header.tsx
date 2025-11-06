@@ -70,18 +70,18 @@ export function Header() {
       
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <DialogContent className="sm:max-w-md" preventClose>
+        <DialogContent preventClose>
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
             <DialogDescription>
               Are you sure you want to logout? You will need to sign in again to access your dashboard.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)}>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)} className="w-full sm:w-auto">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut}>
+            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut} className="w-full sm:w-auto">
               {isLoggingOut ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>

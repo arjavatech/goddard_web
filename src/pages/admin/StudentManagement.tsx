@@ -560,7 +560,7 @@ export function StudentManagement() {
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block relative z-0">
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -809,7 +809,7 @@ export function StudentManagement() {
 
       {/* Child Status Change Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Change Child Status</DialogTitle>
           </DialogHeader>

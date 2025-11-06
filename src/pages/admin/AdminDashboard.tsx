@@ -271,7 +271,7 @@ export function AdminDashboard() {
           <CardContent className="p-4 sm:p-5 lg:p-6">
             <div className="flex justify-between items-start">
               <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground truncate">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">
                   {stat.title}
                 </p>
                 <h3 className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2 text-foreground">
@@ -337,14 +337,14 @@ export function AdminDashboard() {
                 <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Invite Parent</span>
               </Button>
-              <Button
+              {/* <Button
                 variant="outline"
                 className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
                 onClick={() => setIsInviteDialogOpen(true)}
               >
                 <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 <span className="text-xs font-medium">Add Student</span>
-              </Button>
+              </Button> */}
               <Button
                 variant="outline"
                 className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
@@ -363,11 +363,11 @@ export function AdminDashboard() {
 
 
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg mx-4" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[400px] max-w-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
           </DialogHeader>
-          <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
+          <div className="py-2 sm:py-3 md:py-4 space-y-3 sm:space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Name
@@ -422,12 +422,12 @@ export function AdminDashboard() {
         }
         setIsInviteDialogOpen(open);
       }}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] max-w-4xl max-h-[90vh] overflow-y-auto mx-4" preventClose>
+        <DialogContent className="w-[92vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[75vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Invite New Parent</DialogTitle>
           </DialogHeader>
-          <div className="py-3 sm:py-4 space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <div className="py-2 sm:py-3 md:py-4 space-y-3 sm:space-y-4 md:space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
               <div>
                 <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
                 <div className="space-y-4">
@@ -658,11 +658,11 @@ export function AdminDashboard() {
         }
         setIsAddClassroomDialogOpen(open);
       }}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-3 sm:py-4">
+          <div className="py-2 sm:py-3 md:py-4">
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>

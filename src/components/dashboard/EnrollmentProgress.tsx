@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ChevronRight, Check, AlertCircle } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
@@ -47,9 +47,12 @@ export function EnrollmentProgress({
   const incompleteForm = sortedForms.find(form => !COMPLETION_STATUSES.has(form.status));
   const currentStep = incompleteForm?.title || 'Enrollment complete';
 
-  // Generate steps from forms (limit to 5 for display)
-  const displaySteps = sortedForms.slice(0, 5).map(form => ({
-    name: form.title.length > 15 ? form.title.substring(0, 12) + '...' : form.title,
+  // State for showing all forms
+  const [showAllForms, setShowAllForms] = useState(false);
+
+  // Generate steps from forms (limit to 5 for display unless expanded)
+  const displaySteps = sortedForms.slice(0, showAllForms ? sortedForms.length : 5).map(form => ({
+    name: form.title,
     completed: COMPLETION_STATUSES.has(form.status)
   }));
   if (childStatus === 'archive') {
@@ -77,7 +80,64 @@ export function EnrollmentProgress({
       <div className="mb-3 sm:mb-4">
         <Progress value={progressPercentage} className="h-1.5 sm:h-2 bg-blue-100" />
       </div>
-      <div className="flex justify-between text-xs mb-4 sm:mb-5 lg:mb-6 gap-1 sm:gap-2">
+      {/* Mobile: Creative grid layout with overflow handling */}
+      <div className="sm:hidden mb-4">
+        {displaySteps.length <= 3 ? (
+          // For 3 or fewer forms: vertical list
+          <div className="space-y-2">
+            {displaySteps.map((step, index) => <div key={index} className="flex items-center gap-3 p-2 rounded-lg bg-white/50">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${step.completed ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                  {step.completed && <Check className="h-3 w-3" />}
+                </div>
+                <span className={`${step.completed ? 'text-foreground font-medium' : 'text-muted-foreground'} text-sm flex-1`}>
+                  {step.name}
+                </span>
+              </div>)}
+          </div>
+        ) : (
+          // For 4+ forms: compact grid with summary
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              {displaySteps.slice(0, showAllForms ? displaySteps.length : 4).map((step, index) => <div key={index} className="flex items-center gap-2 p-2 rounded-lg bg-white/50">
+                  <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${step.completed ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                    {step.completed && <Check className="h-2.5 w-2.5" />}
+                  </div>
+                  <span className={`${step.completed ? 'text-foreground font-medium' : 'text-muted-foreground'} text-xs truncate`}>
+                    {step.name}
+                  </span>
+                </div>)}
+            </div>
+            {!showAllForms && sortedForms.length > 4 && (
+              <button 
+                onClick={() => setShowAllForms(true)}
+                className="w-full text-center p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <span className="text-xs text-blue-700 font-medium">
+                  +{sortedForms.length - 4} more forms
+                </span>
+              </button>
+            )}
+            {showAllForms && sortedForms.length > 4 && (
+              <button 
+                onClick={() => setShowAllForms(false)}
+                className="w-full text-center p-2 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <span className="text-xs text-blue-700 font-medium">
+                  Show less
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+        <div className="text-center mt-3 p-2 bg-blue-100 rounded-lg">
+          <span className="text-sm text-blue-700 font-semibold">
+            {completedCount} of {totalForms} forms complete ({progressPercentage}%)
+          </span>
+        </div>
+      </div>
+      
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden sm:flex justify-between text-xs mb-4 sm:mb-5 lg:mb-6 gap-1 sm:gap-2">
         {displaySteps.map((step, index) => <div key={index} className="flex flex-col items-center flex-1 min-w-0">
             <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full mb-1 flex items-center justify-center ${step.completed ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'}`}>
               {step.completed && <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3" />}
