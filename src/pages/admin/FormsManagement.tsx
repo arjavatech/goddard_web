@@ -369,7 +369,6 @@ export function FormsManagement() {
                               )}
                               <DropdownMenuItem 
                                 onClick={() => openEditDialog(form)}
-                                disabled={form.status === 'Active'}
                               >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
@@ -429,7 +428,6 @@ export function FormsManagement() {
                           )}
                           <DropdownMenuItem 
                             onClick={() => openEditDialog(form)}
-                            disabled={form.status === 'Active'}
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
