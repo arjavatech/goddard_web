@@ -1,11 +1,19 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Loading } from '../ui/loading';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 interface FormCardProps {
   title: string;
   description: string;
@@ -187,6 +195,8 @@ export function FormsDocuments({
   const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
 
   // Sync activeTab with selectedChildId only when it actually changes
   useEffect(() => {
@@ -274,10 +284,9 @@ export function FormsDocuments({
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, use PDF link with embedded viewer to ensure non-editable viewing
+      // For approved forms, use direct PDF link for react-pdf viewer
       if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
-        // Use Google Docs viewer to display PDF inline without download
-        formUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(recentPdfLink)}&embedded=true`;
+        formUrl = recentPdfLink;
       } else {
         // If no PDF link available, don't allow viewing
         return;
@@ -324,7 +333,22 @@ export function FormsDocuments({
       viewUrl: formUrl
     });
     setIsFrameLoading(true);
+    setPageNumber(1);
+    setNumPages(null);
     onViewForm(form);
+  };
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setIsFrameLoading(false);
+  };
+
+  const goToPrevPage = () => {
+    setPageNumber(pageNumber - 1 <= 1 ? 1 : pageNumber - 1);
+  };
+
+  const goToNextPage = () => {
+    setPageNumber(pageNumber + 1 >= (numPages || 1) ? (numPages || 1) : pageNumber + 1);
   };
 
   // Auto-open form when formToOpen is set
@@ -541,59 +565,106 @@ export function FormsDocuments({
                 </div>
               )}
               {selectedForm.viewUrl && selectedForm.viewUrl !== '#' ? (
-                <>
-                  <style>{`
-                    @media (max-width: 640px) {
-                      .ndfHFb-c4YZDc-q77wGc,
-                      .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb {
-                        display: none !important;
-                      }
-                    }
-                  `}</style>
-                  <iframe
-                    src={selectedForm.viewUrl}
-                    className="w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[400px] sm:min-h-[500px] md:min-h-[1000px] border-none rounded-lg transition-opacity duration-300"
-                    style={{
-                      opacity: isFrameLoading ? 0 : 1
-                    }}
-                    title={selectedForm.title}
-
-                  onLoad={() => {
-                    setIsFrameLoading(false);
-                    // Add a manual trigger button after form loads
-                    setTimeout(() => {
-                      // Check if this might be a thank you page by looking at common indicators
-                      try {
-                        const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
-                        if (iframe && iframe.contentDocument) {
-                          const content = iframe.contentDocument.body.innerText.toLowerCase();
-                          if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
-                            setShowThankYou(true);
-                            setCountdown(5);
-                            
-                            countdownRef.current = setInterval(() => {
-                              setCountdown(prev => {
-                                if (prev <= 1) {
-                                  setSelectedForm(null);
-                                  setShowThankYou(false);
-                                  setIsFrameLoading(false);
-                                  if (countdownRef.current) clearInterval(countdownRef.current);
-                                  // Trigger refresh when auto-redirecting
-                                  if (onFormCompleted) onFormCompleted();
-                                  return 0;
-                                }
-                                return prev - 1;
-                              });
-                            }, 1000);
-                          }
+                selectedForm.status === 'Approved' ? (
+                  <div className="flex flex-col">
+                    {/* PDF Navigation */}
+                    <div className="flex items-center justify-between mb-2 sm:mb-4 p-2 bg-gray-50 rounded-lg">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={pageNumber <= 1}
+                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                      >
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
+                      </Button>
+                      <span className="text-xs sm:text-sm font-medium px-2">
+                        {pageNumber} / {numPages || '...'}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={pageNumber >= (numPages || 1)}
+                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <span className="sm:hidden">Next</span>
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* PDF Viewer */}
+                    <div className="flex justify-center overflow-x-auto">
+                      <Document
+                        file={selectedForm.viewUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        loading={<Loading message="Loading PDF..." size="sm" />}
+                        error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
+                      >
+                        <Page 
+                          pageNumber={pageNumber}
+                          width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
+                          renderTextLayer={true}
+                          renderAnnotationLayer={false}
+                          className="shadow-lg"
+                        />
+                      </Document>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <style>{`
+                      @media (max-width: 640px) {
+                        .ndfHFb-c4YZDc-q77wGc,
+                        .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb {
+                          display: none !important;
                         }
-                      } catch (error) {
-                        // Cross-origin restrictions, ignore
                       }
-                    }, 1000);
-                  }}
-                />
-                </>
+                    `}</style>
+                    <iframe
+                      src={selectedForm.viewUrl}
+                      className="w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[400px] sm:min-h-[500px] md:min-h-[1000px] border-none rounded-lg transition-opacity duration-300"
+                      style={{
+                        opacity: isFrameLoading ? 0 : 1
+                      }}
+                      title={selectedForm.title}
+                      onLoad={() => {
+                        setIsFrameLoading(false);
+                        setTimeout(() => {
+                          try {
+                            const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
+                            if (iframe && iframe.contentDocument) {
+                              const content = iframe.contentDocument.body.innerText.toLowerCase();
+                              if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
+                                setShowThankYou(true);
+                                setCountdown(5);
+                                
+                                countdownRef.current = setInterval(() => {
+                                  setCountdown(prev => {
+                                    if (prev <= 1) {
+                                      setSelectedForm(null);
+                                      setShowThankYou(false);
+                                      setIsFrameLoading(false);
+                                      if (countdownRef.current) clearInterval(countdownRef.current);
+                                      if (onFormCompleted) onFormCompleted();
+                                      return 0;
+                                    }
+                                    return prev - 1;
+                                  });
+                                }, 1000);
+                              }
+                            }
+                          } catch (error) {
+                            // Cross-origin restrictions, ignore
+                          }
+                        }, 1000);
+                      }}
+                    />
+                  </>
+                )
               ) : (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500">
                   Unable to load form. Please check the form configuration.

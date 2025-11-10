@@ -122,6 +122,7 @@ export function ParentManagement() {
 
         // Helper function to map parent details to Parent type
         const mapParentDetails = (detail: any): Parent => {
+          console.log('Mapping parent detail:', { parentId: detail.parentId, email: detail.email, originalDetail: detail });
           const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
           const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
           const children: Child[] = detail.children?.map((child: any) => {
@@ -152,6 +153,7 @@ export function ParentManagement() {
         // Map active parents
         if (parentDetailsResponse.activeParents.length > 0) {
           const mappedActiveParents = parentDetailsResponse.activeParents.map(mapParentDetails);
+          console.log('Mapped active parents:', mappedActiveParents.map(p => ({ id: p.id, email: p.email, originalParentId: parentDetailsResponse.activeParents.find(orig => orig.email === p.email)?.parentId })));
           setParents(mappedActiveParents);
         }
 
@@ -345,6 +347,9 @@ export function ParentManagement() {
     setAddChildFormErrors({});
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
+    console.log('Resending confirmation for parentId:', parentId);
+    console.log('Parent email:', parentEmail);
+    console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
     setResendingParentId(parentId);
     try {
       await resendParentConfirmation(parentId);
