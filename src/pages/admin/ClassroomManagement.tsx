@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
@@ -26,24 +26,17 @@ export function ClassroomManagement() {
   const [newClassroomName, setNewClassroomName] = useState('');
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
   const [loading, setLoading] = useState(true);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'error', title: '', message: '' });
+  const [classroomErrors, setClassroomErrors] = useState<{[key: string]: string}>({});
+  const { showToast } = useToast();
 
-  const showToast = (type: 'success' | 'error', message: string, title?: string) => {
-    setToast({
-      open: true,
-      type,
-      title: title || '',
-      message
-    });
-  };
-
-  const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }));
+  const validateClassroom = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!newClassroomName.trim()) errors.newClassroomName = 'Classroom name is required';
+    else if (newClassroomName.trim().length < 2) errors.newClassroomName = 'Classroom name must be at least 2 characters';
+    
+    setClassroomErrors(errors);
+    return Object.keys(errors).length === 0;
   };
   useEffect(() => {
     let isMounted = true;
@@ -97,7 +90,7 @@ export function ClassroomManagement() {
     mobileItemsPerPage: 5
   });
   const handleAddClassroom = async () => {
-    if (!newClassroomName.trim()) return;
+    if (!validateClassroom()) return;
     
     try {
       const user = await fetchUserContext();
@@ -121,6 +114,7 @@ export function ClassroomManagement() {
       
       setClassrooms(mapped);
       setNewClassroomName('');
+      setClassroomErrors({});
       setIsAddDialogOpen(false);
       showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
     } catch (error) {
@@ -128,7 +122,7 @@ export function ClassroomManagement() {
     }
   };
   const handleEditClassroom = async () => {
-    if (!selectedClassroom || !newClassroomName.trim()) return;
+    if (!selectedClassroom || !validateClassroom()) return;
     
     try {
       const user = await fetchUserContext();
@@ -152,6 +146,7 @@ export function ClassroomManagement() {
       
       setClassrooms(mapped);
       setNewClassroomName('');
+      setClassroomErrors({});
       setIsEditDialogOpen(false);
       showToast('success', `Classroom renamed to "${newClassroomName.trim()}" successfully`);
     } catch (error) {
@@ -191,6 +186,7 @@ export function ClassroomManagement() {
   const openEditDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
     setNewClassroomName(classroom.name);
+    setClassroomErrors({});
     setIsEditDialogOpen(true);
   };
   const openDeleteDialog = (classroom: Classroom) => {
@@ -198,70 +194,71 @@ export function ClassroomManagement() {
     setIsDeleteDialogOpen(true);
   };
   return <AdminLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="ml-4 sm:ml-0">
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 sm:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Classroom Management
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Manage classrooms and student assignments
             </p>
           </div>
           <Button onClick={() => {
           setNewClassroomName('');
+          setClassroomErrors({});
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 ml-4 sm:ml-0 self-start sm:self-center">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Classroom
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                     Total Classrooms
                   </p>
-                  <p className="text-3xl font-bold text-foreground">{classrooms.length}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{classrooms.length}</p>
                 </div>
-                <div className="p-3 bg-amazon-teal/10 rounded-full">
-                  <Users className="h-6 w-6 text-amazon-teal" />
+                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                     Total Students
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {classrooms.reduce((sum, c) => sum + c.studentsCount, 0)}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <Users className="h-6 w-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1">
                     Assigned Forms
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {classrooms.reduce((sum, c) => sum + c.formsCount, 0)}
                   </p>
                 </div>
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <FileText className="h-6 w-6 text-amber-600" />
+                <div className="p-2 sm:p-3 bg-amber-100 rounded-full">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
@@ -270,10 +267,10 @@ export function ClassroomManagement() {
         
         <Card className="glass-card">
           <CardContent className="p-0">
-            <div className="p-6 border-b bg-muted/20">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Classroom Directory</h2>
-                <div className="text-sm text-muted-foreground">
+            <div className="p-4 sm:p-6 border-b bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold">Classroom Directory</h2>
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {filteredClassrooms.length} of {classrooms.length} classrooms
                 </div>
               </div>
@@ -282,40 +279,40 @@ export function ClassroomManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search classrooms..." 
-                  className="pl-10 h-11 bg-background" 
+                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
               </div>
             </div>
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-3 p-4">
+            <div className="lg:hidden space-y-2 sm:space-y-3 p-3 sm:p-4">
               {loading ? (
-                <div className="py-8">
+                <div className="py-6 sm:py-8">
                   <Loading message="Loading classrooms..." size="sm" />
                 </div>
               ) : paginatedClassrooms.length > 0 ? (
                 paginatedClassrooms.map((classroom, index) => (
-                  <Card key={classroom.id || `classroom-${index}`} className="p-3">
+                  <Card key={classroom.id || `classroom-${index}`} className="p-3 sm:p-4">
                     <CardContent className="p-0">
                       <div className="flex items-start justify-between mb-3">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-sm">
+                        <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
+                          <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs sm:text-sm flex-shrink-0">
                             {classroom.name.split(' ').map(word => word.charAt(0)).join('').slice(0, 2)}
                           </div>
-                          <div>
-                            <Link to={`/admin/classrooms/${classroom.id}`} className="text-base font-medium text-foreground hover:text-amazon-teal">
+                          <div className="min-w-0 flex-1">
+                            <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm sm:text-base font-medium text-foreground hover:text-amazon-teal block truncate">
                               {classroom.name}
                             </Link>
                             <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Users className="h-3 w-3" />
-                              {classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}
+                              <Users className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</span>
                             </p>
                           </div>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -335,12 +332,12 @@ export function ClassroomManagement() {
                         <div className="flex flex-wrap gap-1">
                           {classroom.assignedForms.length > 0 ? (
                             classroom.assignedForms.slice(0, 2).map(form => (
-                              <Badge key={form.id} variant="secondary" className="text-xs">
+                              <Badge key={form.id} variant="secondary" className="text-xs truncate max-w-[120px]">
                                 {form.name}
                               </Badge>
                             ))
                           ) : (
-                            <span className="text-gray-400 text-sm">No forms assigned</span>
+                            <span className="text-gray-400 text-xs sm:text-sm">No forms assigned</span>
                           )}
                           {classroom.assignedForms.length > 2 && (
                             <Badge variant="outline" className="text-xs">
@@ -349,8 +346,8 @@ export function ClassroomManagement() {
                           )}
                         </div>
                         <Link to={`/admin/form-assignments?classroom=${classroom.id}`} className="block">
-                          <Button variant="outline" size="sm" className="w-full flex items-center justify-center">
-                            <FileText className="h-4 w-4 mr-1" />
+                          <Button variant="outline" size="sm" className="w-full flex items-center justify-center h-8 sm:h-9 text-xs sm:text-sm">
+                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                             Manage Forms
                           </Button>
                         </Link>
@@ -359,7 +356,7 @@ export function ClassroomManagement() {
                   </Card>
                 ))
               ) : (
-                <div className="py-8 text-center text-muted-foreground text-sm">
+                <div className="py-6 sm:py-8 text-center text-muted-foreground text-xs sm:text-sm">
                   No classrooms found matching your search criteria.
                 </div>
               )}
@@ -481,30 +478,35 @@ export function ClassroomManagement() {
       </div>
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
-            <DialogTitle>Add New Classroom</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-3 sm:py-4">
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>
-            <ValidatedInput 
+            <Input 
               value={newClassroomName} 
-              onChange={e => setNewClassroomName(e.target.value)} 
+              onChange={e => {
+                setNewClassroomName(e.target.value);
+                if (classroomErrors.newClassroomName) {
+                  setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+                }
+              }} 
               placeholder="Enter classroom name" 
-              className="w-full" 
-              validationRules={commonValidationRules.classroom}
-              showToast={(message) => showToast('error', message)}
-              hideToast={hideToast}
+              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`} 
               autoFocus 
             />
+            {classroomErrors.newClassroomName && (
+              <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+            )}
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" disabled={!newClassroomName.trim()}>
+            <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
               Add Classroom
             </AsyncButton>
           </DialogFooter>
@@ -512,30 +514,35 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Edit Classroom Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
-            <DialogTitle>Rename Classroom</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Rename Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
+          <div className="py-3 sm:py-4">
             <label className="block text-sm font-medium mb-2">
               Classroom Name
             </label>
-            <ValidatedInput 
+            <Input 
               value={newClassroomName} 
-              onChange={e => setNewClassroomName(e.target.value)} 
+              onChange={e => {
+                setNewClassroomName(e.target.value);
+                if (classroomErrors.newClassroomName) {
+                  setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+                }
+              }} 
               placeholder="Enter new classroom name" 
-              className="w-full" 
-              validationRules={commonValidationRules.classroom}
-              showToast={(message) => showToast('error', message)}
-              hideToast={hideToast}
+              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`} 
               autoFocus 
             />
+            {classroomErrors.newClassroomName && (
+              <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+            )}
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleEditClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" disabled={!newClassroomName.trim()}>
+            <AsyncButton onClick={handleEditClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
               Save Changes
             </AsyncButton>
           </DialogFooter>
@@ -543,42 +550,35 @@ export function ClassroomManagement() {
       </Dialog>
       {/* Delete Classroom Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
-            <DialogTitle>Delete Classroom</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Delete Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-600">
+          <div className="py-3 sm:py-4">
+            <p className="text-sm sm:text-base text-gray-600">
               Are you sure you want to delete{' '}
               <span className="font-medium">{selectedClassroom?.name}</span>?
               This action cannot be undone.
             </p>
-            {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 && <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                  <AlertCircle className="h-5 w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-800">
+            {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 && <div className="mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs sm:text-sm text-amber-800">
                     This classroom has {selectedClassroom?.studentsCount}{' '}
                     student{selectedClassroom?.studentsCount !== 1 ? 's' : ''}{' '}
                     enrolled. Deleting it will remove all student associations.
                   </p>
                 </div>}
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} className="w-full sm:w-auto">
+            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Delete Classroom
             </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-        onClose={hideToast}
-      />
+
     </AdminLayout>;
 }

@@ -3,27 +3,27 @@ import { X, CheckCircle, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ToastProps {
-  open: boolean
   type: 'success' | 'error'
   title?: string
   message: string
   onClose: () => void
+  index: number
+  id: string
 }
 
-export function Toast({ open, type, title, message, onClose }: ToastProps) {
+export function Toast({ type, title, message, onClose, index, id }: ToastProps) {
   React.useEffect(() => {
-    if (open) {
-      const timer = setTimeout(() => {
-        onClose()
-      }, 4000)
-      return () => clearTimeout(timer)
-    }
-  }, [open, onClose])
-
-  if (!open) return null
+    const timer = setTimeout(() => {
+      onClose()
+    }, 4000)
+    return () => clearTimeout(timer)
+  }, [id, onClose])
 
   return (
-    <div className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-2">
+    <div 
+      className="animate-in slide-in-from-right-2 duration-300"
+      style={{ animationDelay: `${index * 100}ms` }}
+    >
       <div className={cn(
         "glass-card flex items-start gap-3 p-4 rounded-lg shadow-lg border max-w-sm transition-all duration-300",
         type === 'success' 

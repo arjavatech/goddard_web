@@ -44,6 +44,6 @@ export function StatusBadge({
   };
   return <Badge variant={getVariant()} className="mt-1 self-start flex items-center text-xs">
       {getIcon()}
-      {status}
+      {status === 'In Progress' ? 'Completed-Pending Approval' : status === 'Approved' ? 'Completed-Admin Approved' : status}
     </Badge>;
 }

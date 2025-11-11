@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import { createContext, useContext, useState, ReactNode, useCallback } from 'react'
 import { Toast } from '../components/ui/toast'
 
 interface ToastState {
-  open: boolean
+  id: string
   type: 'success' | 'error'
   title?: string
   message: string
@@ -15,36 +15,38 @@ interface ToastContextType {
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
 
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toast, setToast] = useState<ToastState>({
-    open: false,
-    type: 'error',
-    title: '',
-    message: ''
-  })
+  const [toasts, setToasts] = useState<ToastState[]>([])
 
   const showToast = (type: 'success' | 'error', message: string, title?: string) => {
-    setToast({
-      open: true,
+    const id = Date.now().toString()
+    setToasts(prev => [...prev, {
+      id,
       type,
       title: title || '',
       message
-    })
+    }])
   }
 
-  const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }))
-  }
+  const hideToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id))
+  }, [])
 
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <Toast
-        open={toast.open}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-        onClose={hideToast}
-      />
+      <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] space-y-2">
+        {toasts.map((toast, index) => (
+          <Toast
+            key={toast.id}
+            id={toast.id}
+            type={toast.type}
+            title={toast.title}
+            message={toast.message}
+            onClose={() => hideToast(toast.id)}
+            index={index}
+          />
+        ))}
+      </div>
     </ToastContext.Provider>
   )
 }

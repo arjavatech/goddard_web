@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -12,7 +12,7 @@ import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
@@ -47,24 +47,18 @@ export function FormsManagement() {
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'error', title: '', message: '' });
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const { showToast } = useToast();
 
-  const showToast = (message: string) => {
-    setToast({
-      open: true,
-      type: 'error',
-      title: '',
-      message
-    });
-  };
-
-  const hideToast = () => {
-    setToast(prev => ({ ...prev, open: false }));
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!formName.trim()) errors.formName = 'Form name is required';
+    if (!formLink.trim()) errors.formLink = 'Form link is required';
+    else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
   useEffect(() => {
     let isMounted = true;
@@ -82,7 +76,7 @@ export function FormsManagement() {
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
-          classroomsCount: template.classroomsCount ?? 0
+          classroomsCount: 0
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -114,18 +108,19 @@ export function FormsManagement() {
     mobileItemsPerPage: 5
   });
   const handleAddForm = async () => {
-    if (formName.trim() && formLink.trim()) {
-      try {
-        setIsAddingForm(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
-        resetFormFields();
-        setIsAddDialogOpen(false);
-        window.location.reload();
-      } catch (error) {
-        setIsAddingForm(false);
-      }
+    if (!validateForm()) return;
+    
+    try {
+      setIsAddingForm(true);
+      const user = await fetchUserContext();
+      if (!user.schoolId) return;
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
+      resetFormFields();
+      setIsAddDialogOpen(false);
+      window.location.reload();
+    } catch (error) {
+      setIsAddingForm(false);
+      showToast('error', 'Failed to create form. Please try again.');
     }
   };
   const handleEditForm = async () => {
@@ -172,6 +167,7 @@ export function FormsManagement() {
     setFormName('');
     setFormLink('');
     setFormStatus('Default');
+    setFormErrors({});
   };
   const openEditDialog = (form: Form) => {
     setSelectedForm(form);
@@ -204,70 +200,70 @@ export function FormsManagement() {
     return Array.from(unique);
   }, [forms]);
   return <AdminLayout>
-      <div className="space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="ml-4 sm:ml-0">
-            <h1 className="text-2xl font-bold text-foreground mb-2">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Forms Management
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Manage form templates and assignments
             </p>
           </div>
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 ml-4 sm:ml-0 self-start sm:self-center">
+        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Total Forms
                   </p>
-                  <p className="text-3xl font-bold text-foreground">{forms.length}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{forms.length}</p>
                 </div>
-                <div className="p-3 bg-amazon-teal/10 rounded-full">
-                  <FileText className="h-6 w-6 text-amazon-teal" />
+                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Active Forms
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {forms.filter(f => f.status === 'Active').length}
                   </p>
                 </div>
-                <div className="p-3 bg-green-100 rounded-full">
-                  <FileText className="h-6 w-6 text-green-600" />
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Default Forms
                   </p>
-                  <p className="text-3xl font-bold text-foreground">
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
                     {forms.filter(f => f.status === 'Default').length}
                   </p>
                 </div>
-                <div className="p-3 bg-amber-100 rounded-full">
-                  <FileText className="h-6 w-6 text-amber-600" />
+                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
               </div>
             </CardContent>
@@ -276,28 +272,28 @@ export function FormsManagement() {
         
         <Card className="glass-card">
           <CardContent className="p-0">
-            <div className="p-6 border-b bg-muted/20">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Form Directory</h2>
-                <div className="text-sm text-muted-foreground">
+            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
+                <h2 className="text-lg sm:text-xl font-semibold">Form Directory</h2>
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {filteredForms.length} of {forms.length} forms
                 </div>
               </div>
               
-              <div className="relative mb-4">
+              <div className="relative mb-3 sm:mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search forms..." 
-                  className="pl-10 h-11 bg-background" 
+                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-muted-foreground">Status Filter</label>
+                <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
+                  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-11">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -365,11 +361,23 @@ export function FormsManagement() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                              {form.link && (
+                                <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Form
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem 
+                                onClick={() => openEditDialog(form)}
+                              >
                                 <Edit className="h-4 w-4 mr-2" />
                                 Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
+                              <DropdownMenuItem 
+                                onClick={() => openDeleteDialog(form)} 
+                                className="text-red-600 focus:text-red-600"
+                                disabled={form.status === 'Active'}
+                              >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
                               </DropdownMenuItem>
@@ -395,28 +403,40 @@ export function FormsManagement() {
             />
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-3 p-4">
+            <div className="lg:hidden space-y-2 sm:space-y-3 p-3 sm:p-4">
               {loading ? (
-                <div className="py-8">
+                <div className="py-6 sm:py-8">
                   <Loading message="Loading forms..." size="sm" />
                 </div>
               ) : paginatedForms.length > 0 ? (
                 paginatedForms.map(form => (
-                  <Card key={form.id} className="p-3">
-                    <div className="flex justify-between items-start mb-3">
-                      <h3 className="font-semibold text-foreground text-base">{form.name}</h3>
+                  <Card key={form.id} className="p-3 sm:p-4">
+                    <div className="flex justify-between items-start mb-3 gap-2">
+                      <h3 className="font-semibold text-foreground text-sm sm:text-base truncate flex-1">{form.name}</h3>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                          {form.link && (
+                            <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Form
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem 
+                            onClick={() => openEditDialog(form)}
+                          >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(form)} className="text-red-600 focus:text-red-600">
+                          <DropdownMenuItem 
+                            onClick={() => openDeleteDialog(form)} 
+                            className="text-red-600 focus:text-red-600"
+                            disabled={form.status === 'Active'}
+                          >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -424,28 +444,28 @@ export function FormsManagement() {
                       </DropdownMenu>
                     </div>
                     
-                    <div className="space-y-3">
+                    <div className="space-y-2 sm:space-y-3">
                       <div>
-                        <Badge variant={getStatusBadgeVariant(form.status)}>
+                        <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
                           {form.status}
                         </Badge>
                       </div>
                       
-                      <div className="flex items-center space-x-2 text-amazon-teal">
-                        <LinkIcon className="h-4 w-4 flex-shrink-0" />
+                      <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
+                        <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
                         {form.link ? (
-                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-sm break-all">
+                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0">
                             {form.link}
                           </a>
                         ) : (
-                          <span className="text-gray-400 text-sm">No link provided</span>
+                          <span className="text-gray-400 text-xs sm:text-sm">No link provided</span>
                         )}
                       </div>
                     </div>
                   </Card>
                 ))
               ) : (
-                <div className="py-8 text-center text-muted-foreground text-sm">
+                <div className="py-6 sm:py-8 text-center text-muted-foreground text-xs sm:text-sm">
                   No forms found matching your search criteria.
                 </div>
               )}
@@ -461,36 +481,54 @@ export function FormsManagement() {
       </div>
       {/* Add Form Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Add New Form</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Name
               </label>
-              <ValidatedInput 
+              <Input 
                 value={formName} 
-                onChange={e => setFormName(e.target.value)} 
+                onChange={e => {
+                  setFormName(e.target.value);
+                  if (formErrors.formName) {
+                    setFormErrors(prev => ({...prev, formName: ''}));
+                  }
+                }} 
                 placeholder="Enter form name" 
-                className="w-full" 
-                validationRules={commonValidationRules.name}
-                showToast={showToast}
-                hideToast={hideToast}
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
+              {formErrors.formName && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Link
               </label>
-              <Input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://example.com/form" className="w-full" />
+              <Input 
+                value={formLink} 
+                onChange={e => {
+                  setFormLink(e.target.value);
+                  if (formErrors.formLink) {
+                    setFormErrors(prev => ({...prev, formLink: ''}));
+                  }
+                }} 
+                placeholder="https://example.com/form" 
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
+              />
+              {formErrors.formLink && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
               <Select value={formStatus} onValueChange={value => setFormStatus(value as FormStatus)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -502,11 +540,11 @@ export function FormsManagement() {
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
               {isAddingForm ? 'Adding Form...' : 'Add Form'}
             </AsyncButton>
           </DialogFooter>
@@ -514,52 +552,69 @@ export function FormsManagement() {
       </Dialog>
       {/* Edit Form Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Edit Form</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Edit Form</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Name
               </label>
-              <ValidatedInput 
+              <Input 
                 value={formName} 
-                onChange={e => setFormName(e.target.value)} 
+                onChange={e => {
+                  setFormName(e.target.value);
+                  if (formErrors.formName) {
+                    setFormErrors(prev => ({...prev, formName: ''}));
+                  }
+                }} 
                 placeholder="Enter form name" 
-                className="w-full" 
-                validationRules={commonValidationRules.name}
-                showToast={showToast}
-                hideToast={hideToast}
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
+              {formErrors.formName && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
                 Form Link
               </label>
-              <Input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://example.com/form" className="w-full" />
+              <Input 
+                value={formLink} 
+                onChange={e => {
+                  setFormLink(e.target.value);
+                  if (formErrors.formLink) {
+                    setFormErrors(prev => ({...prev, formLink: ''}));
+                  }
+                }} 
+                placeholder="https://example.com/form" 
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
+              />
+              {formErrors.formLink && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Status</label>
               <Select value={formStatus} onValueChange={value => setFormStatus(value as FormStatus)}>
-                <SelectTrigger>
+                <SelectTrigger className="h-10 sm:h-11">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Default">Default</SelectItem>
                   <SelectItem value="Active">Active</SelectItem>
                   <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="Archive">Archive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleEditForm} className="bg-amazon-teal hover:bg-amazon-teal/90" disabled={!formName.trim() || !formLink.trim()}>
+            <AsyncButton onClick={handleEditForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim()}>
               Save Changes
             </AsyncButton>
           </DialogFooter>
@@ -567,35 +622,28 @@ export function FormsManagement() {
       </Dialog>
       {/* Delete Form Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
-            <DialogTitle>Delete Form</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Delete Form</DialogTitle>
           </DialogHeader>
-          <div className="py-4">
-            <p className="text-gray-600">
+          <div className="py-3 sm:py-4">
+            <p className="text-sm sm:text-base text-gray-600">
               Are you sure you want to delete{' '}
               <span className="font-medium">{selectedForm?.name}</span>? This
               action cannot be undone.
             </p>
 
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton variant="destructive" onClick={handleDeleteForm}>
+            <AsyncButton variant="destructive" onClick={handleDeleteForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Delete Form
             </AsyncButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onClose={() => setToast(prev => ({ ...prev, open: false }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }

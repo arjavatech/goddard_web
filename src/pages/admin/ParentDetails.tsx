@@ -7,10 +7,10 @@ import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
-import { Link, useParams, useLocation } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
-import { Toast } from '../../components/ui/toast';
+import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
@@ -84,6 +84,7 @@ export function ParentDetails() {
     parentId: string;
   }>();
   const location = useLocation();
+  const navigate = useNavigate();
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
@@ -96,12 +97,7 @@ export function ParentDetails() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<{formId: string, action: 'download' | 'print'} | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
-  const [toast, setToast] = useState<{
-    open: boolean;
-    type: 'success' | 'error';
-    title: string;
-    message: string;
-  }>({ open: false, type: 'success', title: '', message: '' });
+  const { showToast } = useToast();
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -214,33 +210,41 @@ export function ParentDetails() {
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
-          // Check if there's a student query parameter to select specific child
-          const urlParams = new URLSearchParams(location.search);
-          const studentName = urlParams.get('student');
+          // Check if there's a selectedChildId in route state first
+          const routeSelectedChildId = location.state?.selectedChildId;
           
-          if (studentName) {
-            // Find child by matching name
-            const targetChild = processedChildren.find(child => 
-              `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
-            );
+          if (routeSelectedChildId) {
+            // Find child by ID from route state
+            const targetChild = processedChildren.find(child => child.id === routeSelectedChildId);
             if (targetChild) {
               setSelectedChildId(targetChild.id);
             } else {
               setSelectedChildId(processedChildren[0].id);
             }
           } else {
-            setSelectedChildId(processedChildren[0].id);
+            // Fallback to student query parameter
+            const urlParams = new URLSearchParams(location.search);
+            const studentName = urlParams.get('student');
+            
+            if (studentName) {
+              // Find child by matching name
+              const targetChild = processedChildren.find(child => 
+                `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
+              );
+              if (targetChild) {
+                setSelectedChildId(targetChild.id);
+              } else {
+                setSelectedChildId(processedChildren[0].id);
+              }
+            } else {
+              setSelectedChildId(processedChildren[0].id);
+            }
           }
         }
       } catch (error) {
         if (isMounted) {
           setError('Failed to load parent details. Please try again.');
-          setToast({
-            open: true,
-            type: 'error',
-            title: '',
-            message: 'Failed to load parent details'
-          });
+          showToast('error', 'Failed to load parent details');
         }
       } finally {
         if (isMounted) {
@@ -316,20 +320,10 @@ export function ParentDetails() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
 
-      setToast({
-        open: true,
-        type: 'success',
-        title: '',
-        message: `${form.title} downloading...`
-      });
+      showToast('success', `${form.title} downloading...`);
     } catch (error) {
       console.error('Download failed:', error);
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Download failed'
-      });
+      showToast('error', 'Download failed');
     } finally {
       setLoadingAction(null);
     }
@@ -371,12 +365,7 @@ export function ParentDetails() {
           window.URL.revokeObjectURL(blobUrl);
         }, 3000);
 
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Print dialog opening...'
-        });
+        showToast('success', 'Print dialog opening...');
       } else {
         throw new Error('Popup blocked');
       }
@@ -387,19 +376,9 @@ export function ParentDetails() {
       // Fallback: Open PDF in new tab for manual print
       const printWindow = window.open(form.recentPdfLink, '_blank');
       if (printWindow) {
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Use Ctrl+P to print'
-        });
+        showToast('success', 'Use Ctrl+P to print');
       } else {
-        setToast({
-          open: true,
-          type: 'error',
-          title: '',
-          message: 'Print failed - enable popups'
-        });
+        showToast('error', 'Print failed - enable popups');
       }
 
       setLoadingAction(null);
@@ -436,27 +415,12 @@ export function ParentDetails() {
             }))
           };
         });
-        setToast({
-          open: true,
-          type: 'success',
-          title: '',
-          message: 'Form review completed'
-        });
+        showToast('success', 'Form review completed');
       } else {
-        setToast({
-          open: true,
-          type: 'error',
-          title: '',
-          message: 'Form review failed'
-        });
+        showToast('error', 'Form review failed');
       }
     } catch (error) {
-      setToast({
-        open: true,
-        type: 'error',
-        title: '',
-        message: 'Failed to review form'
-      });
+      showToast('error', 'Failed to review form');
     } finally {
       setIsReviewing(false);
     }
@@ -505,55 +469,66 @@ export function ParentDetails() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center">
-            <Link to="/admin/parents" className="mr-4">
-              <Button variant="outline" size="icon">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-            </Link>
-            <h1 className="text-2xl font-bold text-foreground">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              className="mr-3 sm:mr-4 h-8 w-8 sm:h-10 sm:w-10"
+              onClick={() => {
+                // Check if user came from students page
+                const referrer = document.referrer;
+                if (referrer.includes('/admin/students') || location.state?.fromStudents) {
+                  navigate('/admin/students');
+                } else {
+                  navigate('/admin/parents');
+                }
+              }}
+            >
+              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+            </Button>
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
               Parent Details
             </h1>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MailIcon className="h-4 w-4" />
-              {parent.email}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+              <MailIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+              <span className="truncate">{parent.email}</span>
             </div>
             
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           <Card className="glass-card lg:col-span-2">
             <CardHeader>
               <CardTitle>Guardian Profile</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center text-2xl font-bold">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0">
                   {parent.firstName.charAt(0)}
                   {parent.lastName.charAt(0)}
                 </div>
-                <div>
-                  <h2 className="text-xl font-semibold">
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-lg sm:text-xl font-semibold truncate">
                     {parent.firstName} {parent.lastName}
                   </h2>
-                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
-                      <Users className="h-4 w-4" />
+                      <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                       {parent.children.length} child
                       {parent.children.length === 1 ? '' : 'ren'}
                     </span>
                     <span className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
+                      <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
                       Member since TBD
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 {parent.children.map(child => <Card key={child.id} className={`border ${child.id === selectedChildId ? 'border-amazon-teal' : 'border-transparent'} hover:border-amazon-teal transition-colors cursor-pointer`} onClick={() => setSelectedChildId(child.id)}>
                     <CardContent className="p-4">
                       <div className="flex items-center justify-between">
@@ -596,13 +571,13 @@ export function ParentDetails() {
         </div>
         <Card className="glass-card">
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Child Forms</CardTitle>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+              <CardTitle className="text-base sm:text-lg">Child Forms</CardTitle>
               {availableYears.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
                   <Select value={selectedYear} onValueChange={setSelectedYear}>
-                    <SelectTrigger className="w-[150px]">
+                    <SelectTrigger className="w-[120px] sm:w-[150px] h-8 sm:h-10 text-xs sm:text-sm">
                       <SelectValue placeholder="Filter by year" />
                     </SelectTrigger>
                     <SelectContent>
@@ -620,9 +595,10 @@ export function ParentDetails() {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue={selectedChild?.id ?? ''} value={selectedChild?.id ?? ''} onValueChange={value => setSelectedChildId(value)}>
-              <TabsList className="w-full justify-start overflow-x-auto">
-                {parent.children.map(child => <TabsTrigger key={child.id} value={child.id} className="whitespace-nowrap">
-                    {child.firstName} {child.lastName}
+              <TabsList className="w-full justify-start overflow-x-auto h-auto p-1">
+                {parent.children.map(child => <TabsTrigger key={child.id} value={child.id} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2">
+                    <span className="sm:hidden">{child.firstName}</span>
+                    <span className="hidden sm:inline">{child.firstName} {child.lastName}</span>
                   </TabsTrigger>)}
               </TabsList>
               {parent.children.map(child => {
@@ -661,14 +637,16 @@ export function ParentDetails() {
                       </p>
                     </div>
                   ) : filteredForms && filteredForms.length > 0 ? filteredForms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
-                        <div className="flex items-center justify-between">
-                          <div>
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center">
-                              <FileText className="h-5 w-5 mr-2 text-amazon-teal" />
-                              <h3 className="font-medium">{form.title}</h3>
+                              <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-amazon-teal flex-shrink-0" />
+                              <h3 className="font-medium text-sm sm:text-base truncate">{form.title}</h3>
                             </div>
-                            <StatusBadge status={form.status} />
-                            <p className="text-sm text-gray-600 mt-1">
+                            <div className="mt-2">
+                              <StatusBadge status={form.status} />
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-600 mt-1">
                               {form.description}
                             </p>
                             <p className="text-xs text-gray-500 mt-2">
@@ -703,7 +681,7 @@ export function ParentDetails() {
                               );
                             })()}
                           </div>
-                          <div className="flex space-x-2">
+                          <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-2 sm:gap-0 flex-shrink-0">
                             {form.status === 'Approved' && form.recentPdfLink && (
                               <>
                                 <Button
@@ -748,18 +726,19 @@ export function ParentDetails() {
                       filloutFormId: form.filloutFormId,
                       studentFormAssignmentId: form.studentFormAssignmentId
                     }}>
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
-                                View Form
+                              <Button variant="outline" size="sm" className="text-xs sm:text-sm">
+                                <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                                <span className="hidden sm:inline">View Form</span>
+                                <span className="sm:hidden">View</span>
                               </Button>
                             </Link>
                             {form.status === 'Submitted' && <>
-                                <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50" onClick={() => openReviewDialog(form, 'approve')}>
-                                  <CheckCircle className="h-4 w-4 mr-1" />
+                                <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50 text-xs sm:text-sm" onClick={() => openReviewDialog(form, 'approve')}>
+                                  <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                   Approve
                                 </Button>
-                                <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50" onClick={() => openReviewDialog(form, 'reject')}>
-                                  <AlertCircle className="h-4 w-4 mr-1" />
+                                <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50 text-xs sm:text-sm" onClick={() => openReviewDialog(form, 'reject')}>
+                                  <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                                   Revise
                                 </Button>
                               </>}
@@ -784,7 +763,7 @@ export function ParentDetails() {
         </Card>
       </div>
       <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
             <DialogTitle>
               {formAction === 'approve' ? 'Approve Form' : 'Request Revision'}
@@ -841,13 +820,6 @@ export function ParentDetails() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Toast Notification */}
-      <Toast
-        open={toast.open}
-        onClose={() => setToast(prev => ({ ...prev, open: false }))}
-        type={toast.type}
-        title={toast.title}
-        message={toast.message}
-      />
+
     </AdminLayout>;
 }

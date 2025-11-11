@@ -814,7 +814,7 @@ export function ClassroomDetails() {
 
         {/* Invite Parent Dialog */}
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" preventClose>
             <DialogHeader>
               <DialogTitle>Invite New Parent</DialogTitle>
             </DialogHeader>

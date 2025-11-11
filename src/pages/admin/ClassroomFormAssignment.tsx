@@ -14,6 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, assignFormToClassroom, deleteClassFormOverride } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
+import { useToast } from '../../contexts/ToastContext';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -28,14 +29,16 @@ interface Classroom {
 }
 const formStatusFromTemplate = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
-  if (value.includes('default')) return 'Default';
-  if (value.includes('inactive')) return 'Inactive';
-  if (value.includes('archive')) return 'Archive';
-  return 'Active';
+  if (value === 'school_default' || value.includes('default')) return 'Default';
+  if (value === 'inactive' || value.includes('inactive')) return 'Inactive';
+  if (value === 'archive' || value.includes('archive')) return 'Archive';
+  if (value === 'active') return 'Active';
+  return 'Default';
 };
 export function ClassroomFormAssignment() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const queryParams = new URLSearchParams(location.search);
   const classroomIdFromQuery = queryParams.get('classroom');
   const [allForms, setAllForms] = useState<Form[]>([]);
@@ -119,8 +122,6 @@ export function ClassroomFormAssignment() {
         return 'default';
       case 'Inactive':
         return 'secondary';
-      case 'Archive':
-        return 'outline';
       default:
         return 'default';
     }
@@ -181,14 +182,13 @@ export function ClassroomFormAssignment() {
         return classroom;
       }));
       
-      setDeleteStatus('success');
+      // Show success toast
+      showToast('success', `"${formToDelete.name}" has been removed from ${selectedClassroom.name}`);
       
-      // Close modal after showing success
-      setTimeout(() => {
-        setIsDeleteDialogOpen(false);
-        setFormToDelete(null);
-        setDeleteStatus('idle');
-      }, 1500);
+      // Close modal immediately
+      setIsDeleteDialogOpen(false);
+      setFormToDelete(null);
+      setDeleteStatus('idle');
       
     } catch (error) {
       console.log('Failed to delete form override:', error);
@@ -214,9 +214,6 @@ export function ClassroomFormAssignment() {
   }, {
     id: 'inactive',
     label: 'Inactive'
-  }, {
-    id: 'archive',
-    label: 'Archive'
   }];
   const [activeTab, setActiveTab] = useState('all');
   const filteredForms = selectedClassroom ? selectedClassroom.assignedForms.filter(form => activeTab === 'all' || form.status.toLowerCase() === activeTab) : [];
@@ -363,8 +360,10 @@ export function ClassroomFormAssignment() {
                             className="whitespace-nowrap flex-shrink-0 text-xs px-2 sm:px-4 py-1.5 sm:py-2 transition-all h-8 sm:h-9"
                           >
                             {tab.label}
-                            {activeTab === tab.id && selectedClassroom && (
-                              <span className="ml-1 sm:ml-2 bg-white/20 px-1 sm:px-1.5 py-0.5 rounded text-xs">
+                            {selectedClassroom && (
+                              <span className={`ml-1 sm:ml-2 px-1 sm:px-1.5 py-0.5 rounded text-xs ${
+                                activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100 text-gray-600'
+                              }`}>
                                 {tab.id === 'all' 
                                   ? selectedClassroom.assignedForms.length
                                   : selectedClassroom.assignedForms.filter(f => f.status.toLowerCase() === tab.id).length
@@ -468,193 +467,229 @@ export function ClassroomFormAssignment() {
       
       {/* Delete Form Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md">
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg font-semibold">
-              {deleteStatus === 'success' ? 'Form Removed' : deleteStatus === 'error' ? 'Deletion Failed' : 'Remove Form'}
-            </DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Remove Form</DialogTitle>
           </DialogHeader>
-          
-          <div className="py-4">
-            {deleteStatus === 'idle' && (
-              <p className="text-sm text-gray-600">
-                Are you sure you want to remove <strong>{formToDelete?.name}</strong> from {selectedClassroom?.name}?
-              </p>
-            )}
-            {deleteStatus === 'deleting' && (
-              <div className="flex items-center justify-center py-4">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal"></div>
-                <span className="ml-3 text-sm">Removing form...</span>
-              </div>
-            )}
-            {deleteStatus === 'success' && (
-              <div className="flex items-center justify-center py-4 text-green-600">
-                <CheckCircle2 className="h-8 w-8 mr-3" />
-                <span className="text-sm font-medium">Form successfully removed!</span>
-              </div>
-            )}
-            {deleteStatus === 'error' && (
-              <div className="flex items-center justify-center py-4 text-red-600">
-                <X className="h-8 w-8 mr-3" />
-                <span className="text-sm font-medium">Failed to remove form. Please try again.</span>
-              </div>
-            )}
+          <div className="py-3 sm:py-4">
+            <p className="text-sm sm:text-base text-gray-600">
+              Are you sure you want to remove{' '}
+              <span className="font-medium">{formToDelete?.name}</span> from {selectedClassroom?.name}? This
+              action cannot be undone.
+            </p>
           </div>
-          
-          {deleteStatus === 'idle' && (
-            <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDeleteDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                variant="destructive" 
-                onClick={confirmDeleteForm}
-              >
-                Remove Form
-              </Button>
-            </DialogFooter>
-          )}
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
+            >
+              Cancel
+            </Button>
+            <AsyncButton 
+              variant="destructive" 
+              onClick={confirmDeleteForm}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm"
+            >
+              Remove Form
+            </AsyncButton>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Manage Forms Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] flex flex-col">
-          <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
-            <DialogTitle className="text-lg font-semibold">
-              Manage Forms for {selectedClassroom?.name}
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Select forms to add to this classroom
-            </p>
-          </DialogHeader>
+        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[70vw] xl:w-[60vw] max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col p-0 gap-0" preventClose>
+          {/* Header */}
+          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b bg-gradient-to-r from-amazon-teal/5 to-amazon-teal/10">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amazon-teal/15 rounded-lg flex items-center justify-center flex-shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
+                  Add Forms to Classroom
+                </DialogTitle>
+                <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 truncate">
+                  Select forms to assign to <span className="font-medium text-amazon-teal">{selectedClassroom?.name}</span>
+                </p>
+              </div>
+            </div>
+          </div>
           
-          <div className="flex-1 flex flex-col min-h-0 px-6 py-4">
-            {/* Search Bar */}
-            <div className="relative mb-4 flex-shrink-0">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
-                formSearchQuery ? 'text-amazon-teal' : 'text-muted-foreground'
-              }`} />
-              <Input 
-                placeholder="Search forms..." 
-                className={`pl-9 transition-all ${
-                  formSearchQuery 
-                    ? 'border-amazon-teal/30 ring-1 ring-amazon-teal/20 bg-amazon-teal/5' 
-                    : ''
-                }`}
-                value={formSearchQuery} 
-                onChange={e => setFormSearchQuery(e.target.value)} 
-              />
-              {formSearchQuery && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-gray-400 hover:text-gray-600"
-                    onClick={() => setFormSearchQuery('')}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
+          {/* Content */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Search and Stats Bar */}
+            <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gray-50/50 border-b">
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="relative">
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${
+                    formSearchQuery ? 'text-amazon-teal' : 'text-gray-400'
+                  }`} />
+                  <Input 
+                    placeholder="Search available forms..." 
+                    className={`pl-9 h-9 sm:h-10 text-sm transition-all border-gray-200 focus:border-amazon-teal focus:ring-amazon-teal/20 ${
+                      formSearchQuery 
+                        ? 'border-amazon-teal/40 ring-2 ring-amazon-teal/10 bg-amazon-teal/5' 
+                        : 'bg-white'
+                    }`}
+                    value={formSearchQuery} 
+                    onChange={e => setFormSearchQuery(e.target.value)} 
+                  />
+                  {formSearchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 hover:text-gray-600"
+                      onClick={() => setFormSearchQuery('')}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
-              )}
+                <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 text-xs sm:text-sm">
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-2 h-2 bg-amazon-teal rounded-full"></div>
+                    <span>{availableForms.length} available</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span>{selectedFormIds.length} selected</span>
+                  </div>
+                </div>
+              </div>
             </div>
             
             {/* Forms List */}
-            <div className="flex-1 overflow-y-auto min-h-0 pr-2">
+            <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
               {availableForms.length === 0 ? (
-                <div className="flex items-center justify-center h-full min-h-[200px] text-muted-foreground">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                    <p className="font-medium mb-1">No Available Forms</p>
+                <div className="flex items-center justify-center h-full min-h-[250px] sm:min-h-[300px]">
+                  <div className="text-center max-w-sm px-4">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                      <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No Available Forms</h3>
                     {formSearchQuery ? (
-                      <p className="text-sm">
-                        No forms match your search.
+                      <p className="text-sm text-gray-600">
+                        No forms match your search for <span className="font-medium">'{formSearchQuery}'</span>.
+                        <br className="hidden sm:block" />Try adjusting your search terms.
                       </p>
                     ) : selectedClassroom?.assignedForms.length === allForms.length ? (
-                      <p className="text-sm">
-                        All forms are already assigned.
+                      <p className="text-sm text-gray-600">
+                        All available forms have already been assigned to this classroom.
                       </p>
                     ) : (
-                      <p className="text-sm">
-                        No forms available for assignment.
+                      <p className="text-sm text-gray-600">
+                        No forms are currently available for assignment.
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {availableForms.map(form => (
-                    <div 
-                      key={form.id} 
-                      className="flex items-center p-4 rounded-lg border hover:bg-muted/50 transition-colors cursor-pointer active:bg-muted min-h-[70px]"
-                      onClick={() => {
-                        const isSelected = selectedFormIds.includes(form.id);
-                        if (isSelected) {
-                          setSelectedFormIds(selectedFormIds.filter(id => id !== form.id));
-                        } else {
-                          setSelectedFormIds([...selectedFormIds, form.id]);
-                        }
-                      }}
-                    >
-                      <Checkbox 
-                        id={`form-${form.id}`} 
-                        checked={selectedFormIds.includes(form.id)} 
-                        className="mr-4 flex-shrink-0" 
-                      />
-                      
-                      <div className="flex items-center flex-1 min-w-0">
-                        <div className="flex-shrink-0 w-10 h-10 bg-amazon-teal/10 rounded-lg flex items-center justify-center mr-4">
-                          <FileText className="h-5 w-5 text-amazon-teal" />
+                <div className="grid gap-2 sm:gap-3">
+                  {availableForms.map(form => {
+                    const isSelected = selectedFormIds.includes(form.id);
+                    return (
+                      <div 
+                        key={form.id} 
+                        className={`group relative flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 cursor-pointer ${
+                          isSelected 
+                            ? 'border-amazon-teal bg-amazon-teal/5 shadow-sm' 
+                            : 'border-gray-200 hover:border-amazon-teal/40 hover:bg-gray-50/50'
+                        }`}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedFormIds(selectedFormIds.filter(id => id !== form.id));
+                          } else {
+                            setSelectedFormIds([...selectedFormIds, form.id]);
+                          }
+                        }}
+                      >
+                        {/* Selection Indicator */}
+                        <div className={`absolute top-2 sm:top-3 right-2 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 transition-all ${
+                          isSelected 
+                            ? 'bg-amazon-teal border-amazon-teal' 
+                            : 'border-gray-300 group-hover:border-amazon-teal/60'
+                        }`}>
+                          {isSelected && (
+                            <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white absolute top-0.5 left-0.5" />
+                          )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="font-medium text-base truncate mb-2">
-                            {form.name}
+                        
+                        <Checkbox 
+                          id={`form-${form.id}`} 
+                          checked={isSelected} 
+                          className="mr-3 sm:mr-4 flex-shrink-0" 
+                        />
+                        
+                        <div className="flex items-center flex-1 min-w-0 gap-3 sm:gap-4">
+                          <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors ${
+                            isSelected ? 'bg-amazon-teal/20' : 'bg-amazon-teal/10'
+                          }`}>
+                            <FileText className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${
+                              isSelected ? 'text-amazon-teal' : 'text-amazon-teal/70'
+                            }`} />
                           </div>
-                          <Badge 
-                            variant={getStatusBadgeVariant(form.status)} 
-                            className="text-xs h-6 px-2"
-                          >
-                            {form.status}
-                          </Badge>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-semibold text-gray-900 truncate text-sm sm:text-base mb-1">
+                              {form.name}
+                            </h4>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={getStatusBadgeVariant(form.status)} 
+                                className="text-xs h-5 sm:h-6 px-2 sm:px-3 font-medium"
+                              >
+                                {form.status}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
           
-          <DialogFooter className="flex-shrink-0 px-6 py-4 border-t bg-muted/20">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-              <div className="text-sm text-muted-foreground text-center sm:text-left">
-                {selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected
+          {/* Footer */}
+          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t bg-white">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex items-center justify-center sm:justify-start">
+                {selectedFormIds.length > 0 && (
+                  <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-amazon-teal">
+                    <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
+                    <span>{selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected</span>
+                  </div>
+                )}
+                {selectedFormIds.length === 0 && (
+                  <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
+                    Select forms to add to the classroom
+                  </div>
+                )}
               </div>
-              <div className="flex gap-3 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsAssignDialogOpen(false);
                     setSelectedFormIds([]);
                   }}
-                  className="flex-1 sm:flex-none"
+                  className="flex-1 sm:flex-none px-4 sm:px-6 h-9 sm:h-10 border-gray-300 hover:bg-gray-50 text-sm"
                 >
                   Cancel
                 </Button>
                 <AsyncButton 
                   onClick={handleAssignForms} 
-                  className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none" 
+                  className="flex-1 sm:flex-none bg-amazon-teal hover:bg-amazon-teal/90 text-white px-4 sm:px-6 h-9 sm:h-10 shadow-sm text-sm" 
                   disabled={selectedFormIds.length === 0}
                 >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Add {selectedFormIds.length > 0 ? selectedFormIds.length : ''} Form{selectedFormIds.length !== 1 ? 's' : ''}
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                  Add {selectedFormIds.length > 0 ? `${selectedFormIds.length} ` : ''}Form{selectedFormIds.length !== 1 ? 's' : ''}
                 </AsyncButton>
               </div>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </AdminLayout>

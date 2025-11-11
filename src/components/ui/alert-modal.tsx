@@ -22,8 +22,8 @@ export function AlertModal({
   confirmText = 'OK' 
 }: AlertModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md" hideCloseButton>
+    <Dialog open={open}>
+      <DialogContent className="sm:max-w-md" hideCloseButton preventClose>
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-4">
             {type === 'success' ? (

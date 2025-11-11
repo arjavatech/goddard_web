@@ -16,7 +16,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms } from '@/services/api/admin';
 
-type EnrollmentStatus = 'Complete' | 'In Progress' | 'Not Started';
+type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
 interface EnrollmentData {
   parent_id: string;
@@ -54,15 +54,16 @@ interface Student {
     id: string;
     name: string;
     status: string;
+    assignedAt?: string | null;
   }[];
   childStatus: 'active' | 'archive';
 }
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
   const statusFromProgress = (progress: number): EnrollmentStatus => {
-    if (progress === 100) return 'Complete';
-    if (progress > 0) return 'In Progress';
-    return 'Not Started';
+    if (progress === 100) return 'Completed-AdminApproved';
+    if (progress > 0) return 'Completed-Pending Approval';
+    return 'Draft';
   };
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +71,7 @@ export function StudentManagement() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [childStatusFilter, setChildStatusFilter] = useState<string>('all');
   const [classroomFilter, setClassroomFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
   const [showFilters, setShowFilters] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -105,12 +107,13 @@ export function StudentManagement() {
           const firstName = enrollment.child_first_name || 'Unknown';
           const lastName = enrollment.child_last_name || 'Student';
 
-          // Map forms from API response
-          const formsArray = Object.keys(enrollment.forms || {}).length > 0
-            ? Object.entries(enrollment.forms).map(([key, value]) => ({
-                id: key,
-                name: key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-                status: value || 'Not Started'
+          // Map forms from new API response format
+          const formsArray = enrollment.forms && typeof enrollment.forms === 'object'
+            ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => ({
+                id: formName,
+                name: formName,
+                status: formData.status || 'Not Started',
+                assignedAt: formData.assigned_at || null
               }))
             : [];
 
@@ -194,6 +197,36 @@ export function StudentManagement() {
     return Array.from(classroomSet).sort();
   }, [students]);
 
+  // Extract all unique years from assigned_at dates
+  const allYears = useMemo(() => {
+    const yearSet = new Set<string>();
+    students.forEach(student => {
+      student.assignedForms.forEach(form => {
+        if (form.assignedAt) {
+          try {
+            const date = new Date(form.assignedAt);
+            if (!isNaN(date.getTime())) {
+              yearSet.add(date.getFullYear().toString());
+            } else {
+              // Handle DD-MM-YYYY format
+              const parts = form.assignedAt.split('-');
+              if (parts.length === 3) {
+                yearSet.add(parts[2]);
+              }
+            }
+          } catch (e) {
+            // Handle DD-MM-YYYY format as fallback
+            const parts = form.assignedAt.split('-');
+            if (parts.length === 3) {
+              yearSet.add(parts[2]);
+            }
+          }
+        }
+      });
+    });
+    return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
+  }, [students]);
+
   const filteredStudents = useMemo(() => students.filter(student => {
     const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -231,8 +264,27 @@ export function StudentManagement() {
     // Filter by classroom
     const matchesClassroom = classroomFilter === 'all' || student.classroom.name === classroomFilter;
 
-    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom;
-  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter]);
+    // Filter by year based on assigned_at
+    const matchesYear = yearFilter === 'all' || student.assignedForms.some(form => {
+      if (!form.assignedAt) return false;
+      try {
+        const date = new Date(form.assignedAt);
+        if (!isNaN(date.getTime())) {
+          return date.getFullYear().toString() === yearFilter;
+        } else {
+          // Handle DD-MM-YYYY format
+          const parts = form.assignedAt.split('-');
+          return parts.length === 3 && parts[2] === yearFilter;
+        }
+      } catch (e) {
+        // Handle DD-MM-YYYY format as fallback
+        const parts = form.assignedAt.split('-');
+        return parts.length === 3 && parts[2] === yearFilter;
+      }
+    });
+
+    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom && matchesYear;
+  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
 
   const {
     currentPage,
@@ -244,16 +296,16 @@ export function StudentManagement() {
   } = usePagination({ data: filteredStudents });
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
-    const complete = students.filter(student => student.enrollmentStatus === 'Complete').length;
+    const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
     return Math.round(complete / students.length * 100);
   }, [students]);
   const getStatusBadgeVariant = (status: EnrollmentStatus): 'success' | 'secondary' | 'outline' | 'default' => {
     switch (status) {
-      case 'Complete':
+      case 'Completed-AdminApproved':
         return 'success';
-      case 'In Progress':
+      case 'Completed-Pending Approval':
         return 'secondary';
-      case 'Not Started':
+      case 'Draft':
         return 'outline';
       default:
         return 'default';
@@ -261,11 +313,11 @@ export function StudentManagement() {
   };
   const getStatusIcon = (status: EnrollmentStatus) => {
     switch (status) {
-      case 'Complete':
+      case 'Completed-AdminApproved':
         return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'In Progress':
+      case 'Completed-Pending Approval':
         return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'Not Started':
+      case 'Draft':
         return <AlertCircle className="h-4 w-4 text-gray-400" />;
       default:
         return null;
@@ -303,81 +355,79 @@ export function StudentManagement() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <div className="space-y-6 p-4 sm:p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-foreground mb-1 sm:mb-2">
-                Student Management
-              </h1>
-              <p className="text-sm sm:text-base text-muted-foreground">
-                Manage student enrollments and track progress
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              onClick={toggleFilters} 
-              className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start flex-shrink-0"
-            >
-              {showFilters ? (
-                <>
-                  <X className="h-4 w-4" /> Hide Filters
-                </>
-              ) : (
-                <>
-                  <Filter className="h-4 w-4" /> Show Filters
-                </>
-              )}
-            </Button>
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+              Student Management
+            </h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
+              Manage student enrollments and track progress
+            </p>
           </div>
+          <Button 
+            variant="outline" 
+            onClick={toggleFilters} 
+            className="w-full sm:w-auto" 
+            size="sm"
+          >
+            {showFilters ? (
+              <>
+                <X className="h-4 w-4 mr-2" /> Hide Filters
+              </>
+            ) : (
+              <>
+                <Filter className="h-4 w-4 mr-2" /> Show Filters
+              </>
+            )}
+          </Button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Total Students
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">{students.length}</p>
                 </div>
-                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full">
+                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
                   <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                 </div>
               </div>
             </CardContent>
           </Card>
           <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Completion Rate
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">{completionRate}%</p>
-                  <div className="w-20 sm:w-24 mt-2">
+                  <div className="w-16 sm:w-20 lg:w-24 mt-2">
                     <Progress value={completionRate} className="h-2" />
                   </div>
                 </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-full">
+                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
                   <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-6">
+          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
                     Forms Pending
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {students.filter(student => student.enrollmentStatus !== 'Complete').length}
+                    {students.filter(student => student.enrollmentStatus !== 'Completed-AdminApproved').length}
                   </p>
                 </div>
-                <div className="p-2 sm:p-3 bg-amber-100 rounded-full">
+                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
                   <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
                 </div>
               </div>
@@ -386,10 +436,10 @@ export function StudentManagement() {
         </div>
         <Card className="glass-card">
           <CardContent className="p-0">
-            <div className="p-4 sm:p-6 border-b bg-muted/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 sm:mb-6">
+            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {filteredStudents.length} of {students.length} students
                   {classroomFilter !== 'all' && (
                     <span className="ml-2 text-amazon-teal">• {classroomFilter}</span>
@@ -398,11 +448,11 @@ export function StudentManagement() {
               </div>
               
               {/* Search Bar */}
-              <div className="relative mb-4">
+              <div className="relative mb-3 sm:mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search students by name, parent, or classroom..." 
-                  className="pl-10 h-11 bg-background" 
+                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
@@ -410,11 +460,11 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-4 bg-background rounded-lg border">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-background rounded-lg border">
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Form Type</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form Type</label>
                     <Select value={formFilter} onValueChange={handleFormFilterChange}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 sm:h-11">
                         <SelectValue placeholder="Filter by form" />
                       </SelectTrigger>
                       <SelectContent>
@@ -429,25 +479,24 @@ export function StudentManagement() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</label>
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 sm:h-11">
                         <SelectValue placeholder="Filter by status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">All Statuses</SelectItem>
                         {formFilter === 'all' ? (
                           <>
-                            <SelectItem value="Complete">Complete</SelectItem>
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Not Started">Not Started</SelectItem>
+                            <SelectItem value="Completed-AdminApproved">Completed-AdminApproved</SelectItem>
+                            <SelectItem value="Completed-Pending Approval">Completed-Pending Approval</SelectItem>
+                            <SelectItem value="Draft">Draft</SelectItem>
                           </>
                         ) : (
                           <>
-                            <SelectItem value="Approved">Approved</SelectItem>
-                            {/* <SelectItem value="Submitted">Submitted</SelectItem> */}
-                            <SelectItem value="In Progress">In Progress</SelectItem>
-                            <SelectItem value="Needs Revision">Needs Revision</SelectItem>
+                            <SelectItem value="Completed-AdminApproved">Completed-AdminApproved</SelectItem>
+                            <SelectItem value="Completed-Pending Approval">Completed-Pending Approval</SelectItem>
+                            <SelectItem value="Completed-Needs Revision">Completed-Needs Revision</SelectItem>
                             <SelectItem value="Draft">Draft</SelectItem>
                             {/* <SelectItem value="Incomplete">Incomplete</SelectItem> */}
                           </>
@@ -457,9 +506,9 @@ export function StudentManagement() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Child Status</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Child Status</label>
                     <Select value={childStatusFilter} onValueChange={setChildStatusFilter}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 sm:h-11">
                         <SelectValue placeholder="Child Status" />
                       </SelectTrigger>
                       <SelectContent>
@@ -471,9 +520,9 @@ export function StudentManagement() {
                   </div>
                   
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-muted-foreground">Classroom</label>
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Classroom</label>
                     <Select value={classroomFilter} onValueChange={setClassroomFilter}>
-                      <SelectTrigger>
+                      <SelectTrigger className="h-10 sm:h-11">
                         <SelectValue placeholder="Filter by classroom" />
                       </SelectTrigger>
                       <SelectContent>
@@ -486,12 +535,32 @@ export function StudentManagement() {
                       </SelectContent>
                     </Select>
                   </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Year</label>
+                    <Select value={yearFilter} onValueChange={setYearFilter}>
+                      <SelectTrigger className="h-10 sm:h-11">
+                        <SelectValue placeholder="Filter by year" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Years</SelectItem>
+                        {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                          const year = (new Date().getFullYear() - i).toString();
+                          return (
+                            <SelectItem key={year} value={year}>
+                              {year}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </div>
 
             {/* Desktop Table View */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:block relative z-0">
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -524,7 +593,11 @@ export function StudentManagement() {
                               {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                             </div>
                             <div className="min-w-0">
-                              <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10">
+                              <Link 
+                                to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                                state={{ fromStudents: true }}
+                                className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
+                              >
                                 {student.firstName} {student.lastName}
                               </Link>
                               <div className="text-xs text-gray-500 truncate">
@@ -541,7 +614,11 @@ export function StudentManagement() {
                         </td>
                         <td className="py-3 px-2">
                           <div className="min-w-0">
-                            <Link to={`/admin/parents/${student.parent.id}`} className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate">
+                            <Link 
+                              to={`/admin/parents/${student.parent.id}`} 
+                              state={{ fromStudents: true }}
+                              className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                            >
                               {student.parent.name}
                             </Link>
                             <div className="text-xs text-gray-500 mt-1 truncate">
@@ -555,9 +632,9 @@ export function StudentManagement() {
                             const selectedForm = student.assignedForms.find(form => form.name === formFilter);
                             if (selectedForm) {
                               const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                              const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
-                              const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
-                              const statusIcon = displayStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : displayStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                              const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
+                              const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
+                              const statusIcon = normalizedStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : normalizedStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
                               return (
                                 <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
                                   {statusIcon}
@@ -567,7 +644,7 @@ export function StudentManagement() {
                             }
                             return <span className="text-gray-500 text-xs">N/A</span>;
                           }
-                          const statusIcon = student.enrollmentStatus === 'Complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                          const statusIcon = student.enrollmentStatus === 'Completed-AdminApproved' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'Completed-Pending Approval' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
                           return (
                             <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
                               {statusIcon}
@@ -628,95 +705,103 @@ export function StudentManagement() {
             />
 
             {/* Mobile Card View */}
-            <div className="lg:hidden px-0 py-4 w-full overflow-hidden">
-              <div className="grid grid-cols-1 gap-3 w-full">
+            <div className="lg:hidden p-3 sm:p-4">
+              <div className="space-y-2 sm:space-y-3">
                 {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
-                  <Card key={student.id || `card-${index}`} className="p-3 w-full overflow-hidden">
-                  <div className="flex items-start justify-between mb-2 min-w-0">
-                    <div className="flex items-center space-x-2 min-w-0 flex-1">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
-                        {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline text-sm block truncate relative z-10">
-                          {student.firstName} {student.lastName}
-                        </Link>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {student.classroom.name}
+                  <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
+                          {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Link 
+                            to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                            state={{ fromStudents: true }}
+                            className="font-medium text-amazon-teal hover:underline text-sm block truncate"
+                          >
+                            {student.firstName} {student.lastName}
+                          </Link>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {student.classroom.name}
+                          </div>
                         </div>
                       </div>
+                      <button
+                        onClick={() => {
+                          setSelectedStudent(student);
+                          setNewStatus(student.childStatus);
+                          setIsStatusDialogOpen(true);
+                        }}
+                        className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
+                          student.childStatus === 'active'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-gray-100 text-gray-700'
+                        }`}
+                      >
+                        {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => {
-                        setSelectedStudent(student);
-                        setNewStatus(student.childStatus);
-                        setIsStatusDialogOpen(true);
-                      }}
-                      className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                        student.childStatus === 'active'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-gray-100 text-gray-700'
-                      }`}
-                    >
-                      {student.childStatus === 'active' ? 'Active' : 'Archived'}
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-1.5 w-full">
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground flex-shrink-0">Parent:</span>
-                      <div className="min-w-0 flex-1 ml-2">
-                        <Link to={`/admin/parents/${student.parent.id}`} className="text-xs text-amazon-teal hover:underline block truncate">
+                    
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Parent:</span>
+                        <Link 
+                          to={`/admin/parents/${student.parent.id}`} 
+                          state={{ fromStudents: true }}
+                          className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
+                        >
                           {student.parent.name}
                         </Link>
                       </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground flex-shrink-0">Status:</span>
-                      <div className="ml-2 flex-shrink-0">
-                        {(() => {
-                          if (formFilter !== 'all') {
-                            const selectedForm = student.assignedForms.find(form => form.name === formFilter);
-                            if (selectedForm) {
-                              const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                              const displayStatus = selectedForm.status.toLowerCase() === 'draft' ? 'Incomplete' : normalizedStatus;
-                              const statusVariant = displayStatus === 'Approved' ? 'success' : displayStatus === 'In Progress' ? 'secondary' : 'outline';
-                              return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Status:</span>
+                        <div className="flex-shrink-0">
+                          {(() => {
+                            if (formFilter !== 'all') {
+                              const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                              if (selectedForm) {
+                                const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                                const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
+                                const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
+                                return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                              }
+                              return <span className="text-muted-foreground text-xs">N/A</span>;
                             }
-                            return <span className="text-muted-foreground text-xs">N/A</span>;
-                          }
-                          return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
-                        })()}
+                            return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
+                          })()}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Forms:</span>
+                        <span className="text-xs">{student.formsCompleted}/{student.totalForms}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">Progress:</span>
+                        <div className="flex items-center space-x-1.5">
+                          <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                          <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Forms:</span>
-                      <span className="text-xs">{student.formsCompleted}/{student.totalForms}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between min-w-0">
-                      <span className="text-xs text-muted-foreground flex-shrink-0">Progress:</span>
-                      <div className="flex items-center space-x-1.5 ml-2">
-                        <Progress value={student.enrollmentProgress} className="w-10 h-1.5" />
-                        <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
-                      </div>
-                    </div>
-                  </div>
                   </Card>
                 )) : (
-                  <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
+                  <div className="py-8 text-center text-muted-foreground text-sm">
                     No students found matching your search criteria.
                   </div>
                 )}
               </div>
               
-              <MobilePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
+              <div className="lg:hidden px-3 sm:px-4">
+                <MobilePagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -724,16 +809,16 @@ export function StudentManagement() {
 
       {/* Child Status Change Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
           <DialogHeader>
-            <DialogTitle>Change Child Status</DialogTitle>
+            <DialogTitle className="text-lg sm:text-xl">Change Child Status</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="mb-4">
+            <p className="mb-4 text-sm text-muted-foreground">
               Change status for <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong> to:
             </p>
             <Select value={newStatus} onValueChange={(v) => setNewStatus(v as 'active' | 'archive')}>
-              <SelectTrigger>
+              <SelectTrigger className="h-10 sm:h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -752,6 +837,5 @@ export function StudentManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
-  </AdminLayout>;
+    </AdminLayout>
 }

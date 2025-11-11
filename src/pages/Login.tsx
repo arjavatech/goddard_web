@@ -63,46 +63,46 @@ export function Login() {
     }));
   };
   return <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+      <div className="w-full max-w-sm space-y-4">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 sm:h-20 w-auto max-w-full" />
+            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
           </div>
-          <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground">
+          <div className="space-y-1">
+            <h1 className="text-xl font-semibold text-foreground">
               Welcome Back
             </h1>
-            <p className="text-muted-foreground">
-              Sign in to your parent portal
+            <p className="text-sm text-muted-foreground">
+              Sign in to your account
             </p>
           </div>
         </div>
         {/* Login Form */}
         <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-center">Sign In</CardTitle>
+          <CardHeader className="pb-4">
+            <CardTitle className="text-center text-lg">Sign In</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email Field */}
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-foreground">
+                <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   Email Address
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Enter your email" />
+                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className="w-full pl-10 pr-4 py-3 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm" placeholder="Enter your email" />
                 </div>
               </div>
               {/* Password Field */}
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-foreground">
+                <label htmlFor="password" className="block text-sm font-medium text-foreground">
                   Password
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Enter your password" />
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-10 py-3 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm" placeholder="Enter your password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -119,7 +119,7 @@ export function Login() {
                 </Link>
               </div>
               {/* Sign In Button */}
-              <Button type="submit" disabled={isLoading} className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+              <Button type="submit" disabled={isLoading} className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed py-3">
                 {isLoading ? (
                   <div className="flex items-center justify-center gap-2">
                     <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
@@ -130,23 +130,6 @@ export function Login() {
                 )}
               </Button>
               {/* Divider */}
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-border"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-card px-4 text-muted-foreground">
-                    Don't have an account?
-                  </span>
-                </div>
-              </div>
-
-              {/* Sign Up Link */}
-              <Link to="/signup">
-                <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5">
-                  Create Account
-                </Button>
-              </Link>
             </form>
           </CardContent>
         </Card>

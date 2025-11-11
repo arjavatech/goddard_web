@@ -77,18 +77,18 @@ export function Signup() {
       [name]: type === 'checkbox' ? checked : value
     }));
   };
-  return <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+  return <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4 sm:p-6">
+      <div className="w-full max-w-md space-y-4 sm:space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
-            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 sm:h-20 w-auto max-w-full" />
+            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 md:h-20 w-auto max-w-full" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-2xl font-semibold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-semibold text-foreground">
               Create Account
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Join the Goddard School parent community
             </p>
           </div>
@@ -101,21 +101,21 @@ export function Signup() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Fields */}
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
                   <label htmlFor="firstName" className="text-sm font-medium text-foreground">
                     First Name
                   </label>
                   <div className="relative">
                     <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <input id="firstName" name="firstName" type="text" required value={formData.firstName} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="First name" />
+                    <input id="firstName" name="firstName" type="text" required value={formData.firstName} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="First name" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label htmlFor="lastName" className="text-sm font-medium text-foreground">
                     Last Name
                   </label>
-                  <input id="lastName" name="lastName" type="text" required value={formData.lastName} onChange={handleInputChange} className="w-full px-4 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Last name" />
+                  <input id="lastName" name="lastName" type="text" required value={formData.lastName} onChange={handleInputChange} className="w-full px-4 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="Last name" />
                 </div>
               </div>
               {/* Email Field */}
@@ -125,7 +125,7 @@ export function Signup() {
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Enter your email" />
+                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="Enter your email" />
                 </div>
               </div>
               {/* Phone Field */}
@@ -135,7 +135,7 @@ export function Signup() {
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="phone" name="phone" type="tel" required value={formData.phone} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="(555) 123-4567" />
+                  <input id="phone" name="phone" type="tel" required value={formData.phone} onChange={handleInputChange} className="w-full pl-10 pr-4 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="(555) 123-4567" />
                 </div>
               </div>
               {/* Password Field */}
@@ -145,7 +145,7 @@ export function Signup() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Create a password" />
+                  <input id="password" name="password" type={showPassword ? 'text' : 'password'} required value={formData.password} onChange={handleInputChange} className="w-full pl-10 pr-12 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="Create a password" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -158,16 +158,16 @@ export function Signup() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required value={formData.confirmPassword} onChange={handleInputChange} className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all" placeholder="Confirm your password" />
+                  <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} required value={formData.confirmPassword} onChange={handleInputChange} className="w-full pl-10 pr-12 py-2.5 sm:py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm sm:text-base" placeholder="Confirm your password" />
                   <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               {/* Terms Agreement */}
-              <div className="flex items-start space-x-2">
-                <input type="checkbox" name="agreeToTerms" checked={formData.agreeToTerms} onChange={handleInputChange} required className="w-4 h-4 text-amazon-teal border-input rounded focus:ring-amazon-teal focus:ring-2 mt-1" />
-                <label className="text-sm text-foreground leading-relaxed">
+              <div className="flex items-start space-x-2 sm:space-x-3">
+                <input type="checkbox" name="agreeToTerms" checked={formData.agreeToTerms} onChange={handleInputChange} required className="w-4 h-4 sm:w-5 sm:h-5 text-amazon-teal border-input rounded focus:ring-amazon-teal focus:ring-2 mt-0.5 sm:mt-1 flex-shrink-0" />
+                <label className="text-xs sm:text-sm text-foreground leading-relaxed">
                   I agree to the{' '}
                   <Link to="/terms" className="text-amazon-teal hover:text-amazon-teal/80 transition-colors">
                     Terms of Service
@@ -179,24 +179,24 @@ export function Signup() {
                 </label>
               </div>
               {/* Sign Up Button */}
-              <Button type="submit" className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium" disabled={!formData.agreeToTerms}>
+              <Button type="submit" className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium py-2.5 sm:py-2 text-sm sm:text-base" disabled={!formData.agreeToTerms}>
                 Create Account
               </Button>
 
               {/* Divider */}
-              <div className="relative my-6">
+              <div className="relative my-4 sm:my-6">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border"></div>
                 </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="bg-card px-4 text-muted-foreground">
+                <div className="relative flex justify-center text-xs sm:text-sm">
+                  <span className="bg-card px-3 sm:px-4 text-muted-foreground">
                     Already have an account?
                   </span>
                 </div>
               </div>
               {/* Sign In Link */}
               <Link to="/login">
-                <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5">
+                <Button type="button" variant="outline" className="w-full border-amazon-teal text-amazon-teal hover:bg-amazon-teal/5 py-2.5 sm:py-2 text-sm sm:text-base">
                   Sign In
                 </Button>
               </Link>

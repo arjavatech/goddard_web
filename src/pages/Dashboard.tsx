@@ -9,6 +9,7 @@ import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 type FormStatus = NormalizedFormStatus;
 type ChildFormCard = {
   title: string;
@@ -19,6 +20,7 @@ type ChildFormCard = {
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
   filloutFormId?: string | null;
+  assignedAt?: string | null;
 };
 type ChildSpecificFormGroup = {
   childId: string;
@@ -54,13 +56,28 @@ function formatDate(input: string | null | undefined): string {
     year: 'numeric'
   });
 }
-function normalizeChildFromParent(child: any): DashboardChild {
-  const forms = (child.forms || []).map((form: any) => {
+function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChild {
+  let forms = (child.forms || []).map((form: any) => {
     const status = normalizeFormStatus(form.status);
     return {
       title: form.formName || form.form_name || 'Unknown Form',
       description: form.formName || form.form_name || 'Unknown Form',
       lastUpdated: (() => {
+        // Try assigned_at first, then approved_on as fallback
+        const assignedDate = form.assigned_at;
+        if (assignedDate) {
+          // Handle DD-MM-YYYY format
+          const parts = assignedDate.split('-');
+          if (parts.length === 3) {
+            const [day, month, year] = parts;
+            const date = new Date(`${year}-${month}-${day}`);
+            if (!isNaN(date.getTime())) {
+              return date.toLocaleDateString();
+            }
+          }
+        }
+        
+        // Fallback to approved_on
         const approvedDate = form.approved_on || form.approvedOn;
         if (approvedDate) {
           try {
@@ -76,9 +93,20 @@ function normalizeChildFromParent(child: any): DashboardChild {
       formId: form.form_id || form.formId,
       recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
       recentEditLink: form.recent_edit_link || form.recentEditLink || null,
-      filloutFormId: form.fillout_form_id || form.filloutFormId || null
+      filloutFormId: form.fillout_form_id || form.filloutFormId || null,
+      assignedAt: form.assigned_at || null
     } satisfies ChildFormCard;
   });
+
+  // Filter forms by year if yearFilter is provided
+  if (yearFilter && yearFilter !== 'all') {
+    forms = forms.filter((form: ChildFormCard) => {
+      if (!form.assignedAt) return false;
+      // Handle DD-MM-YYYY format (e.g., "04-11-2025")
+      const parts = form.assignedAt.split('-');
+      return parts.length === 3 && parts[2] === yearFilter;
+    });
+  }
 
   const completedCount = forms.filter((form: ChildFormCard) => COMPLETION_STATUSES.has(form.status)).length;
   const totalForms = forms.length;
@@ -88,7 +116,7 @@ function normalizeChildFromParent(child: any): DashboardChild {
 
   // Extract name from childFullName or fallback to empty string
   const fullName = child.childFullName || '';
-  const nameParts = fullName.split(' ');
+  const nameParts = fullName.trim().split(' ').filter(Boolean);
   const firstName = nameParts[0] || '';
   const lastName = nameParts.slice(1).join(' ') || '';
 
@@ -100,8 +128,13 @@ function normalizeChildFromParent(child: any): DashboardChild {
       if (!child.childDob) return '—';
       const birthDate = new Date(child.childDob);
       if (isNaN(birthDate.getTime())) return '—';
-      const age = Math.floor((Date.now() - birthDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
-      return age >= 0 ? age.toString() : '—';
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      return age >= 0 ? `${age} years` : '—';
     })(),
     dob: formatDate(child.childDob) || '—',
     enrollmentProgress,
@@ -124,7 +157,8 @@ export function Dashboard() {
   const [error, setError] = useState<string | null>(null);
   const [parentData, setParentData] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  
   useEffect(() => {
     // Wait for user data to be loaded
     if (userLoading) {
@@ -161,8 +195,22 @@ export function Dashboard() {
         // Store raw parent data for form viewing
         setParentData(parentData);
 
+        // Extract available years from all forms
+        const years = new Set<string>();
+        (parentData.children || []).forEach(child => {
+          (child.forms || []).forEach((form: any) => {
+            if (form.assigned_at) {
+              // Handle DD-MM-YYYY format (e.g., "04-11-2025")
+              const parts = form.assigned_at.split('-');
+              if (parts.length === 3 && parts[2].length === 4) {
+                years.add(parts[2]);
+              }
+            }
+          });
+        });
+       
         // Process children from the parent response
-        const processedChildren = (parentData.children || []).map(child => normalizeChildFromParent(child));
+        const processedChildren = (parentData.children || []).map(child => normalizeChildFromParent(child, yearFilter));
 
         // Extract forms for each child
         const childFormsData = processedChildren.map(child => ({
@@ -196,7 +244,7 @@ export function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [userData, userLoading, user?.id, refreshTrigger]);
+  }, [userData, userLoading, user?.id, refreshTrigger, yearFilter]);
   useEffect(() => {
     if (children.length === 0) {
       setSelectedChildId(null);
@@ -239,8 +287,9 @@ export function Dashboard() {
         {loading ? <div className="py-8 sm:py-12 text-center text-muted-foreground">
             Loading parent dashboard...
           </div> : <>
-            <div className="mb-3 sm:mb-4 md:mb-6">
+            <div className="mb-3 sm:mb-4 md:mb-6 space-y-3 sm:space-y-4">
               <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
+              
             </div>
             {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
                 <div className="lg:col-span-2 xl:col-span-7 space-y-3 sm:space-y-4 md:space-y-6">
@@ -276,6 +325,8 @@ export function Dashboard() {
                         formToOpen={formToOpen}
                         onFormOpened={() => setFormToOpen(null)}
                         onFormCompleted={handleFormCompleted}
+                        yearFilter={yearFilter}
+                        onYearFilterChange={setYearFilter}
                       />
                     </div>
                   )}

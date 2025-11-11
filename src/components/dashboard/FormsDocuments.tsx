@@ -1,10 +1,19 @@
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Home } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Loading } from '../ui/loading';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 interface FormCardProps {
   title: string;
   description: string;
@@ -23,7 +32,6 @@ function FormCard({
   description,
   lastUpdated,
   status,
-  childName,
   recentPdfLink,
   onView,
   onDownload,
@@ -34,7 +42,12 @@ function FormCard({
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
 
-  return <Card className="glass-card h-full">
+  const getBorderColor = () => {
+    if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
+    return 'border-red-500';
+  };
+
+  return <Card className={`glass-card h-full transition-shadow cursor-pointer hover:shadow-md ${getBorderColor()}`} onClick={onView}>
       <CardHeader className="pb-2">
         <div className="flex flex-col">
           <div className="flex items-center justify-between">
@@ -42,9 +55,6 @@ function FormCard({
               <FileText className="h-4 w-4 mr-2 text-amazon-teal" />
               <CardTitle className="text-base font-medium">{title}</CardTitle>
             </div>
-            {childName && <span className="text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600 font-medium">
-                {childName}
-              </span>}
           </div>
           <StatusBadge status={status} />
         </div>
@@ -55,47 +65,72 @@ function FormCard({
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-2">
         <span className="text-xs text-muted-foreground">
-          Approval date: {lastUpdated}
+          Assigned date: {lastUpdated}
         </span>
         <div className="flex gap-1">
-          {isApproved && recentPdfLink && (
+          {isApproved && (
             <>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-                onClick={onDownload}
-                disabled={isLoadingThis}
-                title="Download PDF"
+                className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onView?.();
+                }}
+                title="View Form (Read-only)"
               >
-                {isLoadingThis && isLoading?.action === 'download' ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                ) : (
-                  <Download className="h-4 w-4" />
-                )}
+                <Eye className="h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
-                onClick={onPrint}
-                disabled={isLoadingThis}
-                title="Print PDF"
-              >
-                {isLoadingThis && isLoading?.action === 'print' ? (
-                  <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
-                ) : (
-                  <Printer className="h-4 w-4" />
-                )}
-              </Button>
+              {recentPdfLink && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload?.();
+                    }}
+                    disabled={isLoadingThis}
+                    title="Download PDF"
+                  >
+                    {isLoadingThis && isLoading?.action === 'download' ? (
+                      <span className="animate-spin h-4 w-4 border-2 border-amazon-teal border-t-transparent rounded-full" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPrint?.();
+                    }}
+                    disabled={isLoadingThis}
+                    title="Print PDF"
+                  >
+                    {isLoadingThis && isLoading?.action === 'print' ? (
+                      <span className="animate-spin h-4 w-4 border-2 border-amazon-teal border-t-transparent rounded-full" />
+                    ) : (
+                      <Printer className="h-4 w-4" />
+                    )}
+                  </Button>
+                </>
+              )}
             </>
           )}
-          {!isApproved && (
+          {!isApproved && onView && (
             <Button
               variant="outline"
               size="icon"
               className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
-              onClick={onView}
+              onClick={(e) => {
+                e.stopPropagation();
+                onView();
+              }}
               title="View Form"
             >
               <Eye className="h-4 w-4" />
@@ -134,19 +169,22 @@ interface FormsDocumentsProps {
   formToOpen?: any; // Form to automatically open
   onFormOpened?: () => void; // Callback when form is opened
   onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
+  yearFilter?: string; // Year filter value
+  onYearFilterChange?: (year: string) => void; // Callback to change year filter
 }
 export function FormsDocuments({
   childSpecificForms,
   familyForms,
   rawFormData,
   selectedChildId,
-  selectedChildName,
   childStatus = 'active',
   onChildSelect,
   onViewForm,
   formToOpen,
   onFormOpened,
-  onFormCompleted
+  onFormCompleted,
+  yearFilter = 'all',
+  onYearFilterChange
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || 'all');
@@ -154,9 +192,11 @@ export function FormsDocuments({
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
 
   // Sync activeTab with selectedChildId only when it actually changes
   useEffect(() => {
@@ -186,7 +226,7 @@ export function FormsDocuments({
         // Find the matching child in rawFormData by childId
         const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
         return child.forms.map((form, formIndex) => {
-          // Find the exact matching form in rawData by form_id
+          // Find the exact matching form in rawData by form_id or form_name
           const matchingRawForm = rawChild?.forms?.find((rawForm: any) => 
             rawForm.form_id === form.formId || rawForm.form_name === form.title
           );
@@ -244,8 +284,13 @@ export function FormsDocuments({
     const isApproved = form.status === 'Approved';
 
     if (isApproved) {
-      // For approved forms, don't allow viewing/editing - only download/print
-      return;
+      // For approved forms, use direct PDF link for react-pdf viewer
+      if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+        formUrl = recentPdfLink;
+      } else {
+        // If no PDF link available, don't allow viewing
+        return;
+      }
     } else {
       // For non-approved forms, prioritize recent_edit_link first
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
@@ -270,7 +315,12 @@ export function FormsDocuments({
         }
       } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
         // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
-        const defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+        let defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+        // Validate the default form ID - if it's invalid test data, use parent_handbook
+        const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
+        if (invalidFormIds.includes(defaultFormId.toLowerCase())) {
+          defaultFormId = 'parent_handbook';
+        }
         console.log('Default form ID used:', defaultFormId)
         formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
       }
@@ -283,7 +333,22 @@ export function FormsDocuments({
       viewUrl: formUrl
     });
     setIsFrameLoading(true);
+    setPageNumber(1);
+    setNumPages(null);
     onViewForm(form);
+  };
+
+  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setIsFrameLoading(false);
+  };
+
+  const goToPrevPage = () => {
+    setPageNumber(pageNumber - 1 <= 1 ? 1 : pageNumber - 1);
+  };
+
+  const goToNextPage = () => {
+    setPageNumber(pageNumber + 1 >= (numPages || 1) ? (numPages || 1) : pageNumber + 1);
   };
 
   // Auto-open form when formToOpen is set
@@ -379,7 +444,7 @@ export function FormsDocuments({
       // Function to start thank you countdown
       const startThankYouCountdown = () => {
         setShowThankYou(true);
-        setCountdown(5);
+        setCountdown(4);
         
         // Start countdown
         countdownRef.current = setInterval(() => {
@@ -458,13 +523,13 @@ export function FormsDocuments({
   // If a form is selected for viewing, show iframe in this section
   if (selectedForm) {
     return (
-      <div>
-        <div className="mb-4 space-y-3 sm:space-y-0">
+      <div className="px-2 sm:px-0">
+        <div className="mb-3 sm:mb-4 space-y-3 sm:space-y-0">
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="icon"
-              className="shrink-0"
+              className="shrink-0 h-8 w-8 sm:h-10 sm:w-10"
               onClick={() => {
                 setSelectedForm(null);
                 setIsFrameLoading(false);
@@ -473,11 +538,14 @@ export function FormsDocuments({
                 if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
               }}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
             </Button>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg sm:text-xl font-semibold text-foreground truncate">
+              <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">
                 {selectedForm.title}
+                {selectedForm.status === 'Approved' && (
+                  <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-green-600">(Read-only)</span>
+                )}
               </h2>
               {selectedForm.childName && (
                 <span className="inline-block mt-1 text-xs bg-gray-100 px-2 py-1 rounded-full text-gray-600">
@@ -486,98 +554,117 @@ export function FormsDocuments({
               )}
             </div>
           </div>
-          
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
-            {showThankYou && (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 bg-green-50 p-3 rounded-lg border border-green-200">
-                <span className="text-sm text-green-700 font-medium">
-                  Form completed! Redirecting in {countdown}s
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-green-300 text-green-700 hover:bg-green-100 shrink-0"
-                  onClick={() => {
-                    setSelectedForm(null);
-                    setShowThankYou(false);
-                    setIsFrameLoading(false);
-                    if (countdownRef.current) clearInterval(countdownRef.current);
-                    if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-                    // Trigger refresh when returning to dashboard
-                    if (onFormCompleted) onFormCompleted();
-                  }}
-                >
-                  <Home className="h-4 w-4 mr-1" />
-                  <span className="hidden sm:inline">Back to Dashboard</span>
-                  <span className="sm:hidden">Dashboard</span>
-                </Button>
-              </div>
-            )}
-            {!showThankYou && (
-              <div className="flex items-center gap-2">
-                <StatusBadge status={selectedForm.status} />
-              </div>
-            )}
-          </div>
         </div>
 
         <Card className="glass-card">
-          <CardContent className="p-6">
+          <CardContent className="p-2 sm:p-3 md:p-6">
             <div className="relative">
               {isFrameLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
-                  <Loading message="Loading form..." size="md" />
+                  <Loading message="Loading form..." size="sm" />
                 </div>
               )}
               {selectedForm.viewUrl && selectedForm.viewUrl !== '#' ? (
-                <iframe
-                  src={selectedForm.viewUrl}
-                  style={{
-                    width: '100%',
-                    height: '500px',
-                    border: 'none',
-                    borderRadius: '8px',
-                    opacity: isFrameLoading ? 0 : 1,
-                    transition: 'opacity 0.3s ease-in-out'
-                  }}
-                  className="sm:h-[600px]"
-                  title={selectedForm.title}
-                  allow="fullscreen"
-                  onLoad={() => {
-                    setIsFrameLoading(false);
-                    // Add a manual trigger button after form loads
-                    setTimeout(() => {
-                      // Check if this might be a thank you page by looking at common indicators
-                      try {
-                        const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
-                        if (iframe && iframe.contentDocument) {
-                          const content = iframe.contentDocument.body.innerText.toLowerCase();
-                          if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
-                            setShowThankYou(true);
-                            setCountdown(5);
-                            
-                            countdownRef.current = setInterval(() => {
-                              setCountdown(prev => {
-                                if (prev <= 1) {
-                                  setSelectedForm(null);
-                                  setShowThankYou(false);
-                                  setIsFrameLoading(false);
-                                  if (countdownRef.current) clearInterval(countdownRef.current);
-                                  // Trigger refresh when auto-redirecting
-                                  if (onFormCompleted) onFormCompleted();
-                                  return 0;
-                                }
-                                return prev - 1;
-                              });
-                            }, 1000);
-                          }
+                selectedForm.status === 'Approved' ? (
+                  <div className="flex flex-col">
+                    {/* PDF Navigation */}
+                    <div className="flex items-center justify-between mb-2 sm:mb-4 p-2 bg-gray-50 rounded-lg">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToPrevPage}
+                        disabled={pageNumber <= 1}
+                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                      >
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
+                      </Button>
+                      <span className="text-xs sm:text-sm font-medium px-2">
+                        {pageNumber} / {numPages || '...'}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={goToNextPage}
+                        disabled={pageNumber >= (numPages || 1)}
+                        className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3"
+                      >
+                        <span className="hidden sm:inline">Next</span>
+                        <span className="sm:hidden">Next</span>
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                    
+                    {/* PDF Viewer */}
+                    <div className="flex justify-center overflow-x-auto">
+                      <Document
+                        file={selectedForm.viewUrl}
+                        onLoadSuccess={onDocumentLoadSuccess}
+                        loading={<Loading message="Loading PDF..." size="sm" />}
+                        error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
+                      >
+                        <Page 
+                          pageNumber={pageNumber}
+                          width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
+                          renderTextLayer={true}
+                          renderAnnotationLayer={false}
+                          className="shadow-lg"
+                        />
+                      </Document>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <style>{`
+                      @media (max-width: 640px) {
+                        .ndfHFb-c4YZDc-q77wGc,
+                        .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb {
+                          display: none !important;
                         }
-                      } catch (error) {
-                        // Cross-origin restrictions, ignore
                       }
-                    }, 1000);
-                  }}
-                />
+                    `}</style>
+                    <iframe
+                      src={selectedForm.viewUrl}
+                      className="w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[400px] sm:min-h-[500px] md:min-h-[1000px] border-none rounded-lg transition-opacity duration-300"
+                      style={{
+                        opacity: isFrameLoading ? 0 : 1
+                      }}
+                      title={selectedForm.title}
+                      onLoad={() => {
+                        setIsFrameLoading(false);
+                        setTimeout(() => {
+                          try {
+                            const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
+                            if (iframe && iframe.contentDocument) {
+                              const content = iframe.contentDocument.body.innerText.toLowerCase();
+                              if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
+                                setShowThankYou(true);
+                                setCountdown(5);
+                                
+                                countdownRef.current = setInterval(() => {
+                                  setCountdown(prev => {
+                                    if (prev <= 1) {
+                                      setSelectedForm(null);
+                                      setShowThankYou(false);
+                                      setIsFrameLoading(false);
+                                      if (countdownRef.current) clearInterval(countdownRef.current);
+                                      if (onFormCompleted) onFormCompleted();
+                                      return 0;
+                                    }
+                                    return prev - 1;
+                                  });
+                                }, 1000);
+                              }
+                            }
+                          } catch (error) {
+                            // Cross-origin restrictions, ignore
+                          }
+                        }, 1000);
+                      }}
+                    />
+                  </>
+                )
               ) : (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500">
                   Unable to load form. Please check the form configuration.
@@ -592,17 +679,17 @@ export function FormsDocuments({
 
   // Show archived message if child is archived
   if (childStatus === 'archive') {
-    return <div>
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-foreground mb-4">
+    return <div className="px-2 sm:px-0">
+        <div className="mb-3 sm:mb-4 md:mb-6">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-2 sm:mb-3 md:mb-4">
             Forms & Documents
           </h2>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-8 text-center">
-            <AlertCircle className="h-12 w-12 mx-auto text-amber-600 mb-4" />
-            <h3 className="font-semibold text-amber-900 mb-2 text-lg">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4 md:p-8 text-center">
+            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 mx-auto text-amber-600 mb-2 sm:mb-3 md:mb-4" />
+            <h3 className="font-semibold text-amber-900 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg">
               The student is Archived
             </h3>
-            <p className="text-sm text-amber-700">
+            <p className="text-xs sm:text-sm text-amber-700">
               Form viewing is disabled for archived students.
             </p>
           </div>
@@ -611,11 +698,34 @@ export function FormsDocuments({
   }
 
   // Forms grid view with tabs
-  return <div>
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-foreground mb-4">
-          Forms & Documents
-        </h2>
+  return <div className="px-2 sm:px-0">
+      <div className="mb-3 sm:mb-4 md:mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3 md:mb-4 gap-2 sm:gap-3 md:gap-4">
+          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
+            Forms & Documents
+          </h2>
+          {onYearFilterChange && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Select value={yearFilter} onValueChange={onYearFilterChange}>
+                <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
+                  <SelectValue placeholder="Filter by year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                    const year = (new Date().getFullYear() - i).toString();
+                    return (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+        </div>
 
         <Tabs value={activeTab} onValueChange={(value) => {
           setActiveTab(value);
@@ -628,14 +738,14 @@ export function FormsDocuments({
             }
           }
         }}>
-          <div className="mb-4 overflow-x-auto ">
-            <TabsList className="w-max">
-              <TabsTrigger value="all">All Forms</TabsTrigger>
+          <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
+            <TabsList className="w-max h-8 sm:h-10">
+              <TabsTrigger value="all" className="text-xs sm:text-sm px-2 sm:px-3">All Forms</TabsTrigger>
               {familyForms.length > 0 && (
-                <TabsTrigger value="family">Family Forms</TabsTrigger>
+                <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
               )}
               {childSpecificForms.map((child) => (
-                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap">
+                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
                   <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
                   <span className="hidden sm:inline">{child.childName}</span>
                 </TabsTrigger>
@@ -645,12 +755,13 @@ export function FormsDocuments({
 
           <TabsContent value="all">
             {allForms.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
                 No forms available yet. This section will populate once assignments are available from the backend service.
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                 {getFormsForTab('all').map(form => (
+                  
                   <FormCard
                     key={form._key}
                     title={form.title}
@@ -677,11 +788,11 @@ export function FormsDocuments({
           {childSpecificForms.map((child) => (
             <TabsContent key={child.childId} value={child.childId}>
               {getFormsForTab(child.childId).length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-6 text-sm text-muted-foreground">
+                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
                   No forms available for {child.childName} yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {getFormsForTab(child.childId).map(form => (
                     <FormCard
                       key={form._key}
