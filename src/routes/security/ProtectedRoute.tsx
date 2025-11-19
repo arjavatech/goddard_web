@@ -29,6 +29,12 @@ export function ProtectedRoute({
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>;
   }
+  // Allow superadmin routes without authentication
+  if (location.pathname.startsWith('/superadmin')) {
+    console.log('🛡️ Access granted: Superadmin route');
+    return children;
+  }
+
   if (!isAuthenticated) {
     console.log('🛡️ Access denied: Not authenticated, redirecting to login');
     return <Navigate to="/login" state={{

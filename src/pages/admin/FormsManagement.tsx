@@ -15,7 +15,7 @@ import { commonValidationRules } from '../../lib/validation';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
-import { deleteForm, createFormTemplate, updateFormTemplate } from '../../services/api/admin';
+import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
@@ -48,6 +48,8 @@ export function FormsManagement() {
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
+  const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const { showToast } = useToast();
 
   const validateForm = () => {
@@ -179,6 +181,21 @@ export function FormsManagement() {
   const openDeleteDialog = (form: Form) => {
     setSelectedForm(form);
     setIsDeleteDialogOpen(true);
+  };
+  
+  const handleAssignToAllStudents = async () => {
+    if (!selectedFormForAssign) return;
+    
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) return;
+      
+      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id);
+      showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
+      setIsAssignToAllDialogOpen(false);
+    } catch (error) {
+      showToast('error', 'Failed to assign form to all students. Please try again.');
+    }
   };
   const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
@@ -374,6 +391,15 @@ export function FormsManagement() {
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedFormForAssign(form);
+                                  setIsAssignToAllDialogOpen(true);
+                                }}
+                              >
+                                <School className="h-4 w-4 mr-2" />
+                                Assign to All Students
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
                                 onClick={() => openDeleteDialog(form)} 
                                 className="text-red-600 focus:text-red-600"
                                 disabled={form.status === 'Active'}
@@ -431,6 +457,15 @@ export function FormsManagement() {
                           >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setSelectedFormForAssign(form);
+                              setIsAssignToAllDialogOpen(true);
+                            }}
+                          >
+                            <School className="h-4 w-4 mr-2" />
+                            Assign to All Students
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => openDeleteDialog(form)} 
@@ -640,6 +675,30 @@ export function FormsManagement() {
             </Button>
             <AsyncButton variant="destructive" onClick={handleDeleteForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Delete Form
+            </AsyncButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign to All Students Dialog */}
+      <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-lg sm:text-xl">Assign Form to All Students</DialogTitle>
+          </DialogHeader>
+          <div className="py-3 sm:py-4">
+            <p className="text-sm sm:text-base text-gray-600">
+              Are you sure you want to assign{' '}
+              <span className="font-medium">{selectedFormForAssign?.name}</span>{' '}
+              to all students in the school? This will add the form to every student's enrollment.
+            </p>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+              Cancel
+            </Button>
+            <AsyncButton onClick={handleAssignToAllStudents} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm">
+              Assign to All Students
             </AsyncButton>
           </DialogFooter>
         </DialogContent>

@@ -760,3 +760,44 @@ export async function fetchClassBasedEnrollments(
     return [];
   }
 }
+
+export async function assignFormsToStudent(
+  schoolId: string,
+  assignments: {
+    enrollment_id: string;
+    child_id: string;
+    form_template_id: string;
+    is_required: boolean;
+  }[]
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/student-form-assignments/assign',
+    headers: {
+      'X-API-Key': 'test-owner-key-2024'
+    },
+    body: {
+      school_id: schoolId,
+      assignments
+    }
+  }, z.object({}));
+}
+
+export async function assignFormToAllStudents(
+  schoolId: string,
+  formTemplateId: string,
+  isRequired: boolean = true
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/student-form-assignments/assign-to-school',
+    headers: {
+      'X-API-Key': 'test-owner-key-2024'
+    },
+    body: {
+      school_id: schoolId,
+      form_template_id: formTemplateId,
+      is_required: isRequired
+    }
+  }, z.object({}));
+}

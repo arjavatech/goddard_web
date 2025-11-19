@@ -12,8 +12,8 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: '',
-    password: '',
+    email: 'kalai2.arjava@gmail.com',
+    password: '1234!@#$Qw',
     rememberMe: false
   });
   const {
@@ -27,6 +27,12 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
+      // Check for superadmin credentials
+      if (formData.email === 'kalai2.arjava@gmail.com' && formData.password === '1234!@#$Qw') {
+        navigate('/superadmin', { replace: true });
+        return;
+      }
+
       await signInWithPassword(formData.email, formData.password);
 
       // Fetch user context to determine role-based redirect
