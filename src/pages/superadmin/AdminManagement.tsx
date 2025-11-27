@@ -29,6 +29,7 @@ export function AdminManagement() {
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData } = useUserContext();
 
@@ -45,18 +46,19 @@ export function AdminManagement() {
       
       try {
         setIsLoading(true);
+        setLoadError(null);
         const adminUsers = await fetchAdminUsers(userData.schoolId);
         setAdmins(adminUsers);
       } catch (error) {
         console.error('Error loading admins:', error);
-        showToast('error', 'Failed to load admin users');
+        setLoadError('Failed to load admin users. Please try refreshing the page.');
       } finally {
         setIsLoading(false);
       }
     };
 
     loadAdmins();
-  }, [userData?.schoolId, showToast]);
+  }, [userData?.schoolId]);
 
   const validateEmail = (email: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,6 +129,7 @@ export function AdminManagement() {
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
     setAdminPhone(''); // Phone not available in current data
+    setEmailError(''); // Clear any existing email errors
     setIsEditDialogOpen(true);
   };
 
@@ -158,6 +161,7 @@ export function AdminManagement() {
 
   const handleViewAdmin = (admin: AdminUser) => {
     setSelectedAdmin(admin);
+    setEmailError(''); // Clear any existing email errors
     setIsViewDialogOpen(true);
   };
 
@@ -199,7 +203,10 @@ export function AdminManagement() {
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
             Admin Management
           </h1>
-          <Button className="bg-amazon-teal hover:bg-amazon-teal/90" onClick={() => setIsAddDialogOpen(true)}>
+          <Button className="bg-amazon-teal hover:bg-amazon-teal/90" onClick={() => {
+            setEmailError(''); // Clear any existing email errors
+            setIsAddDialogOpen(true);
+          }}>
             <Plus className="w-4 h-4 mr-2" />
             Invite Admin
           </Button>
@@ -227,6 +234,13 @@ export function AdminManagement() {
             {isLoading ? (
               <div className="flex justify-center py-8">
                 <div className="animate-spin h-6 w-6 border-2 border-amazon-teal border-t-transparent rounded-full"></div>
+              </div>
+            ) : loadError ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-muted-foreground mb-4">{loadError}</p>
+                <Button onClick={() => window.location.reload()} variant="outline">
+                  Refresh Page
+                </Button>
               </div>
             ) : (
               <div className="space-y-3 sm:space-y-4">
