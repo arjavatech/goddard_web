@@ -1068,6 +1068,33 @@ export function StudentManagement() {
                       <Clock className="h-3 w-3" /> : 
                       <AlertCircle className="h-3 w-3" />;
                     
+                    // Calculate due date (assignment date + 3 days default, will be dynamic later)
+                    const dueDays = 3; // Default, will come from API later
+                    const dueDate = form.assignedAt ? (() => {
+                      try {
+                        // Parse DD/MM/YYYY or DD-MM-YYYY format
+                        const parts = form.assignedAt.split(/[/-]/);
+                        if (parts.length === 3) {
+                          const [day, month, year] = parts.map(p => parseInt(p));
+                          if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
+                            const assignedDate = new Date(year, month - 1, day);
+                            if (!isNaN(assignedDate.getTime())) {
+                              return new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                            }
+                          }
+                        }
+                        // Fallback to regular date parsing
+                        const fallbackDate = new Date(form.assignedAt);
+                        if (!isNaN(fallbackDate.getTime())) {
+                          return new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                        }
+                      } catch (e) {
+                        console.warn('Date parsing failed for:', form.assignedAt);
+                      }
+                      return null;
+                    })() : null;
+                    const isOverdue = dueDate && new Date() > dueDate && normalizedStatus !== 'Approved';
+                    
                     return (
                       <div key={form.id} className={`flex items-center justify-between p-3 hover:bg-gray-50 transition-colors ${
                         index !== selectedStudentForForms.assignedForms.length - 1 ? 'border-b' : ''
@@ -1076,18 +1103,31 @@ export function StudentManagement() {
                           <FileText className="h-4 w-4 text-amazon-teal flex-shrink-0" />
                           <div className="flex-1 min-w-0">
                             <h4 className="font-medium text-sm truncate">{form.name}</h4>
-                            <p className="text-xs text-muted-foreground">
-                              {form.assignedAt ? 
-                                new Date(form.assignedAt).toLocaleDateString() : 
-                                'No date'
-                              }
-                            </p>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                Assigned: {form.assignedAt || 'No date'}
+                              </span>
+                              {dueDate && !isNaN(dueDate.getTime()) && (
+                                <span className={`font-medium ${
+                                  isOverdue ? 'text-red-600' : 'text-amber-600'
+                                }`}>
+                                  • Due: {dueDate.toLocaleDateString('en-GB')}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs flex-shrink-0">
-                          {statusIcon}
-                          {normalizedStatus}
-                        </Badge>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs flex-shrink-0">
+                            {statusIcon}
+                            {normalizedStatus}
+                          </Badge>
+                          {isOverdue && (
+                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                              Overdue
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     );
                   })

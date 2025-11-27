@@ -1,4 +1,5 @@
 import { authedFetch, z } from './common';
+import { httpFetch } from './http';
 import { fetchUserContext } from './user';
 export type Classroom = {
   id: string;
@@ -798,6 +799,89 @@ export async function assignFormToAllStudents(
       school_id: schoolId,
       form_template_id: formTemplateId,
       is_required: isRequired
+    }
+  }, z.object({}));
+}
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_verified: boolean;
+  school_id: string;
+};
+
+export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/users/admin?school_id=${encodeURIComponent(schoolId)}`
+    }, z.object({
+      success: z.boolean(),
+      count: z.number(),
+      data: z.array(z.object({
+        id: z.string(),
+        email: z.string(),
+        first_name: z.string(),
+        last_name: z.string(),
+        role: z.string(),
+        is_verified: z.boolean(),
+        school_id: z.string()
+      }))
+    }));
+    
+    return data.data;
+  } catch (error) {
+    console.error('fetchAdminUsers error:', error);
+    throw error;
+  }
+}
+
+export async function inviteAdmin(
+  email: string,
+  firstName: string,
+  lastName: string,
+  schoolId: string
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/auth/invite-create',
+    body: {
+      email,
+      school_id: schoolId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: null
+    }
+  }, z.object({}));
+}
+
+export async function updateAdmin(
+  userId: string,
+  firstName: string,
+  lastName: string,
+  phoneNumber?: string
+): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/users/admin',
+    body: {
+      user_id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phoneNumber || null
+    }
+  }, z.object({}));
+}
+
+export async function deleteAdmin(userId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: '/users/admin',
+    body: {
+      user_id: userId
     }
   }, z.object({}));
 }

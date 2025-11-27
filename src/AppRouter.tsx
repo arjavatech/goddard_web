@@ -8,6 +8,7 @@ import { ToastProvider } from './contexts/ToastContext';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { SetPassword } from './pages/SetPassword';
+import { ForgotPassword } from './pages/ForgotPassword';
 // Admin pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { ClassroomManagement } from './pages/admin/ClassroomManagement';
@@ -19,8 +20,7 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 
 import { FormView } from './pages/admin/FormView';
-// SuperAdmin pages
-import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
+// Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
@@ -35,6 +35,7 @@ export function AppRouter() {
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/set-password" element={<SetPassword />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
           {/* Admin Routes (protected parent) */}
           <Route element={<ProtectedRoute>
                 <Outlet />
@@ -48,15 +49,10 @@ export function AppRouter() {
             <Route path="/admin/parents" element={<ParentManagement />} />
             <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
             <Route path="/admin/students" element={<StudentManagement />} />
+            <Route path="/admin/admins" element={<AdminManagement />} />
 
           </Route>
-          {/* SuperAdmin Routes (protected parent) */}
-          <Route element={<ProtectedRoute>
-                <Outlet />
-              </ProtectedRoute>}>
-            <Route path="/superadmin" element={<SuperAdminDashboard />} />
-            <Route path="/superadmin/admins" element={<AdminManagement />} />
-          </Route>
+
         </Routes>
       </BrowserRouter>
       </ToastProvider>

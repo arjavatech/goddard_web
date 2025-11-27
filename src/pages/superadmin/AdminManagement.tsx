@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SuperAdminLayout } from './SuperAdminLayout';
+import { AdminLayout } from '../admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -10,104 +10,190 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { useToast } from '../../contexts/ToastContext';
 import { supabase } from '../../lib/supabaseClient';
+import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, type AdminUser } from '../../services/api/admin';
+import { useUserContext } from '../../contexts/UserContext';
 
 export function AdminManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
   const [adminName, setAdminName] = useState('');
+  const [adminFirstName, setAdminFirstName] = useState('');
+  const [adminLastName, setAdminLastName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const [adminPhone, setAdminPhone] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { showToast } = useToast();
+  const { userData } = useUserContext();
 
-  const [admins, setAdmins] = useState([
-    { id: 1, name: 'John Smith', email: 'john@goddardschool.com', status: 'active', lastLogin: '2 hours ago' },
-    { id: 2, name: 'Sarah Johnson', email: 'sarah@goddardschool.com', status: 'active', lastLogin: '1 day ago' },
-    { id: 3, name: 'Mike Wilson', email: 'mike@goddardschool.com', status: 'active', lastLogin: '3 hours ago' },
-    { id: 4, name: 'Lisa Brown', email: 'lisa@goddardschool.com', status: 'inactive', lastLogin: '1 week ago' }
-  ]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
 
   const filteredAdmins = admins.filter(admin =>
-    admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    `${admin.first_name} ${admin.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     admin.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  React.useEffect(() => {
+    const loadAdmins = async () => {
+      if (!userData?.schoolId) return;
+      
+      try {
+        setIsLoading(true);
+        const adminUsers = await fetchAdminUsers(userData.schoolId);
+        setAdmins(adminUsers);
+      } catch (error) {
+        console.error('Error loading admins:', error);
+        showToast('error', 'Failed to load admin users');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadAdmins();
+  }, [userData?.schoolId, showToast]);
+
+  const validateEmail = (email: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setAdminEmail(email);
+    
+    if (email && !validateEmail(email)) {
+      setEmailError('Please enter a valid email address');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
+
   const handleInviteAdmin = async () => {
-    if (!adminEmail.trim()) {
-      showToast('error', 'Please enter an email address');
+    if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError) {
+      showToast('error', 'Please fill in all required fields with valid information');
+      return;
+    }
+
+    // Check for existing email
+    if (admins.some(admin => admin.email.toLowerCase() === adminEmail.toLowerCase())) {
+      setEmailError('Email already exists');
+      return;
+    }
+
+    if (!userData?.schoolId) {
+      showToast('error', 'School ID not found');
       return;
     }
 
     setIsInviting(true);
 
     try {
-      // Use Supabase auth signup to send invitation email
-      const { data, error } = await supabase.auth.signUp({
-        email: adminEmail.trim(),
-        password: Math.random().toString(36).slice(-8) + 'A1!',
-        options: {
-          emailRedirectTo: `${window.location.origin}/signup`
-        }
-      });
-
-      if (error) {
-        showToast('error', error.message);
-        return;
-      }
+      await inviteAdmin(
+        adminEmail.trim(),
+        adminFirstName.trim(),
+        adminLastName.trim(),
+        userData.schoolId
+      );
       
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
       setIsAddDialogOpen(false);
       resetForm();
-    } catch (err) {
-      showToast('error', 'Failed to send invitation');
+      
+      // Reload admin list
+      const adminUsers = await fetchAdminUsers(userData.schoolId);
+      setAdmins(adminUsers);
+    } catch (err: any) {
+      if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
+        setEmailError('Email already exists');
+      } else {
+        showToast('error', 'Failed to send invitation');
+      }
     } finally {
       setIsInviting(false);
     }
   };
 
-  const handleEditAdmin = (admin: any) => {
+  const handleEditAdmin = (admin: AdminUser) => {
     setSelectedAdmin(admin);
-    setAdminName(admin.name);
+    setAdminFirstName(admin.first_name);
+    setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
+    setAdminPhone(''); // Phone not available in current data
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateAdmin = () => {
-    if (!selectedAdmin || !adminName.trim() || !adminEmail.trim()) return;
+  const handleUpdateAdmin = async () => {
+    if (!selectedAdmin || !adminFirstName.trim() || !adminLastName.trim()) return;
     
-    setAdmins(admins.map(admin => 
-      admin.id === selectedAdmin.id 
-        ? { ...admin, name: adminName.trim(), email: adminEmail.trim() }
-        : admin
-    ));
-    setIsEditDialogOpen(false);
-    setSelectedAdmin(null);
-    resetForm();
+    try {
+      await updateAdmin(
+        selectedAdmin.id,
+        adminFirstName.trim(),
+        adminLastName.trim(),
+        adminPhone.trim() || undefined
+      );
+      
+      setAdmins(admins.map(admin => 
+        admin.id === selectedAdmin.id 
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim() }
+          : admin
+      ));
+      
+      showToast('success', 'Admin updated successfully');
+      setIsEditDialogOpen(false);
+      setSelectedAdmin(null);
+      resetForm();
+    } catch (error) {
+      showToast('error', 'Failed to update admin');
+    }
   };
 
-  const handleViewAdmin = (admin: any) => {
+  const handleViewAdmin = (admin: AdminUser) => {
     setSelectedAdmin(admin);
     setIsViewDialogOpen(true);
   };
 
-  const handleDeleteAdmin = (adminId: number) => {
-    if (confirm('Are you sure you want to delete this admin?')) {
-      setAdmins(admins.filter(admin => admin.id !== adminId));
+  const handleDeleteAdmin = (admin: AdminUser) => {
+    setAdminToDelete(admin);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteAdmin = async () => {
+    if (!adminToDelete) return;
+    
+    try {
+      await deleteAdmin(adminToDelete.id);
+      setAdmins(admins.filter(admin => admin.id !== adminToDelete.id));
+      showToast('success', 'Admin deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setAdminToDelete(null);
+    } catch (error) {
+      showToast('error', 'Failed to delete admin');
     }
   };
 
   const resetForm = () => {
     setAdminName('');
+    setAdminFirstName('');
+    setAdminLastName('');
     setAdminEmail('');
+    setAdminPhone('');
+    setEmailError('');
   };
 
   // Remove the old handleAddAdmin function and keep only handleInviteAdmin
   const handleAddAdmin = handleInviteAdmin;
 
   return (
-    <SuperAdminLayout>
+    <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
@@ -138,76 +224,110 @@ export function AdminManagement() {
             <CardTitle className="text-lg sm:text-xl">System Admins ({filteredAdmins.length})</CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
-            <div className="space-y-3 sm:space-y-4">
-              {filteredAdmins.map((admin) => (
-                <div key={admin.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3 sm:space-y-0">
-                  <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                      {admin.name.split(' ').map(n => n[0]).join('')}
+            {isLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin h-6 w-6 border-2 border-amazon-teal border-t-transparent rounded-full"></div>
+              </div>
+            ) : (
+              <div className="space-y-3 sm:space-y-4">
+                {filteredAdmins.map((admin) => (
+                  <div key={admin.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3 sm:space-y-0">
+                    <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {admin.first_name[0]}{admin.last_name[0]}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.first_name} {admin.last_name}</h3>
+                          <Shield className="w-4 h-4 text-amazon-teal" />
+                        </div>
+                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
+                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                          <span>Role: {admin.role}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.name}</h3>
-                        <Shield className="w-4 h-4 text-amazon-teal" />
-                      </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
-                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                        <span>Last login: {admin.lastLogin}</span>
-                      </div>
+                    <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3">
+                      <Badge variant={admin.is_verified ? 'success' : 'secondary'}>
+                        {admin.is_verified ? 'approved' : 'pending'}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleViewAdmin(admin)}>
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditAdmin(admin)}>
+                            <Edit className="w-4 h-4 mr-2" />
+                            Edit Admin
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteAdmin(admin)} className="text-red-600">
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete Admin
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3">
-                    <Badge variant={admin.status === 'active' ? 'success' : 'secondary'}>
-                      {admin.status}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleViewAdmin(admin)}>
-                          <Eye className="w-4 h-4 mr-2" />
-                          View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEditAdmin(admin)}>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Edit Admin
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDeleteAdmin(admin.id)} className="text-red-600">
-                          <Trash2 className="w-4 h-4 mr-2" />
-                          Delete Admin
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Invite Admin Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsAddDialogOpen(false);
+            resetForm();
+          }
+        }}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Invite New Admin</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
+                <label className="block text-sm font-medium mb-2">First Name</label>
+                <Input
+                  value={adminFirstName}
+                  onChange={(e) => setAdminFirstName(e.target.value)}
+                  placeholder="Enter first name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Last Name</label>
+                <Input
+                  value={adminLastName}
+                  onChange={(e) => setAdminLastName(e.target.value)}
+                  placeholder="Enter last name"
+                  required
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium mb-2">Email</label>
                 <Input
                   type="email"
                   value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
+                  onChange={handleEmailChange}
                   placeholder="Enter admin email"
+                  required
+                  className={emailError ? 'border-red-500' : ''}
                 />
+                {emailError && (
+                  <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                )}
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleInviteAdmin} disabled={isInviting} className="bg-amazon-teal hover:bg-amazon-teal/90">
+              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="bg-amazon-teal hover:bg-amazon-teal/90 disabled:opacity-50">
                 {isInviting ? 'Sending...' : 'Send Invite'}
               </Button>
             </DialogFooter>
@@ -215,18 +335,32 @@ export function AdminManagement() {
         </Dialog>
 
         {/* Edit Admin Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <Dialog open={isEditDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsEditDialogOpen(false);
+            setSelectedAdmin(null);
+            resetForm();
+          }
+        }}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Edit Admin</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Admin Name</label>
+                <label className="block text-sm font-medium mb-2">First Name</label>
                 <Input
-                  value={adminName}
-                  onChange={(e) => setAdminName(e.target.value)}
-                  placeholder="Enter admin name"
+                  value={adminFirstName}
+                  onChange={(e) => setAdminFirstName(e.target.value)}
+                  placeholder="Enter first name"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Last Name</label>
+                <Input
+                  value={adminLastName}
+                  onChange={(e) => setAdminLastName(e.target.value)}
+                  placeholder="Enter last name"
                 />
               </div>
               <div>
@@ -234,8 +368,18 @@ export function AdminManagement() {
                 <Input
                   type="email"
                   value={adminEmail}
-                  onChange={(e) => setAdminEmail(e.target.value)}
-                  placeholder="Enter admin email"
+                  disabled
+                  className="bg-gray-100 cursor-not-allowed"
+                  placeholder="Email cannot be edited"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <Input
+                  type="tel"
+                  value={adminPhone}
+                  onChange={(e) => setAdminPhone(e.target.value)}
+                  placeholder="Enter phone number (optional)"
                 />
               </div>
             </div>
@@ -249,7 +393,12 @@ export function AdminManagement() {
         </Dialog>
 
         {/* View Admin Details Dialog */}
-        <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsViewDialogOpen(false);
+            setSelectedAdmin(null);
+          }
+        }}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
               <DialogTitle>Admin Details</DialogTitle>
@@ -258,23 +407,23 @@ export function AdminManagement() {
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4">
                   <div className="w-16 h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg">
-                    {selectedAdmin.name.split(' ').map((n: string) => n[0]).join('')}
+                    {selectedAdmin.first_name[0]}{selectedAdmin.last_name[0]}
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold">{selectedAdmin.name}</h3>
+                    <h3 className="text-lg font-semibold">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
                     <p className="text-sm text-muted-foreground">{selectedAdmin.email}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-muted-foreground">Status</label>
-                    <Badge variant={selectedAdmin.status === 'active' ? 'success' : 'secondary'}>
-                      {selectedAdmin.status}
+                    <Badge variant={selectedAdmin.is_verified ? 'success' : 'secondary'}>
+                      {selectedAdmin.is_verified ? 'approved' : 'pending'}
                     </Badge>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground">Last Login</label>
-                    <p className="text-sm">{selectedAdmin.lastLogin}</p>
+                    <label className="block text-sm font-medium text-muted-foreground">Role</label>
+                    <p className="text-sm">{selectedAdmin.role}</p>
                   </div>
                 </div>
               </div>
@@ -284,7 +433,32 @@ export function AdminManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsDeleteDialogOpen(false);
+            setAdminToDelete(null);
+          }
+        }}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle>Delete Admin</DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground">
+                Are you sure you want to delete <strong>{adminToDelete?.first_name} {adminToDelete?.last_name}</strong>? This action cannot be undone.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteAdmin}>
+                Delete Admin
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </SuperAdminLayout>
+    </AdminLayout>
   );
 }

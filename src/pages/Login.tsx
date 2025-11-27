@@ -12,8 +12,8 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    email: 'kalai2.arjava@gmail.com',
-    password: '1234!@#$Qw',
+    email: '',
+    password: '',
     rememberMe: false
   });
   const {
@@ -27,12 +27,6 @@ export function Login() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // Check for superadmin credentials
-      if (formData.email === 'kalai2.arjava@gmail.com' && formData.password === '1234!@#$Qw') {
-        navigate('/superadmin', { replace: true });
-        return;
-      }
-
       await signInWithPassword(formData.email, formData.password);
 
       // Fetch user context to determine role-based redirect
@@ -42,8 +36,8 @@ export function Login() {
 
       // If no specific redirect path, use role-based default
       if (!redirectTo) {
-        // Check role case-insensitively (API returns 'Admin' with capital A)
-        const isAdmin = userContext.role && userContext.role.toLowerCase() === 'admin';
+        // Check role case-insensitively (API returns 'Admin' or 'SuperAdmin')
+        const isAdmin = userContext.role && (userContext.role.toLowerCase() === 'admin' || userContext.role.toLowerCase() === 'superadmin');
         redirectTo = isAdmin ? '/admin' : '/dashboard';
       }
 

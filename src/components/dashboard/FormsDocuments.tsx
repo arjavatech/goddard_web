@@ -26,6 +26,7 @@ interface FormCardProps {
   onPrint?: () => void;
   isLoading?: { action: string; formId: string } | null;
   formId?: string;
+  assignedAt?: string | null;
 }
 function FormCard({
   title,
@@ -37,14 +38,43 @@ function FormCard({
   onDownload,
   onPrint,
   isLoading,
-  formId
+  formId,
+  assignedAt
 }: FormCardProps) {
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
 
+  // Calculate due date (assignment date + 3 days default, will be dynamic later)
+  const dueDays = 3; // Default, will come from API later
+  const dueDate = assignedAt ? (() => {
+    try {
+      // Parse DD/MM/YYYY or DD-MM-YYYY format
+      const parts = assignedAt.split(/[/-]/);
+      if (parts.length === 3) {
+        const [day, month, year] = parts.map(p => parseInt(p));
+        if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
+          const assignedDate = new Date(year, month - 1, day);
+          if (!isNaN(assignedDate.getTime())) {
+            return new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+          }
+        }
+      }
+      // Fallback to regular date parsing
+      const fallbackDate = new Date(assignedAt);
+      if (!isNaN(fallbackDate.getTime())) {
+        return new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+      }
+    } catch (e) {
+      console.warn('Date parsing failed for:', assignedAt);
+    }
+    return null;
+  })() : null;
+  const isOverdue = dueDate && new Date() > dueDate && status !== 'Approved';
+
   const getBorderColor = () => {
+    if (isOverdue) return 'border-red-500';
     if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
-    return 'border-red-500';
+    return 'border-amber-500';
   };
 
   return <Card className={`glass-card h-full transition-shadow cursor-pointer hover:shadow-md ${getBorderColor()}`} onClick={onView}>
@@ -64,9 +94,19 @@ function FormCard({
         <div className="w-full h-1 bg-gray-100 rounded mt-4"></div>
       </CardContent>
       <CardFooter className="flex justify-between items-center pt-2">
-        <span className="text-xs text-muted-foreground">
-          Assigned date: {lastUpdated}
-        </span>
+        <div className="flex flex-col gap-1">
+          <span className="text-xs text-muted-foreground">
+            Assigned: {lastUpdated}
+          </span>
+          {dueDate && !isNaN(dueDate.getTime()) && (
+            <span className={`text-xs font-medium ${
+              isOverdue ? 'text-red-600' : 'text-amber-600'
+            }`}>
+              Due: {dueDate.toLocaleDateString('en-GB')}
+              {isOverdue && ' (Overdue)'}
+            </span>
+          )}
+        </div>
         <div className="flex gap-1">
           {isApproved && (
             <>
@@ -771,6 +811,7 @@ export function FormsDocuments({
                     childName={form.childName}
                     formId={form.formId || form._key}
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                    assignedAt={form.assignedAt}
                     onView={() => {
                       console.log('Form ID:', form.formId || form._key);
                       console.log('Child ID:', form.childId);
@@ -803,6 +844,7 @@ export function FormsDocuments({
                       childName={form.childName}
                       formId={form.formId || form._key}
                       recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                      assignedAt={form.assignedAt}
                       onView={() => {
                         console.log('Form ID:', form.formId || form._key);
                         console.log('Child ID:', form.childId);

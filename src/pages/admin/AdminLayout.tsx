@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -22,6 +22,10 @@ export function AdminLayout({
     signOut
   } = useAuth();
   const { userData } = useUserContext();
+  
+  // Check if user is SuperAdmin
+  const isSuperAdmin = userData?.role === 'SuperAdmin';
+  
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -37,7 +41,7 @@ export function AdminLayout({
   };
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
-  const navigationItems = [{
+  const baseNavigationItems = [{
     icon: <Home className="w-5 h-5" />,
     label: 'Dashboard',
     path: '/admin'
@@ -58,6 +62,15 @@ export function AdminLayout({
     label: 'Parents',
     path: '/admin/parents'
   }];
+  
+  const navigationItems = isSuperAdmin ? [
+    ...baseNavigationItems,
+    {
+      icon: <UserCog className="w-5 h-5" />,
+      label: 'Admins',
+      path: '/admin/admins'
+    }
+  ] : baseNavigationItems;
   React.useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -122,7 +135,7 @@ export function AdminLayout({
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-              Admin Portal
+              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
             </h1>
           </div>
           <DropdownMenu>
