@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '../ui/card';
 import { Progress } from '../ui/progress';
+import { Badge } from '../ui/badge';
 interface Child {
   id: string;
   name: string;
@@ -10,6 +11,7 @@ interface Child {
   enrollmentProgress: number;
   formsCompleted: number;
   totalForms: number;
+  parentType?: string;
 }
 interface ChildrenOverviewProps {
   children: Child[];
@@ -47,6 +49,14 @@ export function ChildrenOverview({
                   {child.initials}
                 </div>
                 <div className="flex-1 min-w-0">
+                  {child.parentType && (
+                    <Badge
+                      variant={child.parentType === 'primary_parent' ? 'default' : 'warning'}
+                      className="text-[10px] px-1.5 py-0 mb-1 w-fit"
+                    >
+                      {child.parentType === 'primary_parent' ? 'Primary Parent' : 'Secondary Parent'}
+                    </Badge>
+                  )}
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1 sm:gap-0">
                     <h3 className="font-medium text-foreground text-sm sm:text-base truncate">
                       {child.name}

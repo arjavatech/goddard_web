@@ -66,6 +66,9 @@ export function ParentManagement() {
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
+  const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
+  const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -200,7 +203,7 @@ export function ParentManagement() {
 
   const validateInviteForm = () => {
     const errors: {[key: string]: string} = {};
-    
+
     if (!parentEmail.trim()) errors.parentEmail = 'Parent email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) errors.parentEmail = 'Please enter a valid email address';
     if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
@@ -208,7 +211,20 @@ export function ParentManagement() {
     if (!childDob) errors.childDob = 'Child date of birth is required';
     if (!childGender) errors.childGender = 'Child gender is required';
     if (!childClassroom) errors.childClassroom = 'Child classroom is required';
-    
+
+    // Secondary parent validation - only required if email is provided
+    if (secondaryParentEmail.trim()) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
+        errors.secondaryParentEmail = 'Please enter a valid email address';
+      }
+      if (!secondaryParentFirstName.trim()) {
+        errors.secondaryParentFirstName = 'First name is required when email is provided';
+      }
+      if (!secondaryParentLastName.trim()) {
+        errors.secondaryParentLastName = 'Last name is required when email is provided';
+      }
+    }
+
     setInviteFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -227,7 +243,10 @@ export function ParentManagement() {
         childFullName: `${childFirstName} ${childLastName}`,
         childDob,
         classroomId: childClassroom,
-        gender: childGender
+        gender: childGender,
+        secondaryParentEmail: secondaryParentEmail.trim() || undefined,
+        secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
+        secondaryParentLastName: secondaryParentLastName.trim() || undefined
       });
       
       // Success - update UI and show success notification
@@ -331,6 +350,9 @@ export function ParentManagement() {
     setParentFirstName('');
     setParentLastName('');
     setParentEmail('');
+    setSecondaryParentFirstName('');
+    setSecondaryParentLastName('');
+    setSecondaryParentEmail('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -942,6 +964,81 @@ export function ParentManagement() {
                     )}
                   </div>
                 </div>
+                {/* Secondary Parent Information - Optional */}
+                <div className="mt-6 pt-4 border-t">
+                  <h4 className="text-sm font-medium mb-4 text-gray-600">
+                    Secondary Parent Information (Optional)
+                  </h4>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        First Name
+                      </label>
+                      <Input
+                        value={secondaryParentFirstName}
+                        onChange={e => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                          setSecondaryParentFirstName(value);
+                          if (inviteFormErrors.secondaryParentFirstName) {
+                            setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
+                          }
+                        }}
+                        placeholder="Enter first name"
+                        className={`w-full ${inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}`}
+                      />
+                      {inviteFormErrors.secondaryParentFirstName && (
+                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Last Name
+                      </label>
+                      <Input
+                        value={secondaryParentLastName}
+                        onChange={e => {
+                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                          setSecondaryParentLastName(value);
+                          if (inviteFormErrors.secondaryParentLastName) {
+                            setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
+                          }
+                        }}
+                        placeholder="Enter last name"
+                        className={`w-full ${inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}`}
+                      />
+                      {inviteFormErrors.secondaryParentLastName && (
+                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2">
+                        Email
+                      </label>
+                      <Input
+                        type="email"
+                        value={secondaryParentEmail}
+                        onChange={e => {
+                          setSecondaryParentEmail(e.target.value);
+                          if (inviteFormErrors.secondaryParentEmail) {
+                            setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
+                          }
+                        }}
+                        onBlur={() => {
+                          if (!isDialogClosing && secondaryParentEmail.trim()) {
+                            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
+                              setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
+                            }
+                          }
+                        }}
+                        placeholder="Enter email address"
+                        className={`w-full ${inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}`}
+                      />
+                      {inviteFormErrors.secondaryParentEmail && (
+                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
               <div>
                 <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
@@ -1081,7 +1178,7 @@ export function ParentManagement() {
             <AsyncButton 
               onClick={handleInviteParent} 
               className="bg-amazon-teal hover:bg-amazon-teal/90"
-              disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom}
+              disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || (secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}
             >
               <Mail className="h-4 w-4 mr-2" />
               Send Invitation

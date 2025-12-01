@@ -316,6 +316,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
         classroomId: child.classroom_id || child.classroomId,
         classroomName: child.classroom_name || child.classroomName,
         enrollmentId: child.enrollment_id || child.enrollmentId || '',
+        parentType: child.parent_type || child.parentType,
         forms: (child.forms || []).map((form: any) => ({
           formId: form.form_id || form.formId || '',
           formName: form.form_name || form.formName || '',
@@ -462,24 +463,35 @@ export async function inviteParent(schoolId: string, parentData: {
   childDob: string;
   classroomId: string;
   gender: string;
+  secondaryParentEmail?: string;
+  secondaryParentFirstName?: string;
+  secondaryParentLastName?: string;
 }): Promise<void> {
   const [childFirstName, ...childLastNameParts] = parentData.childFullName.split(' ');
   const childLastName = childLastNameParts.join(' ');
-  
+
+  const body: Record<string, string> = {
+    school_id: schoolId,
+    child_first_name: childFirstName || parentData.childFullName,
+    child_last_name: childLastName || '',
+    child_birth_date: parentData.childDob,
+    class_id: parentData.classroomId,
+    parent_email: parentData.parentEmail,
+    parent_first_name: parentData.parentFirstName,
+    parent_last_name: parentData.parentLastName,
+    gender: parentData.gender
+  };
+
+  if (parentData.secondaryParentEmail) {
+    body.secondary_parent_email = parentData.secondaryParentEmail;
+    body.secondary_parent_first_name = parentData.secondaryParentFirstName || '';
+    body.secondary_parent_last_name = parentData.secondaryParentLastName || '';
+  }
+
   await authedFetch({
     method: 'POST',
     url: '/enrollments/parent-invite',
-    body: {
-      school_id: schoolId,
-      child_first_name: childFirstName || parentData.childFullName,
-      child_last_name: childLastName || '',
-      child_birth_date: parentData.childDob,
-      class_id: parentData.classroomId,
-      parent_email: parentData.parentEmail,
-      parent_first_name: parentData.parentFirstName,
-      parent_last_name: parentData.parentLastName,
-      gender: parentData.gender
-    }
+    body
   }, z.union([z.object({}), z.string()]));
 }
 export async function resendParentConfirmation(parentId: string): Promise<void> {
