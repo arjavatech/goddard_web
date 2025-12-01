@@ -228,6 +228,12 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
         classroomId: child.classroom_id || child.classroomId,
         classroomName: child.classroom_name || child.classroomName,
         enrollmentId: child.enrollment_id || child.enrollmentId || '',
+        primaryParentEmail: child.primary_parent_email || child.primaryParentEmail || null,
+        primaryParentFirstName: child.primary_parent_first_name || child.primaryParentFirstName || null,
+        primaryParentLastName: child.primary_parent_last_name || child.primaryParentLastName || null,
+        secondaryParentEmail: child.secondary_parent_email || child.secondaryParentEmail || null,
+        secondaryParentFirstName: child.secondary_parent_first_name || child.secondaryParentFirstName || null,
+        secondaryParentLastName: child.secondary_parent_last_name || child.secondaryParentLastName || null,
         forms: (child.forms || []).map((form: any) => ({
           formId: form.form_id || form.formId || '',
           formName: form.form_name || form.formName || '',

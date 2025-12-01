@@ -908,10 +908,10 @@ export function ClassroomDetails() {
                       />
                     </div>
                   </div>
-                  {/* Secondary Parent Information - Optional */}
+                  {/* Additional Parent Information - Optional */}
                   <div className="mt-6 pt-4 border-t">
                     <h4 className="text-sm font-medium mb-4 text-gray-600">
-                      Secondary Parent Information (Optional)
+                      Additional Parent Information (Optional)
                     </h4>
                     <div className="space-y-4">
                       <div>

@@ -51,6 +51,8 @@ interface ParentDetailView {
   phone: string;
   children: ChildInfo[];
   familyForms: Form[];
+  additionalParentEmail?: string | null;
+  additionalParentName?: string | null;
 }
 const mapToFormStatus = (value: string | null | undefined): FormStatus => {
   const normalized = normalizeFormStatus(value);
@@ -199,6 +201,33 @@ export function ParentDetails() {
           });
         });
         const friendly = makeFriendlyName(parentRecord.email);
+
+        // Find additional parent email and name from children
+        // The additional parent is whichever email (primary or secondary) differs from the main parent_email
+        const firstChild = parentRecord.children?.[0];
+        let additionalParentEmail: string | null = null;
+        let additionalParentName: string | null = null;
+
+        if (firstChild) {
+          const primaryEmail = (firstChild as any).primaryParentEmail;
+          const secondaryEmail = (firstChild as any).secondaryParentEmail;
+
+          // Check if primary parent email differs from main parent email
+          if (primaryEmail && primaryEmail !== parentRecord.email) {
+            additionalParentEmail = primaryEmail;
+            const firstName = (firstChild as any).primaryParentFirstName || '';
+            const lastName = (firstChild as any).primaryParentLastName || '';
+            additionalParentName = `${firstName} ${lastName}`.trim() || null;
+          }
+          // Or if secondary parent email exists and differs
+          else if (secondaryEmail && secondaryEmail !== parentRecord.email) {
+            additionalParentEmail = secondaryEmail;
+            const firstName = (firstChild as any).secondaryParentFirstName || '';
+            const lastName = (firstChild as any).secondaryParentLastName || '';
+            additionalParentName = `${firstName} ${lastName}`.trim() || null;
+          }
+        }
+
         const finalParentData = {
           id: parentRecord.parentId,
           firstName: parentRecord.firstName || friendly.first,
@@ -206,7 +235,9 @@ export function ParentDetails() {
           email: parentRecord.email,
           phone: '—',
           children: processedChildren,
-          familyForms: Array.from(allForms.values())
+          familyForms: Array.from(allForms.values()),
+          additionalParentEmail,
+          additionalParentName
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
@@ -557,11 +588,30 @@ export function ParentDetails() {
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
+              {/* Parent */}
               <div className="flex items-center gap-2">
                 <MailIcon className="h-4 w-4 text-muted-foreground" />
-                {parent.email}
+                <div>
+                  <div className="font-medium text-foreground">{parent.firstName} {parent.lastName}</div>
+                  <div>{parent.email}</div>
+                  <div className="text-xs text-muted-foreground">Parent</div>
+                </div>
               </div>
-              
+
+              {/* Additional Parent - only show if exists */}
+              {parent.additionalParentEmail && (
+                <div className="flex items-center gap-2">
+                  <MailIcon className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    {parent.additionalParentName && (
+                      <div className="font-medium text-foreground">{parent.additionalParentName}</div>
+                    )}
+                    <div>{parent.additionalParentEmail}</div>
+                    <div className="text-xs text-muted-foreground">Additional Parent</div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <School className="h-4 w-4" />
                 Primary Guardian
