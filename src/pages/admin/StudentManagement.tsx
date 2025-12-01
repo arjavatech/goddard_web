@@ -34,6 +34,10 @@ interface EnrollmentData {
   additional_parent_email?: string | null;
   child_status?: string;
   enrollment_id?: string;
+  secondary_parent_id?: string | null;
+  secondary_parent_first_name?: string | null;
+  secondary_parent_last_name?: string | null;
+  secondary_parent_email?: string | null;
 }
 interface Student {
   id: string;
@@ -53,6 +57,11 @@ interface Student {
     name: string;
     email: string;
   };
+  secondaryParent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedForms: {
     id: string;
     name: string;
@@ -155,6 +164,16 @@ export function StudentManagement() {
           const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
           const parentId = enrollment.parent_id;
 
+          // Extract secondary parent info when available
+          let secondaryParent = null;
+          if (enrollment.secondary_parent_id) {
+            secondaryParent = {
+              id: enrollment.secondary_parent_id,
+              name: `${enrollment.secondary_parent_first_name || ''} ${enrollment.secondary_parent_last_name || ''}`.trim(),
+              email: enrollment.secondary_parent_email || ''
+            };
+          }
+
           const student = {
             id: studentId,
             firstName,
@@ -173,6 +192,7 @@ export function StudentManagement() {
               name: parentName,
               email: parentEmail
             },
+            secondaryParent,
             assignedForms: formsArray,
             childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
             enrollmentId: enrollment.enrollment_id
@@ -661,17 +681,36 @@ export function StudentManagement() {
                           </Link>
                         </td>
                         <td className="py-3 px-2">
-                          <div className="min-w-0">
-                            <Link 
-                              to={`/admin/parents/${student.parent.id}`} 
-                              state={{ fromStudents: true }}
-                              className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
-                            >
-                              {student.parent.name}
-                            </Link>
-                            <div className="text-xs text-gray-500 mt-1 truncate">
-                              {student.parent.email}
+                          <div className="min-w-0 space-y-2">
+                            {/* Primary Parent */}
+                            <div>
+                              <Link
+                                to={`/admin/parents/${student.parent.id}`}
+                                state={{ fromStudents: true }}
+                                className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                              >
+                                {student.parent.name}
+                              </Link>
+                              <div className="text-xs text-gray-500 truncate">
+                                {student.parent.email}
+                              </div>
                             </div>
+
+                            {/* Secondary Parent - only show if exists */}
+                            {student.secondaryParent && (
+                              <div className="border-t pt-2">
+                                <Link
+                                  to={`/admin/parents/${student.secondaryParent.id}`}
+                                  state={{ fromStudents: true }}
+                                  className="text-amazon-orange hover:text-amazon-orange/80 font-medium hover:underline transition-colors block truncate text-sm"
+                                >
+                                  {student.secondaryParent.name}
+                                </Link>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {student.secondaryParent.email}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       <td className="py-3 px-2 text-center">
@@ -808,15 +847,29 @@ export function StudentManagement() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Parent:</span>
-                        <Link 
-                          to={`/admin/parents/${student.parent.id}`} 
+                        <Link
+                          to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
                           className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
                         >
                           {student.parent.name}
                         </Link>
                       </div>
-                      
+
+                      {/* Secondary Parent - only show in mobile if exists */}
+                      {student.secondaryParent && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Secondary:</span>
+                          <Link
+                            to={`/admin/parents/${student.secondaryParent.id}`}
+                            state={{ fromStudents: true }}
+                            className="text-xs text-amazon-orange hover:underline truncate max-w-[60%]"
+                          >
+                            {student.secondaryParent.name}
+                          </Link>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Status:</span>
                         <div className="flex-shrink-0">
