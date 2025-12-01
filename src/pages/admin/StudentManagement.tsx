@@ -702,7 +702,7 @@ export function StudentManagement() {
                                 <Link
                                   to={`/admin/parents/${student.secondaryParent.id}`}
                                   state={{ fromStudents: true }}
-                                  className="text-amazon-orange hover:text-amazon-orange/80 font-medium hover:underline transition-colors block truncate text-sm"
+                                  className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
                                 >
                                   {student.secondaryParent.name}
                                 </Link>
@@ -863,7 +863,7 @@ export function StudentManagement() {
                           <Link
                             to={`/admin/parents/${student.secondaryParent.id}`}
                             state={{ fromStudents: true }}
-                            className="text-xs text-amazon-orange hover:underline truncate max-w-[60%]"
+                            className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
                           >
                             {student.secondaryParent.name}
                           </Link>
