@@ -1,4 +1,5 @@
 import { authedFetch, z } from './common';
+import { httpFetch } from './http';
 import { fetchUserContext } from './user';
 export type Classroom = {
   id: string;
@@ -315,6 +316,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
         classroomId: child.classroom_id || child.classroomId,
         classroomName: child.classroom_name || child.classroomName,
         enrollmentId: child.enrollment_id || child.enrollmentId || '',
+        parentType: child.parent_type || child.parentType,
         forms: (child.forms || []).map((form: any) => ({
           formId: form.form_id || form.formId || '',
           formName: form.form_name || form.formName || '',
@@ -461,24 +463,35 @@ export async function inviteParent(schoolId: string, parentData: {
   childDob: string;
   classroomId: string;
   gender: string;
+  secondaryParentEmail?: string;
+  secondaryParentFirstName?: string;
+  secondaryParentLastName?: string;
 }): Promise<void> {
   const [childFirstName, ...childLastNameParts] = parentData.childFullName.split(' ');
   const childLastName = childLastNameParts.join(' ');
-  
+
+  const body: Record<string, string> = {
+    school_id: schoolId,
+    child_first_name: childFirstName || parentData.childFullName,
+    child_last_name: childLastName || '',
+    child_birth_date: parentData.childDob,
+    class_id: parentData.classroomId,
+    parent_email: parentData.parentEmail,
+    parent_first_name: parentData.parentFirstName,
+    parent_last_name: parentData.parentLastName,
+    gender: parentData.gender
+  };
+
+  if (parentData.secondaryParentEmail) {
+    body.secondary_parent_email = parentData.secondaryParentEmail;
+    body.secondary_parent_first_name = parentData.secondaryParentFirstName || '';
+    body.secondary_parent_last_name = parentData.secondaryParentLastName || '';
+  }
+
   await authedFetch({
     method: 'POST',
     url: '/enrollments/parent-invite',
-    body: {
-      school_id: schoolId,
-      child_first_name: childFirstName || parentData.childFullName,
-      child_last_name: childLastName || '',
-      child_birth_date: parentData.childDob,
-      class_id: parentData.classroomId,
-      parent_email: parentData.parentEmail,
-      parent_first_name: parentData.parentFirstName,
-      parent_last_name: parentData.parentLastName,
-      gender: parentData.gender
-    }
+    body
   }, z.union([z.object({}), z.string()]));
 }
 export async function resendParentConfirmation(parentId: string): Promise<void> {
@@ -759,4 +772,128 @@ export async function fetchClassBasedEnrollments(
     console.error('fetchClassBasedEnrollments error:', error);
     return [];
   }
+}
+
+export async function assignFormsToStudent(
+  schoolId: string,
+  assignments: {
+    enrollment_id: string;
+    child_id: string;
+    form_template_id: string;
+    is_required: boolean;
+  }[]
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/student-form-assignments/assign',
+    headers: {
+      'X-API-Key': 'test-owner-key-2024'
+    },
+    body: {
+      school_id: schoolId,
+      assignments
+    }
+  }, z.object({}));
+}
+
+export async function assignFormToAllStudents(
+  schoolId: string,
+  formTemplateId: string,
+  isRequired: boolean = true
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/student-form-assignments/assign-to-school',
+    headers: {
+      'X-API-Key': 'test-owner-key-2024'
+    },
+    body: {
+      school_id: schoolId,
+      form_template_id: formTemplateId,
+      is_required: isRequired
+    }
+  }, z.object({}));
+}
+
+export type AdminUser = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_verified: boolean;
+  school_id: string;
+};
+
+export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: `/users/admin?school_id=${encodeURIComponent(schoolId)}`
+    }, z.object({
+      success: z.boolean(),
+      count: z.number(),
+      data: z.array(z.object({
+        id: z.string(),
+        email: z.string(),
+        first_name: z.string(),
+        last_name: z.string(),
+        role: z.string(),
+        is_verified: z.boolean(),
+        school_id: z.string()
+      }))
+    }));
+    
+    return data.data;
+  } catch (error) {
+    console.error('fetchAdminUsers error:', error);
+    throw error;
+  }
+}
+
+export async function inviteAdmin(
+  email: string,
+  firstName: string,
+  lastName: string,
+  schoolId: string
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/auth/invite-create',
+    body: {
+      email,
+      school_id: schoolId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: null
+    }
+  }, z.object({}));
+}
+
+export async function updateAdmin(
+  userId: string,
+  firstName: string,
+  lastName: string,
+  phoneNumber?: string
+): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/users/admin',
+    body: {
+      user_id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phoneNumber || null
+    }
+  }, z.object({}));
+}
+
+export async function deleteAdmin(userId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: '/users/admin',
+    body: {
+      user_id: userId
+    }
+  }, z.object({}));
 }

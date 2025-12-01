@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
@@ -10,11 +10,13 @@ import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { Checkbox } from '../../components/ui/checkbox';
 import { fetchUserContext } from '../../services/api/user';
 import { usePagination } from '../../hooks/usePagination';
 
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms } from '@/services/api/admin';
+import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent } from '@/services/api/admin';
+import { fetchFormTemplates } from '../../services/api/dashboard';
 
 type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
@@ -31,6 +33,11 @@ interface EnrollmentData {
   forms: Record<string, string>;
   additional_parent_email?: string | null;
   child_status?: string;
+  enrollment_id?: string;
+  secondary_parent_id?: string | null;
+  secondary_parent_first_name?: string | null;
+  secondary_parent_last_name?: string | null;
+  secondary_parent_email?: string | null;
 }
 interface Student {
   id: string;
@@ -50,6 +57,11 @@ interface Student {
     name: string;
     email: string;
   };
+  secondaryParent?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
   assignedForms: {
     id: string;
     name: string;
@@ -57,6 +69,7 @@ interface Student {
     assignedAt?: string | null;
   }[];
   childStatus: 'active' | 'archive';
+  enrollmentId?: string;
 }
 export function StudentManagement() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -77,6 +90,19 @@ export function StudentManagement() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [newStatus, setNewStatus] = useState<'active' | 'archive'>('active');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  
+  // Form assignment states
+  const [isAssignFormDialogOpen, setIsAssignFormDialogOpen] = useState(false);
+  const [selectedStudentsForForm, setSelectedStudentsForForm] = useState<string[]>([]);
+  const [selectedFormToAssign, setSelectedFormToAssign] = useState('');
+  const [assignDialogClassroomFilter, setAssignDialogClassroomFilter] = useState('all');
+  const [assignDialogSearchTerm, setAssignDialogSearchTerm] = useState('');
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  
+  // Individual student form assignment states
+  const [isStudentFormDialogOpen, setIsStudentFormDialogOpen] = useState(false);
+  const [selectedStudentForForms, setSelectedStudentForForms] = useState<Student | null>(null);
+  const [selectedFormsToAdd, setSelectedFormsToAdd] = useState<string[]>([]);
 
   const handleFormFilterChange = (value: string) => {
     setFormFilter(value);
@@ -91,9 +117,10 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const [enrollmentData, classrooms] = await Promise.all([
+        const [enrollmentData, classrooms, formsData] = await Promise.all([
           fetchStudentEnrollments(user.schoolId),
-          fetchClassrooms(user.schoolId)
+          fetchClassrooms(user.schoolId),
+          fetchFormTemplates(user.schoolId)
         ]);
         
         const enrollments = enrollmentData.enrollments || [];
@@ -137,6 +164,16 @@ export function StudentManagement() {
           const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
           const parentId = enrollment.parent_id;
 
+          // Extract secondary parent info when available
+          let secondaryParent = null;
+          if (enrollment.secondary_parent_id) {
+            secondaryParent = {
+              id: enrollment.secondary_parent_id,
+              name: `${enrollment.secondary_parent_first_name || ''} ${enrollment.secondary_parent_last_name || ''}`.trim(),
+              email: enrollment.secondary_parent_email || ''
+            };
+          }
+
           const student = {
             id: studentId,
             firstName,
@@ -155,14 +192,23 @@ export function StudentManagement() {
               name: parentName,
               email: parentEmail
             },
+            secondaryParent,
             assignedForms: formsArray,
-            childStatus: (enrollment.child_status || 'active') as 'active' | 'archive'
+            childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
+            enrollmentId: enrollment.enrollment_id
           };
           return student;
         });
         if (mappedStudents.length > 0) {
           setStudents(mappedStudents);
         }
+        
+        // Set available forms from API
+        const formsList = formsData.map((template) => ({
+          id: template.id,
+          name: template.formName
+        }));
+        setAvailableForms(formsList);
       } catch (error) {
       } finally {
         if (isMounted) {
@@ -344,6 +390,26 @@ export function StudentManagement() {
       setIsUpdatingStatus(false);
     }
   };
+  
+  const handleStudentSelectForForm = (studentId: string) => {
+    setSelectedStudentsForForm(prev => 
+      prev.includes(studentId) 
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+  
+  const handleAssignFormToStudents = () => {
+    if (!selectedFormToAssign || selectedStudentsForForm.length === 0) return;
+    
+    console.log('Assigning form', selectedFormToAssign, 'to students', selectedStudentsForForm);
+    
+    setIsAssignFormDialogOpen(false);
+    setSelectedStudentsForForm([]);
+    setSelectedFormToAssign('');
+    setAssignDialogClassroomFilter('all');
+    setAssignDialogSearchTerm('');
+  };
   if (loading) {
     return <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -368,7 +434,6 @@ export function StudentManagement() {
           <Button 
             variant="outline" 
             onClick={toggleFilters} 
-            className="w-full sm:w-auto" 
             size="sm"
           >
             {showFilters ? (
@@ -579,6 +644,9 @@ export function StudentManagement() {
                     <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
                       Child Status
                     </th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
+                      Actions
+                    </th>
                     <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">
                       Progress
                     </th>
@@ -613,17 +681,36 @@ export function StudentManagement() {
                           </Link>
                         </td>
                         <td className="py-3 px-2">
-                          <div className="min-w-0">
-                            <Link 
-                              to={`/admin/parents/${student.parent.id}`} 
-                              state={{ fromStudents: true }}
-                              className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
-                            >
-                              {student.parent.name}
-                            </Link>
-                            <div className="text-xs text-gray-500 mt-1 truncate">
-                              {student.parent.email}
+                          <div className="min-w-0 space-y-2">
+                            {/* Primary Parent */}
+                            <div>
+                              <Link
+                                to={`/admin/parents/${student.parent.id}`}
+                                state={{ fromStudents: true }}
+                                className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                              >
+                                {student.parent.name}
+                              </Link>
+                              <div className="text-xs text-gray-500 truncate">
+                                {student.parent.email}
+                              </div>
                             </div>
+
+                            {/* Secondary Parent - only show if exists */}
+                            {student.secondaryParent && (
+                              <div className="border-t pt-2">
+                                <Link
+                                  to={`/admin/parents/${student.secondaryParent.id}`}
+                                  state={{ fromStudents: true }}
+                                  className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
+                                >
+                                  {student.secondaryParent.name}
+                                </Link>
+                                <div className="text-xs text-gray-500 truncate">
+                                  {student.secondaryParent.email}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </td>
                       <td className="py-3 px-2 text-center">
@@ -669,6 +756,20 @@ export function StudentManagement() {
                           {student.childStatus === 'active' ? 'Active' : 'Archived'}
                         </button>
                       </td>
+                      <td className="py-3 px-2 text-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStudentForForms(student);
+                            setIsStudentFormDialogOpen(true);
+                          }}
+                          className="h-8 px-2"
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          Forms
+                        </Button>
+                      </td>
                         <td className="py-3 px-3">
                           <div className="flex items-center justify-end space-x-2">
                             <div className="flex items-center text-xs text-gray-600">
@@ -686,7 +787,7 @@ export function StudentManagement() {
                     </tr>
                     )) : (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-500">
+                        <td colSpan={7} className="py-8 text-center text-gray-500">
                           No students match the current filters.
                         </td>
                       </tr>
@@ -746,15 +847,29 @@ export function StudentManagement() {
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Parent:</span>
-                        <Link 
-                          to={`/admin/parents/${student.parent.id}`} 
+                        <Link
+                          to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
                           className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
                         >
                           {student.parent.name}
                         </Link>
                       </div>
-                      
+
+                      {/* Secondary Parent - only show in mobile if exists */}
+                      {student.secondaryParent && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-muted-foreground">Secondary:</span>
+                          <Link
+                            to={`/admin/parents/${student.secondaryParent.id}`}
+                            state={{ fromStudents: true }}
+                            className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
+                          >
+                            {student.secondaryParent.name}
+                          </Link>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Status:</span>
                         <div className="flex-shrink-0">
@@ -785,6 +900,21 @@ export function StudentManagement() {
                           <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
                           <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
                         </div>
+                      </div>
+                      
+                      <div className="mt-2 pt-2 border-t">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStudentForForms(student);
+                            setIsStudentFormDialogOpen(true);
+                          }}
+                          className="w-full h-7 text-xs"
+                        >
+                          <Settings className="h-3 w-3 mr-1" />
+                          Manage Forms
+                        </Button>
                       </div>
                     </div>
                   </Card>
@@ -834,6 +964,351 @@ export function StudentManagement() {
             <Button onClick={handleStatusChange} disabled={isUpdatingStatus} className="bg-amazon-teal hover:bg-amazon-teal/90">
               {isUpdatingStatus ? 'Updating...' : 'Confirm'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Form Dialog */}
+      <Dialog open={isAssignFormDialogOpen} onOpenChange={setIsAssignFormDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Assign Form to Students</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Form</label>
+              <Select value={selectedFormToAssign} onValueChange={setSelectedFormToAssign}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose a form to assign" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableForms.map(form => (
+                    <SelectItem key={form.id} value={form.id}>
+                      {form.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Search Students</label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <Input
+                    placeholder="Search by student name..."
+                    value={assignDialogSearchTerm}
+                    onChange={(e) => setAssignDialogSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Filter by Classroom</label>
+                <Select value={assignDialogClassroomFilter} onValueChange={setAssignDialogClassroomFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Classrooms" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classrooms</SelectItem>
+                    {allClassrooms.map(classroom => (
+                      <SelectItem key={classroom} value={classroom}>
+                        {classroom}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Select Students ({selectedStudentsForForm.length} selected)
+              </label>
+              <div className="border rounded-lg max-h-60 overflow-y-auto">
+                {filteredStudents.filter(student => {
+                  const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
+                  const matchesSearch = assignDialogSearchTerm === '' || 
+                    `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
+                  return matchesClassroom && matchesSearch;
+                }).map((student) => (
+                  <div key={student.id} className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-gray-50">
+                    <Checkbox
+                      checked={selectedStudentsForForm.includes(student.id)}
+                      onCheckedChange={() => handleStudentSelectForForm(student.id)}
+                    />
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
+                      {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium">{student.firstName} {student.lastName}</div>
+                      <div className="text-sm text-muted-foreground">
+                        {student.classroom.name} • {student.parent.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {filteredStudents.filter(student => {
+                  const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
+                  const matchesSearch = assignDialogSearchTerm === '' || 
+                    `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
+                  return matchesClassroom && matchesSearch;
+                }).length === 0 && (
+                  <div className="p-4 text-center text-muted-foreground">
+                    No students found matching your criteria.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAssignFormToStudents} 
+              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              disabled={!selectedFormToAssign || selectedStudentsForForm.length === 0}
+            >
+              Assign Form ({selectedStudentsForForm.length} students)
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Individual Student Form Assignment Dialog */}
+      <Dialog open={isStudentFormDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsStudentFormDialogOpen(false);
+          setSelectedFormsToAdd([]);
+        }
+      }}>
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg">
+                {selectedStudentForForms?.firstName.charAt(0)}{selectedStudentForForms?.lastName.charAt(0)}
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold">
+                  {selectedStudentForForms?.firstName} {selectedStudentForForms?.lastName}
+                </DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  {selectedStudentForForms?.classroom.name} • {selectedStudentForForms?.parent.name}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6 overflow-y-auto max-h-[60vh]">
+            {/* Currently Assigned Forms */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Assigned Forms</h3>
+                <Badge variant="secondary" className="text-xs">
+                  {selectedStudentForForms?.assignedForms?.length || 0} forms
+                </Badge>
+              </div>
+              
+              <div className="border rounded-lg max-h-80 overflow-y-auto">
+                {selectedStudentForForms?.assignedForms && selectedStudentForForms.assignedForms.length > 0 ? (
+                  selectedStudentForForms.assignedForms.map((form, index) => {
+                    const normalizedStatus = normalizeFormStatus(form.status);
+                    const statusVariant = normalizedStatus === 'Approved' ? 'success' : 
+                                        normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
+                    const statusIcon = normalizedStatus === 'Approved' ? 
+                      <CheckCircle className="h-3 w-3" /> : 
+                      normalizedStatus === 'In Progress' ? 
+                      <Clock className="h-3 w-3" /> : 
+                      <AlertCircle className="h-3 w-3" />;
+                    
+                    // Calculate due date (assignment date + 3 days default, will be dynamic later)
+                    const dueDays = 3; // Default, will come from API later
+                    const dueDate = form.assignedAt ? (() => {
+                      try {
+                        // Parse DD/MM/YYYY or DD-MM-YYYY format
+                        const parts = form.assignedAt.split(/[/-]/);
+                        if (parts.length === 3) {
+                          const [day, month, year] = parts.map(p => parseInt(p));
+                          if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
+                            const assignedDate = new Date(year, month - 1, day);
+                            if (!isNaN(assignedDate.getTime())) {
+                              return new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                            }
+                          }
+                        }
+                        // Fallback to regular date parsing
+                        const fallbackDate = new Date(form.assignedAt);
+                        if (!isNaN(fallbackDate.getTime())) {
+                          return new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                        }
+                      } catch (e) {
+                        console.warn('Date parsing failed for:', form.assignedAt);
+                      }
+                      return null;
+                    })() : null;
+                    const isOverdue = dueDate && new Date() > dueDate && normalizedStatus !== 'Approved';
+                    
+                    return (
+                      <div key={form.id} className={`flex items-center justify-between p-3 hover:bg-gray-50 transition-colors ${
+                        index !== selectedStudentForForms.assignedForms.length - 1 ? 'border-b' : ''
+                      }`}>
+                        <div className="flex items-center space-x-3 flex-1 min-w-0">
+                          <FileText className="h-4 w-4 text-amazon-teal flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-medium text-sm truncate">{form.name}</h4>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                Assigned: {form.assignedAt || 'No date'}
+                              </span>
+                              {dueDate && !isNaN(dueDate.getTime()) && (
+                                <span className={`font-medium ${
+                                  isOverdue ? 'text-red-600' : 'text-amber-600'
+                                }`}>
+                                  • Due: {dueDate.toLocaleDateString('en-GB')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs flex-shrink-0">
+                            {statusIcon}
+                            {normalizedStatus}
+                          </Badge>
+                          {isOverdue && (
+                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
+                              Overdue
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="p-6 text-center">
+                    <div className="flex flex-col items-center space-y-2">
+                      <FileText className="h-8 w-8 text-gray-400" />
+                      <div>
+                        <p className="font-medium text-sm">No forms assigned</p>
+                        <p className="text-xs text-muted-foreground">Add forms from the available list</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Add New Forms */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-foreground">Available Forms</h3>
+                <Badge variant="outline" className="text-xs">
+                  {selectedFormsToAdd.length} selected
+                </Badge>
+              </div>
+              
+              <div className="space-y-3 max-h-80 overflow-y-auto">
+                {availableForms.filter(form => 
+                  !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
+                ).length > 0 ? (
+                  availableForms.filter(form => 
+                    !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
+                  ).map((form) => (
+                    <Card key={form.id} className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                      selectedFormsToAdd.includes(form.id) ? 'ring-2 ring-amazon-teal bg-amazon-teal/5' : 'hover:bg-gray-50'
+                    }`}>
+                      <div className="flex items-center space-x-3"
+                           onClick={() => {
+                             if (selectedFormsToAdd.includes(form.id)) {
+                               setSelectedFormsToAdd(prev => prev.filter(id => id !== form.id));
+                             } else {
+                               setSelectedFormsToAdd(prev => [...prev, form.id]);
+                             }
+                           }}>
+                        <Checkbox
+                          checked={selectedFormsToAdd.includes(form.id)}
+                          onChange={() => {}}
+                          className="pointer-events-none"
+                        />
+                        <div className="p-2 bg-gray-100 rounded-lg">
+                          <FileText className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm">{form.name}</h4>
+                          <p className="text-xs text-muted-foreground">Click to select</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))
+                ) : (
+                  <Card className="p-8 text-center">
+                    <div className="flex flex-col items-center space-y-3">
+                      <div className="p-3 bg-green-100 rounded-full">
+                        <CheckCircle className="h-6 w-6 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">All forms assigned</p>
+                        <p className="text-xs text-muted-foreground">This student has all available forms</p>
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="pt-4 border-t">
+            <div className="flex items-center justify-between w-full">
+              <div className="text-sm text-muted-foreground">
+                {selectedFormsToAdd.length > 0 && (
+                  <span>{selectedFormsToAdd.length} form{selectedFormsToAdd.length !== 1 ? 's' : ''} selected</span>
+                )}
+              </div>
+              <div className="flex space-x-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsStudentFormDialogOpen(false);
+                    setSelectedFormsToAdd([]);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={async () => {
+                    if (selectedFormsToAdd.length > 0 && selectedStudentForForms) {
+                      try {
+                        const user = await fetchUserContext();
+                        if (!selectedStudentForForms.enrollmentId) {
+                          console.error('No enrollment ID found for student');
+                          return;
+                        }
+                        
+                        const assignments = selectedFormsToAdd.map(formId => ({
+                          enrollment_id: selectedStudentForForms.enrollmentId!,
+                          child_id: selectedStudentForForms.id,
+                          form_template_id: formId,
+                          is_required: true
+                        }));
+                        
+                        await assignFormsToStudent(user.schoolId || '', assignments);
+                        setIsStudentFormDialogOpen(false);
+                        setSelectedFormsToAdd([]);
+                        window.location.reload();
+                      } catch (error) {
+                        console.error('Error assigning forms:', error);
+                      }
+                    }
+
+                  }}
+                  className="bg-amazon-teal hover:bg-amazon-teal/90"
+                  disabled={selectedFormsToAdd.length === 0}
+                >
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Assign Forms ({selectedFormsToAdd.length})
+                </Button>
+              </div>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>

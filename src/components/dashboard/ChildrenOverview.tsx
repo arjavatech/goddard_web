@@ -10,6 +10,7 @@ interface Child {
   enrollmentProgress: number;
   formsCompleted: number;
   totalForms: number;
+  parentType?: string;
 }
 interface ChildrenOverviewProps {
   children: Child[];

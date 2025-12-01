@@ -653,6 +653,53 @@ export function ParentDetails() {
                               Last updated: {form.lastUpdated}
                             </p>
                             {(() => {
+                              // Calculate due date (assignment date + 3 days default, will be dynamic later)
+                              const dueDays = 3; // Default, will come from API later
+                              const assignedAt = form.lastUpdated; // Using lastUpdated as assignment date
+                              
+                              if (!assignedAt || assignedAt === '—') return null;
+                              
+                              try {
+                                // Parse DD/MM/YYYY or DD-MM-YYYY format
+                                const parts = assignedAt.split(/[/-]/);
+                                let dueDate = null;
+                                
+                                if (parts.length === 3) {
+                                  const [day, month, year] = parts.map(p => parseInt(p));
+                                  if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
+                                    const assignedDate = new Date(year, month - 1, day);
+                                    if (!isNaN(assignedDate.getTime())) {
+                                      dueDate = new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                                    }
+                                  }
+                                }
+                                
+                                // Fallback to regular date parsing
+                                if (!dueDate) {
+                                  const fallbackDate = new Date(assignedAt);
+                                  if (!isNaN(fallbackDate.getTime())) {
+                                    dueDate = new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
+                                  }
+                                }
+                                
+                                if (dueDate && !isNaN(dueDate.getTime())) {
+                                  const isOverdue = new Date() > dueDate && form.status !== 'Approved';
+                                  return (
+                                    <p className={`text-xs mt-1 font-medium ${
+                                      isOverdue ? 'text-red-600' : 'text-amber-600'
+                                    }`}>
+                                      Due: {dueDate.toLocaleDateString('en-GB')}
+                                      {isOverdue && ' (Overdue)'}
+                                    </p>
+                                  );
+                                }
+                              } catch (e) {
+                                console.warn('Date parsing failed for:', assignedAt);
+                              }
+                              
+                              return null;
+                            })()}
+                            {(() => {
                               if (!form.approvedOn) {
                                 return (
                                   <p className="text-xs text-gray-500 mt-1">

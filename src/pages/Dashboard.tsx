@@ -41,6 +41,7 @@ type DashboardChild = {
   nextActionLabel: string;
   forms: ChildFormCard[];
   childStatus: 'active' | 'archive';
+  parentType?: string;
 };
 function getInitials(firstName: string, lastName: string): string {
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -143,7 +144,8 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     currentStep,
     nextActionLabel: pendingForm ? `Continue ${pendingForm.title}` : 'View enrollment summary',
     forms,
-    childStatus: (child.childStatus || 'active') as 'active' | 'archive'
+    childStatus: (child.childStatus || 'active') as 'active' | 'archive',
+    parentType: child.parent_type || child.parentType || 'primary_parent'
   };
 }
 export function Dashboard() {

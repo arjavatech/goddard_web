@@ -1,76 +1,45 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog } from 'lucide-react';
+import { Home, Users, Shield, Settings, LogOut, Menu, X, User } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
-interface AdminLayoutProps {
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+
+interface SuperAdminLayoutProps {
   children: ReactNode;
 }
-export function AdminLayout({
-  children
-}: AdminLayoutProps) {
+
+export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    signOut
-  } = useAuth();
+  const { signOut } = useAuth();
   const { userData } = useUserContext();
-  
-  // Check if user is SuperAdmin
-  const isSuperAdmin = userData?.role === 'SuperAdmin';
-  
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
       await signOut();
-      navigate('/login', {
-        replace: true
-      });
+      navigate('/login', { replace: true });
     } catch (err) {
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);
     }
   };
+
   const currentPath = location.pathname;
-  const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
-  const baseNavigationItems = [{
-    icon: <Home className="w-5 h-5" />,
-    label: 'Dashboard',
-    path: '/admin'
-  }, {
-    icon: <School className="w-5 h-5" />,
-    label: 'Classrooms',
-    path: '/admin/classrooms'
-  }, {
-    icon: <GraduationCap className="w-5 h-5" />,
-    label: 'Students',
-    path: '/admin/students'
-  }, {
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Forms',
-    path: '/admin/forms'
-  }, {
-    icon: <Users className="w-5 h-5" />,
-    label: 'Parents',
-    path: '/admin/parents'
-  }];
-  
-  const navigationItems = isSuperAdmin ? [
-    ...baseNavigationItems,
-    {
-      icon: <UserCog className="w-5 h-5" />,
-      label: 'Admins',
-      path: '/admin/admins'
-    }
-  ] : baseNavigationItems;
+
+  const navigationItems = [
+    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin' },
+    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/superadmin/admins' }
+  ];
+
   React.useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -82,7 +51,8 @@ export function AdminLayout({
     };
   }, [isSidebarOpen]);
 
-  return <div className="min-h-screen bg-background flex">
+  return (
+    <div className="min-h-screen bg-background flex">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
@@ -106,21 +76,26 @@ export function AdminLayout({
         </div>
         <nav className="flex-1 p-6">
           <ul className="space-y-2">
-            {navigationItems.map((item, index) => <li key={index}>
+            {navigationItems.map((item, index) => (
+              <li key={index}>
                 <Link 
                   to={item.path} 
                   onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center space-x-4 px-4 py-3.5 rounded-lg transition-all duration-200 ${currentPath === item.path ? 'bg-amazon-teal text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-amazon-teal'}`}
+                  className={`flex items-center space-x-4 px-4 py-3.5 rounded-lg transition-all duration-200 ${
+                    currentPath === item.path 
+                      ? 'bg-amazon-teal text-white shadow-sm' 
+                      : 'text-gray-700 hover:bg-gray-50 hover:text-amazon-teal'
+                  }`}
                 >
                   <span className={`${currentPath === item.path ? 'text-white' : 'text-gray-500'}`}>
                     {item.icon}
                   </span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
-              </li>)}
+              </li>
+            ))}
           </ul>
         </nav>
-       
       </aside>
       
       {/* Main content */}
@@ -135,18 +110,18 @@ export function AdminLayout({
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+              SuperAdmin Portal
             </h1>
           </div>
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
                 <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
                   {userData?.firstName && userData?.lastName
                     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-                    : 'AD'}
+                    : 'SA'}
                 </div>
-                
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
@@ -159,9 +134,9 @@ export function AdminLayout({
                     <p className="text-sm font-semibold text-gray-900">
                       {userData?.firstName && userData?.lastName
                         ? `${userData.firstName} ${userData.lastName}`
-                        : 'Administrator'}
+                        : 'Super Administrator'}
                     </p>
-                    <p className="text-xs text-gray-500">System Administrator</p>
+                    <p className="text-xs text-gray-500">System SuperAdmin</p>
                   </div>
                 </div>
               </div>
@@ -177,8 +152,9 @@ export function AdminLayout({
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
+        
         {/* Page content */}
-        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 flex flex-col bg-gray-50`}>{children}</main>
+        <main className="flex-1 p-6 pt-20 flex flex-col bg-gray-50">{children}</main>
       </div>
       
       {/* Logout Confirmation Modal */}
@@ -187,7 +163,7 @@ export function AdminLayout({
           <DialogHeader>
             <DialogTitle>Confirm Logout</DialogTitle>
             <DialogDescription>
-              Are you sure you want to logout? You will need to sign in again to access the admin portal.
+              Are you sure you want to logout? You will need to sign in again to access the SuperAdmin portal.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -200,5 +176,6 @@ export function AdminLayout({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>;
+    </div>
+  );
 }
