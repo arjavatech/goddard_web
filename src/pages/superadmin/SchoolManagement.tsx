@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { SuperAdminLayout } from './SuperAdminLayout';
+import { AdminLayout } from '../admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { School, Users, MapPin, Plus, Search, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { School, MapPin, Plus, Search, MoreVertical, Edit, Trash2, Crown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { useToast } from '../../contexts/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
 export function SchoolManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,12 +19,17 @@ export function SchoolManagement() {
   const [schoolLocation, setSchoolLocation] = useState('');
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [schoolToDelete, setSchoolToDelete] = useState<any>(null);
+  
+  // Mock subscription limit - 3 schools allowed
+  const maxSchools = 3;
 
   const [schools, setSchools] = useState([
-    { id: 1, name: 'Goddard Lynnwood', location: 'Lynnwood, WA', admin: 'John Smith', adminEmail: 'john@goddard-lynnwood.com', status: 'active' },
-    { id: 2, name: 'Goddard Bellevue', location: 'Bellevue, WA', admin: 'Sarah Johnson', adminEmail: 'sarah@goddard-bellevue.com', status: 'active' },
-    { id: 3, name: 'Goddard Seattle', location: 'Seattle, WA', admin: 'Mike Wilson', adminEmail: 'mike@goddard-seattle.com', status: 'active' },
-    { id: 4, name: 'Goddard Redmond', location: 'Redmond, WA', admin: 'Lisa Brown', adminEmail: 'lisa@goddard-redmond.com', status: 'pending' }
+    { id: 1, name: 'Goddard Lynnwood', location: 'Lynnwood, WA', admin: 'John Smith', adminEmail: 'john@goddard-lynnwood.com', status: 'active' }
   ]);
 
   const filteredSchools = schools.filter(school =>
@@ -49,6 +56,7 @@ export function SchoolManagement() {
     setSchoolLocation('');
     setAdminName('');
     setAdminEmail('');
+    showToast('success', 'School added successfully');
   };
 
   const handleEditSchool = (school: any) => {
@@ -74,28 +82,45 @@ export function SchoolManagement() {
     setSchoolLocation('');
     setAdminName('');
     setAdminEmail('');
+    showToast('success', 'School updated successfully');
   };
 
-  const handleDeleteSchool = (schoolId: number) => {
-    if (confirm('Are you sure you want to delete this school?')) {
-      setSchools(schools.filter(school => school.id !== schoolId));
+  const openDeleteDialog = (school: any) => {
+    setSchoolToDelete(school);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDeleteSchool = () => {
+    if (schoolToDelete) {
+      setSchools(schools.filter(school => school.id !== schoolToDelete.id));
+      showToast('success', 'School deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setSchoolToDelete(null);
     }
   };
 
   return (
-    <SuperAdminLayout>
+    <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
             School Management
           </h1>
-          <Button className="bg-amazon-teal hover:bg-amazon-teal/90" onClick={() => setIsAddDialogOpen(true)}>
+          <Button 
+            className="bg-amazon-teal hover:bg-amazon-teal/90" 
+            onClick={() => {
+              if (schools.length >= maxSchools) {
+                setIsSubscriptionDialogOpen(true);
+              } else {
+                setIsAddDialogOpen(true);
+              }
+            }}
+          >
             <Plus className="w-4 h-4 mr-2" />
             Add School
           </Button>
         </div>
 
-        {/* Search */}
         <div className="flex items-center space-x-4">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -108,7 +133,6 @@ export function SchoolManagement() {
           </div>
         </div>
 
-        {/* Schools Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           {filteredSchools.map((school) => (
             <Card key={school.id} className="glass-card">
@@ -140,7 +164,7 @@ export function SchoolManagement() {
                         <Edit className="w-4 h-4 mr-2" />
                         Edit School
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteSchool(school.id)} className="text-red-600">
+                      <DropdownMenuItem onClick={() => openDeleteDialog(school)} className="text-red-600">
                         <Trash2 className="w-4 h-4 mr-2" />
                         Delete School
                       </DropdownMenuItem>
@@ -164,7 +188,6 @@ export function SchoolManagement() {
           ))}
         </div>
 
-        {/* Add School Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
@@ -214,7 +237,6 @@ export function SchoolManagement() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit School Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
           <DialogContent className="w-[95vw] max-w-md">
             <DialogHeader>
@@ -263,7 +285,84 @@ export function SchoolManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Subscription Limit Dialog */}
+        <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Crown className="h-5 w-5 text-amazon-teal" />
+                Subscription Required
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                You've reached your school limit. Subscribe to add more schools and unlock additional features.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-blue-900">Current Plan: Basic</p>
+                    <p className="text-sm text-blue-700">Schools: {schools.length}/{maxSchools}</p>
+                  </div>
+                  <Crown className="h-8 w-8 text-blue-600" />
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsSubscriptionDialogOpen(false)}>Cancel</Button>
+              <Button 
+                onClick={() => {
+                  setIsSubscriptionDialogOpen(false);
+                  navigate('/admin/subscription');
+                }} 
+                className="bg-amazon-teal hover:bg-amazon-teal/90"
+              >
+                <Crown className="h-4 w-4 mr-2" />
+                See Plans
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-red-500" />
+                Delete School
+              </DialogTitle>
+            </DialogHeader>
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground mb-4">
+                Are you sure you want to delete <strong>{schoolToDelete?.name}</strong>? This action cannot be undone.
+              </p>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4 text-red-600" />
+                  <p className="text-sm text-red-800 font-medium">This will permanently remove:</p>
+                </div>
+                <ul className="text-sm text-red-700 mt-2 ml-6 list-disc">
+                  <li>School information and settings</li>
+                  <li>All associated admin accounts</li>
+                  <li>Student and parent data</li>
+                </ul>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleDeleteSchool}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete School
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-    </SuperAdminLayout>
+    </AdminLayout>
   );
 }

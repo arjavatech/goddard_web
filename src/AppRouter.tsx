@@ -20,6 +20,10 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 
 import { FormView } from './pages/admin/FormView';
+// SuperAdmin pages
+import { SchoolManagement } from './pages/superadmin/SchoolManagement';
+import { UserManagement } from './pages/superadmin/UserManagement';
+import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
@@ -50,7 +54,9 @@ export function AppRouter() {
             <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
             <Route path="/admin/students" element={<StudentManagement />} />
             <Route path="/admin/admins" element={<AdminManagement />} />
-
+            <Route path="/admin/subscription" element={<SubscriptionManagement />} />
+            <Route path="/admin/schools" element={<SchoolManagement />} />
+            <Route path="/admin/users" element={<UserManagement />} />
           </Route>
 
         </Routes>

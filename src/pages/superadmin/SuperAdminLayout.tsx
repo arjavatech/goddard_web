@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, Users, Shield, Settings, LogOut, Menu, X, User } from 'lucide-react';
+import { Home, Users, Shield, Settings, LogOut, Menu, X, User, Crown, School } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -36,8 +36,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const currentPath = location.pathname;
 
   const navigationItems = [
-    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin' },
-    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/superadmin/admins' }
+    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/admin' },
+    { icon: <Crown className="w-5 h-5" />, label: 'Subscription', path: '/admin/subscription' },
+    { icon: <School className="w-5 h-5" />, label: 'Schools', path: '/admin/schools' },
+    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/admin/admins' }
   ];
 
   React.useEffect(() => {

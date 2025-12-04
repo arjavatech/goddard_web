@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Crown } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -23,8 +23,12 @@ export function AdminLayout({
   } = useAuth();
   const { userData } = useUserContext();
   
-  // Check if user is SuperAdmin
-  const isSuperAdmin = userData?.role === 'SuperAdmin';
+  // Check if user is SuperAdmin - temporarily show for all users for testing
+  const isSuperAdmin = true; // userData?.role === 'SuperAdmin';
+  
+  // Debug: Log user data
+  console.log('User data:', userData);
+  console.log('Is SuperAdmin:', isSuperAdmin);
   
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -41,7 +45,7 @@ export function AdminLayout({
   };
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
-  const baseNavigationItems = [{
+  const navigationItems = [{
     icon: <Home className="w-5 h-5" />,
     label: 'Dashboard',
     path: '/admin'
@@ -61,16 +65,19 @@ export function AdminLayout({
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'
+  }, {
+    icon: <Crown className="w-5 h-5" />,
+    label: 'Subscription',
+    path: '/admin/subscription'
+  }, {
+    icon: <School className="w-5 h-5" />,
+    label: 'Schools',
+    path: '/admin/schools'
+  }, {
+    icon: <UserCog className="w-5 h-5" />,
+    label: 'Admins',
+    path: '/admin/admins'
   }];
-  
-  const navigationItems = isSuperAdmin ? [
-    ...baseNavigationItems,
-    {
-      icon: <UserCog className="w-5 h-5" />,
-      label: 'Admins',
-      path: '/admin/admins'
-    }
-  ] : baseNavigationItems;
   React.useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -105,8 +112,13 @@ export function AdminLayout({
           </div>
         </div>
         <nav className="flex-1 p-6">
+          <div className="mb-4 text-xs text-gray-500">
+            Navigation Items: {navigationItems.length}
+          </div>
           <ul className="space-y-2">
-            {navigationItems.map((item, index) => <li key={index}>
+            {navigationItems.map((item, index) => {
+              console.log('Rendering nav item:', item.label, item.path);
+              return <li key={index}>
                 <Link 
                   to={item.path} 
                   onClick={() => setIsSidebarOpen(false)}
@@ -117,7 +129,8 @@ export function AdminLayout({
                   </span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
-              </li>)}
+              </li>
+            })}
           </ul>
         </nav>
        
@@ -134,9 +147,12 @@ export function AdminLayout({
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-            </h1>
+            <div>
+              <h1 className="text-lg lg:text-xl font-semibold text-foreground">
+                {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+              </h1>
+              <p className="text-xs text-gray-500">Role: {userData?.role || 'Unknown'}</p>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

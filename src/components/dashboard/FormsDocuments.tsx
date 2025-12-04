@@ -44,35 +44,9 @@ function FormCard({
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
 
-  // Calculate due date (assignment date + 3 days default, will be dynamic later)
-  const dueDays = 3; // Default, will come from API later
-  const dueDate = assignedAt ? (() => {
-    try {
-      // Parse DD/MM/YYYY or DD-MM-YYYY format
-      const parts = assignedAt.split(/[/-]/);
-      if (parts.length === 3) {
-        const [day, month, year] = parts.map(p => parseInt(p));
-        if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
-          const assignedDate = new Date(year, month - 1, day);
-          if (!isNaN(assignedDate.getTime())) {
-            return new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-          }
-        }
-      }
-      // Fallback to regular date parsing
-      const fallbackDate = new Date(assignedAt);
-      if (!isNaN(fallbackDate.getTime())) {
-        return new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-      }
-    } catch (e) {
-      console.warn('Date parsing failed for:', assignedAt);
-    }
-    return null;
-  })() : null;
-  const isOverdue = dueDate && new Date() > dueDate && status !== 'Approved';
+
 
   const getBorderColor = () => {
-    if (isOverdue) return 'border-red-500';
     if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
     return 'border-amber-500';
   };
@@ -98,14 +72,7 @@ function FormCard({
           <span className="text-xs text-muted-foreground">
             Assigned: {lastUpdated}
           </span>
-          {dueDate && !isNaN(dueDate.getTime()) && (
-            <span className={`text-xs font-medium ${
-              isOverdue ? 'text-red-600' : 'text-amber-600'
-            }`}>
-              Due: {dueDate.toLocaleDateString('en-GB')}
-              {isOverdue && ' (Overdue)'}
-            </span>
-          )}
+
         </div>
         <div className="flex gap-1">
           {isApproved && (

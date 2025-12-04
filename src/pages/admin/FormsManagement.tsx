@@ -25,7 +25,6 @@ interface Form {
   link: string;
   status: FormStatus;
   classroomsCount: number;
-  dueDays: number;
 }
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
@@ -45,7 +44,7 @@ export function FormsManagement() {
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
-  const [formDueDays, setFormDueDays] = useState(3);
+
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
@@ -81,7 +80,7 @@ export function FormsManagement() {
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
           classroomsCount: 0,
-          dueDays: 3 // Default value, will be updated when API supports it
+
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -164,7 +163,7 @@ export function FormsManagement() {
       link: template.filloutFormUrl ?? '#',
       status: mapStatus(template.status),
       classroomsCount: 0,
-      dueDays: 3 // Default value, will be updated when API supports it
+
     }));
     setForms(mappedForms);
     setIsDeleteDialogOpen(false);
@@ -173,7 +172,7 @@ export function FormsManagement() {
     setFormName('');
     setFormLink('');
     setFormStatus('Default');
-    setFormDueDays(3);
+
     setFormErrors({});
   };
   const openEditDialog = (form: Form) => {
@@ -181,7 +180,7 @@ export function FormsManagement() {
     setFormName(form.name);
     setFormLink(form.link);
     setFormStatus(form.status);
-    setFormDueDays(form.dueDays);
+
     setIsEditDialogOpen(true);
   };
   const openDeleteDialog = (form: Form) => {
@@ -339,9 +338,7 @@ export function FormsManagement() {
                     <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">
                       Status
                     </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/12">
-                      Due Days
-                    </th>
+
                     <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">
                       Form Link
                     </th>
@@ -371,9 +368,7 @@ export function FormsManagement() {
                             {form.status}
                           </Badge>
                         </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="text-sm font-medium">{form.dueDays} days</span>
-                        </td>
+
                         <td className="py-3 px-2">
                           <div className="flex items-center text-amazon-teal min-w-0">
                             <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
@@ -496,7 +491,7 @@ export function FormsManagement() {
                         <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
                           {form.status}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">• Due in {form.dueDays} days</span>
+
                       </div>
                       
                       <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
@@ -587,19 +582,7 @@ export function FormsManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Due Days</label>
-              <Input 
-                type="number" 
-                min="1" 
-                max="30" 
-                value={formDueDays} 
-                onChange={e => setFormDueDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} 
-                placeholder="Days until due" 
-                className="w-full h-10 sm:h-11 text-sm sm:text-base" 
-              />
-          
-            </div>
+
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
@@ -670,19 +653,7 @@ export function FormsManagement() {
                 </SelectContent>
               </Select>
             </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Due Days</label>
-              <Input 
-                type="number" 
-                min="1" 
-                max="30" 
-                value={formDueDays} 
-                onChange={e => setFormDueDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} 
-                placeholder="Days until due" 
-                className="w-full h-10 sm:h-11 text-sm sm:text-base" 
-              />
-        
-            </div>
+
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
