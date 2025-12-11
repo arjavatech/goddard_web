@@ -26,6 +26,16 @@ export type ParentDetail = {
   lastName?: string;
   signedStatus: string;
   createdAt: string | null;
+  parentType?: string;
+  additional_first_name?: string;
+  additional_last_name?: string;
+  additional_email?: string;
+  otherParent?: {
+    firstName?: string;
+    lastName?: string;
+    email?: string;
+    parentType?: string;
+  } | null;
   children?: {
     childId: string;
     childFullName: string;
@@ -314,6 +324,16 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
       lastName: data.parent_last_name || data.lastName,
       signedStatus: data.signed_status || 'not signed',
       createdAt: data.created_at || data.createdAt || null,
+      parentType: data.parent_type || data.parentType || 'primary_parent',
+      additional_first_name: data.additional_first_name || data.additionalFirstName,
+      additional_last_name: data.additional_last_name || data.additionalLastName,
+      additional_email: data.additional_email || data.additionalEmail,
+      otherParent: data.other_parent ? {
+        firstName: data.other_parent.first_name || data.other_parent.firstName,
+        lastName: data.other_parent.last_name || data.other_parent.lastName,
+        email: data.other_parent.email,
+        parentType: data.other_parent.parent_type || data.other_parent.parentType || 'secondary_parent'
+      } : null,
       children: (data.children || []).map((child: any) => ({
         childId: child.child_id || child.childId || '',
         childFullName: child.child_full_name || child.childFullName || `${child.firstName || ''} ${child.lastName || ''}`.trim(),

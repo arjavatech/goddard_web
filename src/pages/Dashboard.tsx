@@ -5,6 +5,7 @@ import { FormsDocuments } from '../components/dashboard/FormsDocuments';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
+import { ParentInfo } from '../components/dashboard/ParentInfo';
 import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
@@ -333,9 +334,14 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last">
+                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last space-y-4">
                   <div className="section-fade-in" style={{
               animationDelay: '0.3s'
+            }}>
+                    <ParentInfo parentData={parentData} />
+                  </div>
+                  <div className="section-fade-in" style={{
+              animationDelay: '0.4s'
             }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
