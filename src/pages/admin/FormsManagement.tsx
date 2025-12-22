@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUpDown, MoreVertical, Settings } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUpDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -47,6 +47,7 @@ export function FormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
   const [formDueDate, setFormDueDate] = useState('');
+  const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
@@ -406,9 +407,27 @@ export function FormsManagement() {
                         <td className="py-3 px-2">
                           <div className="flex items-center text-amazon-teal min-w-0">
                             <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate">
-                                {form.link}
-                              </a> : <span className="text-gray-400">Not provided</span>}
+                            {form.link ? (
+                              <>
+                                <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1">
+                                  {form.link}
+                                </a>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(form.link);
+                                    setCopiedFormId(form.id);
+                                    setTimeout(() => setCopiedFormId(null), 3000);
+                                  }}
+                                  className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                                  title="Copy link"
+                                >
+                                  {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Not provided</span>
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-3 text-center">
@@ -533,9 +552,23 @@ export function FormsManagement() {
                       <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
                         <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
                         {form.link ? (
-                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0">
-                            {form.link}
-                          </a>
+                          <>
+                            <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0 flex-1">
+                              {form.link}
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(form.link);
+                                setCopiedFormId(form.id);
+                                setTimeout(() => setCopiedFormId(null), 3000);
+                              }}
+                              className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                              title="Copy link"
+                            >
+                              {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          </>
                         ) : (
                           <span className="text-gray-400 text-xs sm:text-sm">No link provided</span>
                         )}
@@ -628,7 +661,7 @@ export function FormsManagement() {
                 min={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Leave empty to use default 30-day due date when assigned
+                
               </p>
             </div>
 
@@ -712,7 +745,7 @@ export function FormsManagement() {
                 min={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Leave empty to use default 30-day due date when assigned
+                
               </p>
             </div>
 

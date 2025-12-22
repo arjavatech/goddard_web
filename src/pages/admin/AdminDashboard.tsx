@@ -13,8 +13,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from '@/components/ui/select';
-import { ValidatedInput } from '@/components/ui/validated-input';
-import { commonValidationRules } from '@/lib/validation';
+import { AsyncButton } from '../../components/ui/async-button';
 
 type StatCard = {
   title: string;
@@ -29,6 +28,7 @@ type ProgressItem = {
   completed: number;
   total: number;
 };
+
 export function AdminDashboard() {
   const [stats, setStats] = useState<StatCard[]>([]);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
@@ -38,14 +38,18 @@ export function AdminDashboard() {
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState('Active');
+  const [formDueDate, setFormDueDate] = useState('');
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [parentPhoneNumber, setParentPhoneNumber] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
+  const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -112,7 +116,6 @@ export function AdminDashboard() {
             change: 'Live data',
             onClick: () => navigate('/admin/parents')
           },
-
           {
             title: 'Pending Enrollments',
             value: pendingEnrollments,
@@ -150,36 +153,39 @@ export function AdminDashboard() {
     };
   }, []);
 
-  const showValidationToast = (message: string) => {
-    if (!isClassroomDialogClosing) {
-      console.error(message);
-    }
-  };
-
-  const hideValidationToast = () => {
-    // No-op for compatibility
-  };
-
-  const handleAddClassroom = async () => {
-    if (!newClassroomName.trim()) return;
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
     
-    setIsAddingClassroom(true);
+    if (!formName.trim()) errors.formName = 'Form name is required';
+    if (!formLink.trim()) errors.formLink = 'Form link is required';
+    else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleAddForm = async () => {
+    if (!validateForm()) return;
+
+    setIsAddingForm(true);
     try {
       const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
-      
-      await createClassroom(user.schoolId, newClassroomName.trim());
-      
-      setIsAddClassroomDialogOpen(false);
-      setNewClassroomName('');
-      showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
-      
-      // Refresh the page to show updated stats
+      if (!user.schoolId) return;
+
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate || undefined);
+
+      setIsAddDialogOpen(false);
+      setFormName('');
+      setFormLink('');
+      setFormStatus('Active');
+      setFormDueDate('');
+      setFormErrors({});
+
       window.location.reload();
     } catch (error) {
-      showToast('error', 'Failed to create classroom. Please try again.');
+      showToast('error', 'Failed to create form. Please try again.');
     } finally {
-      setIsAddingClassroom(false);
+      setIsAddingForm(false);
     }
   };
 
@@ -194,7 +200,6 @@ export function AdminDashboard() {
     if (!childGender) errors.childGender = 'Child gender is required';
     if (!childClassroom) errors.childClassroom = 'Child classroom is required';
 
-    // Secondary parent validation - only required if email is provided
     if (secondaryParentEmail.trim()) {
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
         errors.secondaryParentEmail = 'Please enter a valid email address';
@@ -223,22 +228,26 @@ export function AdminDashboard() {
         parentFirstName,
         parentLastName,
         parentEmail,
+        parentPhoneNumber: parentPhoneNumber.trim() || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob,
         classroomId: childClassroom,
         gender: childGender,
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
-        secondaryParentLastName: secondaryParentLastName.trim() || undefined
+        secondaryParentLastName: secondaryParentLastName.trim() || undefined,
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
       });
 
       setIsInviteDialogOpen(false);
       setParentFirstName('');
       setParentLastName('');
       setParentEmail('');
+      setParentPhoneNumber('');
       setSecondaryParentFirstName('');
       setSecondaryParentLastName('');
       setSecondaryParentEmail('');
+      setSecondaryParentPhoneNumber('');
       setChildFirstName('');
       setChildLastName('');
       setChildDob('');
@@ -246,7 +255,6 @@ export function AdminDashboard() {
       setChildClassroom('');
       setInviteFormErrors({});
 
-      // Refresh the page to show updated stats
       window.location.reload();
     } catch (error) {
       console.error('Error inviting parent:', error);
@@ -255,249 +263,265 @@ export function AdminDashboard() {
     }
   };
 
-  const handleAddForm = async () => {
-    if (!formName.trim() || !formLink.trim()) return;
-
-    setIsAddingForm(true);
-    try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
-
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
-
-      setIsAddDialogOpen(false);
-      setFormName('');
-      setFormLink('');
-      setFormStatus('Active');
-
-      // Refresh the stats to show updated form count
-      window.location.reload();
-    } catch (error) {
-      console.error('Error adding form:', error);
-    } finally {
-      setIsAddingForm(false);
+  const showValidationToast = (message: string) => {
+    if (!isClassroomDialogClosing) {
+      console.error(message);
     }
   };
 
-  return <AdminLayout>
-    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-        Dashboard Overview
-      </h1>
-      {error && <div className="rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700">
-        {error}
-      </div>}
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
-        {stats.map((stat, index) => <Card key={index} className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]" onClick={stat.onClick}>
-          <CardContent className="p-4 sm:p-5 lg:p-6">
-            <div className="flex justify-between items-start">
-              <div className="min-w-0 flex-1">
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                  {stat.title}
-                </p>
-                <h3 className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2 text-foreground">
-                  {stat.value}
-                </h3>
-                <p className="text-xs text-muted-foreground mt-1 truncate">
-                  {stat.change}
+  const hideValidationToast = () => {
+    // No-op for compatibility
+  };
+
+  const handleAddClassroom = async () => {
+    if (!newClassroomName.trim()) return;
+    
+    setIsAddingClassroom(true);
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      await createClassroom(user.schoolId, newClassroomName.trim());
+      
+      setIsAddClassroomDialogOpen(false);
+      setNewClassroomName('');
+      showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
+      
+      window.location.reload();
+    } catch (error) {
+      showToast('error', 'Failed to create classroom. Please try again.');
+    } finally {
+      setIsAddingClassroom(false);
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+          Dashboard Overview
+        </h1>
+        {error && (
+          <div className="rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+          {stats.map((stat, index) => (
+            <Card key={index} className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]" onClick={stat.onClick}>
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex justify-between items-start">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">
+                      {stat.title}
+                    </p>
+                    <h3 className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2 text-foreground">
+                      {stat.value}
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1 truncate">
+                      {stat.change}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-3 bg-gray-50 rounded-full flex-shrink-0 ml-2">{stat.icon}</div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Quick Actions & Enrollment Progress Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
+          <Card className="glass-card lg:col-span-3 order-2 lg:order-1">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl">Enrollment Progress by Classroom</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="space-y-3 sm:space-y-4">
+                {loading ? (
+                  <Loading message="Loading enrollment data..." size="sm" />
+                ) : enrollmentProgress.length === 0 ? (
+                  <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
+                    No enrollment data available yet.
+                  </div>
+                ) : (
+                  enrollmentProgress.map((classroom, index) => (
+                    <div key={`${classroom.classroom}-${index}`}>
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="font-medium text-xs sm:text-sm truncate flex-1 mr-2">
+                          {classroom.classroom}
+                        </span>
+                        <span className="text-xs sm:text-sm text-amazon-teal font-medium flex-shrink-0">
+                          {classroom.total > 0 ? Math.round(classroom.completed / classroom.total * 100) : 0}%
+                        </span>
+                      </div>
+                      <Progress value={classroom.total > 0 ? classroom.completed / classroom.total * 100 : 0} className="h-2" />
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {classroom.completed} of {classroom.total} students marked complete
+                      </p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Admin Actions */}
+          <Card className="glass-card lg:col-span-1 order-1 lg:order-2">
+            <CardHeader className="pb-3 sm:pb-4">
+              <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
+                <Button
+                  variant="outline"
+                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
+                  onClick={() => setIsAddDialogOpen(true)}
+                >
+                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
+                  <span className="text-xs font-medium">Add Form</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
+                  onClick={() => setIsInviteDialogOpen(true)}
+                >
+                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
+                  <span className="text-xs font-medium">Invite Parent</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
+                  onClick={() => setIsAddClassroomDialogOpen(true)}
+                >
+                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
+                  <span className="text-xs font-medium">Add Classrooms</span>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Add Form Dialog */}
+        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
+            </DialogHeader>
+            <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Form Name</label>
+                <Input
+                  value={formName}
+                  onChange={e => {
+                    setFormName(e.target.value);
+                    if (formErrors.formName) {
+                      setFormErrors(prev => ({...prev, formName: ''}));
+                    }
+                  }}
+                  placeholder="Enter form name"
+                  className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`}
+                  autoFocus
+                />
+                {formErrors.formName && (
+                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Form Link</label>
+                <Input 
+                  value={formLink} 
+                  onChange={e => {
+                    setFormLink(e.target.value);
+                    if (formErrors.formLink) {
+                      setFormErrors(prev => ({...prev, formLink: ''}));
+                    }
+                  }} 
+                  placeholder="https://example.com/form" 
+                  className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
+                />
+                {formErrors.formLink && (
+                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Status</label>
+                <Select value={formStatus} onValueChange={setFormStatus}>
+                  <SelectTrigger className="h-10 sm:h-11">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Default">Default</SelectItem>
+                    <SelectItem value="Active">Active</SelectItem>
+                    <SelectItem value="Inactive">Inactive</SelectItem>
+                    <SelectItem value="Archive">Archive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+                <Input
+                  type="date"
+                  value={formDueDate}
+                  onChange={e => setFormDueDate(e.target.value)}
+                  className="w-full h-10 sm:h-11"
+                  min={new Date().toISOString().split('T')[0]}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  
                 </p>
               </div>
-              <div className="p-2 sm:p-3 bg-gray-50 rounded-full flex-shrink-0 ml-2">{stat.icon}</div>
             </div>
-          </CardContent>
-        </Card>)}
-      </div>
-
-      {/* Quick Actions & Enrollment Progress Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-        <Card className="glass-card lg:col-span-3 order-2 lg:order-1">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl">Enrollment Progress by Classroom</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="space-y-3 sm:space-y-4">
-              {loading ? <Loading message="Loading enrollment data..." size="sm" /> : enrollmentProgress.length === 0 ? <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
-                No enrollment data available yet.
-              </div> : enrollmentProgress.map((classroom, index) => <div key={`${classroom.classroom}-${index}`}>
-                <div className="flex justify-between items-center mb-1">
-                  <span className="font-medium text-xs sm:text-sm truncate flex-1 mr-2">
-                    {classroom.classroom}
-                  </span>
-                  <span className="text-xs sm:text-sm text-amazon-teal font-medium flex-shrink-0">
-                    {classroom.total > 0 ? Math.round(classroom.completed / classroom.total * 100) : 0}%
-                  </span>
-                </div>
-                <Progress value={classroom.total > 0 ? classroom.completed / classroom.total * 100 : 0} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {classroom.completed} of {classroom.total} students marked complete
-                </p>
-              </div>)}
-            </div>
-          </CardContent>
-        </Card>
-        {/* Admin Actions */}
-        <Card className="glass-card lg:col-span-1 order-1 lg:order-2">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
-              <Button
-                variant="outline"
-                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                onClick={() => setIsAddDialogOpen(true)}
-              >
-                <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                <span className="text-xs font-medium">Add Form</span>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+                Cancel
               </Button>
-              <Button
-                variant="outline"
-                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                onClick={() => setIsInviteDialogOpen(true)}
-              >
-                <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                <span className="text-xs font-medium">Invite Parent</span>
+              <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+                {isAddingForm ? 'Adding Form...' : 'Add Form'}
               </Button>
-              {/* <Button
-                variant="outline"
-                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                onClick={() => setIsInviteDialogOpen(true)}
-              >
-                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                <span className="text-xs font-medium">Add Student</span>
-              </Button> */}
-              <Button
-                variant="outline"
-                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                onClick={() => setIsAddClassroomDialogOpen(true)}
-              >
-                <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                <span className="text-xs font-medium">Add Classrooms</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-        {/* Enrollment Progress */}
-
-      </div>
-
-
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[400px] max-w-lg" preventClose>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 sm:py-3 md:py-4 space-y-3 sm:space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Form Name
-              </label>
-              <Input
-                value={formName}
-                onChange={e => setFormName(e.target.value)}
-                placeholder="Enter form name"
-                className="w-full h-10 sm:h-11 text-sm sm:text-base"
-                autoFocus
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Form Link
-              </label>
-              <Input value={formLink} onChange={e => setFormLink(e.target.value)} placeholder="https://example.com/form" className="w-full h-10 sm:h-11 text-sm sm:text-base" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <Select value={formStatus} onValueChange={setFormStatus}>
-                <SelectTrigger className="h-10 sm:h-11">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Default">Default</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
-            <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
-              {isAddingForm ? 'Adding Form...' : 'Add Form'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-
-
-      <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsDialogClosing(true);
-          setInviteFormErrors({});
-          setTimeout(() => setIsDialogClosing(false), 100);
-        }
-        setIsInviteDialogOpen(open);
-      }}>
-        <DialogContent className="w-[92vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] xl:w-[75vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Invite New Parent</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 sm:py-3 md:py-4 space-y-3 sm:space-y-4 md:space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
-                <div className="space-y-4">
+        {/* Invite Parent Dialog */}
+        <Dialog open={isInviteDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsDialogClosing(true);
+            setInviteFormErrors({});
+            setTimeout(() => setIsDialogClosing(false), 100);
+          }
+          setIsInviteDialogOpen(open);
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold">Invite New Parent</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 py-4">
+              {/* Primary Parent */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Primary Parent Information</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      First Name
-                    </label>
+                    <label className="block text-sm font-medium mb-2">First Name</label>
                     <Input 
                       value={parentFirstName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setParentFirstName(value);
-                        if (inviteFormErrors.parentFirstName) {
-                          setInviteFormErrors(prev => ({...prev, parentFirstName: ''}));
-                        }
-                      }}
+                      onChange={e => setParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                       placeholder="Enter first name" 
-                      className={`w-full ${inviteFormErrors.parentFirstName ? 'border-red-500' : ''}`}
                     />
-                    {inviteFormErrors.parentFirstName && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentFirstName}</p>
-                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Last Name
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Last Name</label>
                     <Input 
                       value={parentLastName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setParentLastName(value);
-                        if (inviteFormErrors.parentLastName) {
-                          setInviteFormErrors(prev => ({...prev, parentLastName: ''}));
-                        }
-                      }}
-
+                      onChange={e => setParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                       placeholder="Enter last name" 
-                      className={`w-full ${inviteFormErrors.parentLastName ? 'border-red-500' : ''}`}
                     />
-                    {inviteFormErrors.parentLastName && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentLastName}</p>
-                    )}
                   </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Email
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Email</label>
                     <Input 
                       type="email" 
                       value={parentEmail} 
@@ -517,146 +541,152 @@ export function AdminDashboard() {
                         }
                       }}
                       placeholder="Enter email address" 
-                      className={`w-full ${inviteFormErrors.parentEmail ? 'border-red-500' : ''}`}
+                      className={inviteFormErrors.parentEmail ? 'border-red-500' : ''}
                     />
                     {inviteFormErrors.parentEmail && (
                       <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentEmail}</p>
                     )}
                   </div>
-                </div>
-                {/* Additional Parent Information - Optional */}
-                <div className="mt-6 pt-4 border-t">
-                  <h4 className="text-sm font-medium mb-4 text-gray-600">
-                    Additional Parent Information (Optional)
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        First Name
-                      </label>
-                      <Input
-                        value={secondaryParentFirstName}
-                        onChange={e => {
-                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                          setSecondaryParentFirstName(value);
-                          if (inviteFormErrors.secondaryParentFirstName) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
-                          }
-                        }}
-                        placeholder="Enter first name"
-                        className={`w-full ${inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentFirstName && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Last Name
-                      </label>
-                      <Input
-                        value={secondaryParentLastName}
-                        onChange={e => {
-                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                          setSecondaryParentLastName(value);
-                          if (inviteFormErrors.secondaryParentLastName) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
-                          }
-                        }}
-                        placeholder="Enter last name"
-                        className={`w-full ${inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentLastName && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Email
-                      </label>
-                      <Input
-                        type="email"
-                        value={secondaryParentEmail}
-                        onChange={e => {
-                          setSecondaryParentEmail(e.target.value);
-                          if (inviteFormErrors.secondaryParentEmail) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!isDialogClosing && secondaryParentEmail.trim()) {
-                            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
-                              setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
-                            }
-                          }
-                        }}
-                        placeholder="Enter email address"
-                        className={`w-full ${inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentEmail && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
-                      )}
-                    </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
+                    <Input 
+                      type="tel" 
+                      value={parentPhoneNumber} 
+                      onChange={e => setParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
+                      placeholder="Enter phone number" 
+                    />
                   </div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
-                <div className="space-y-4">
+              {/* Secondary Parent */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Secondary Parent Information (Optional)</h3>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      First Name
-                    </label>
+                    <label className="block text-sm font-medium mb-2">First Name</label>
+                    <Input
+                      value={secondaryParentFirstName}
+                      onChange={e => {
+                        setSecondaryParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                        if (inviteFormErrors.secondaryParentFirstName) {
+                          setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
+                        }
+                      }}
+                      placeholder="Enter first name"
+                      className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
+                    />
+                    {inviteFormErrors.secondaryParentFirstName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Last Name</label>
+                    <Input
+                      value={secondaryParentLastName}
+                      onChange={e => {
+                        setSecondaryParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                        if (inviteFormErrors.secondaryParentLastName) {
+                          setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
+                        }
+                      }}
+                      placeholder="Enter last name"
+                      className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
+                    />
+                    {inviteFormErrors.secondaryParentLastName && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Email</label>
+                    <Input
+                      type="email"
+                      value={secondaryParentEmail}
+                      onChange={e => {
+                        setSecondaryParentEmail(e.target.value);
+                        if (inviteFormErrors.secondaryParentEmail) {
+                          setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
+                        }
+                      }}
+                      onBlur={() => {
+                        if (!isDialogClosing && secondaryParentEmail.trim()) {
+                          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
+                            setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
+                          }
+                        }
+                      }}
+                      placeholder="Enter email address"
+                      className={inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}
+                    />
+                    {inviteFormErrors.secondaryParentEmail && (
+                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
+                    <Input
+                      type="tel"
+                      value={secondaryParentPhoneNumber}
+                      onChange={e => setSecondaryParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
+                      placeholder="Enter phone number"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Child Information */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium border-b pb-2">Child Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2">First Name</label>
                     <Input 
                       value={childFirstName} 
                       onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setChildFirstName(value);
+                        setChildFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
                         if (inviteFormErrors.childFirstName) {
                           setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
                         }
                       }}
                       onBlur={() => {
-                        if (!isDialogClosing && !childFirstName.trim()) {
+                        if (!childFirstName.trim()) {
                           setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
                         }
-                      }}
+                      }} 
                       placeholder="Enter first name" 
-                      className={`w-full ${inviteFormErrors.childFirstName ? 'border-red-500' : ''}`}
+                      className={inviteFormErrors.childFirstName ? 'border-red-500' : ''}
                     />
                     {inviteFormErrors.childFirstName && (
                       <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Last Name
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Last Name</label>
                     <Input 
                       value={childLastName} 
                       onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setChildLastName(value);
+                        setChildLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
                         if (inviteFormErrors.childLastName) {
                           setInviteFormErrors(prev => ({...prev, childLastName: ''}));
                         }
                       }}
                       onBlur={() => {
-                        if (!isDialogClosing && !childLastName.trim()) {
+                        if (!childLastName.trim()) {
                           setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
                         }
-                      }}
+                      }} 
                       placeholder="Enter last name" 
-                      className={`w-full ${inviteFormErrors.childLastName ? 'border-red-500' : ''}`}
+                      className={inviteFormErrors.childLastName ? 'border-red-500' : ''}
                     />
                     {inviteFormErrors.childLastName && (
                       <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
                     )}
                   </div>
+                </div>
+                <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Date of Birth
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Date of Birth</label>
                     <Input 
                       type="date" 
                       value={childDob} 
@@ -667,11 +697,11 @@ export function AdminDashboard() {
                         }
                       }}
                       onBlur={() => {
-                        if (!isDialogClosing && !childDob) {
+                        if (!childDob) {
                           setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
                         }
-                      }}
-                      className={`w-full ${inviteFormErrors.childDob ? 'border-red-500' : ''}`} 
+                      }} 
+                      className={inviteFormErrors.childDob ? 'border-red-500' : ''} 
                       min="2000-01-01" 
                       max="2020-12-31" 
                     />
@@ -680,9 +710,7 @@ export function AdminDashboard() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Gender
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Gender</label>
                     <Select value={childGender} onValueChange={(value) => {
                       setChildGender(value);
                       if (inviteFormErrors.childGender) {
@@ -702,9 +730,7 @@ export function AdminDashboard() {
                     )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Classroom
-                    </label>
+                    <label className="block text-sm font-medium mb-2">Classroom</label>
                     <Select value={childClassroom} onValueChange={(value) => {
                       setChildClassroom(value);
                       if (inviteFormErrors.childClassroom) {
@@ -715,11 +741,9 @@ export function AdminDashboard() {
                         <SelectValue placeholder="Select a classroom" />
                       </SelectTrigger>
                       <SelectContent>
-                        {classrooms.map(classroom => (
-                          <SelectItem key={classroom.id} value={classroom.id}>
+                        {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
                             {classroom.name}
-                          </SelectItem>
-                        ))}
+                          </SelectItem>)}
                       </SelectContent>
                     </Select>
                     {inviteFormErrors.childClassroom && (
@@ -729,63 +753,60 @@ export function AdminDashboard() {
                 </div>
               </div>
             </div>
-          </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setIsInviteDialogOpen(false);
+                setInviteFormErrors({});
+              }}>
+                Cancel
+              </Button>
+              <AsyncButton 
+                onClick={handleInviteParent} 
+                className="bg-amazon-teal hover:bg-amazon-teal/90"
+                disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || (!!secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Send Invitation
+              </AsyncButton>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
-
-
-
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
-            <Button onClick={handleInviteParent} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || isInvitingParent || (secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}>
-              <Mail className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-              {isInvitingParent ? 'Sending Invitation...' : 'Send Invitation'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-
-      <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
-        if (!open) {
-          setIsClassroomDialogClosing(true);
-          setTimeout(() => setIsClassroomDialogClosing(false), 100);
-        }
-        setIsAddClassroomDialogOpen(open);
-      }}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 sm:py-3 md:py-4">
-            <label className="block text-sm font-medium mb-2">
-              Classroom Name
-            </label>
-            <ValidatedInput
-              value={newClassroomName}
-              onChange={e => setNewClassroomName(e.target.value)}
-              placeholder="Enter classroom name"
-              className="w-full h-10 sm:h-11 text-sm sm:text-base"
-              validationRules={commonValidationRules.classroom}
-              showToast={showValidationToast}
-              hideToast={hideValidationToast}
-              autoFocus
-            />
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
-            <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim() || isAddingClassroom}>
-              {isAddingClassroom ? 'Adding Classroom...' : 'Add Classroom'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-
-    </div>
-  </AdminLayout>;
+        {/* Add Classroom Dialog */}
+        <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            setIsClassroomDialogClosing(true);
+            setTimeout(() => setIsClassroomDialogClosing(false), 100);
+          }
+          setIsAddClassroomDialogOpen(open);
+        }}>
+          <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+            <DialogHeader>
+              <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
+            </DialogHeader>
+            <div className="py-2 sm:py-3 md:py-4">
+              <label className="block text-sm font-medium mb-2">
+                Classroom Name
+              </label>
+              <Input
+                value={newClassroomName}
+                onChange={e => setNewClassroomName(e.target.value)}
+                placeholder="Enter classroom name"
+                className="w-full h-10 sm:h-11 text-sm sm:text-base"
+                autoFocus
+              />
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+                Cancel
+              </Button>
+              <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim() || isAddingClassroom}>
+                {isAddingClassroom ? 'Adding Classroom...' : 'Add Classroom'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </AdminLayout>
+  );
 }
