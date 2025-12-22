@@ -108,9 +108,7 @@ export function AdminLayout({
           </div>
         </div>
         <nav className="flex-1 p-6">
-          <div className="mb-4 text-xs text-gray-500">
-            Navigation Items: {navigationItems.length}
-          </div>
+          
           <ul className="space-y-2">
             {navigationItems.map((item, index) => {
               console.log('Rendering nav item:', item.label, item.path);
