@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUpDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -15,6 +15,7 @@ import { Loading } from '../../components/ui/loading';
 import { fetchUserContext } from '../../services/api/user';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
+
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 type ParentStatus = 'Active' | 'Archive';
@@ -66,9 +67,11 @@ export function ParentManagement() {
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [parentPhoneNumber, setParentPhoneNumber] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
+  const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -187,6 +190,25 @@ export function ParentManagement() {
     });
   }, [parents, deactivatedParents, activeTab, searchQuery, statusFilter, signupFilter]);
 
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortedParents = useMemo(() => {
+    return [...filteredParents].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`; break;
+        case 'email': aVal = a.email; bVal = b.email; break;
+        case 'children': aVal = a.children.length; bVal = b.children.length; break;
+        case 'status': aVal = a.signupStatus; bVal = b.signupStatus; break;
+        default: aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredParents, sortBy, sortOrder]);
+
   const {
     currentPage,
     totalPages,
@@ -194,7 +216,7 @@ export function ParentManagement() {
     itemsPerPage,
     setCurrentPage
   } = usePagination({ 
-    data: filteredParents,
+    data: sortedParents,
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
@@ -240,13 +262,15 @@ export function ParentManagement() {
         parentFirstName,
         parentLastName,
         parentEmail,
+        parentPhoneNumber: parentPhoneNumber.trim() || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob,
         classroomId: childClassroom,
         gender: childGender,
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
-        secondaryParentLastName: secondaryParentLastName.trim() || undefined
+        secondaryParentLastName: secondaryParentLastName.trim() || undefined,
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
       });
       
       // Success - update UI and show success notification
@@ -350,9 +374,11 @@ export function ParentManagement() {
     setParentFirstName('');
     setParentLastName('');
     setParentEmail('');
+    setParentPhoneNumber('');
     setSecondaryParentFirstName('');
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
+    setSecondaryParentPhoneNumber('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -528,7 +554,7 @@ export function ParentManagement() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Parent Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
+                  {sortedParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
                 </div>
               </div>
               
@@ -566,6 +592,24 @@ export function ParentManagement() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
+                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                        Sort
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('email'); setSortOrder('asc'); }}>Email A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('children'); setSortOrder('desc'); }}>Most Children</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Signup Status</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
             {/* Desktop Table View */}
@@ -573,21 +617,11 @@ export function ParentManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
-                      Parent
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">
-                      Email
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">
-                      Children
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Signup Status
-                    </th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">
-                      Actions
-                    </th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">Parent</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Email</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Children</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">Signup Status</th>
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -607,11 +641,11 @@ export function ParentManagement() {
                                 <Link to={`/admin/parents/${parent.id}`} state={{
                           parentData: parent
                         }} className="font-medium text-amazon-teal hover:underline block truncate">
-                                  {parent.firstName} {parent.lastName}
+                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                                 </Link>
                               ) : (
                                 <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
-                                  {parent.firstName} {parent.lastName}
+                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                                 </span>
                               )}
                             </div>
@@ -753,11 +787,11 @@ export function ParentManagement() {
                             <Link to={`/admin/parents/${parent.id}`} state={{
                               parentData: parent
                             }} className="font-medium text-amazon-teal hover:underline text-sm block truncate">
-                              {parent.firstName} {parent.lastName}
+                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                             </Link>
                           ) : (
                             <span className="font-medium text-gray-400 cursor-not-allowed text-sm block truncate">
-                              {parent.firstName} {parent.lastName}
+                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                             </span>
                           )}
                           <div className="text-xs text-muted-foreground truncate max-w-[150px]">
@@ -891,279 +925,262 @@ export function ParentManagement() {
         }
         setIsInviteDialogOpen(open);
       }}>
-        <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[80vw] max-w-4xl max-h-[85vh] overflow-y-auto mx-4" preventClose>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Invite New Parent</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Invite New Parent</DialogTitle>
           </DialogHeader>
-          <div className="py-4 space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-              <div>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      First Name
-                    </label>
-                    <Input 
-                      value={parentFirstName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setParentFirstName(value);
-
-                      }}
- 
-                      placeholder="Enter first name" 
-                      className="w-full"
-                    />
-
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Last Name
-                    </label>
-                    <Input 
-                      value={parentLastName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setParentLastName(value);
-
-                      }}
- 
-                      placeholder="Enter last name" 
-                      className="w-full"
-                    />
-
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Email
-                    </label>
-                    <Input 
-                      type="email" 
-                      value={parentEmail} 
-                      onChange={e => {
-                        setParentEmail(e.target.value);
-                        if (inviteFormErrors.parentEmail) {
-                          setInviteFormErrors(prev => ({...prev, parentEmail: ''}));
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!isDialogClosing) {
-                          if (!parentEmail.trim()) {
-                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Parent email is required'}));
-                          } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
-                            setInviteFormErrors(prev => ({...prev, parentEmail: 'Please enter a valid email address'}));
-                          }
-                        }
-                      }}
-                      placeholder="Enter email address" 
-                      className={`w-full ${inviteFormErrors.parentEmail ? 'border-red-500' : ''}`}
-                    />
-                    {inviteFormErrors.parentEmail && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentEmail}</p>
-                    )}
-                  </div>
+          <div className="space-y-6 py-4">
+            {/* Primary Parent */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Primary Parent Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">First Name</label>
+                  <Input 
+                    value={parentFirstName} 
+                    onChange={e => setParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                    placeholder="Enter first name" 
+                  />
                 </div>
-                {/* Additional Parent Information - Optional */}
-                <div className="mt-6 pt-4 border-t">
-                  <h4 className="text-sm font-medium mb-4 text-gray-600">
-                    Additional Parent Information (Optional)
-                  </h4>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        First Name
-                      </label>
-                      <Input
-                        value={secondaryParentFirstName}
-                        onChange={e => {
-                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                          setSecondaryParentFirstName(value);
-                          if (inviteFormErrors.secondaryParentFirstName) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
-                          }
-                        }}
-                        placeholder="Enter first name"
-                        className={`w-full ${inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentFirstName && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Last Name
-                      </label>
-                      <Input
-                        value={secondaryParentLastName}
-                        onChange={e => {
-                          const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                          setSecondaryParentLastName(value);
-                          if (inviteFormErrors.secondaryParentLastName) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
-                          }
-                        }}
-                        placeholder="Enter last name"
-                        className={`w-full ${inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentLastName && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Email
-                      </label>
-                      <Input
-                        type="email"
-                        value={secondaryParentEmail}
-                        onChange={e => {
-                          setSecondaryParentEmail(e.target.value);
-                          if (inviteFormErrors.secondaryParentEmail) {
-                            setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
-                          }
-                        }}
-                        onBlur={() => {
-                          if (!isDialogClosing && secondaryParentEmail.trim()) {
-                            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
-                              setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
-                            }
-                          }
-                        }}
-                        placeholder="Enter email address"
-                        className={`w-full ${inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}`}
-                      />
-                      {inviteFormErrors.secondaryParentEmail && (
-                        <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
-                      )}
-                    </div>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Last Name</label>
+                  <Input 
+                    value={parentLastName} 
+                    onChange={e => setParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
+                    placeholder="Enter last name" 
+                  />
                 </div>
               </div>
-              <div>
-                <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      First Name
-                    </label>
-                    <Input 
-                      value={childFirstName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setChildFirstName(value);
-                        if (inviteFormErrors.childFirstName) {
-                          setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!childFirstName.trim()) {
-                          setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
-                        }
-                      }} 
-                      placeholder="Enter first name" 
-                      className={`w-full ${inviteFormErrors.childFirstName ? 'border-red-500' : ''}`}
-                    />
-                    {inviteFormErrors.childFirstName && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Last Name
-                    </label>
-                    <Input 
-                      value={childLastName} 
-                      onChange={e => {
-                        const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                        setChildLastName(value);
-                        if (inviteFormErrors.childLastName) {
-                          setInviteFormErrors(prev => ({...prev, childLastName: ''}));
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!childLastName.trim()) {
-                          setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
-                        }
-                      }} 
-                      placeholder="Enter last name" 
-                      className={`w-full ${inviteFormErrors.childLastName ? 'border-red-500' : ''}`}
-                    />
-                    {inviteFormErrors.childLastName && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Date of Birth
-                    </label>
-                    <Input 
-                      type="date" 
-                      value={childDob} 
-                      onChange={e => {
-                        setChildDob(e.target.value);
-                        if (inviteFormErrors.childDob) {
-                          setInviteFormErrors(prev => ({...prev, childDob: ''}));
-                        }
-                      }}
-                      onBlur={() => {
-                        if (!childDob) {
-                          setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
-                        }
-                      }} 
-                      className={`w-full ${inviteFormErrors.childDob ? 'border-red-500' : ''}`} 
-                      min="2000-01-01" 
-                      max="2020-12-31" 
-                    />
-                    {inviteFormErrors.childDob && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Gender
-                    </label>
-                    <Select value={childGender} onValueChange={(value) => {
-                      setChildGender(value);
-                      if (inviteFormErrors.childGender) {
-                        setInviteFormErrors(prev => ({...prev, childGender: ''}));
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <Input 
+                    type="email" 
+                    value={parentEmail} 
+                    onChange={e => {
+                      setParentEmail(e.target.value);
+                      if (inviteFormErrors.parentEmail) {
+                        setInviteFormErrors(prev => ({...prev, parentEmail: ''}));
                       }
-                    }}>
-                      <SelectTrigger className={inviteFormErrors.childGender ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {inviteFormErrors.childGender && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      Classroom
-                    </label>
-                    <Select value={childClassroom} onValueChange={(value) => {
-                      setChildClassroom(value);
-                      if (inviteFormErrors.childClassroom) {
-                        setInviteFormErrors(prev => ({...prev, childClassroom: ''}));
+                    }}
+                    onBlur={() => {
+                      if (!isDialogClosing) {
+                        if (!parentEmail.trim()) {
+                          setInviteFormErrors(prev => ({...prev, parentEmail: 'Parent email is required'}));
+                        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentEmail)) {
+                          setInviteFormErrors(prev => ({...prev, parentEmail: 'Please enter a valid email address'}));
+                        }
                       }
-                    }}>
-                      <SelectTrigger className={inviteFormErrors.childClassroom ? 'border-red-500' : ''}>
-                        <SelectValue placeholder="Select a classroom" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
-                            {classroom.name}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                    {inviteFormErrors.childClassroom && (
-                      <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>
-                    )}
-                  </div>
+                    }}
+                    placeholder="Enter email address" 
+                    className={inviteFormErrors.parentEmail ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.parentEmail && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.parentEmail}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
+                  <Input 
+                    type="tel" 
+                    value={parentPhoneNumber} 
+                    onChange={e => setParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
+                    placeholder="Enter phone number" 
+                  />
+                </div>
+              </div>
+            </div>
+            {/* Secondary Parent */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Secondary Parent Information (Optional)</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">First Name</label>
+                  <Input
+                    value={secondaryParentFirstName}
+                    onChange={e => {
+                      setSecondaryParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                      if (inviteFormErrors.secondaryParentFirstName) {
+                        setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
+                      }
+                    }}
+                    placeholder="Enter first name"
+                    className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.secondaryParentFirstName && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Last Name</label>
+                  <Input
+                    value={secondaryParentLastName}
+                    onChange={e => {
+                      setSecondaryParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                      if (inviteFormErrors.secondaryParentLastName) {
+                        setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
+                      }
+                    }}
+                    placeholder="Enter last name"
+                    className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.secondaryParentLastName && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email</label>
+                  <Input
+                    type="email"
+                    value={secondaryParentEmail}
+                    onChange={e => {
+                      setSecondaryParentEmail(e.target.value);
+                      if (inviteFormErrors.secondaryParentEmail) {
+                        setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!isDialogClosing && secondaryParentEmail.trim()) {
+                        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
+                          setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
+                        }
+                      }
+                    }}
+                    placeholder="Enter email address"
+                    className={inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.secondaryParentEmail && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
+                  <Input
+                    type="tel"
+                    value={secondaryParentPhoneNumber}
+                    onChange={e => setSecondaryParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
+                    placeholder="Enter phone number"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Child Information */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-medium border-b pb-2">Child Information</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">First Name</label>
+                  <Input 
+                    value={childFirstName} 
+                    onChange={e => {
+                      setChildFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                      if (inviteFormErrors.childFirstName) {
+                        setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!childFirstName.trim()) {
+                        setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
+                      }
+                    }} 
+                    placeholder="Enter first name" 
+                    className={inviteFormErrors.childFirstName ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.childFirstName && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Last Name</label>
+                  <Input 
+                    value={childLastName} 
+                    onChange={e => {
+                      setChildLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                      if (inviteFormErrors.childLastName) {
+                        setInviteFormErrors(prev => ({...prev, childLastName: ''}));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!childLastName.trim()) {
+                        setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
+                      }
+                    }} 
+                    placeholder="Enter last name" 
+                    className={inviteFormErrors.childLastName ? 'border-red-500' : ''}
+                  />
+                  {inviteFormErrors.childLastName && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
+                  )}
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Date of Birth</label>
+                  <Input 
+                    type="date" 
+                    value={childDob} 
+                    onChange={e => {
+                      setChildDob(e.target.value);
+                      if (inviteFormErrors.childDob) {
+                        setInviteFormErrors(prev => ({...prev, childDob: ''}));
+                      }
+                    }}
+                    onBlur={() => {
+                      if (!childDob) {
+                        setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
+                      }
+                    }} 
+                    className={inviteFormErrors.childDob ? 'border-red-500' : ''} 
+                    min="2000-01-01" 
+                    max="2020-12-31" 
+                  />
+                  {inviteFormErrors.childDob && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Gender</label>
+                  <Select value={childGender} onValueChange={(value) => {
+                    setChildGender(value);
+                    if (inviteFormErrors.childGender) {
+                      setInviteFormErrors(prev => ({...prev, childGender: ''}));
+                    }
+                  }}>
+                    <SelectTrigger className={inviteFormErrors.childGender ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {inviteFormErrors.childGender && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Classroom</label>
+                  <Select value={childClassroom} onValueChange={(value) => {
+                    setChildClassroom(value);
+                    if (inviteFormErrors.childClassroom) {
+                      setInviteFormErrors(prev => ({...prev, childClassroom: ''}));
+                    }
+                  }}>
+                    <SelectTrigger className={inviteFormErrors.childClassroom ? 'border-red-500' : ''}>
+                      <SelectValue placeholder="Select a classroom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
+                          {classroom.name}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {inviteFormErrors.childClassroom && (
+                    <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>
+                  )}
                 </div>
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Crown } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Calendar } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -62,17 +62,13 @@ export function AdminLayout({
     label: 'Forms',
     path: '/admin/forms'
   }, {
+    icon: <Calendar className="w-5 h-5" />,
+    label: 'Due Forms',
+    path: '/admin/forms/due'
+  }, {
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'
-  }, {
-    icon: <Crown className="w-5 h-5" />,
-    label: 'Subscription',
-    path: '/admin/subscription'
-  }, {
-    icon: <School className="w-5 h-5" />,
-    label: 'Schools',
-    path: '/admin/schools'
   }, {
     icon: <UserCog className="w-5 h-5" />,
     label: 'Admins',

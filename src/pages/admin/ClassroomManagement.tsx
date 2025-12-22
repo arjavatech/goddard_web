@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle, ArrowUpDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -17,6 +17,7 @@ import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -78,6 +79,24 @@ export function ClassroomManagement() {
     return classrooms.filter(classroom => classroom.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [classrooms, searchQuery]);
 
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortedClassrooms = useMemo(() => {
+    return [...filteredClassrooms].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = a.name; bVal = b.name; break;
+        case 'students': aVal = a.studentsCount; bVal = b.studentsCount; break;
+        case 'forms': aVal = a.formsCount; bVal = b.formsCount; break;
+        default: aVal = a.name; bVal = b.name;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredClassrooms, sortBy, sortOrder]);
+
   const {
     currentPage,
     totalPages,
@@ -85,7 +104,7 @@ export function ClassroomManagement() {
     itemsPerPage,
     setCurrentPage
   } = usePagination({ 
-    data: filteredClassrooms,
+    data: sortedClassrooms,
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
@@ -271,18 +290,34 @@ export function ClassroomManagement() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Classroom Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredClassrooms.length} of {classrooms.length} classrooms
+                  {sortedClassrooms.length} of {classrooms.length} classrooms
                 </div>
               </div>
               
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input 
-                  placeholder="Search classrooms..." 
-                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)} 
-                />
+              <div className="flex gap-3">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input 
+                    placeholder="Search classrooms..." 
+                    className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                  />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-10 sm:h-11">
+                      <ArrowUpDown className="h-4 w-4 mr-2" />
+                      Sort
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortBy('students'); setSortOrder('desc'); }}>Most Students</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortBy('forms'); setSortOrder('desc'); }}>Most Forms</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             </div>
             {/* Mobile Card View */}
@@ -372,18 +407,10 @@ export function ClassroomManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/3">
-                      Classroom
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">
-                      Students
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">
-                      Assigned Forms
-                    </th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">
-                      Actions
-                    </th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/3">Classroom</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">Students</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">Assigned Forms</th>
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">Actions</th>
                   </tr>
                 </thead>
                 <tbody>

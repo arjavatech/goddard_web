@@ -1,6 +1,7 @@
 import { authedFetch, z } from './common';
 import { httpFetch } from './http';
 import { fetchUserContext } from './user';
+
 export type Classroom = {
   id: string;
   name: string;
@@ -56,6 +57,7 @@ export type ParentDetail = {
       approved_by?: string | null;
       approved_on?: string | null;
       assigned_at?: string | null;
+      due_date?: string | null;
     }[];
   }[];
 };
@@ -254,7 +256,9 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
           recent_edit_link: form.recent_edit_link || null,
           recent_pdf_link: form.recent_pdf_link || null,
           approved_by: form.approved_by || null,
-          approved_on: form.approved_on || null
+          approved_on: form.approved_on || null,
+          assigned_at: form.assigned_at || null,
+          due_date: form.due_date || null
         }))
       }))
     });
@@ -355,6 +359,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           approved_by: form.approved_by || null,
           approved_on: form.approved_on || null,
           assigned_at: form.assigned_at || null,
+          due_date: form.due_date || null,
           updated_at: form.updated_at || null,
           created_at: form.created_at || null
         }))
@@ -456,35 +461,51 @@ export async function deleteForm(formId: string, schoolId: string): Promise<void
     url: `/form-templates?form_id=${encodeURIComponent(validFormId)}&school_id=${encodeURIComponent(schoolId)}`
   }, z.object({}));
 }
-export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string): Promise<void> {
+export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string, dueDate?: string): Promise<void> {
+  const body: any = {
+    id: crypto.randomUUID(),
+    school_id: schoolId,
+    form_name: formName,
+    fillout_form_id: filloutFormId
+  };
+  
+  if (dueDate) {
+    body.due_date = dueDate;
+  }
+  
   await authedFetch({
     method: 'POST',
     url: '/form-templates',
-    body: {
-      id: crypto.randomUUID(),
-      school_id: schoolId,
-      form_name: formName,
-      fillout_form_id: filloutFormId
-    }
+    body
   }, z.object({}));
 }
-export async function updateFormTemplate(formId: string, formName: string, filloutFormId: string, schoolId: string, status?: string): Promise<void> {
+export async function updateFormTemplate(formId: string, formName: string, filloutFormId: string, schoolId: string, status?: string, dueDate?: string): Promise<void> {
+  const body: any = {
+    id: formId,
+    school_id: schoolId,
+    form_name: formName,
+    fillout_form_id: filloutFormId
+  };
+  
+  if (status) {
+    body.status = status;
+  }
+  
+  if (dueDate) {
+    body.due_date = dueDate;
+  }
+  
   await authedFetch({
     method: 'PUT',
     url: '/form-templates',
-    body: {
-      id: formId,
-      school_id: schoolId,
-      form_name: formName,
-      fillout_form_id: filloutFormId,
-      status: status
-    }
+    body
   }, z.object({}));
 }
 export async function inviteParent(schoolId: string, parentData: {
   parentFirstName: string;
   parentLastName: string;
   parentEmail: string;
+  parentPhoneNumber?: string;
   childFullName: string;
   childDob: string;
   classroomId: string;
@@ -492,6 +513,7 @@ export async function inviteParent(schoolId: string, parentData: {
   secondaryParentEmail?: string;
   secondaryParentFirstName?: string;
   secondaryParentLastName?: string;
+  secondaryParentPhoneNumber?: string;
 }): Promise<void> {
   const [childFirstName, ...childLastNameParts] = parentData.childFullName.split(' ');
   const childLastName = childLastNameParts.join(' ');
@@ -508,10 +530,17 @@ export async function inviteParent(schoolId: string, parentData: {
     gender: parentData.gender
   };
 
+  if (parentData.parentPhoneNumber) {
+    body.parent_phone_number = parentData.parentPhoneNumber;
+  }
+
   if (parentData.secondaryParentEmail) {
     body.secondary_parent_email = parentData.secondaryParentEmail;
     body.secondary_parent_first_name = parentData.secondaryParentFirstName || '';
     body.secondary_parent_last_name = parentData.secondaryParentLastName || '';
+    if (parentData.secondaryParentPhoneNumber) {
+      body.secondary_parent_phone_number = parentData.secondaryParentPhoneNumber;
+    }
   }
 
   await authedFetch({
@@ -807,6 +836,7 @@ export async function assignFormsToStudent(
     child_id: string;
     form_template_id: string;
     is_required: boolean;
+    due_date?: string;
   }[]
 ): Promise<void> {
   await authedFetch({
@@ -825,7 +855,8 @@ export async function assignFormsToStudent(
 export async function assignFormToAllStudents(
   schoolId: string,
   formTemplateId: string,
-  isRequired: boolean = true
+  isRequired: boolean = true,
+  dueDate?: string
 ): Promise<void> {
   await authedFetch({
     method: 'POST',
@@ -836,7 +867,8 @@ export async function assignFormToAllStudents(
     body: {
       school_id: schoolId,
       form_template_id: formTemplateId,
-      is_required: isRequired
+      is_required: isRequired,
+      due_date: dueDate
     }
   }, z.object({}));
 }
@@ -881,7 +913,8 @@ export async function inviteAdmin(
   email: string,
   firstName: string,
   lastName: string,
-  schoolId: string
+  schoolId: string,
+  phoneNumber?: string
 ): Promise<void> {
   await authedFetch({
     method: 'POST',
@@ -891,7 +924,7 @@ export async function inviteAdmin(
       school_id: schoolId,
       first_name: firstName,
       last_name: lastName,
-      phone_number: null
+      phone_number: phoneNumber || null
     }
   }, z.object({}));
 }
@@ -922,4 +955,186 @@ export async function deleteAdmin(userId: string): Promise<void> {
       user_id: userId
     }
   }, z.object({}));
+}
+
+export async function transferStudentToClass(
+  childId: string,
+  newClassroomId: string,
+  schoolId: string
+): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/students/transfer-class',
+    body: {
+      child_id: childId,
+      new_classroom_id: newClassroomId,
+      school_id: schoolId
+    }
+  }, z.object({}));
+}
+
+export async function promoteStudent(
+  enrollmentId: string,
+  targetClassroomId: string,
+  reason: string = 'Age progression',
+  effectiveDate?: string
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: `/class-promotions/${encodeURIComponent(enrollmentId)}`,
+    body: {
+      to_classroom_id: targetClassroomId,
+      reason,
+      effective_date: effectiveDate || new Date().toISOString()
+    }
+  }, z.object({}));
+}
+
+export async function bulkPromoteStudents(
+  schoolId: string,
+  promotions: {
+    enrollment_id: string;
+    to_classroom_id: string;
+    reason?: string;
+    effective_date?: string;
+  }[]
+): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/class-promotions/bulk',
+    body: {
+      school_id: schoolId,
+      promotions
+    }
+  }, z.object({}));
+}
+
+export type DueForm = {
+  id: string;
+  formName: string;
+  studentName: string;
+  parentName: string;
+  parentEmail: string;
+  dueDate: string | null;
+  status: 'pending' | 'completed' | 'overdue';
+  assignedDate: string;
+};
+
+export function calculateFormDueDate(form: any, formTemplates: any[]): string | null {
+  // Remove 'form_' prefix if present
+  const cleanFormId = form.formId?.startsWith('form_') ? form.formId.substring(5) : form.formId;
+  const formTemplate = formTemplates.find(t => t.id === cleanFormId);
+  
+  console.log('calculateFormDueDate:', {
+    originalFormId: form.formId,
+    cleanFormId,
+    foundTemplate: formTemplate,
+    templateDueDate: formTemplate?.due_date,
+    assignedAt: form.assigned_at
+  });
+  
+  if (formTemplate?.due_date) {
+    const dueDate = new Date(formTemplate.due_date);
+    if (!isNaN(dueDate.getTime())) {
+      console.log('Using template due date:', dueDate.toLocaleDateString('en-US'));
+      return dueDate.toLocaleDateString('en-US');
+    }
+  }
+  
+  // Fallback to calculated date
+  if (form.assigned_at) {
+    const parts = form.assigned_at.split('-');
+    if (parts.length === 3) {
+      const [day, month, year] = parts;
+      const assigned = new Date(`${year}-${month}-${day}`);
+      if (!isNaN(assigned.getTime())) {
+        const due = new Date(assigned);
+        due.setDate(due.getDate() + 30);
+        console.log('Using calculated due date:', due.toLocaleDateString('en-US'));
+        return due.toLocaleDateString('en-US');
+      }
+    }
+  }
+  
+  console.log('No due date found');
+  return null;
+}
+
+export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
+  try {
+    const { activeParents } = await fetchParentDetails(schoolId);
+    
+    const dueFormsMap = new Map<string, DueForm>();
+    const childParentsMap = new Map<string, any[]>();
+    
+    // First, collect all parents for each child
+    activeParents.forEach(parent => {
+      parent.children?.forEach(child => {
+        if (!childParentsMap.has(child.childId)) {
+          childParentsMap.set(child.childId, []);
+        }
+        childParentsMap.get(child.childId)?.push(parent);
+      });
+    });
+    
+    // Then process forms with combined parent info
+    activeParents.forEach(parent => {
+      parent.children?.forEach(child => {
+        child.forms.forEach(form => {
+          const formKey = `${child.childId}-${form.formId}`;
+          
+          if (!dueFormsMap.has(formKey)) {
+            const today = new Date();
+            
+            // Calculate due date (30 days from assigned date)
+            let dueDateString = null;
+            if (form.assigned_at) {
+              const parts = form.assigned_at.split('-');
+              if (parts.length === 3) {
+                const [day, month, year] = parts;
+                const assigned = new Date(`${year}-${month}-${day}`);
+                if (!isNaN(assigned.getTime())) {
+                  const due = new Date(assigned);
+                  due.setDate(due.getDate() + 30);
+                  dueDateString = due.toLocaleDateString('en-US');
+                }
+              }
+            }
+            const dueDate = dueDateString ? new Date(dueDateString) : null;
+         
+            let status: 'pending' | 'completed' | 'overdue' = 'pending';
+            if (form.status === 'completed' || form.status === 'approved') {
+              status = 'completed';
+            } else if (dueDate && dueDate < today) {
+              status = 'overdue';
+            }
+            
+            // Get all parents for this child
+            const allParents = childParentsMap.get(child.childId) || [parent];
+            const parentNames = allParents.map(p => `${p.firstName || ''} ${p.lastName || ''}`.trim());
+            const parentEmails = allParents.map(p => p.email);
+            
+            const combinedParentName = parentNames.join(' & ');
+            const combinedParentEmail = parentEmails.join(', ');
+            
+            dueFormsMap.set(formKey, {
+              id: form.studentFormAssignmentId || formKey,
+              formName: form.formName,
+              studentName: child.childFullName,
+              parentName: combinedParentName,
+              parentEmail: combinedParentEmail,
+              dueDate: dueDateString,
+              status,
+              assignedDate: form.assigned_at || new Date().toISOString().split('T')[0]
+            });
+          }
+        });
+      });
+    });
+    
+    return Array.from(dueFormsMap.values());
+  } catch (error) {
+    console.error('fetchDueForms error:', error);
+    return [];
+  }
 }

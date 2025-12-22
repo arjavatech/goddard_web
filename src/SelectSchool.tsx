@@ -80,7 +80,7 @@ const SelectSchool = () => {
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto" avoidCollisions={false}>
+              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-[var(--radix-dropdown-menu-trigger-width)] max-w-[calc(100vw-2rem)] max-h-60 overflow-y-auto">
                 <DropdownMenuLabel className="text-amazon-teal font-semibold">
                   Select State
                 </DropdownMenuLabel>
@@ -112,7 +112,7 @@ const SelectSchool = () => {
                   <ChevronDown className="h-4 w-4 opacity-50" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-full min-w-[var(--radix-dropdown-menu-trigger-width)] max-h-60 overflow-y-auto" avoidCollisions={false}>
+              <DropdownMenuContent side="bottom" align="center" sideOffset={5} className="w-[var(--radix-dropdown-menu-trigger-width)] max-w-[calc(100vw-2rem)] max-h-60 overflow-y-auto">
                 <DropdownMenuLabel className="text-amazon-teal font-semibold">
                   Available Locations
                 </DropdownMenuLabel>

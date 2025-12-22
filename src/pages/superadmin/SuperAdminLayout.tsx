@@ -36,10 +36,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const currentPath = location.pathname;
 
   const navigationItems = [
-    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/admin' },
-    { icon: <Crown className="w-5 h-5" />, label: 'Subscription', path: '/admin/subscription' },
-    { icon: <School className="w-5 h-5" />, label: 'Schools', path: '/admin/schools' },
-    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/admin/admins' }
+    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin-arjava' },
+    { icon: <Crown className="w-5 h-5" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
+    { icon: <School className="w-5 h-5" />, label: 'Schools', path: '/superadmin-arjava/schools' },
+    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/superadmin-arjava/admins' }
   ];
 
   React.useEffect(() => {

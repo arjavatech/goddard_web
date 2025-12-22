@@ -27,6 +27,7 @@ interface FormCardProps {
   isLoading?: { action: string; formId: string } | null;
   formId?: string;
   assignedAt?: string | null;
+  dueDate?: string | null;
 }
 function FormCard({
   title,
@@ -39,7 +40,8 @@ function FormCard({
   onPrint,
   isLoading,
   formId,
-  assignedAt
+  assignedAt,
+  dueDate
 }: FormCardProps) {
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
@@ -56,7 +58,6 @@ function FormCard({
         <div className="flex flex-col">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <FileText className="h-4 w-4 mr-2 text-amazon-teal" />
               <CardTitle className="text-base font-medium">{title}</CardTitle>
             </div>
           </div>
@@ -72,7 +73,11 @@ function FormCard({
           <span className="text-xs text-muted-foreground">
             Assigned: {lastUpdated}
           </span>
-
+          {dueDate && (
+            <span className="text-xs text-muted-foreground">
+              Due: {dueDate}
+            </span>
+          )}
         </div>
         <div className="flex gap-1">
           {isApproved && (
@@ -156,6 +161,8 @@ interface FormData {
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
   filloutFormId?: string | null;
+  assignedAt?: string | null;
+  dueDate?: string | null;
   fromContinueButton?: boolean;
 }
 
@@ -234,9 +241,17 @@ export function FormsDocuments({
         const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
         return child.forms.map((form, formIndex) => {
           // Find the exact matching form in rawData by form_id or form_name
-          const matchingRawForm = rawChild?.forms?.find((rawForm: any) => 
-            rawForm.form_id === form.formId || rawForm.form_name === form.title
-          );
+          console.log('Matching form for:', form.title, 'formId:', form.formId);
+          console.log('Raw child data:', rawChild);
+          console.log('Available raw forms (full):', rawChild?.forms);
+          
+          const matchingRawForm = rawChild?.forms?.find((rawForm: any) => {
+            return rawForm.formId === form.formId || 
+                   rawForm.formName === form.title ||
+                   rawForm.formName === form.description;
+          });
+          
+          console.log('Final matching result:', matchingRawForm);
           return {
             ...form,
             childId: child.childId,
@@ -250,9 +265,11 @@ export function FormsDocuments({
   }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
 
   const handleView = (form: any) => {
+    console.log('handleView called with form:', form);
     console.log('Form ID:', form.formId || form._key);
     console.log('Child ID form opening:', form.childId);
     console.log('Selected Child ID:', selectedChildId);
+    console.log('Form data:', form);
     console.log('Active Tab:', activeTab);
     
     // Skip validation for forms from Continue button
@@ -272,11 +289,12 @@ export function FormsDocuments({
     
     // Extract all possible URL sources from rawData and form object
     const rawData = form.rawData || {};
-    const recentEditLink = rawData.recent_edit_link || form.recentEditLink;
-    const recentPdfLink = rawData.recent_pdf_link || form.recentPdfLink;
-    const filloutFormId = rawData.fillout_form_id || form.filloutFormId;
-    const studentFormAssignmentId = rawData.student_form_assignment_id || rawData.studentFormAssignmentId;
-    const formId = rawData.form_id || form.formId;
+    console.log('Raw data for form:', form);
+    const recentEditLink = rawData.recentEditLink || form.recentEditLink;
+    const recentPdfLink = rawData.recentPdfLink || form.recentPdfLink;
+    const filloutFormId = rawData.filloutFormId || form.filloutFormId;
+    let studentFormAssignmentId = rawData.studentFormAssignmentId;
+    const formId = rawData.formId || form.formId;
     
     console.log('Form data for URL construction:', {
       status: form.status,
@@ -779,6 +797,7 @@ export function FormsDocuments({
                     formId={form.formId || form._key}
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
                     assignedAt={form.assignedAt}
+                    dueDate={form.dueDate}
                     onView={() => {
                       console.log('Form ID:', form.formId || form._key);
                       console.log('Child ID:', form.childId);
@@ -802,6 +821,7 @@ export function FormsDocuments({
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {getFormsForTab(child.childId).map(form => (
+                    
                     <FormCard
                       key={form._key}
                       title={form.title}
@@ -812,9 +832,11 @@ export function FormsDocuments({
                       formId={form.formId || form._key}
                       recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
                       assignedAt={form.assignedAt}
+                      dueDate={form.dueDate}
                       onView={() => {
                         console.log('Form ID:', form.formId || form._key);
                         console.log('Child ID:', form.childId);
+                        console.log('Form data passss:', form);
                         handleView(form);
                       }}
                       onDownload={() => handleDownload(form)}

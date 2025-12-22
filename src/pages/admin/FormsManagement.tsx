@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUpDown, MoreVertical, Settings } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -18,6 +18,7 @@ import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -25,6 +26,7 @@ interface Form {
   link: string;
   status: FormStatus;
   classroomsCount: number;
+  dueDate?: string;
 }
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
@@ -44,6 +46,7 @@ export function FormsManagement() {
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('Default');
+  const [formDueDate, setFormDueDate] = useState('');
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
@@ -74,13 +77,13 @@ export function FormsManagement() {
         if (!isMounted) return;
         if (templates.length === 0) return;
         
-        const mappedForms: Form[] = templates.map(template => ({
+        const mappedForms: Form[] = templates.map((template, index) => ({
           id: template.id,
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
           classroomsCount: 0,
-
+          dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -100,6 +103,24 @@ export function FormsManagement() {
     return matchesSearch && matchesStatus;
   }), [forms, searchQuery, statusFilter]);
 
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortedForms = useMemo(() => {
+    return [...filteredForms].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = a.name; bVal = b.name; break;
+        case 'status': aVal = a.status; bVal = b.status; break;
+        case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
+        default: aVal = a.name; bVal = b.name;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredForms, sortBy, sortOrder]);
+
   const {
     currentPage,
     totalPages,
@@ -107,7 +128,7 @@ export function FormsManagement() {
     itemsPerPage,
     setCurrentPage
   } = usePagination({ 
-    data: filteredForms,
+    data: sortedForms,
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
@@ -118,7 +139,7 @@ export function FormsManagement() {
       setIsAddingForm(true);
       const user = await fetchUserContext();
       if (!user.schoolId) return;
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate || undefined);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -141,7 +162,7 @@ export function FormsManagement() {
     };
     const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
     
-    await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
+    await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus, formDueDate || undefined);
     
     resetFormFields();
     setIsEditDialogOpen(false);
@@ -157,13 +178,13 @@ export function FormsManagement() {
     
     // Refetch forms from server to ensure consistency
     const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
-    const mappedForms: Form[] = templates.map(template => ({
+    const mappedForms: Form[] = templates.map((template, index) => ({
       id: template.id,
       name: template.formName,
       link: template.filloutFormUrl ?? '#',
       status: mapStatus(template.status),
       classroomsCount: 0,
-
+      dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
     }));
     setForms(mappedForms);
     setIsDeleteDialogOpen(false);
@@ -172,7 +193,7 @@ export function FormsManagement() {
     setFormName('');
     setFormLink('');
     setFormStatus('Default');
-
+    setFormDueDate('');
     setFormErrors({});
   };
   const openEditDialog = (form: Form) => {
@@ -180,7 +201,7 @@ export function FormsManagement() {
     setFormName(form.name);
     setFormLink(form.link);
     setFormStatus(form.status);
-
+    setFormDueDate(form.dueDate || '');
     setIsEditDialogOpen(true);
   };
   const openDeleteDialog = (form: Form) => {
@@ -195,9 +216,10 @@ export function FormsManagement() {
       const user = await fetchUserContext();
       if (!user.schoolId) return;
       
-      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id);
+      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate || undefined);
       showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
       setIsAssignToAllDialogOpen(false);
+      setFormDueDate('');
     } catch (error) {
       showToast('error', 'Failed to assign form to all students. Please try again.');
     }
@@ -298,7 +320,7 @@ export function FormsManagement() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Form Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredForms.length} of {forms.length} forms
+                  {sortedForms.length} of {forms.length} forms
                 </div>
               </div>
               
@@ -312,19 +334,38 @@ export function FormsManagement() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-11">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {statuses.map(status => <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full h-10 sm:h-11">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {statuses.map(status => <SelectItem key={status} value={status}>
+                          {status}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
+                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                        Sort
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
             {/* Desktop Table View */}
@@ -332,32 +373,21 @@ export function FormsManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
-                      Form Name
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Status
-                    </th>
-
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">
-                      Form Link
-                    </th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">
-                      Actions
-                    </th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/5">Form Name</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Status</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Due Date</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">Form Link</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? <tr>
-                      <td colSpan={5} className="py-8">
+                      <td colSpan={6} className="py-8">
                         <Loading message="Loading forms..." size="sm" />
                       </td>
                     </tr> : paginatedForms.length > 0 ? paginatedForms.map(form => <tr key={form.id} className="border-b border-gray-100">
                         <td className="py-3 px-3">
                           <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
-                              {form.name.charAt(0)}
-                            </div>
                             <div className="min-w-0">
                               <div className="font-medium text-foreground truncate">{form.name}</div>
                             </div>
@@ -368,7 +398,11 @@ export function FormsManagement() {
                             {form.status}
                           </Badge>
                         </td>
-
+                        <td className="py-3 px-2">
+                          <div className="text-sm text-foreground">
+                            {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                          </div>
+                        </td>
                         <td className="py-3 px-2">
                           <div className="flex items-center text-amazon-teal min-w-0">
                             <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
@@ -377,11 +411,11 @@ export function FormsManagement() {
                               </a> : <span className="text-gray-400">Not provided</span>}
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-right">
+                        <td className="py-3 px-3 text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
+                               <Settings className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -418,7 +452,7 @@ export function FormsManagement() {
                           </DropdownMenu>
                         </td>
                       </tr>) : <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
                         No forms match the current filters.
                       </td>
                     </tr>}
@@ -491,7 +525,9 @@ export function FormsManagement() {
                         <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
                           {form.status}
                         </Badge>
-
+                        <div className="text-xs text-muted-foreground">
+                          Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                        </div>
                       </div>
                       
                       <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
@@ -582,6 +618,19 @@ export function FormsManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => setFormDueDate(e.target.value)}
+                className="w-full h-10 sm:h-11"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to use default 30-day due date when assigned
+              </p>
+            </div>
 
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
@@ -653,6 +702,19 @@ export function FormsManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => setFormDueDate(e.target.value)}
+                className="w-full h-10 sm:h-11"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to use default 30-day due date when assigned
+              </p>
+            </div>
 
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
@@ -702,6 +764,19 @@ export function FormsManagement() {
               <span className="font-medium">{selectedFormForAssign?.name}</span>{' '}
               to all students in the school? This will add the form to every student's enrollment.
             </p>
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => setFormDueDate(e.target.value)}
+                className="w-full h-10 sm:h-11"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to use default 30-day due date
+              </p>
+            </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
