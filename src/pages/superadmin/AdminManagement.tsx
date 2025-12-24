@@ -199,11 +199,11 @@ export function AdminManagement() {
   return (
     <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
             Admin Management
           </h1>
-          <Button className="bg-amazon-teal hover:bg-amazon-teal/90" onClick={() => {
+          <Button className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm" onClick={() => {
             setEmailError(''); // Clear any existing email errors
             setIsAddDialogOpen(true);
           }}>
@@ -245,26 +245,20 @@ export function AdminManagement() {
             ) : (
               <div className="space-y-3 sm:space-y-4">
                 {filteredAdmins.map((admin) => (
-                  <div key={admin.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3 sm:space-y-0">
-                    <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                        {admin.first_name[0]}{admin.last_name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2">
-                          <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.first_name} {admin.last_name}</h3>
-                          <Shield className="w-4 h-4 text-amazon-teal" />
+                  <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                          {admin.first_name[0]}{admin.last_name[0]}
                         </div>
-                        <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <span>Role: {admin.role}</span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.first_name} {admin.last_name}</h3>
+                            <Shield className="w-4 h-4 text-amazon-teal flex-shrink-0" />
+                          </div>
+                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3">
-                      <Badge variant={admin.is_verified ? 'success' : 'secondary'}>
-                        {admin.is_verified ? 'approved' : 'pending'}
-                      </Badge>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="sm">
@@ -286,6 +280,14 @@ export function AdminManagement() {
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs text-muted-foreground">
+                        Role: {admin.role}
+                      </div>
+                      <Badge variant={admin.is_verified ? 'success' : 'secondary'}>
+                        {admin.is_verified ? 'approved' : 'pending'}
+                      </Badge>
                     </div>
                   </div>
                 ))}

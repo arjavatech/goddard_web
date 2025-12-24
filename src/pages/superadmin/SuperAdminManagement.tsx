@@ -99,8 +99,9 @@ export function SuperAdminManagement() {
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
+          <CardContent className="pt-0">
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
@@ -157,6 +158,46 @@ export function SuperAdminManagement() {
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            {/* Mobile Card View */}
+            <div className="lg:hidden space-y-3 sm:space-y-4">
+              {filteredAndSortedAdmins.map((admin) => (
+                <div key={admin.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3 sm:space-y-0">
+                  <div className="flex items-center space-x-3 sm:space-x-4 flex-1">
+                    <div className="w-10 h-10 bg-amazon-teal/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <span className="text-sm font-medium text-amazon-teal">
+                        {admin.name.split(' ').map(n => n[0]).join('')}
+                      </span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.name}</h3>
+                      <div className="flex items-center space-x-2 text-xs sm:text-sm text-muted-foreground">
+                        <School className="w-3 h-3" />
+                        <span className="truncate">{admin.school}</span>
+                      </div>
+                      <div className="flex items-center space-x-2 text-xs text-muted-foreground">
+                        <Mail className="w-3 h-3" />
+                        <span className="truncate">{admin.email}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end space-x-2 sm:space-x-3">
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="outline" className="text-xs">{admin.role}</Badge>
+                      <Badge variant={admin.status === 'Active' ? 'success' : 'secondary'} className="text-xs">
+                        {admin.status}
+                      </Badge>
+                    </div>
+                    <div className="flex space-x-1">
+                      <Button variant="outline" size="sm" className="text-xs px-2">Edit</Button>
+                      <Button variant="outline" size="sm" className="text-xs px-2">
+                        {admin.status === 'Active' ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>

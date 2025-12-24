@@ -10,6 +10,9 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { apiBaseUrl } from '../../config/env';
+import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
+import { validateEmail } from '../../lib/emailValidation';
+import { supabase } from '../../lib/supabaseClient';
 
 export function SchoolManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -25,6 +28,7 @@ export function SchoolManagement() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [ageGroups, setAgeGroups] = useState(['infants', 'toddlers', 'preschool', 'pre-k']);
+  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -32,81 +36,35 @@ export function SchoolManagement() {
   const [schools, setSchools] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const fetchSchools = async () => {
-      try {
-        const response = await fetch(`${apiBaseUrl}/schools/with-owners`, {
-          method: 'GET',
-          headers: {
-            'X-API-Key': 'test-owner-key-2024',
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('API Response:', data);
-          const mappedSchools = data.map((item: any) => ({
-            id: item.school.id,
-            name: item.school.name,
-            subdomain: item.school.subdomain,
-            location: item.school.settings?.timezone || 'N/A',
-            capacity: item.school.settings?.enrollment_capacity || 'N/A',
-            ageGroups: item.school.settings?.age_groups || [],
-            admin: `${item.owner.first_name} ${item.owner.last_name}`,
-            adminEmail: item.owner.email,
-            adminPhone: item.owner.phone_number,
-            status: item.owner.is_verified ? 'active' : 'inactive',
-            createdAt: item.school.created_at
-          }));
-          setSchools(mappedSchools);
-        } else {
-          // Fallback to sample data
-          setSchools([
-            {
-              id: 'eea5544a-12c6-4db4-82d3-e6749ab85389',
-              name: 'Test School Email Template',
-              subdomain: 'testschool9999',
-              location: 'America/New_York',
-              capacity: 'N/A',
-              ageGroups: [],
-              admin: 'Test Admin',
-              adminEmail: 'testadmin9999@test.com',
-              adminPhone: '+1234567890',
-              status: 'active',
-              createdAt: null
-            },
-            {
-              id: 'dd8e8b76-d43d-41b2-95f3-4e9de35f95ee',
-              name: 'Goddard School 1765962555',
-              subdomain: 'school1765962555',
-              location: 'America/New_York',
-              capacity: 200,
-              ageGroups: [],
-              admin: 'John Doe',
-              adminEmail: 'owner1765962555@test.com',
-              adminPhone: '+1234567890',
-              status: 'active',
-              createdAt: null
-            },
-            {
-              id: 'd0cfcff0-bc82-4366-a9bf-77e950bf085f',
-              name: 'Goddard Schools, Lynnwood',
-              subdomain: 'lynnwood',
-              location: 'America/New_York',
-              capacity: 200,
-              ageGroups: ['infants', 'toddlers', 'preschool', 'pre-k'],
-              admin: 'Super Admin',
-              adminEmail: 'mani.arjava+01@gmail.com',
-              adminPhone: '+1-555-0100',
-              status: 'active',
-              createdAt: null
-            }
-          ]);
+  const fetchSchools = async () => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/schools/with-owners`, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': 'test-owner-key-2024',
+          'Content-Type': 'application/json'
         }
-      } catch (error) {
-        console.error('Error fetching schools:', error);
-        // Fallback to sample data on error
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('API Response:', data);
+        const mappedSchools = data.map((item: any) => ({
+          id: item.school.id,
+          name: item.school.name,
+          subdomain: item.school.subdomain,
+          location: item.school.settings?.timezone || 'N/A',
+          capacity: item.school.settings?.enrollment_capacity || 'N/A',
+          ageGroups: item.school.settings?.age_groups || [],
+          admin: `${item.owner.first_name} ${item.owner.last_name}`,
+          adminEmail: item.owner.email,
+          adminPhone: item.owner.phone_number,
+          status: item.owner.is_verified ? 'active' : 'inactive',
+          createdAt: item.school.created_at
+        }));
+        setSchools(mappedSchools);
+      } else {
+        // Fallback to sample data
         setSchools([
           {
             id: 'eea5544a-12c6-4db4-82d3-e6749ab85389',
@@ -148,12 +106,61 @@ export function SchoolManagement() {
             createdAt: null
           }
         ]);
-      } finally {
-        setLoading(false);
       }
-    };
+    } catch (error) {
+      console.error('Error fetching schools:', error);
+      // Fallback to sample data on error
+      setSchools([
+        {
+          id: 'eea5544a-12c6-4db4-82d3-e6749ab85389',
+          name: 'Test School Email Template',
+          subdomain: 'testschool9999',
+          location: 'America/New_York',
+          capacity: 'N/A',
+          ageGroups: [],
+          admin: 'Test Admin',
+          adminEmail: 'testadmin9999@test.com',
+          adminPhone: '+1234567890',
+          status: 'active',
+          createdAt: null
+        },
+        {
+          id: 'dd8e8b76-d43d-41b2-95f3-4e9de35f95ee',
+          name: 'Goddard School 1765962555',
+          subdomain: 'school1765962555',
+          location: 'America/New_York',
+          capacity: 200,
+          ageGroups: [],
+          admin: 'John Doe',
+          adminEmail: 'owner1765962555@test.com',
+          adminPhone: '+1234567890',
+          status: 'active',
+          createdAt: null
+        },
+        {
+          id: 'd0cfcff0-bc82-4366-a9bf-77e950bf085f',
+          name: 'Goddard Schools, Lynnwood',
+          subdomain: 'lynnwood',
+          location: 'America/New_York',
+          capacity: 200,
+          ageGroups: ['infants', 'toddlers', 'preschool', 'pre-k'],
+          admin: 'Super Admin',
+          adminEmail: 'mani.arjava+01@gmail.com',
+          adminPhone: '+1-555-0100',
+          status: 'active',
+          createdAt: null
+        }
+      ]);
+    }
+  };
 
-    fetchSchools();
+  useEffect(() => {
+    const loadSchools = async () => {
+      setLoading(true);
+      await fetchSchools();
+      setLoading(false);
+    };
+    loadSchools();
   }, []);
 
   const filteredSchools = schools.filter(school =>
@@ -164,6 +171,12 @@ export function SchoolManagement() {
 
   const handleAddSchool = async () => {
     if (!schoolName.trim() || !subdomain.trim() || !adminName.trim() || !adminEmail.trim()) return;
+    
+    const emailError = validateEmail(adminEmail);
+    if (emailError) {
+      setFormErrors({adminEmail: emailError});
+      return;
+    }
     
     try {
       const [firstName, ...lastNameParts] = adminName.trim().split(' ');
@@ -197,17 +210,22 @@ export function SchoolManagement() {
       });
       
       if (response.ok) {
-        const newSchool = {
-          id: schools.length + 1,
-          name: schoolName.trim(),
-          location: schoolLocation.trim(),
-          admin: adminName.trim(),
-          adminEmail: adminEmail.trim(),
-          status: 'active'
-        };
+        // Send admin invite via Supabase
+        try {
+          const { data, error } = await supabase.auth.admin.inviteUserByEmail(adminEmail.trim());
+          if (error) {
+            console.error('Error inviting admin:', error);
+            showToast('error', 'School created but failed to send admin invite');
+          } else {
+            showToast('success', 'School created and admin invite sent successfully');
+          }
+        } catch (inviteError) {
+          console.error('Error sending invite:', inviteError);
+          showToast('error', 'School created but failed to send admin invite');
+        }
         
-        setSchools([...schools, newSchool]);
-        showToast('success', 'School created successfully');
+        // Refetch schools data instead of manually updating state
+        await fetchSchools();
       } else {
         showToast('error', 'Failed to create school');
       }
@@ -216,6 +234,7 @@ export function SchoolManagement() {
       showToast('error', 'Error creating school');
     }
     
+    // Reset form and close dialog
     setIsAddDialogOpen(false);
     setSchoolName('');
     setSchoolLocation('');
@@ -226,6 +245,7 @@ export function SchoolManagement() {
     setAdminEmail('');
     setAdminPhone('');
     setAgeGroups(['infants', 'toddlers', 'preschool', 'pre-k']);
+    setFormErrors({});
   };
 
   const handleEditSchool = (school: any) => {
@@ -259,13 +279,31 @@ export function SchoolManagement() {
     setIsDeleteDialogOpen(true);
   };
 
-  const handleDeleteSchool = () => {
-    if (schoolToDelete) {
-      setSchools(schools.filter(school => school.id !== schoolToDelete.id));
-      showToast('success', 'School deleted successfully');
-      setIsDeleteDialogOpen(false);
-      setSchoolToDelete(null);
+  const handleDeleteSchool = async () => {
+    if (!schoolToDelete) return;
+    
+    try {
+      const response = await fetch(`${apiBaseUrl}/schools/${schoolToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'X-API-Key': 'test-owner-key-2024',
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        showToast('success', 'School deleted successfully');
+        await fetchSchools();
+      } else {
+        showToast('error', 'Failed to delete school');
+      }
+    } catch (error) {
+      console.error('Error deleting school:', error);
+      showToast('error', 'Error deleting school');
     }
+    
+    setIsDeleteDialogOpen(false);
+    setSchoolToDelete(null);
   };
 
   return (
@@ -533,15 +571,14 @@ export function SchoolManagement() {
                       placeholder="Enter admin name"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-2">Admin Email</label>
-                    <Input
-                      type="email"
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      placeholder="Enter admin email"
-                    />
-                  </div>
+                  <ValidatedEmailInput
+                    value={adminEmail}
+                    onChange={setAdminEmail}
+                    label="Admin Email"
+                    errors={formErrors}
+                    errorKey="adminEmail"
+                    setErrors={setFormErrors}
+                  />
                 </div>
                 <div className="mt-4">
                   <label className="block text-sm font-medium mb-2">Admin Phone</label>
@@ -559,7 +596,7 @@ export function SchoolManagement() {
               <Button 
                 onClick={handleAddSchool} 
                 className="bg-amazon-teal hover:bg-amazon-teal/90"
-                disabled={!schoolName.trim() || !subdomain.trim() || !adminName.trim() || !adminEmail.trim()}
+                disabled={!schoolName.trim() || !subdomain.trim() || !adminName.trim() || !adminEmail.trim() || !!formErrors.adminEmail}
               >
                 Add School
               </Button>
