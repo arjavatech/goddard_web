@@ -24,7 +24,7 @@ export function AdminLayout({
   const { userData } = useUserContext();
   
   // Check if user is SuperAdmin - temporarily show for all users for testing
-  const isSuperAdmin = true; // userData?.role === 'SuperAdmin';
+  const isSuperAdmin = userData?.role === 'SuperAdmin';
   
   // Debug: Log user data
   console.log('User data:', userData);
@@ -69,11 +69,16 @@ export function AdminLayout({
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'
-  }, {
-    icon: <UserCog className="w-5 h-5" />,
-    label: 'Admins',
-    path: '/admin/admins'
   }];
+  
+  // Add Admins menu only for SuperAdmin
+  if (isSuperAdmin) {
+    navigationItems.push({
+      icon: <UserCog className="w-5 h-5" />,
+      label: 'Admins',
+      path: '/admin/admin-management'
+    });
+  }
   React.useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -95,7 +100,7 @@ export function AdminLayout({
       )}
       
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />

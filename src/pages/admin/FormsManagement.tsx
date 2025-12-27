@@ -61,8 +61,16 @@ export function FormsManagement() {
     const errors: {[key: string]: string} = {};
     
     if (!formName.trim()) errors.formName = 'Form name is required';
-    if (!formLink.trim()) errors.formLink = 'Form link is required';
-    else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
+    if (!formDueDate) errors.formDueDate = 'Due date is required';
+    else {
+      const today = new Date();
+      const selectedDate = new Date(formDueDate);
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate <= today) {
+        errors.formDueDate = 'Due date must be greater than today';
+      }
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -140,7 +148,16 @@ export function FormsManagement() {
       setIsAddingForm(true);
       const user = await fetchUserContext();
       if (!user.schoolId) return;
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate || undefined);
+      
+      const statusMap: Record<FormStatus, string> = {
+        'Default': 'school_default',
+        'Active': 'active',
+        'Inactive': 'inactive',
+        'Archive': 'archived'
+      };
+      const apiStatus = statusMap[formStatus] || 'school_default';
+      
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, apiStatus);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -150,24 +167,32 @@ export function FormsManagement() {
     }
   };
   const handleEditForm = async () => {
-    if (!selectedForm || !formName.trim() || !formLink.trim()) return;
+    if (!selectedForm || !formName.trim()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    const statusMap: Record<FormStatus, string> = {
-      'Default': 'school_default',
-      'Active': 'active',
-      'Inactive': 'inactive',
-      'Archive': 'archived'
-    };
-    const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
-    
-    await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus, formDueDate || undefined);
-    
-    resetFormFields();
-    setIsEditDialogOpen(false);
-    window.location.reload();
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+      
+      const statusMap: Record<FormStatus, string> = {
+        'Default': 'school_default',
+        'Active': 'active',
+        'Inactive': 'inactive',
+        'Archive': 'archived'
+      };
+      const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
+      
+      // Don't send due date if status is inactive
+      const dueDateToSend = apiStatus === 'inactive' ? undefined : formDueDate;
+      
+      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus, dueDateToSend);
+      
+      showToast('success', 'Form updated successfully');
+      resetFormFields();
+      setIsEditDialogOpen(false);
+      window.location.reload();
+    } catch (error) {
+      showToast('error', 'Failed to update form. Please try again.');
+    }
   };
   const handleDeleteForm = async () => {
     if (!selectedForm) return;
@@ -217,7 +242,7 @@ export function FormsManagement() {
       const user = await fetchUserContext();
       if (!user.schoolId) return;
       
-      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate || undefined);
+      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate);
       showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
       setIsAssignToAllDialogOpen(false);
       setFormDueDate('');
@@ -652,17 +677,22 @@ export function FormsManagement() {
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <label className="block text-sm font-medium mb-2">Due Date</label>
               <Input
                 type="date"
                 value={formDueDate}
-                onChange={e => setFormDueDate(e.target.value)}
-                className="w-full h-10 sm:h-11"
-                min={new Date().toISOString().split('T')[0]}
+                onChange={e => {
+                  setFormDueDate(e.target.value);
+                  if (formErrors.formDueDate) {
+                    setFormErrors(prev => ({...prev, formDueDate: ''}));
+                  }
+                }}
+                className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
+                min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                
-              </p>
+              {formErrors.formDueDate && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
+              )}
             </div>
 
           </div>
@@ -670,7 +700,7 @@ export function FormsManagement() {
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || !formDueDate || isAddingForm || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}>
               {isAddingForm ? 'Adding Form...' : 'Add Form'}
             </AsyncButton>
           </DialogFooter>

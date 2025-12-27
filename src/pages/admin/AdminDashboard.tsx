@@ -162,6 +162,16 @@ export function AdminDashboard() {
     if (!formName.trim()) errors.formName = 'Form name is required';
     if (!formLink.trim()) errors.formLink = 'Form link is required';
     else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
+    if (!formDueDate) errors.formDueDate = 'Due date is required';
+    else {
+      const today = new Date();
+      const selectedDate = new Date(formDueDate);
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate <= today) {
+        errors.formDueDate = 'Due date must be greater than today';
+      }
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -175,7 +185,7 @@ export function AdminDashboard() {
       const user = await fetchUserContext();
       if (!user.schoolId) return;
 
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate || undefined);
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
 
       setIsAddDialogOpen(false);
       setFormName('');
@@ -464,24 +474,29 @@ export function AdminDashboard() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+                <label className="block text-sm font-medium mb-2">Due Date</label>
                 <Input
                   type="date"
                   value={formDueDate}
-                  onChange={e => setFormDueDate(e.target.value)}
-                  className="w-full h-10 sm:h-11"
-                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => {
+                    setFormDueDate(e.target.value);
+                    if (formErrors.formDueDate) {
+                      setFormErrors(prev => ({...prev, formDueDate: ''}));
+                    }
+                  }}
+                  className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
+                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  
-                </p>
+                {formErrors.formDueDate && (
+                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
+                )}
               </div>
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
                 Cancel
               </Button>
-              <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+              <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || !formDueDate || isAddingForm || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}>
                 {isAddingForm ? 'Adding Form...' : 'Add Form'}
               </Button>
             </DialogFooter>

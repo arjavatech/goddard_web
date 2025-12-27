@@ -461,16 +461,17 @@ export async function deleteForm(formId: string, schoolId: string): Promise<void
     url: `/form-templates?form_id=${encodeURIComponent(validFormId)}&school_id=${encodeURIComponent(schoolId)}`
   }, z.object({}));
 }
-export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string, dueDate?: string): Promise<void> {
+export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string, dueDate: string, status?: string): Promise<void> {
   const body: any = {
     id: crypto.randomUUID(),
     school_id: schoolId,
     form_name: formName,
-    fillout_form_id: filloutFormId
+    fillout_form_id: filloutFormId,
+    due_date: dueDate
   };
   
-  if (dueDate) {
-    body.due_date = dueDate;
+  if (status) {
+    body.status = status;
   }
   
   await authedFetch({

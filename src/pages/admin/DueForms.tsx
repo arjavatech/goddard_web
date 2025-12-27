@@ -258,19 +258,19 @@ export function DueForms() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-4 py-6 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Due Forms Tracking
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               Monitor form completion status and send reminders to parents
             </p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button className="bg-amazon-teal hover:bg-amazon-teal/90">
+              <Button className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
                 <Mail className="h-4 w-4 mr-2" />
                 Remind
               </Button>
@@ -306,58 +306,58 @@ export function DueForms() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Total Forms</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Total Forms</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</p>
                 </div>
-                <div className="p-2 bg-blue-100 rounded-full">
-                  <Calendar className="h-5 w-5 text-blue-600" />
+                <div className="p-2 bg-blue-100 rounded-full flex-shrink-0 ml-2">
+                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Pending</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.pending}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Pending</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.pending}</p>
                 </div>
-                <div className="p-2 bg-yellow-100 rounded-full">
-                  <Clock className="h-5 w-5 text-yellow-600" />
+                <div className="p-2 bg-yellow-100 rounded-full flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Overdue</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.overdue}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Overdue</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.overdue}</p>
                 </div>
-                <div className="p-2 bg-red-100 rounded-full">
-                  <AlertTriangle className="h-5 w-5 text-red-600" />
+                <div className="p-2 bg-red-100 rounded-full flex-shrink-0 ml-2">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-1">Completed</p>
-                  <p className="text-2xl font-bold text-foreground">{stats.completed}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Completed</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.completed}</p>
                 </div>
-                <div className="p-2 bg-green-100 rounded-full">
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                <div className="p-2 bg-green-100 rounded-full flex-shrink-0 ml-2">
+                  <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
                 </div>
               </div>
             </CardContent>
@@ -366,20 +366,20 @@ export function DueForms() {
 
         {/* Filters */}
         <Card className="glass-card">
-          <CardContent className="p-4">
-            <div className="flex flex-col sm:flex-row gap-4">
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search forms, students, or parents..."
-                  className="pl-10"
+                  className="pl-10 h-10 sm:h-11 text-sm sm:text-base"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48">
+                  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-11">
                     <Filter className="h-4 w-4 mr-2" />
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -392,7 +392,7 @@ export function DueForms() {
                 </Select>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-11">
                       <ArrowUpDown className="h-4 w-4 mr-2" />
                       Sort
                     </Button>
@@ -425,74 +425,149 @@ export function DueForms() {
                 <p className="mt-2 text-muted-foreground">Loading forms...</p>
               </div>
             ) : filteredForms.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="border-b">
-                    <tr>
-                      <th className="text-left p-4 font-medium">
-                        <div className="flex items-center gap-2">
-                          <span>Select</span>
-                          {filteredForms.length > 0 && (
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="border-b">
+                      <tr>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">
+                          <div className="flex items-center gap-2">
+                            <span>Select</span>
+                            {filteredForms.length > 0 && (
+                              <Checkbox
+                                checked={selectedForms.length === filteredForms.length}
+                                onCheckedChange={handleSelectAll}
+                              />
+                            )}
+                          </div>
+                        </th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Form</th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Student</th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Parent</th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Due Date</th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Status</th>
+                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredForms.map(form => (
+                        <tr key={form.id} className="border-b hover:bg-muted/50">
+                          <td className="p-2 md:p-4">
                             <Checkbox
-                              checked={selectedForms.length === filteredForms.length}
-                              onCheckedChange={handleSelectAll}
+                              checked={selectedForms.includes(form.id)}
+                              onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
                             />
-                          )}
-                        </div>
-                      </th>
-                      <th className="text-left p-4 font-medium">Form Name</th>
-                      <th className="text-left p-4 font-medium">Student</th>
-                      <th className="text-left p-4 font-medium">Parent</th>
-                      <th className="text-left p-4 font-medium">Due Date</th>
-                      <th className="text-left p-4 font-medium">Status</th>
-                      <th className="text-left p-4 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredForms.map(form => (
-                      <tr key={form.id} className="border-b hover:bg-muted/50">
-                        <td className="p-4">
+                          </td>
+                          <td className="p-2 md:p-4 font-medium text-xs md:text-sm">{form.formName}</td>
+                          <td className="p-2 md:p-4 text-xs md:text-sm">{form.studentName}</td>
+                          <td className="p-2 md:p-4 text-xs md:text-sm">
+                            <div>
+                              <div className="font-medium">{form.parentName.split(' & ')[0]}</div>
+                              <div className="text-xs text-muted-foreground">{form.parentEmail.split(', ')[0]}</div>
+                              {form.parentName.includes(' & ') && (
+                                <div className="mt-1">
+                                  <div className="font-medium">{form.parentName.split(' & ')[1]}</div>
+                                  <div className="text-xs text-muted-foreground">{form.parentEmail.split(', ')[1] || ''}</div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-2 md:p-4 text-xs md:text-sm">
+                            <div className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-medium' : form.dueDate ? '' : 'text-muted-foreground'}>
+                              {formatDate(form.dueDate)}
+                            </div>
+                          </td>
+                          <td className="p-2 md:p-4">{getStatusBadge(form.status)}</td>
+                          <td className="p-2 md:p-4">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleSendReminder([form.id])}
+                              disabled={form.status === 'completed'}
+                              className="text-xs px-2 py-1"
+                            >
+                              <Mail className="h-3 w-3 mr-1" />
+                              <span className="hidden lg:inline">Remind</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3 p-3">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <span className="text-sm font-medium">Select All</span>
+                    <Checkbox
+                      checked={selectedForms.length === filteredForms.length}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </div>
+                  {filteredForms.map(form => (
+                    <div key={form.id} className="border rounded-lg p-3 space-y-3 bg-card">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2 flex-1 min-w-0">
                           <Checkbox
                             checked={selectedForms.includes(form.id)}
                             onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
+                            className="mt-0.5 flex-shrink-0"
                           />
-                        </td>
-                        <td className="p-4 font-medium">{form.formName}</td>
-                        <td className="p-4">{form.studentName}</td>
-                        <td className="p-4">
-                          <div className="whitespace-pre-line">
-                            <div className="font-medium">{form.parentName.split(' & ')[0]}</div>
-                            <div className="text-sm text-muted-foreground mb-2">{form.parentEmail.split(', ')[0]}</div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-medium text-sm truncate">{form.formName}</h3>
+                            <p className="text-xs text-muted-foreground">Student: {form.studentName}</p>
+                          </div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          {getStatusBadge(form.status)}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Parent(s):</p>
+                          <div className="text-sm space-y-1">
+                            <div>
+                              <div className="font-medium text-xs">{form.parentName.split(' & ')[0]}</div>
+                              <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[0]}</div>
+                            </div>
                             {form.parentName.includes(' & ') && (
                               <div>
-                                <div className="font-medium">{form.parentName.split(' & ')[1]}</div>
-                                <div className="text-sm text-muted-foreground">{form.parentEmail.split(', ')[1] || ''}</div>
+                                <div className="font-medium text-xs">{form.parentName.split(' & ')[1]}</div>
+                                <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[1] || ''}</div>
                               </div>
                             )}
                           </div>
-                        </td>
-                        <td className="p-4">
-                          <div className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-medium' : form.dueDate ? '' : 'text-muted-foreground'}>
-                            {formatDate(form.dueDate)}
+                        </div>
+                        
+                        <div className="flex items-center justify-between pt-2 border-t">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-xs text-muted-foreground">Due:</p>
+                            <p className={`text-xs font-medium truncate ${
+                              isOverdue(form.dueDate) && form.status !== 'completed' 
+                                ? 'text-red-600' 
+                                : form.dueDate ? 'text-foreground' : 'text-muted-foreground'
+                            }`}>
+                              {formatDate(form.dueDate)}
+                            </p>
                           </div>
-                        </td>
-                        <td className="p-4">{getStatusBadge(form.status)}</td>
-                        <td className="p-4">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleSendReminder([form.id])}
                             disabled={form.status === 'completed'}
+                            className="text-xs px-2 py-1 h-7 flex-shrink-0 ml-2"
                           >
-                            <Mail className="h-4 w-4 mr-1" />
-                            Remind
+                            <Mail className="h-3 w-3" />
                           </Button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
             ) : (
               <div className="p-8 text-center">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

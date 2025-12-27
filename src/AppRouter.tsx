@@ -57,6 +57,7 @@ export function AppRouter() {
             <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
             <Route path="/admin/students" element={<StudentManagement />} />
             <Route path="/admin/admins" element={<AdminManagement />} />
+            <Route path="/admin/admin-management" element={<AdminManagement />} />
             <Route path="/admin/users" element={<UserManagement />} />
           </Route>
 
