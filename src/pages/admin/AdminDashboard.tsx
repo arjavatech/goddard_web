@@ -268,9 +268,11 @@ export function AdminDashboard() {
       setChildClassroom('');
       setInviteFormErrors({});
 
+      showToast('success', 'Parent invitation sent successfully');
       window.location.reload();
     } catch (error) {
       console.error('Error inviting parent:', error);
+      showToast('error', 'Failed to send parent invitation. Please try again.');
     } finally {
       setIsInvitingParent(false);
     }
