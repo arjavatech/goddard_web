@@ -18,6 +18,7 @@ import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { AddFormModal } from '../../components/admin/AddFormModal';
 
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
@@ -45,7 +46,7 @@ export function FormsManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
-  const [formStatus, setFormStatus] = useState<FormStatus>('Default');
+  const [formStatus, setFormStatus] = useState('school_default');
   const [formDueDate, setFormDueDate] = useState('');
   const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
@@ -149,15 +150,7 @@ export function FormsManagement() {
       const user = await fetchUserContext();
       if (!user.schoolId) return;
       
-      const statusMap: Record<FormStatus, string> = {
-        'Default': 'school_default',
-        'Active': 'active',
-        'Inactive': 'inactive',
-        'Archive': 'archived'
-      };
-      const apiStatus = statusMap[formStatus] || 'school_default';
-      
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, apiStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -173,18 +166,10 @@ export function FormsManagement() {
       const user = await fetchUserContext();
       if (!user.schoolId) throw new Error('School context not found');
       
-      const statusMap: Record<FormStatus, string> = {
-        'Default': 'school_default',
-        'Active': 'active',
-        'Inactive': 'inactive',
-        'Archive': 'archived'
-      };
-      const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
-      
       // Don't send due date if status is inactive
-      const dueDateToSend = apiStatus === 'inactive' ? undefined : formDueDate;
+      const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
       
-      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus, dueDateToSend);
+      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, formStatus, dueDateToSend);
       
       showToast('success', 'Form updated successfully');
       resetFormFields();
@@ -218,7 +203,7 @@ export function FormsManagement() {
   const resetFormFields = () => {
     setFormName('');
     setFormLink('');
-    setFormStatus('Default');
+    setFormStatus('school_default');
     setFormDueDate('');
     setFormErrors({});
   };

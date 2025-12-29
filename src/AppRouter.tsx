@@ -26,7 +26,7 @@ import { SchoolManagement } from './pages/superadmin/SchoolManagement';
 import { UserManagement } from './pages/superadmin/UserManagement';
 import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
-import { AdminManagement } from './pages/superadmin/AdminManagement';
+import { ClientManagement } from './pages/superadmin/ClientManagement';
 import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
@@ -56,8 +56,6 @@ export function AppRouter() {
             <Route path="/admin/parents" element={<ParentManagement />} />
             <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
             <Route path="/admin/students" element={<StudentManagement />} />
-            <Route path="/admin/admins" element={<AdminManagement />} />
-            <Route path="/admin/admin-management" element={<AdminManagement />} />
             <Route path="/admin/users" element={<UserManagement />} />
           </Route>
 
@@ -67,7 +65,7 @@ export function AppRouter() {
               </ProtectedRoute>}>
             <Route path="/superadmin-arjava" element={<SuperAdminDashboard />} />
             <Route path="/superadmin-arjava/schools" element={<SchoolManagement />} />
-            <Route path="/superadmin-arjava/admins" element={<SuperAdminManagement />} />
+            <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
             <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
           </Route>
 

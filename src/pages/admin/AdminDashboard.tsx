@@ -17,6 +17,7 @@ import { AsyncButton } from '../../components/ui/async-button';
 import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
 import { validateEmail } from '../../lib/emailValidation';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
+import { AddFormModal } from '../../components/admin/AddFormModal';
 
 type StatCard = {
   title: string;
@@ -40,7 +41,7 @@ export function AdminDashboard() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
-  const [formStatus, setFormStatus] = useState('Active');
+  const [formStatus, setFormStatus] = useState('school_default');
   const [formDueDate, setFormDueDate] = useState('');
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
@@ -160,8 +161,6 @@ export function AdminDashboard() {
     const errors: {[key: string]: string} = {};
     
     if (!formName.trim()) errors.formName = 'Form name is required';
-    if (!formLink.trim()) errors.formLink = 'Form link is required';
-    else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
     if (!formDueDate) errors.formDueDate = 'Due date is required';
     else {
       const today = new Date();
@@ -190,7 +189,7 @@ export function AdminDashboard() {
       setIsAddDialogOpen(false);
       setFormName('');
       setFormLink('');
-      setFormStatus('Active');
+      setFormStatus('school_default');
       setFormDueDate('');
       setFormErrors({});
 
@@ -417,91 +416,23 @@ export function AdminDashboard() {
           </Card>
         </div>
 
-        {/* Add Form Dialog */}
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
-            <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
-            </DialogHeader>
-            <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Form Name</label>
-                <Input
-                  value={formName}
-                  onChange={e => {
-                    setFormName(e.target.value);
-                    if (formErrors.formName) {
-                      setFormErrors(prev => ({...prev, formName: ''}));
-                    }
-                  }}
-                  placeholder="Enter form name"
-                  className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`}
-                  autoFocus
-                />
-                {formErrors.formName && (
-                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Form Link</label>
-                <Input 
-                  value={formLink} 
-                  onChange={e => {
-                    setFormLink(e.target.value);
-                    if (formErrors.formLink) {
-                      setFormErrors(prev => ({...prev, formLink: ''}));
-                    }
-                  }} 
-                  placeholder="https://example.com/form" 
-                  className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
-                />
-                {formErrors.formLink && (
-                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Status</label>
-                <Select value={formStatus} onValueChange={setFormStatus}>
-                  <SelectTrigger className="h-10 sm:h-11">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Default">Default</SelectItem>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Archive">Archive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Due Date</label>
-                <Input
-                  type="date"
-                  value={formDueDate}
-                  onChange={e => {
-                    setFormDueDate(e.target.value);
-                    if (formErrors.formDueDate) {
-                      setFormErrors(prev => ({...prev, formDueDate: ''}));
-                    }
-                  }}
-                  className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
-                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                />
-                {formErrors.formDueDate && (
-                  <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
-                )}
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-                Cancel
-              </Button>
-              <Button onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || !formDueDate || isAddingForm || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}>
-                {isAddingForm ? 'Adding Form...' : 'Add Form'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Add Form Modal */}
+        <AddFormModal
+          isOpen={isAddDialogOpen}
+          onClose={() => setIsAddDialogOpen(false)}
+          onSubmit={handleAddForm}
+          formName={formName}
+          setFormName={setFormName}
+          formLink={formLink}
+          setFormLink={setFormLink}
+          formStatus={formStatus}
+          setFormStatus={setFormStatus}
+          formDueDate={formDueDate}
+          setFormDueDate={setFormDueDate}
+          formErrors={formErrors}
+          setFormErrors={setFormErrors}
+          isSubmitting={isAddingForm}
+        />
 
         {/* Invite Parent Dialog */}
         <InviteParentModal

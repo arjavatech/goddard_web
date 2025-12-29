@@ -31,17 +31,11 @@ export function SuperAdminDashboard() {
           setSchools(data || []);
         } else {
           console.error('API response not ok:', response.status, response.statusText);
-          // Fallback to mock data for now
-          setSchools([
-            { id: 1, name: 'Goddard Lynnwood', status: 'active', owner: { first_name: 'John', last_name: 'Smith', email: 'john@goddard.com' } }
-          ]);
+          setSchools([]);
         }
       } catch (error) {
         console.error('Error fetching schools:', error);
-        // Fallback to mock data
-        setSchools([
-          { id: 1, name: 'Goddard Lynnwood', status: 'active', owner: { first_name: 'John', last_name: 'Smith', email: 'john@goddard.com' } }
-        ]);
+        setSchools([]);
       } finally {
         setLoading(false);
       }
@@ -52,23 +46,10 @@ export function SuperAdminDashboard() {
 
   const stats = {
     totalSchools: schools.length,
-    activeSchools: schools.length, // All schools are considered active from API
-    totalAdmins: schools.length,
-    totalSubscriptions: 1
+    activeSchools: schools.filter(item => item.owner?.is_verified).length,
+    totalClients: schools.length,
+    totalSubscriptions: schools.length > 0 ? 1 : 0
   };
-
-  const recentActivity = [
-    { id: 1, action: 'School Created', details: 'Goddard Lynnwood added', time: '2 hours ago' },
-    { id: 2, action: 'Admin Added', details: 'John Smith assigned to Lynnwood', time: '1 day ago' }
-  ];
-
-  const admins = schools.map((item, index) => ({
-    id: index + 1,
-    name: item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'Admin',
-    school: item.school.name,
-    email: item.owner?.email || 'admin@school.com',
-    status: item.owner?.is_verified ? 'Active' : 'Inactive'
-  }));
 
   return (
     <SuperAdminLayout>
@@ -129,9 +110,9 @@ export function SuperAdminDashboard() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Admins
+                    Total Clients
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.totalAdmins}</p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.totalClients}</p>
                 </div>
                 <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
                   <Users className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
@@ -157,10 +138,10 @@ export function SuperAdminDashboard() {
           </Card>
         </div>
 
-        {/* Admin Table */}
+        {/* Schools Overview Table */}
         <Card className="glass-card">
           <CardHeader>
-            <CardTitle className="text-lg font-semibold">School Admins</CardTitle>
+            <CardTitle className="text-lg font-semibold">Schools Overview</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -172,21 +153,23 @@ export function SuperAdminDashboard() {
                 <table className="w-full">
                   <thead>
                     <tr className="border-b">
+                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">School Name</th>
+                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">Subdomain</th>
                       <th className="text-left py-3 px-2 font-medium text-muted-foreground">Admin</th>
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">School</th>
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">Email</th>
                       <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {admins.length > 0 ? admins.map((admin) => (
-                      <tr key={admin.id} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-2 font-medium">{admin.name}</td>
-                        <td className="py-3 px-2 text-muted-foreground">{admin.school}</td>
-                        <td className="py-3 px-2 text-muted-foreground">{admin.email}</td>
+                    {schools.length > 0 ? schools.map((item, index) => (
+                      <tr key={item.school?.id || index} className="border-b hover:bg-gray-50">
+                        <td className="py-3 px-2 font-medium">{item.school?.name || 'N/A'}</td>
+                        <td className="py-3 px-2 text-muted-foreground">{item.school?.subdomain || 'N/A'}</td>
+                        <td className="py-3 px-2 text-muted-foreground">
+                          {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
+                        </td>
                         <td className="py-3 px-2">
-                          <Badge variant={admin.status === 'Active' ? 'success' : 'secondary'}>
-                            {admin.status}
+                          <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'}>
+                            {item.owner?.is_verified ? 'Active' : 'Inactive'}
                           </Badge>
                         </td>
                       </tr>
@@ -212,51 +195,40 @@ export function SuperAdminDashboard() {
             </CardHeader>
             <CardContent className="space-y-3">
               <Link to="/superadmin-arjava/schools" className="block">
-                <Button variant="outline" className="w-full justify-between h-12">
-                  <div className="flex items-center">
-                    <School className="w-4 h-4 mr-3" />
-                    Manage Schools
-                  </div>
-                  <ArrowRight className="w-4 h-4" />
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <School className="w-4 h-4 mr-2" />
+                  Manage Schools
+                  <ArrowRight className="w-4 h-4 ml-auto" />
                 </Button>
               </Link>
-              <Link to="/superadmin-arjava/admins" className="block">
-                <Button variant="outline" className="w-full justify-between h-12">
-                  <div className="flex items-center">
-                    <Users className="w-4 h-4 mr-3" />
-                    Manage Admins
-                  </div>
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-              <Link to="/superadmin-arjava/subscription" className="block">
-                <Button variant="outline" className="w-full justify-between h-12">
-                  <div className="flex items-center">
-                    <Crown className="w-4 h-4 mr-3" />
-                    Subscription Management
-                  </div>
-                  <ArrowRight className="w-4 h-4" />
+              <Link to="/superadmin-arjava/clients" className="block">
+                <Button variant="outline" className="w-full justify-start" size="sm">
+                  <Users className="w-4 h-4 mr-2" />
+                  View Clients
+                  <ArrowRight className="w-4 h-4 ml-auto" />
                 </Button>
               </Link>
             </CardContent>
           </Card>
-
+          
           <Card className="glass-card">
             <CardHeader>
-              <CardTitle className="text-lg font-semibold">Recent Activity</CardTitle>
+              <CardTitle className="text-lg font-semibold">System Status</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {recentActivity.map((activity) => (
-                  <div key={activity.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="w-2 h-2 bg-amazon-teal rounded-full mt-2 flex-shrink-0"></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{activity.action}</p>
-                      <p className="text-xs text-muted-foreground">{activity.details}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
-                    </div>
-                  </div>
-                ))}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">System Status</span>
+                  <Badge variant="success">Online</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Database</span>
+                  <Badge variant="success">Connected</Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">API Status</span>
+                  <Badge variant="success">Active</Badge>
+                </div>
               </div>
             </CardContent>
           </Card>

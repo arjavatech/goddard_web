@@ -39,7 +39,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin-arjava' },
     { icon: <Crown className="w-5 h-5" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
     { icon: <School className="w-5 h-5" />, label: 'Schools', path: '/superadmin-arjava/schools' },
-    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/superadmin-arjava/admins' }
+    { icon: <Users className="w-5 h-5" />, label: 'Clients', path: '/superadmin-arjava/clients' }
   ];
 
   React.useEffect(() => {
