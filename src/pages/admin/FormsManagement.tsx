@@ -165,6 +165,8 @@ export function FormsManagement() {
     try {
       const user = await fetchUserContext();
       if (!user.schoolId) throw new Error('School context not found');
+
+      
       
       // Don't send due date if status is inactive
       const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
