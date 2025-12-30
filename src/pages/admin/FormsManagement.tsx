@@ -20,7 +20,7 @@ import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { AddFormModal } from '../../components/admin/AddFormModal';
 
-type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
+type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
   id: string;
   name: string;
@@ -31,11 +31,11 @@ interface Form {
 }
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
-  if (value.includes('default')) return 'Default';
-  if (value.includes('inactive')) return 'Inactive';
-  if (value.includes('archive')) return 'Archive';
-  if (value.includes('active')) return 'Active';
-  return 'Active';
+  if (value.includes('default') || value.includes('school_default')) return 'school_default';
+  if (value.includes('inactive')) return 'inactive';
+  if (value.includes('archive')) return 'archived';
+  if (value.includes('active')) return 'active';
+  return 'active';
 };
 export function FormsManagement() {
   const [forms, setForms] = useState<Form[]>([]);
@@ -46,7 +46,7 @@ export function FormsManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
-  const [formStatus, setFormStatus] = useState('school_default');
+  const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
   const [formDueDate, setFormDueDate] = useState('');
   const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
@@ -239,16 +239,30 @@ export function FormsManagement() {
   };
   const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'success';
-      case 'Default':
+      case 'school_default':
         return 'default';
-      case 'Inactive':
+      case 'inactive':
         return 'secondary';
-      case 'Archive':
+      case 'archived':
         return 'outline';
       default:
         return 'default';
+    }
+  };
+  const getStatusDisplayName = (status: FormStatus): string => {
+    switch (status) {
+      case 'school_default':
+        return 'Default';
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      case 'archived':
+        return 'Archived';
+      default:
+        return status;
     }
   };
   const statuses = useMemo(() => {
@@ -299,7 +313,7 @@ export function FormsManagement() {
                     Active Forms
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'Active').length}
+                    {forms.filter(f => f.status === 'active').length}
                   </p>
                 </div>
                 <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
@@ -316,7 +330,7 @@ export function FormsManagement() {
                     Default Forms
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'Default').length}
+                    {forms.filter(f => f.status === 'school_default').length}
                   </p>
                 </div>
                 <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
@@ -357,7 +371,7 @@ export function FormsManagement() {
                     <SelectContent>
                       <SelectItem value="all">All Statuses</SelectItem>
                       {statuses.map(status => <SelectItem key={status} value={status}>
-                          {status}
+                          {getStatusDisplayName(status)}
                         </SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -408,7 +422,7 @@ export function FormsManagement() {
                         </td>
                         <td className="py-3 px-2">
                           <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
-                            {form.status}
+                            {getStatusDisplayName(form.status)}
                           </Badge>
                         </td>
                         <td className="py-3 px-2">
@@ -474,7 +488,7 @@ export function FormsManagement() {
                               <DropdownMenuItem 
                                 onClick={() => openDeleteDialog(form)} 
                                 className="text-red-600 focus:text-red-600"
-                                disabled={form.status === 'Active'}
+                                disabled={form.status === 'active'}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
@@ -542,7 +556,7 @@ export function FormsManagement() {
                           <DropdownMenuItem 
                             onClick={() => openDeleteDialog(form)} 
                             className="text-red-600 focus:text-red-600"
-                            disabled={form.status === 'Active'}
+                            disabled={form.status === 'active'}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -554,7 +568,7 @@ export function FormsManagement() {
                     <div className="space-y-2 sm:space-y-3">
                       <div className="flex items-center gap-2">
                         <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
-                          {form.status}
+                          {getStatusDisplayName(form.status)}
                         </Badge>
                         <div className="text-xs text-muted-foreground">
                           Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
@@ -656,10 +670,10 @@ export function FormsManagement() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Default">Default</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="Archive">Archive</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -746,9 +760,9 @@ export function FormsManagement() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Default">Default</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
