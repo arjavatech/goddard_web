@@ -39,7 +39,20 @@ export function SetPassword() {
         return;
       }
 
-      // Check for access token in URL hash
+      // FIRST: Check if we already have a valid session (handles page reloads/reopens)
+      try {
+        const { data: existingSession, error: sessionCheckError } = await supabase.auth.getSession();
+
+        if (!sessionCheckError && existingSession?.session) {
+          console.log('Existing session found, reusing session for user:', existingSession.session.user?.email);
+          setSessionReady(true);
+          return;
+        }
+      } catch (err) {
+        console.log('No existing session, will create new one from URL tokens');
+      }
+
+      // SECOND: Try to create session from URL tokens (first time clicking link)
       const hash = window.location.hash.substring(1);
       const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
@@ -72,11 +85,22 @@ export function SetPassword() {
         });
 
         if (sessionError) {
-          // Check for token expiration errors
+          // Check for token expiration or already-used errors
           if (sessionError.message?.includes('expired') ||
               sessionError.message?.includes('invalid') ||
-              sessionError.status === 401) {
-            setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
+              sessionError.message?.includes('already') ||
+              sessionError.status === 401 ||
+              sessionError.status === 422) {
+
+            // Token might have been used already - check if we have a valid session anyway
+            const { data: fallbackSession } = await supabase.auth.getSession();
+            if (fallbackSession?.session) {
+              console.log('Token was already used, but valid session exists. Continuing...');
+              setSessionReady(true);
+              return;
+            }
+
+            setError('This link has expired or has already been used. Please request a new password reset link from your school administrator.');
           } else {
             throw sessionError;
           }
@@ -96,8 +120,8 @@ export function SetPassword() {
         const errorMessage = (err as Error).message || 'Unknown error';
 
         // Provide specific error messages for common issues
-        if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
-          setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
+        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('already')) {
+          setError('This link has expired or has already been used. Please request a new password reset link from your school administrator.');
         } else {
           setError(`Failed to authenticate: ${errorMessage}. Please try clicking the link in your email again.`);
         }
