@@ -45,6 +45,19 @@ export function SetPassword() {
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
       const type = params.get('type');
+      const errorParam = params.get('error');
+      const errorCode = params.get('error_code');
+      const errorDescription = params.get('error_description');
+
+      // Handle error cases (e.g., expired token from URL)
+      if (errorParam) {
+        if (errorParam === 'access_denied' || errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
+          setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
+        } else {
+          setError(`Authentication error: ${errorDescription || errorParam}. Please contact support.`);
+        }
+        return;
+      }
 
       if (!accessToken) {
         setError('Invalid or missing authentication token. Please check your email and click the invitation link again.');
@@ -53,19 +66,41 @@ export function SetPassword() {
 
       try {
         // Set the session using the tokens from URL
-        const { error: sessionError } = await supabase.auth.setSession({
+        const { data, error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
           refresh_token: refreshToken || ''
         });
 
         if (sessionError) {
-          throw sessionError;
+          // Check for token expiration errors
+          if (sessionError.message?.includes('expired') ||
+              sessionError.message?.includes('invalid') ||
+              sessionError.status === 401) {
+            setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
+          } else {
+            throw sessionError;
+          }
+          return;
         }
 
+        // Verify the session was actually created
+        if (!data?.session) {
+          setError('Failed to create session. Please try clicking the link in your email again.');
+          return;
+        }
+
+        console.log('Session established successfully for user:', data.session.user?.email);
         setSessionReady(true);
       } catch (err) {
         console.error('Error setting session:', err);
-        setError('Failed to authenticate. Please try clicking the link in your email again.');
+        const errorMessage = (err as Error).message || 'Unknown error';
+
+        // Provide specific error messages for common issues
+        if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+          setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
+        } else {
+          setError(`Failed to authenticate: ${errorMessage}. Please try clicking the link in your email again.`);
+        }
       }
     };
 
@@ -99,12 +134,31 @@ export function SetPassword() {
         throw new Error('Supabase client is not configured');
       }
 
+      // Verify session is still valid before updating password
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session) {
+        setError('Your session has expired. Please request a new password reset link from your school administrator.');
+        setLoading(false);
+        return;
+      }
+
       // Update user password
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        // Check for session expiration during password update
+        if (updateError.message?.includes('expired') ||
+            updateError.message?.includes('invalid') ||
+            updateError.status === 401 ||
+            updateError.status === 403) {
+          setError('Your session has expired. Please request a new password reset link from your school administrator.');
+          setLoading(false);
+          return;
+        }
+        throw updateError;
+      }
 
       setSuccess(true);
 
@@ -115,7 +169,14 @@ export function SetPassword() {
 
     } catch (err) {
       console.error('Error setting password:', err);
-      setError((err as Error).message || 'Failed to set password. Please try again.');
+      const errorMessage = (err as Error).message || 'Failed to set password';
+
+      // Provide user-friendly error messages
+      if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
+        setError('Your session has expired. Please request a new password reset link from your school administrator.');
+      } else {
+        setError(`${errorMessage}. Please try again or contact support.`);
+      }
     } finally {
       setLoading(false);
     }
