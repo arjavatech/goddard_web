@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUpDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -18,22 +18,24 @@ import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
-type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
+import { AddFormModal } from '../../components/admin/AddFormModal';
+
+type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
   id: string;
   name: string;
   link: string;
   status: FormStatus;
   classroomsCount: number;
-  dueDays: number;
+  dueDate?: string;
 }
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
-  if (value.includes('default')) return 'Default';
-  if (value.includes('inactive')) return 'Inactive';
-  if (value.includes('archive')) return 'Archive';
-  if (value.includes('active')) return 'Active';
-  return 'Active';
+  if (value.includes('default') || value.includes('school_default')) return 'school_default';
+  if (value.includes('inactive')) return 'inactive';
+  if (value.includes('archive')) return 'archived';
+  if (value.includes('active')) return 'active';
+  return 'active';
 };
 export function FormsManagement() {
   const [forms, setForms] = useState<Form[]>([]);
@@ -44,8 +46,10 @@ export function FormsManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
-  const [formStatus, setFormStatus] = useState<FormStatus>('Default');
-  const [formDueDays, setFormDueDays] = useState(3);
+  const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
+  const [formDueDate, setFormDueDate] = useState('');
+  const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
+
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
@@ -58,8 +62,16 @@ export function FormsManagement() {
     const errors: {[key: string]: string} = {};
     
     if (!formName.trim()) errors.formName = 'Form name is required';
-    if (!formLink.trim()) errors.formLink = 'Form link is required';
-    else if (!/^https?:\/\/.+/.test(formLink.trim())) errors.formLink = 'Please enter a valid URL';
+    if (!formDueDate) errors.formDueDate = 'Due date is required';
+    else {
+      const today = new Date();
+      const selectedDate = new Date(formDueDate);
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
+      if (selectedDate <= today) {
+        errors.formDueDate = 'Due date must be greater than today';
+      }
+    }
     
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -75,13 +87,13 @@ export function FormsManagement() {
         if (!isMounted) return;
         if (templates.length === 0) return;
         
-        const mappedForms: Form[] = templates.map(template => ({
+        const mappedForms: Form[] = templates.map((template, index) => ({
           id: template.id,
           name: template.formName,
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
           classroomsCount: 0,
-          dueDays: 3 // Default value, will be updated when API supports it
+          dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -101,6 +113,24 @@ export function FormsManagement() {
     return matchesSearch && matchesStatus;
   }), [forms, searchQuery, statusFilter]);
 
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortedForms = useMemo(() => {
+    return [...filteredForms].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = a.name; bVal = b.name; break;
+        case 'status': aVal = a.status; bVal = b.status; break;
+        case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
+        default: aVal = a.name; bVal = b.name;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredForms, sortBy, sortOrder]);
+
   const {
     currentPage,
     totalPages,
@@ -108,7 +138,7 @@ export function FormsManagement() {
     itemsPerPage,
     setCurrentPage
   } = usePagination({ 
-    data: filteredForms,
+    data: sortedForms,
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
@@ -119,7 +149,8 @@ export function FormsManagement() {
       setIsAddingForm(true);
       const user = await fetchUserContext();
       if (!user.schoolId) return;
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId);
+      
+      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -129,24 +160,26 @@ export function FormsManagement() {
     }
   };
   const handleEditForm = async () => {
-    if (!selectedForm || !formName.trim() || !formLink.trim()) return;
+    if (!selectedForm || !formName.trim()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    const statusMap: Record<FormStatus, string> = {
-      'Default': 'school_default',
-      'Active': 'active',
-      'Inactive': 'inactive',
-      'Archive': 'archived'
-    };
-    const apiStatus = statusMap[formStatus] || formStatus.toLowerCase();
-    
-    await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, apiStatus);
-    
-    resetFormFields();
-    setIsEditDialogOpen(false);
-    window.location.reload();
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+
+      
+      
+      // Don't send due date if status is inactive
+      const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
+      
+      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, formStatus, dueDateToSend);
+      
+      showToast('success', 'Form updated successfully');
+      resetFormFields();
+      setIsEditDialogOpen(false);
+      window.location.reload();
+    } catch (error) {
+      showToast('error', 'Failed to update form. Please try again.');
+    }
   };
   const handleDeleteForm = async () => {
     if (!selectedForm) return;
@@ -158,13 +191,13 @@ export function FormsManagement() {
     
     // Refetch forms from server to ensure consistency
     const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
-    const mappedForms: Form[] = templates.map(template => ({
+    const mappedForms: Form[] = templates.map((template, index) => ({
       id: template.id,
       name: template.formName,
       link: template.filloutFormUrl ?? '#',
       status: mapStatus(template.status),
       classroomsCount: 0,
-      dueDays: 3 // Default value, will be updated when API supports it
+      dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
     }));
     setForms(mappedForms);
     setIsDeleteDialogOpen(false);
@@ -172,8 +205,8 @@ export function FormsManagement() {
   const resetFormFields = () => {
     setFormName('');
     setFormLink('');
-    setFormStatus('Default');
-    setFormDueDays(3);
+    setFormStatus('school_default');
+    setFormDueDate('');
     setFormErrors({});
   };
   const openEditDialog = (form: Form) => {
@@ -181,7 +214,7 @@ export function FormsManagement() {
     setFormName(form.name);
     setFormLink(form.link);
     setFormStatus(form.status);
-    setFormDueDays(form.dueDays);
+    setFormDueDate(form.dueDate || '');
     setIsEditDialogOpen(true);
   };
   const openDeleteDialog = (form: Form) => {
@@ -196,25 +229,40 @@ export function FormsManagement() {
       const user = await fetchUserContext();
       if (!user.schoolId) return;
       
-      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id);
+      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate);
       showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
       setIsAssignToAllDialogOpen(false);
+      setFormDueDate('');
     } catch (error) {
       showToast('error', 'Failed to assign form to all students. Please try again.');
     }
   };
   const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
-      case 'Active':
+      case 'active':
         return 'success';
-      case 'Default':
+      case 'school_default':
         return 'default';
-      case 'Inactive':
+      case 'inactive':
         return 'secondary';
-      case 'Archive':
+      case 'archived':
         return 'outline';
       default:
         return 'default';
+    }
+  };
+  const getStatusDisplayName = (status: FormStatus): string => {
+    switch (status) {
+      case 'school_default':
+        return 'Default';
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      case 'archived':
+        return 'Archived';
+      default:
+        return status;
     }
   };
   const statuses = useMemo(() => {
@@ -265,7 +313,7 @@ export function FormsManagement() {
                     Active Forms
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'Active').length}
+                    {forms.filter(f => f.status === 'active').length}
                   </p>
                 </div>
                 <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
@@ -282,7 +330,7 @@ export function FormsManagement() {
                     Default Forms
                   </p>
                   <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'Default').length}
+                    {forms.filter(f => f.status === 'school_default').length}
                   </p>
                 </div>
                 <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
@@ -299,7 +347,7 @@ export function FormsManagement() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Form Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredForms.length} of {forms.length} forms
+                  {sortedForms.length} of {forms.length} forms
                 </div>
               </div>
               
@@ -313,19 +361,38 @@ export function FormsManagement() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-11">
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Statuses</SelectItem>
-                    {statuses.map(status => <SelectItem key={status} value={status}>
-                        {status}
-                      </SelectItem>)}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full h-10 sm:h-11">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Statuses</SelectItem>
+                      {statuses.map(status => <SelectItem key={status} value={status}>
+                          {getStatusDisplayName(status)}
+                        </SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
+                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                        Sort
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
             {/* Desktop Table View */}
@@ -333,34 +400,21 @@ export function FormsManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
-                      Form Name
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Status
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/12">
-                      Due Days
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">
-                      Form Link
-                    </th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">
-                      Actions
-                    </th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/5">Form Name</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Status</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Due Date</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">Form Link</th>
+                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? <tr>
-                      <td colSpan={5} className="py-8">
+                      <td colSpan={6} className="py-8">
                         <Loading message="Loading forms..." size="sm" />
                       </td>
                     </tr> : paginatedForms.length > 0 ? paginatedForms.map(form => <tr key={form.id} className="border-b border-gray-100">
                         <td className="py-3 px-3">
                           <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
-                              {form.name.charAt(0)}
-                            </div>
                             <div className="min-w-0">
                               <div className="font-medium text-foreground truncate">{form.name}</div>
                             </div>
@@ -368,25 +422,45 @@ export function FormsManagement() {
                         </td>
                         <td className="py-3 px-2">
                           <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
-                            {form.status}
+                            {getStatusDisplayName(form.status)}
                           </Badge>
                         </td>
-                        <td className="py-3 px-2 text-center">
-                          <span className="text-sm font-medium">{form.dueDays} days</span>
+                        <td className="py-3 px-2">
+                          <div className="text-sm text-foreground">
+                            {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                          </div>
                         </td>
                         <td className="py-3 px-2">
                           <div className="flex items-center text-amazon-teal min-w-0">
                             <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {form.link ? <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate">
-                                {form.link}
-                              </a> : <span className="text-gray-400">Not provided</span>}
+                            {form.link ? (
+                              <>
+                                <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1">
+                                  {form.link}
+                                </a>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(form.link);
+                                    setCopiedFormId(form.id);
+                                    setTimeout(() => setCopiedFormId(null), 3000);
+                                  }}
+                                  className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                                  title="Copy link"
+                                >
+                                  {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-gray-400">Not provided</span>
+                            )}
                           </div>
                         </td>
-                        <td className="py-3 px-3 text-right">
+                        <td className="py-3 px-3 text-center">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
+                               <Settings className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
@@ -414,7 +488,7 @@ export function FormsManagement() {
                               <DropdownMenuItem 
                                 onClick={() => openDeleteDialog(form)} 
                                 className="text-red-600 focus:text-red-600"
-                                disabled={form.status === 'Active'}
+                                disabled={form.status === 'active'}
                               >
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete
@@ -423,7 +497,7 @@ export function FormsManagement() {
                           </DropdownMenu>
                         </td>
                       </tr>) : <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500">
+                      <td colSpan={6} className="py-8 text-center text-gray-500">
                         No forms match the current filters.
                       </td>
                     </tr>}
@@ -482,7 +556,7 @@ export function FormsManagement() {
                           <DropdownMenuItem 
                             onClick={() => openDeleteDialog(form)} 
                             className="text-red-600 focus:text-red-600"
-                            disabled={form.status === 'Active'}
+                            disabled={form.status === 'active'}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
@@ -494,17 +568,33 @@ export function FormsManagement() {
                     <div className="space-y-2 sm:space-y-3">
                       <div className="flex items-center gap-2">
                         <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
-                          {form.status}
+                          {getStatusDisplayName(form.status)}
                         </Badge>
-                        <span className="text-xs text-muted-foreground">• Due in {form.dueDays} days</span>
+                        <div className="text-xs text-muted-foreground">
+                          Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                        </div>
                       </div>
                       
                       <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
                         <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
                         {form.link ? (
-                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0">
-                            {form.link}
-                          </a>
+                          <>
+                            <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0 flex-1">
+                              {form.link}
+                            </a>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigator.clipboard.writeText(form.link);
+                                setCopiedFormId(form.id);
+                                setTimeout(() => setCopiedFormId(null), 3000);
+                              }}
+                              className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                              title="Copy link"
+                            >
+                              {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                            </button>
+                          </>
                         ) : (
                           <span className="text-gray-400 text-xs sm:text-sm">No link provided</span>
                         )}
@@ -580,32 +670,38 @@ export function FormsManagement() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Default">Default</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
-                  <SelectItem value="Archive">Archive</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Due Days</label>
-              <Input 
-                type="number" 
-                min="1" 
-                max="30" 
-                value={formDueDays} 
-                onChange={e => setFormDueDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} 
-                placeholder="Days until due" 
-                className="w-full h-10 sm:h-11 text-sm sm:text-base" 
+              <label className="block text-sm font-medium mb-2">Due Date</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => {
+                  setFormDueDate(e.target.value);
+                  if (formErrors.formDueDate) {
+                    setFormErrors(prev => ({...prev, formDueDate: ''}));
+                  }
+                }}
+                className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
+                min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
               />
-          
+              {formErrors.formDueDate && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
+              )}
             </div>
+
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || isAddingForm}>
+            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || !formDueDate || isAddingForm || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}>
               {isAddingForm ? 'Adding Form...' : 'Add Form'}
             </AsyncButton>
           </DialogFooter>
@@ -664,25 +760,26 @@ export function FormsManagement() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Default">Default</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="Inactive">Inactive</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Due Days</label>
-              <Input 
-                type="number" 
-                min="1" 
-                max="30" 
-                value={formDueDays} 
-                onChange={e => setFormDueDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))} 
-                placeholder="Days until due" 
-                className="w-full h-10 sm:h-11 text-sm sm:text-base" 
+              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => setFormDueDate(e.target.value)}
+                className="w-full h-10 sm:h-11"
+                min={new Date().toISOString().split('T')[0]}
               />
-        
+              <p className="text-xs text-muted-foreground mt-1">
+                
+              </p>
             </div>
+
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
@@ -731,6 +828,19 @@ export function FormsManagement() {
               <span className="font-medium">{selectedFormForAssign?.name}</span>{' '}
               to all students in the school? This will add the form to every student's enrollment.
             </p>
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <Input
+                type="date"
+                value={formDueDate}
+                onChange={e => setFormDueDate(e.target.value)}
+                className="w-full h-10 sm:h-11"
+                min={new Date().toISOString().split('T')[0]}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Leave empty to use default 30-day due date
+              </p>
+            </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">

@@ -5,6 +5,7 @@ import { FormsDocuments } from '../components/dashboard/FormsDocuments';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
+import { ParentInfo } from '../components/dashboard/ParentInfo';
 import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
@@ -21,6 +22,7 @@ type ChildFormCard = {
   recentEditLink?: string | null;
   filloutFormId?: string | null;
   assignedAt?: string | null;
+  dueDate?: string | null;
 };
 type ChildSpecificFormGroup = {
   childId: string;
@@ -95,7 +97,19 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
       recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
       recentEditLink: form.recent_edit_link || form.recentEditLink || null,
       filloutFormId: form.fillout_form_id || form.filloutFormId || null,
-      assignedAt: form.assigned_at || null
+      assignedAt: form.assigned_at || null,
+      dueDate: form.due_date ? (() => {
+        // Handle DD-MM-YYYY format from API
+        const parts = form.due_date.split('-');
+        if (parts.length === 3) {
+          const [day, month, year] = parts;
+          const date = new Date(`${year}-${month}-${day}`);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('en-US');
+          }
+        }
+        return form.due_date;
+      })() : null
     } satisfies ChildFormCard;
   });
 
@@ -113,7 +127,18 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
   const totalForms = forms.length;
   const pendingForm = forms.find((form: ChildFormCard) => !COMPLETION_STATUSES.has(form.status)) ?? null;
   const enrollmentProgress = totalForms > 0 ? Math.round(completedCount / totalForms * 100) : 0;
-  const currentStep = pendingForm?.title ?? (enrollmentProgress === 100 ? 'Enrollment complete' : 'Start enrollment');
+  
+  // Check for overdue forms
+  const overdueForms = forms.filter((form: ChildFormCard) => {
+    if (COMPLETION_STATUSES.has(form.status) || !form.dueDate) return false;
+    const today = new Date();
+    const dueDate = new Date(form.dueDate);
+    return dueDate < today;
+  });
+  
+  const currentStep = overdueForms.length > 0 
+    ? `${overdueForms.length} overdue form${overdueForms.length > 1 ? 's' : ''}` 
+    : pendingForm?.title ?? (enrollmentProgress === 100 ? 'Enrollment complete' : 'Start enrollment');
 
   // Extract name from childFullName or fallback to empty string
   const fullName = child.childFullName || '';
@@ -184,15 +209,14 @@ export function Dashboard() {
     let isMounted = true;
     setLoading(true);
 
-    // Fetch parent data with children and forms in a single API call
+    // Fetch parent data
     fetchSingleParent(parentId, userData.schoolId)
-      .then(parentData => {
+      .then((parentData) => {
         if (!isMounted) return;
 
         if (!parentData) {
           throw new Error('Unable to fetch parent data.');
         }
-
 
         // Store raw parent data for form viewing
         setParentData(parentData);
@@ -212,7 +236,9 @@ export function Dashboard() {
         });
        
         // Process children from the parent response
-        const processedChildren = (parentData.children || []).map(child => normalizeChildFromParent(child, yearFilter));
+        const processedChildren = (parentData.children || []).map(child => {
+          return normalizeChildFromParent(child, yearFilter);
+        });
 
         // Extract forms for each child
         const childFormsData = processedChildren.map(child => ({
@@ -333,9 +359,14 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last">
+                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last space-y-4">
                   <div className="section-fade-in" style={{
               animationDelay: '0.3s'
+            }}>
+                    <ParentInfo parentData={parentData} />
+                  </div>
+                  <div className="section-fade-in" style={{
+              animationDelay: '0.4s'
             }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>

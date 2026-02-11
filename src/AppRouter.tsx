@@ -18,10 +18,17 @@ import { ClassroomFormAssignment } from './pages/admin/ClassroomFormAssignment';
 import { ParentManagement } from './pages/admin/ParentManagement';
 import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
-
+import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
+// SuperAdmin pages
+import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
+import { SchoolManagement } from './pages/superadmin/SchoolManagement';
+import { UserManagement } from './pages/superadmin/UserManagement';
+import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
+import { ClientManagement } from './pages/superadmin/ClientManagement';
+import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
   return <UserProvider>
@@ -44,13 +51,24 @@ export function AppRouter() {
             <Route path="/admin/classrooms" element={<ClassroomManagement />} />
             <Route path="/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
             <Route path="/admin/forms" element={<FormsManagement />} />
+            <Route path="/admin/forms/due" element={<DueForms />} />
             <Route path="/admin/forms/view/:formId" element={<FormView />} />
             <Route path="/admin/form-assignments" element={<ClassroomFormAssignment />} />
             <Route path="/admin/parents" element={<ParentManagement />} />
             <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
             <Route path="/admin/students" element={<StudentManagement />} />
-            <Route path="/admin/admins" element={<AdminManagement />} />
+            <Route path="/admin/admin-management" element={<AdminManagement />} />
+            <Route path="/admin/users" element={<UserManagement />} />
+          </Route>
 
+          {/* SuperAdmin Routes */}
+          <Route element={<ProtectedRoute>
+                <Outlet />
+              </ProtectedRoute>}>
+            <Route path="/superadmin-arjava" element={<SuperAdminDashboard />} />
+            <Route path="/superadmin-arjava/schools" element={<SchoolManagement />} />
+            <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
+            <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
           </Route>
 
         </Routes>

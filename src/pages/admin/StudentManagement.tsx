@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
@@ -14,9 +15,11 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { fetchUserContext } from '../../services/api/user';
 import { usePagination } from '../../hooks/usePagination';
 
+
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent } from '@/services/api/admin';
+import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, transferStudentToClass, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
+import { useToast } from '../../contexts/ToastContext';
 
 type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
@@ -67,11 +70,13 @@ interface Student {
     name: string;
     status: string;
     assignedAt?: string | null;
+    dueDate?: string | null;
   }[];
   childStatus: 'active' | 'archive';
   enrollmentId?: string;
 }
 export function StudentManagement() {
+  const { showToast } = useToast();
   const [students, setStudents] = useState<Student[]>([]);
   const statusFromProgress = (progress: number): EnrollmentStatus => {
     if (progress === 100) return 'Completed-AdminApproved';
@@ -80,11 +85,12 @@ export function StudentManagement() {
   };
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [formFilter, setFormFilter] = useState<string>('all');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [childStatusFilter, setChildStatusFilter] = useState<string>('all');
-  const [classroomFilter, setClassroomFilter] = useState<string>('all');
-  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [formFilter, setFormFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [childStatusFilter, setChildStatusFilter] = useState<string[]>([]);
+  const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
+  const [yearFilter, setYearFilter] = useState<string[]>([]);
+
   const [showFilters, setShowFilters] = useState(false);
   const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -103,9 +109,87 @@ export function StudentManagement() {
   const [isStudentFormDialogOpen, setIsStudentFormDialogOpen] = useState(false);
   const [selectedStudentForForms, setSelectedStudentForForms] = useState<Student | null>(null);
   const [selectedFormsToAdd, setSelectedFormsToAdd] = useState<string[]>([]);
+  
+  // Class transfer states
+  const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
+  const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<Student | null>(null);
+  const [newClassroomId, setNewClassroomId] = useState('');
+  const [isTransferring, setIsTransferring] = useState(false);
 
-  const handleFormFilterChange = (value: string) => {
-    setFormFilter(value);
+  const [availableClassrooms, setAvailableClassrooms] = useState<{id: string, name: string}[]>([]);
+  
+  // Bulk transfer states
+  const [isBulkTransferDialogOpen, setIsBulkTransferDialogOpen] = useState(false);
+  const [selectedStudentsForTransfer, setSelectedStudentsForTransfer] = useState<string[]>([]);
+  const [bulkTransferFromGrade, setBulkTransferFromGrade] = useState('');
+  const [bulkTransferToGrade, setBulkTransferToGrade] = useState('');
+  const [isBulkSelectionMode, setIsBulkSelectionMode] = useState(false);
+  const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
+
+  const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
+    if (currentValues.includes(value)) {
+      setter(currentValues.filter(v => v !== value));
+    } else {
+      setter([...currentValues, value]);
+    }
+  };
+
+  const MultiSelectDropdown = ({ 
+    value, 
+    onValueChange, 
+    options, 
+    placeholder, 
+    label 
+  }: { 
+    value: string[], 
+    onValueChange: (values: string[]) => void, 
+    options: string[], 
+    placeholder: string,
+    label: string 
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <span className="truncate">
+            {value.length === 0 ? placeholder : `${value.length} selected`}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        </button>
+        {isOpen && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+            <div className="p-1 max-h-60 overflow-y-auto">
+              {options.map((option) => (
+                <div
+                  key={option}
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={value.includes(option)}
+                      onChange={() => {}}
+                      className="pointer-events-none"
+                    />
+                    <span>{option}</span>
+                  </div>
+                </div>
+              ))}
+              {options.length === 0 && (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No options available
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
   useEffect(() => {
     let isMounted = true;
@@ -136,12 +220,26 @@ export function StudentManagement() {
 
           // Map forms from new API response format
           const formsArray = enrollment.forms && typeof enrollment.forms === 'object'
-            ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => ({
-                id: formName,
-                name: formName,
-                status: formData.status || 'Not Started',
-                assignedAt: formData.assigned_at || null
-              }))
+            ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => {
+                const assignedDate = formData.assigned_at;
+                let dueDate = null;
+                if (assignedDate) {
+                  // Add 30 days to assigned date for due date
+                  const assigned = new Date(assignedDate);
+                  if (!isNaN(assigned.getTime())) {
+                    const due = new Date(assigned);
+                    due.setDate(due.getDate() + 30);
+                    dueDate = due.toISOString().split('T')[0];
+                  }
+                }
+                return {
+                  id: formName,
+                  name: formName,
+                  status: formData.status || 'Not Started',
+                  assignedAt: assignedDate || null,
+                  dueDate
+                };
+              })
             : [];
 
           // Count forms with 'approved' status as completed
@@ -209,6 +307,13 @@ export function StudentManagement() {
           name: template.formName
         }));
         setAvailableForms(formsList);
+        
+        // Set available classrooms
+        const classroomsList = classrooms.map(classroom => ({
+          id: classroom.id,
+          name: classroom.name
+        }));
+        setAvailableClassrooms(classroomsList);
       } catch (error) {
       } finally {
         if (isMounted) {
@@ -273,64 +378,84 @@ export function StudentManagement() {
     return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
   }, [students]);
 
-  const filteredStudents = useMemo(() => students.filter(student => {
-    const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
+      const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
 
-    // Filter by form - only show students who have the selected form
-    const matchesForm = formFilter === 'all' || student.assignedForms.some(form => form.name === formFilter);
+      // Filter by forms - show students who have any of the selected forms
+      const matchesForm = formFilter.length === 0 || formFilter.some(form => student.assignedForms.some(assignedForm => assignedForm.name === form));
 
-    // Filter by status - if a form is selected, filter by that form's status; otherwise by overall enrollment status
-    let matchesStatus = true;
-    if (statusFilter !== 'all') {
-      if (formFilter === 'all') {
-        // Overall enrollment status
-        matchesStatus = student.enrollmentStatus === statusFilter;
-      } else {
-        // Specific form status
-        const selectedForm = student.assignedForms.find(form => form.name === formFilter);
-        if (selectedForm) {
-          const normalizedStatus = normalizeFormStatus(selectedForm.status);
-          // "Incomplete" filter should match both "incomplete" and "draft" statuses
-          if (statusFilter.toLowerCase() === 'incomplete') {
-            matchesStatus = normalizedStatus.toLowerCase() === 'incomplete' ||
-                           selectedForm.status.toLowerCase() === 'draft' ||
-                           normalizedStatus.toLowerCase() === 'draft';
-          } else {
-            matchesStatus = normalizedStatus.toLowerCase() === statusFilter.toLowerCase();
+      // Filter by status
+      const matchesStatus = statusFilter.length === 0 || statusFilter.some(status => {
+        if (formFilter.length === 0) {
+          return student.enrollmentStatus === status;
+        } else {
+          return formFilter.some(form => {
+            const selectedForm = student.assignedForms.find(assignedForm => assignedForm.name === form);
+            if (selectedForm) {
+              const normalizedStatus = normalizeFormStatus(selectedForm.status);
+              if (status.toLowerCase() === 'incomplete') {
+                return normalizedStatus.toLowerCase() === 'incomplete' ||
+                       selectedForm.status.toLowerCase() === 'draft' ||
+                       normalizedStatus.toLowerCase() === 'draft';
+              } else {
+                return normalizedStatus.toLowerCase() === status.toLowerCase();
+              }
+            }
+            return false;
+          });
+        }
+      });
+
+      // Filter by child status
+      const matchesChildStatus = childStatusFilter.length === 0 || childStatusFilter.includes(student.childStatus);
+
+      // Filter by classroom
+      const matchesClassroom = classroomFilter.length === 0 || classroomFilter.includes(student.classroom.name);
+
+      // Filter by year
+      const matchesYear = yearFilter.length === 0 || yearFilter.some(year => {
+        return student.assignedForms.some(form => {
+          if (!form.assignedAt) return false;
+          try {
+            const date = new Date(form.assignedAt);
+            if (!isNaN(date.getTime())) {
+              return date.getFullYear().toString() === year;
+            } else {
+              const parts = form.assignedAt.split('-');
+              return parts.length === 3 && parts[2] === year;
+            }
+          } catch (e) {
+            const parts = form.assignedAt.split('-');
+            return parts.length === 3 && parts[2] === year;
           }
-        } else {
-          matchesStatus = false;
-        }
-      }
-    }
+        });
+      });
 
-    // Filter by child status
-    const matchesChildStatus = childStatusFilter === 'all' || student.childStatus === childStatusFilter;
-
-    // Filter by classroom
-    const matchesClassroom = classroomFilter === 'all' || student.classroom.name === classroomFilter;
-
-    // Filter by year based on assigned_at
-    const matchesYear = yearFilter === 'all' || student.assignedForms.some(form => {
-      if (!form.assignedAt) return false;
-      try {
-        const date = new Date(form.assignedAt);
-        if (!isNaN(date.getTime())) {
-          return date.getFullYear().toString() === yearFilter;
-        } else {
-          // Handle DD-MM-YYYY format
-          const parts = form.assignedAt.split('-');
-          return parts.length === 3 && parts[2] === yearFilter;
-        }
-      } catch (e) {
-        // Handle DD-MM-YYYY format as fallback
-        const parts = form.assignedAt.split('-');
-        return parts.length === 3 && parts[2] === yearFilter;
-      }
+      return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom && matchesYear;
     });
+  }, [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
 
-    return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom && matchesYear;
-  }), [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const filteredAndSortedStudents = useMemo(() => {
+    const sorted = [...filteredStudents].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`; break;
+        case 'classroom': aVal = a.classroom.name; bVal = b.classroom.name; break;
+        case 'parent': aVal = a.parent.name; bVal = b.parent.name; break;
+        case 'status': aVal = a.enrollmentStatus; bVal = b.enrollmentStatus; break;
+        case 'progress': aVal = a.enrollmentProgress; bVal = b.enrollmentProgress; break;
+        default: aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+    return sorted;
+  }, [filteredStudents, sortBy, sortOrder]);
 
   const {
     currentPage,
@@ -339,7 +464,7 @@ export function StudentManagement() {
     itemsPerPage,
     isMobile,
     setCurrentPage
-  } = usePagination({ data: filteredStudents });
+  } = usePagination({ data: filteredAndSortedStudents });
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
@@ -431,21 +556,7 @@ export function StudentManagement() {
               Manage student enrollments and track progress
             </p>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={toggleFilters} 
-            size="sm"
-          >
-            {showFilters ? (
-              <>
-                <X className="h-4 w-4 mr-2" /> Hide Filters
-              </>
-            ) : (
-              <>
-                <Filter className="h-4 w-4 mr-2" /> Show Filters
-              </>
-            )}
-          </Button>
+
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
@@ -505,22 +616,90 @@ export function StudentManagement() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredStudents.length} of {students.length} students
-                  {classroomFilter !== 'all' && (
-                    <span className="ml-2 text-amazon-teal">• {classroomFilter}</span>
+                  {filteredAndSortedStudents.length} of {students.length} students
+                  {classroomFilter.length > 0 && (
+                    <span className="ml-2 text-amazon-teal">• {classroomFilter.length} classroom{classroomFilter.length !== 1 ? 's' : ''}</span>
                   )}
                 </div>
               </div>
               
               {/* Search Bar */}
-              <div className="relative mb-3 sm:mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input 
-                  placeholder="Search students by name, parent, or classroom..." 
-                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
-                  value={searchQuery} 
-                  onChange={e => setSearchQuery(e.target.value)} 
-                />
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input 
+                    placeholder="Search students by name, parent, or classroom..." 
+                    className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
+                    value={searchQuery} 
+                    onChange={e => setSearchQuery(e.target.value)} 
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={toggleFilters} 
+                    size="sm"
+                    className="h-10 sm:h-11"
+                  >
+                    {showFilters ? (
+                      <>
+                        <X className="h-4 w-4 mr-2" /> Hide Filters
+                      </>
+                    ) : (
+                      <>
+                        <Filter className="h-4 w-4 mr-2" /> Filters
+                      </>
+                    )}
+                  </Button>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-10 sm:h-11">
+                        <ArrowUpDown className="h-4 w-4 mr-2" />
+                        Sort
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('classroom'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('classroom'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('parent'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('parent'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('progress'); setSortOrder('desc'); }}>Progress High-Low</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <Button 
+                    onClick={() => {
+                      setIsBulkSelectionMode(!isBulkSelectionMode);
+                      setSelectedStudentsForBulkAction([]);
+                    }}
+                    size="sm"
+                    variant={isBulkSelectionMode ? "default" : "outline"}
+                    className={`h-10 sm:h-11 ${isBulkSelectionMode ? 'bg-amazon-teal hover:bg-amazon-teal/90' : ''}`}
+                  >
+                    {isBulkSelectionMode ? 'Cancel Selection' : 'Bulk Select'}
+                  </Button>
+                  {isBulkSelectionMode && selectedStudentsForBulkAction.length > 0 && (
+                    <Button 
+                      onClick={() => {
+                        setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
+                        // Auto-set from grade based on selected students
+                        const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
+                        if (selectedStudentObjects.length > 0) {
+                          setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
+                        }
+                        setIsBulkTransferDialogOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
+                    >
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Transfer Selected ({selectedStudentsForBulkAction.length})
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Filters */}
@@ -528,97 +707,62 @@ export function StudentManagement() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-background rounded-lg border">
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form Type</label>
-                    <Select value={formFilter} onValueChange={handleFormFilterChange}>
-                      <SelectTrigger className="h-10 sm:h-11">
-                        <SelectValue placeholder="Filter by form" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Forms</SelectItem>
-                        {allFormNames.map(formName => (
-                          <SelectItem key={formName} value={formName}>
-                            {formName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectDropdown
+                      value={formFilter}
+                      onValueChange={setFormFilter}
+                      options={allFormNames}
+                      placeholder="Select forms"
+                      label="Form Type"
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</label>
-                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                      <SelectTrigger className="h-10 sm:h-11">
-                        <SelectValue placeholder="Filter by status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Statuses</SelectItem>
-                        {formFilter === 'all' ? (
-                          <>
-                            <SelectItem value="Completed-AdminApproved">Completed-AdminApproved</SelectItem>
-                            <SelectItem value="Completed-Pending Approval">Completed-Pending Approval</SelectItem>
-                            <SelectItem value="Draft">Draft</SelectItem>
-                          </>
-                        ) : (
-                          <>
-                            <SelectItem value="Completed-AdminApproved">Completed-AdminApproved</SelectItem>
-                            <SelectItem value="Completed-Pending Approval">Completed-Pending Approval</SelectItem>
-                            <SelectItem value="Completed-Needs Revision">Completed-Needs Revision</SelectItem>
-                            <SelectItem value="Draft">Draft</SelectItem>
-                            {/* <SelectItem value="Incomplete">Incomplete</SelectItem> */}
-                          </>
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectDropdown
+                      value={statusFilter}
+                      onValueChange={setStatusFilter}
+                      options={formFilter.length === 0 ? 
+                        ['Completed-AdminApproved', 'Completed-Pending Approval', 'Draft'] :
+                        ['Completed-AdminApproved', 'Completed-Pending Approval', 'Completed-Needs Revision', 'Draft']
+                      }
+                      placeholder="Select statuses"
+                      label="Status"
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Child Status</label>
-                    <Select value={childStatusFilter} onValueChange={setChildStatusFilter}>
-                      <SelectTrigger className="h-10 sm:h-11">
-                        <SelectValue placeholder="Child Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Children</SelectItem>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="archive">Archived</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectDropdown
+                      value={childStatusFilter}
+                      onValueChange={setChildStatusFilter}
+                      options={['active', 'archive']}
+                      placeholder="Select child status"
+                      label="Child Status"
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Classroom</label>
-                    <Select value={classroomFilter} onValueChange={setClassroomFilter}>
-                      <SelectTrigger className="h-10 sm:h-11">
-                        <SelectValue placeholder="Filter by classroom" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Classrooms</SelectItem>
-                        {allClassrooms.map(classroom => (
-                          <SelectItem key={classroom} value={classroom}>
-                            {classroom}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectDropdown
+                      value={classroomFilter}
+                      onValueChange={setClassroomFilter}
+                      options={allClassrooms}
+                      placeholder="Select classrooms"
+                      label="Classroom"
+                    />
                   </div>
                   
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Year</label>
-                    <Select value={yearFilter} onValueChange={setYearFilter}>
-                      <SelectTrigger className="h-10 sm:h-11">
-                        <SelectValue placeholder="Filter by year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Years</SelectItem>
-                        {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
-                          const year = (new Date().getFullYear() - i).toString();
-                          return (
-                            <SelectItem key={year} value={year}>
-                              {year}
-                            </SelectItem>
-                          );
-                        })}
-                      </SelectContent>
-                    </Select>
+                    <MultiSelectDropdown
+                      value={yearFilter}
+                      onValueChange={setYearFilter}
+                      options={Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => 
+                        (new Date().getFullYear() - i).toString()
+                      )}
+                      placeholder="Select years"
+                      label="Year"
+                    />
                   </div>
                 </div>
               )}
@@ -629,32 +773,46 @@ export function StudentManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">
-                      Student
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/6">
-                      Classroom
-                    </th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/5">
-                      Parent
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Status
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Child Status
-                    </th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">
-                      Actions
-                    </th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/6">
-                      Progress
-                    </th>
+                    {isBulkSelectionMode && (
+                      <th className="text-center py-3 px-2 font-medium text-gray-600 w-[8%]">
+                        <Checkbox
+                          checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                            } else {
+                              setSelectedStudentsForBulkAction([]);
+                            }
+                          }}
+                        />
+                      </th>
+                    )}
+                    <th className={`text-left py-3 px-3 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[18%]' : 'w-[20%]'}`}>Student</th>
+                    <th className={`text-left py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Classroom</th>
+                    <th className={`text-left py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[16%]' : 'w-[18%]'}`}>Parent</th>
+                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Status</th>
+                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[9%]' : 'w-[10%]'}`}>Child Status</th>
+                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[15%]' : 'w-[16%]'}`}>Actions</th>
+                    <th className={`text-right py-3 px-3 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Progress</th>
                   </tr>
                 </thead>
                   <tbody>
                     {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
                       <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
+                        {isBulkSelectionMode && (
+                          <td className="py-3 px-2 text-center">
+                            <Checkbox
+                              checked={selectedStudentsForBulkAction.includes(student.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                                } else {
+                                  setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                                }
+                              }}
+                            />
+                          </td>
+                        )}
                         <td className="py-3 px-3">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
@@ -666,11 +824,8 @@ export function StudentManagement() {
                                 state={{ fromStudents: true }}
                                 className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
                               >
-                                {student.firstName} {student.lastName}
+                                {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                               </Link>
-                              <div className="text-xs text-gray-500 truncate">
-                                ID: {student.id.slice(0, 6)}...
-                              </div>
                             </div>
                           </div>
                         </td>
@@ -715,8 +870,8 @@ export function StudentManagement() {
                         </td>
                       <td className="py-3 px-2 text-center">
                         {(() => {
-                          if (formFilter !== 'all') {
-                            const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                          if (formFilter.length > 0) {
+                            const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
                             if (selectedForm) {
                               const normalizedStatus = normalizeFormStatus(selectedForm.status);
                               const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
@@ -757,28 +912,39 @@ export function StudentManagement() {
                         </button>
                       </td>
                       <td className="py-3 px-2 text-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudentForForms(student);
-                            setIsStudentFormDialogOpen(true);
-                          }}
-                          className="h-8 px-2"
-                        >
-                          <Settings className="h-3 w-3 mr-1" />
-                          Forms
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedStudentForForms(student);
+                              setIsStudentFormDialogOpen(true);
+                            }}>
+                              <Settings className="h-4 w-4 mr-2" />
+                              Manage Forms
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedStudentForTransfer(student);
+                              setNewClassroomId('');
+                              setIsTransferDialogOpen(true);
+                            }}>
+                              <School className="h-4 w-4 mr-2" />
+                              Transfer Class
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                         <td className="py-3 px-3">
-                          <div className="flex items-center justify-end space-x-2">
-                            <div className="flex items-center text-xs text-gray-600">
-                              <FileText className="h-3 w-3 mr-1" />
+                          <div className="text-right">
+                            <div className="text-xs text-gray-600 mb-1">
                               {student.formsCompleted}/{student.totalForms}
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
-                              <span className="text-xs font-semibold text-foreground w-8">
+                            <div className="flex items-center justify-end space-x-1">
+                              <Progress value={student.enrollmentProgress} className="w-16 h-2" />
+                              <span className="text-xs font-semibold text-foreground min-w-[28px]">
                                 {student.enrollmentProgress}%
                               </span>
                             </div>
@@ -787,7 +953,7 @@ export function StudentManagement() {
                     </tr>
                     )) : (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-gray-500">
+                        <td colSpan={isBulkSelectionMode ? 8 : 7} className="py-8 text-center text-gray-500">
                           No students match the current filters.
                         </td>
                       </tr>
@@ -799,7 +965,7 @@ export function StudentManagement() {
             <Pagination
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredStudents.length}
+              totalItems={filteredAndSortedStudents.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               className="hidden lg:flex"
@@ -812,6 +978,19 @@ export function StudentManagement() {
                   <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
+                        {isBulkSelectionMode && (
+                          <Checkbox
+                            checked={selectedStudentsForBulkAction.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                              } else {
+                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                              }
+                            }}
+                            className="flex-shrink-0"
+                          />
+                        )}
                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
                           {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                         </div>
@@ -821,7 +1000,7 @@ export function StudentManagement() {
                             state={{ fromStudents: true }}
                             className="font-medium text-amazon-teal hover:underline text-sm block truncate"
                           >
-                            {student.firstName} {student.lastName}
+                            {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                           </Link>
                           <div className="text-xs text-muted-foreground truncate">
                             {student.classroom.name}
@@ -874,8 +1053,8 @@ export function StudentManagement() {
                         <span className="text-xs text-muted-foreground">Status:</span>
                         <div className="flex-shrink-0">
                           {(() => {
-                            if (formFilter !== 'all') {
-                              const selectedForm = student.assignedForms.find(form => form.name === formFilter);
+                            if (formFilter.length > 0) {
+                              const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
                               if (selectedForm) {
                                 const normalizedStatus = normalizeFormStatus(selectedForm.status);
                                 const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
@@ -902,7 +1081,7 @@ export function StudentManagement() {
                         </div>
                       </div>
                       
-                      <div className="mt-2 pt-2 border-t">
+                      <div className="mt-2 pt-2 border-t space-y-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -914,6 +1093,19 @@ export function StudentManagement() {
                         >
                           <Settings className="h-3 w-3 mr-1" />
                           Manage Forms
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedStudentForTransfer(student);
+                            setNewClassroomId('');
+                            setIsTransferDialogOpen(true);
+                          }}
+                          className="w-full h-7 text-xs"
+                        >
+                          <School className="h-3 w-3 mr-1" />
+                          Transfer Class
                         </Button>
                       </div>
                     </div>
@@ -1025,7 +1217,7 @@ export function StudentManagement() {
                 Select Students ({selectedStudentsForForm.length} selected)
               </label>
               <div className="border rounded-lg max-h-60 overflow-y-auto">
-                {filteredStudents.filter(student => {
+                {filteredAndSortedStudents.filter(student => {
                   const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
                   const matchesSearch = assignDialogSearchTerm === '' || 
                     `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
@@ -1047,7 +1239,7 @@ export function StudentManagement() {
                     </div>
                   </div>
                 ))}
-                {filteredStudents.filter(student => {
+                {filteredAndSortedStudents.filter(student => {
                   const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
                   const matchesSearch = assignDialogSearchTerm === '' || 
                     `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
@@ -1121,32 +1313,7 @@ export function StudentManagement() {
                       <Clock className="h-3 w-3" /> : 
                       <AlertCircle className="h-3 w-3" />;
                     
-                    // Calculate due date (assignment date + 3 days default, will be dynamic later)
-                    const dueDays = 3; // Default, will come from API later
-                    const dueDate = form.assignedAt ? (() => {
-                      try {
-                        // Parse DD/MM/YYYY or DD-MM-YYYY format
-                        const parts = form.assignedAt.split(/[/-]/);
-                        if (parts.length === 3) {
-                          const [day, month, year] = parts.map(p => parseInt(p));
-                          if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
-                            const assignedDate = new Date(year, month - 1, day);
-                            if (!isNaN(assignedDate.getTime())) {
-                              return new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-                            }
-                          }
-                        }
-                        // Fallback to regular date parsing
-                        const fallbackDate = new Date(form.assignedAt);
-                        if (!isNaN(fallbackDate.getTime())) {
-                          return new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-                        }
-                      } catch (e) {
-                        console.warn('Date parsing failed for:', form.assignedAt);
-                      }
-                      return null;
-                    })() : null;
-                    const isOverdue = dueDate && new Date() > dueDate && normalizedStatus !== 'Approved';
+
                     
                     return (
                       <div key={form.id} className={`flex items-center justify-between p-3 hover:bg-gray-50 transition-colors ${
@@ -1160,13 +1327,7 @@ export function StudentManagement() {
                               <span>
                                 Assigned: {form.assignedAt || 'No date'}
                               </span>
-                              {dueDate && !isNaN(dueDate.getTime()) && (
-                                <span className={`font-medium ${
-                                  isOverdue ? 'text-red-600' : 'text-amber-600'
-                                }`}>
-                                  • Due: {dueDate.toLocaleDateString('en-GB')}
-                                </span>
-                              )}
+
                             </div>
                           </div>
                         </div>
@@ -1175,11 +1336,7 @@ export function StudentManagement() {
                             {statusIcon}
                             {normalizedStatus}
                           </Badge>
-                          {isOverdue && (
-                            <Badge variant="destructive" className="text-xs px-1.5 py-0.5">
-                              Overdue
-                            </Badge>
-                          )}
+
                         </div>
                       </div>
                     );
@@ -1309,6 +1466,242 @@ export function StudentManagement() {
                 </Button>
               </div>
             </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Class Transfer Dialog */}
+      <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md" preventClose>
+          <DialogHeader>
+            <DialogTitle>Transfer Student to New Class</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="p-3 bg-gray-50 rounded-lg">
+              <div className="font-medium">{selectedStudentForTransfer?.firstName} {selectedStudentForTransfer?.lastName}</div>
+              <div className="text-sm text-muted-foreground">Current: {selectedStudentForTransfer?.classroom.name}</div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">New Classroom</label>
+              <Select value={newClassroomId} onValueChange={setNewClassroomId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select new classroom" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableClassrooms
+                    .filter(classroom => classroom.id !== selectedStudentForTransfer?.classroom.id)
+                    .map(classroom => (
+                    <SelectItem key={classroom.id} value={classroom.id}>
+                      {classroom.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!selectedStudentForTransfer || !newClassroomId) return;
+                try {
+                  setIsTransferring(true);
+                  if (!selectedStudentForTransfer.enrollmentId) {
+                    console.error('No enrollment ID found');
+                    return;
+                  }
+                  
+                  await promoteStudent(
+                    selectedStudentForTransfer.enrollmentId,
+                    newClassroomId,
+                    'Age progression to new class',
+                    new Date().toISOString()
+                  );
+                  
+                  showToast('success', 'Student transferred successfully!');
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                  console.error('Error transferring student:', error);
+                  showToast('error', 'Error transferring student. Please try again.');
+                } finally {
+                  setIsTransferring(false);
+                }
+              }}
+              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              disabled={!newClassroomId || isTransferring}
+            >
+              {isTransferring ? 'Transferring...' : 'Transfer Student'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Transfer Dialog */}
+      <Dialog open={isBulkTransferDialogOpen} onOpenChange={setIsBulkTransferDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+          <DialogHeader>
+            <DialogTitle>Bulk Grade Transfer</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">From Grade/Class</label>
+                <Select value={bulkTransferFromGrade} onValueChange={setBulkTransferFromGrade} disabled={selectedStudentsForTransfer.length > 0}>
+                  <SelectTrigger className={selectedStudentsForTransfer.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}>
+                    <SelectValue placeholder="Select current grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClassrooms.map(classroom => (
+                      <SelectItem key={classroom.id} value={classroom.id}>
+                        {classroom.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">To Grade/Class</label>
+                <Select value={bulkTransferToGrade} onValueChange={setBulkTransferToGrade}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableClassrooms
+                      .filter(classroom => classroom.id !== bulkTransferFromGrade)
+                      .map(classroom => (
+                      <SelectItem key={classroom.id} value={classroom.id}>
+                        {classroom.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            
+            {bulkTransferFromGrade && (
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Select Students to Transfer ({selectedStudentsForTransfer.length} selected)
+                </label>
+                <div className="border rounded-lg max-h-80 overflow-y-auto">
+                  {(selectedStudentsForTransfer.length > 0 
+                    ? students.filter(student => selectedStudentsForTransfer.includes(student.id))
+                    : students.filter(student => student.classroom.id === bulkTransferFromGrade)
+                  ).map((student) => (
+                    <div key={student.id} className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-gray-50">
+                      {selectedStudentsForTransfer.length === 0 && (
+                        <Checkbox
+                          checked={selectedStudentsForTransfer.includes(student.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudentsForTransfer(prev => [...prev, student.id]);
+                            } else {
+                              setSelectedStudentsForTransfer(prev => prev.filter(id => id !== student.id));
+                            }
+                          }}
+                        />
+                      )}
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
+                        {student.firstName.charAt(0)}{student.lastName.charAt(0)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{student.firstName} {student.lastName}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {student.parent.name} • Progress: {student.enrollmentProgress}%
+                        </div>
+                      </div>
+                      <Badge variant={student.enrollmentStatus === 'Completed-AdminApproved' ? 'success' : 'secondary'} className="text-xs">
+                        {student.enrollmentStatus}
+                      </Badge>
+                    </div>
+                  ))}
+                  {(selectedStudentsForTransfer.length > 0 
+                    ? students.filter(student => selectedStudentsForTransfer.includes(student.id))
+                    : students.filter(student => student.classroom.id === bulkTransferFromGrade)
+                  ).length === 0 && (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No students found in selected grade/class.
+                    </div>
+                  )}
+                </div>
+                
+                {selectedStudentsForTransfer.length === 0 && students.filter(student => student.classroom.id === bulkTransferFromGrade).length > 0 && (
+                  <div className="flex justify-between items-center mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allStudentIds = students
+                          .filter(student => student.classroom.id === bulkTransferFromGrade)
+                          .map(student => student.id);
+                        setSelectedStudentsForTransfer(allStudentIds);
+                      }}
+                    >
+                      Select All
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedStudentsForTransfer([])}
+                    >
+                      Clear All
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsBulkTransferDialogOpen(false);
+              setSelectedStudentsForTransfer([]);
+              setBulkTransferFromGrade('');
+              setBulkTransferToGrade('');
+              setIsBulkSelectionMode(false);
+              setSelectedStudentsForBulkAction([]);
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={async () => {
+                if (!bulkTransferToGrade || selectedStudentsForTransfer.length === 0) return;
+                try {
+                  const user = await fetchUserContext();
+                  
+                  // Prepare promotions array
+                  const promotions = selectedStudentsForTransfer.map(studentId => {
+                    const student = students.find(s => s.id === studentId);
+                    return {
+                      enrollment_id: student?.enrollmentId || '',
+                      to_classroom_id: bulkTransferToGrade,
+                      reason: 'Bulk transfer to new class',
+                      effective_date: new Date().toISOString()
+                    };
+                  }).filter(p => p.enrollment_id);
+                  
+                  // Use bulk promotion API
+                  await bulkPromoteStudents(user.schoolId || '', promotions);
+                  
+                  // Show success message
+                  showToast('success', `Successfully transferred ${selectedStudentsForTransfer.length} students!`);
+                  
+                  // Refresh the page
+                  setTimeout(() => window.location.reload(), 1000);
+                } catch (error) {
+                  console.error('Error in bulk transfer:', error);
+                  showToast('error', 'Error transferring students. Please try again.');
+                }
+              }}
+              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              disabled={!bulkTransferToGrade || selectedStudentsForTransfer.length === 0}
+            >
+              Transfer {selectedStudentsForTransfer.length} Students
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

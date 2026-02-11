@@ -51,6 +51,8 @@ interface ParentDetailView {
   phone: string;
   children: ChildInfo[];
   familyForms: Form[];
+  additionalParentEmail?: string | null;
+  additionalParentName?: string | null;
 }
 const mapToFormStatus = (value: string | null | undefined): FormStatus => {
   const normalized = normalizeFormStatus(value);
@@ -199,6 +201,33 @@ export function ParentDetails() {
           });
         });
         const friendly = makeFriendlyName(parentRecord.email);
+
+        // Find additional parent email and name from children
+        // The additional parent is whichever email (primary or secondary) differs from the main parent_email
+        const firstChild = parentRecord.children?.[0];
+        let additionalParentEmail: string | null = null;
+        let additionalParentName: string | null = null;
+
+        if (firstChild) {
+          const primaryEmail = (firstChild as any).primaryParentEmail;
+          const secondaryEmail = (firstChild as any).secondaryParentEmail;
+
+          // Check if primary parent email differs from main parent email
+          if (primaryEmail && primaryEmail !== parentRecord.email) {
+            additionalParentEmail = primaryEmail;
+            const firstName = (firstChild as any).primaryParentFirstName || '';
+            const lastName = (firstChild as any).primaryParentLastName || '';
+            additionalParentName = `${firstName} ${lastName}`.trim() || null;
+          }
+          // Or if secondary parent email exists and differs
+          else if (secondaryEmail && secondaryEmail !== parentRecord.email) {
+            additionalParentEmail = secondaryEmail;
+            const firstName = (firstChild as any).secondaryParentFirstName || '';
+            const lastName = (firstChild as any).secondaryParentLastName || '';
+            additionalParentName = `${firstName} ${lastName}`.trim() || null;
+          }
+        }
+
         const finalParentData = {
           id: parentRecord.parentId,
           firstName: parentRecord.firstName || friendly.first,
@@ -206,7 +235,9 @@ export function ParentDetails() {
           email: parentRecord.email,
           phone: '—',
           children: processedChildren,
-          familyForms: Array.from(allForms.values())
+          familyForms: Array.from(allForms.values()),
+          additionalParentEmail,
+          additionalParentName
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
@@ -557,11 +588,30 @@ export function ParentDetails() {
               <CardTitle>Contact Information</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-muted-foreground">
+              {/* Parent */}
               <div className="flex items-center gap-2">
                 <MailIcon className="h-4 w-4 text-muted-foreground" />
-                {parent.email}
+                <div>
+                  <div className="font-medium text-foreground">{parent.firstName} {parent.lastName}</div>
+                  <div>{parent.email}</div>
+                  <div className="text-xs text-muted-foreground">Parent</div>
+                </div>
               </div>
-              
+
+              {/* Additional Parent - only show if exists */}
+              {parent.additionalParentEmail && (
+                <div className="flex items-center gap-2">
+                  <MailIcon className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    {parent.additionalParentName && (
+                      <div className="font-medium text-foreground">{parent.additionalParentName}</div>
+                    )}
+                    <div>{parent.additionalParentEmail}</div>
+                    <div className="text-xs text-muted-foreground">Additional Parent</div>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2">
                 <School className="h-4 w-4" />
                 Primary Guardian
@@ -652,53 +702,7 @@ export function ParentDetails() {
                             <p className="text-xs text-gray-500 mt-2">
                               Last updated: {form.lastUpdated}
                             </p>
-                            {(() => {
-                              // Calculate due date (assignment date + 3 days default, will be dynamic later)
-                              const dueDays = 3; // Default, will come from API later
-                              const assignedAt = form.lastUpdated; // Using lastUpdated as assignment date
-                              
-                              if (!assignedAt || assignedAt === '—') return null;
-                              
-                              try {
-                                // Parse DD/MM/YYYY or DD-MM-YYYY format
-                                const parts = assignedAt.split(/[/-]/);
-                                let dueDate = null;
-                                
-                                if (parts.length === 3) {
-                                  const [day, month, year] = parts.map(p => parseInt(p));
-                                  if (day > 0 && day <= 31 && month > 0 && month <= 12 && year > 1900) {
-                                    const assignedDate = new Date(year, month - 1, day);
-                                    if (!isNaN(assignedDate.getTime())) {
-                                      dueDate = new Date(assignedDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-                                    }
-                                  }
-                                }
-                                
-                                // Fallback to regular date parsing
-                                if (!dueDate) {
-                                  const fallbackDate = new Date(assignedAt);
-                                  if (!isNaN(fallbackDate.getTime())) {
-                                    dueDate = new Date(fallbackDate.getTime() + dueDays * 24 * 60 * 60 * 1000);
-                                  }
-                                }
-                                
-                                if (dueDate && !isNaN(dueDate.getTime())) {
-                                  const isOverdue = new Date() > dueDate && form.status !== 'Approved';
-                                  return (
-                                    <p className={`text-xs mt-1 font-medium ${
-                                      isOverdue ? 'text-red-600' : 'text-amber-600'
-                                    }`}>
-                                      Due: {dueDate.toLocaleDateString('en-GB')}
-                                      {isOverdue && ' (Overdue)'}
-                                    </p>
-                                  );
-                                }
-                              } catch (e) {
-                                console.warn('Date parsing failed for:', assignedAt);
-                              }
-                              
-                              return null;
-                            })()}
+
                             {(() => {
                               if (!form.approvedOn) {
                                 return (

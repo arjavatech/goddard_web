@@ -19,6 +19,7 @@ export type FormTemplate = {
   filloutFormUrl: string | null;
   isRequired: boolean | null;
   createdAt: string | null;
+  due_date?: string | null;
 };
 const enrollmentChildSchema = z.object({
   child_id: z.string().optional(),
@@ -249,7 +250,8 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
         formType: template.form_type || template.formType || template.type || null,
         filloutFormUrl: template.fillout_form_id || template.fillout_form_id || template.fillout_form_id || null,
         isRequired: template.is_required ?? template.isRequired ?? null,
-        createdAt: template.created_at || template.createdAt || template.dateCreated || null
+        createdAt: template.created_at || template.createdAt || template.dateCreated || null,
+        due_date: template.due_date || null
       };
 
       // Validate required fields

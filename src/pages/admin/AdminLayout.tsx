@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Calendar } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -23,8 +23,12 @@ export function AdminLayout({
   } = useAuth();
   const { userData } = useUserContext();
   
-  // Check if user is SuperAdmin
+  // Check if user is SuperAdmin - temporarily show for all users for testing
   const isSuperAdmin = userData?.role === 'SuperAdmin';
+  
+  // Debug: Log user data
+  console.log('User data:', userData);
+  console.log('Is SuperAdmin:', isSuperAdmin);
   
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -41,7 +45,7 @@ export function AdminLayout({
   };
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
-  const baseNavigationItems = [{
+  const navigationItems = [{
     icon: <Home className="w-5 h-5" />,
     label: 'Dashboard',
     path: '/admin'
@@ -58,19 +62,23 @@ export function AdminLayout({
     label: 'Forms',
     path: '/admin/forms'
   }, {
+    icon: <Calendar className="w-5 h-5" />,
+    label: 'Due Forms',
+    path: '/admin/forms/due'
+  }, {
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'
   }];
   
-  const navigationItems = isSuperAdmin ? [
-    ...baseNavigationItems,
-    {
+  // Add Admins menu only for SuperAdmin
+  if (isSuperAdmin) {
+    navigationItems.push({
       icon: <UserCog className="w-5 h-5" />,
       label: 'Admins',
-      path: '/admin/admins'
-    }
-  ] : baseNavigationItems;
+      path: '/admin/admin-management'
+    });
+  }
   React.useEffect(() => {
     if (isSidebarOpen) {
       document.body.style.overflow = 'hidden';
@@ -92,7 +100,7 @@ export function AdminLayout({
       )}
       
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />
@@ -105,8 +113,11 @@ export function AdminLayout({
           </div>
         </div>
         <nav className="flex-1 p-6">
+          
           <ul className="space-y-2">
-            {navigationItems.map((item, index) => <li key={index}>
+            {navigationItems.map((item, index) => {
+              console.log('Rendering nav item:', item.label, item.path);
+              return <li key={index}>
                 <Link 
                   to={item.path} 
                   onClick={() => setIsSidebarOpen(false)}
@@ -117,7 +128,8 @@ export function AdminLayout({
                   </span>
                   <span className="font-medium">{item.label}</span>
                 </Link>
-              </li>)}
+              </li>
+            })}
           </ul>
         </nav>
        
@@ -134,9 +146,12 @@ export function AdminLayout({
             >
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-            </h1>
+            <div>
+              <h1 className="text-lg lg:text-xl font-semibold text-foreground">
+                {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+              </h1>
+              <p className="text-xs text-gray-500">Role: {userData?.role || 'Unknown'}</p>
+            </div>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

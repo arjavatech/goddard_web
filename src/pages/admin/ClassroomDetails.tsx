@@ -10,14 +10,11 @@ import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { ValidatedInput } from '../../components/ui/validated-input';
+import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { usePagination } from '../../hooks/usePagination';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-import { commonValidationRules } from '../../lib/validation';
 import { useToast } from '../../contexts/ToastContext';
 interface Form {
   id: string;
@@ -78,9 +75,11 @@ export function ClassroomDetails() {
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
+  const [parentPhoneNumber, setParentPhoneNumber] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
+  const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -229,9 +228,11 @@ export function ClassroomDetails() {
     setParentFirstName('');
     setParentLastName('');
     setParentEmail('');
+    setParentPhoneNumber('');
     setSecondaryParentFirstName('');
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
+    setSecondaryParentPhoneNumber('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -280,13 +281,15 @@ export function ClassroomDetails() {
         parentFirstName,
         parentLastName,
         parentEmail,
+        parentPhoneNumber: parentPhoneNumber.trim() || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob,
         classroomId: childClassroom,
         gender: childGender,
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
-        secondaryParentLastName: secondaryParentLastName.trim() || undefined
+        secondaryParentLastName: secondaryParentLastName.trim() || undefined,
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
       });
       
       // Success - update UI and show success notification
@@ -406,7 +409,10 @@ export function ClassroomDetails() {
             </Link>
             <Button 
               className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none"
-              onClick={() => setIsInviteDialogOpen(true)}
+              onClick={() => {
+                setChildClassroom(classroomId || '');
+                setIsInviteDialogOpen(true);
+              }}
             >
               <UserPlus className="h-4 w-4 mr-2" />
               <span className="hidden sm:inline">Add Student</span>
@@ -853,231 +859,45 @@ export function ClassroomDetails() {
           </TabsContent>
         </Tabs>
 
-        {/* Invite Parent Dialog */}
-        <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" preventClose>
-            <DialogHeader>
-              <DialogTitle>Invite New Parent</DialogTitle>
-            </DialogHeader>
-            <div className="py-4 space-y-4 sm:space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <div>
-                  <h3 className="text-base sm:text-lg font-medium mb-4">Parent Information</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        First Name
-                      </label>
-                      <ValidatedInput 
-                        value={parentFirstName} 
-                        onChange={e => setParentFirstName(e.target.value)} 
-                        placeholder="Enter first name" 
-                        className="w-full"
-                        validationRules={commonValidationRules.name}
-                        showToast={showValidationToast}
-                        hideToast={hideValidationToast}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Last Name
-                      </label>
-                      <ValidatedInput 
-                        value={parentLastName} 
-                        onChange={e => setParentLastName(e.target.value)} 
-                        placeholder="Enter last name" 
-                        className="w-full"
-                        validationRules={commonValidationRules.name}
-                        showToast={showValidationToast}
-                        hideToast={hideValidationToast}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Email
-                      </label>
-                      <ValidatedInput
-                        type="email"
-                        value={parentEmail}
-                        onChange={e => setParentEmail(e.target.value)}
-                        placeholder="Enter email address"
-                        className="w-full"
-                        validationRules={commonValidationRules.email}
-                        showToast={showValidationToast}
-                        hideToast={hideValidationToast}
-                      />
-                    </div>
-                  </div>
-                  {/* Secondary Parent Information - Optional */}
-                  <div className="mt-6 pt-4 border-t">
-                    <h4 className="text-sm font-medium mb-4 text-gray-600">
-                      Secondary Parent Information (Optional)
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          First Name
-                        </label>
-                        <Input
-                          value={secondaryParentFirstName}
-                          onChange={e => {
-                            const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                            setSecondaryParentFirstName(value);
-                            if (inviteFormErrors.secondaryParentFirstName) {
-                              setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
-                            }
-                          }}
-                          placeholder="Enter first name"
-                          className={`w-full ${inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}`}
-                        />
-                        {inviteFormErrors.secondaryParentFirstName && (
-                          <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Last Name
-                        </label>
-                        <Input
-                          value={secondaryParentLastName}
-                          onChange={e => {
-                            const value = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                            setSecondaryParentLastName(value);
-                            if (inviteFormErrors.secondaryParentLastName) {
-                              setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
-                            }
-                          }}
-                          placeholder="Enter last name"
-                          className={`w-full ${inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}`}
-                        />
-                        {inviteFormErrors.secondaryParentLastName && (
-                          <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium mb-2">
-                          Email
-                        </label>
-                        <Input
-                          type="email"
-                          value={secondaryParentEmail}
-                          onChange={e => {
-                            setSecondaryParentEmail(e.target.value);
-                            if (inviteFormErrors.secondaryParentEmail) {
-                              setInviteFormErrors(prev => ({...prev, secondaryParentEmail: ''}));
-                            }
-                          }}
-                          onBlur={() => {
-                            if (!isDialogClosing && secondaryParentEmail.trim()) {
-                              if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(secondaryParentEmail)) {
-                                setInviteFormErrors(prev => ({...prev, secondaryParentEmail: 'Please enter a valid email address'}));
-                              }
-                            }
-                          }}
-                          placeholder="Enter email address"
-                          className={`w-full ${inviteFormErrors.secondaryParentEmail ? 'border-red-500' : ''}`}
-                        />
-                        {inviteFormErrors.secondaryParentEmail && (
-                          <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentEmail}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-base sm:text-lg font-medium mb-4">Child Information</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        First Name
-                      </label>
-                      <ValidatedInput 
-                        value={childFirstName} 
-                        onChange={e => setChildFirstName(e.target.value)} 
-                        placeholder="Enter first name" 
-                        className="w-full"
-                        validationRules={commonValidationRules.name}
-                        showToast={showValidationToast}
-                        hideToast={hideValidationToast}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Last Name
-                      </label>
-                      <ValidatedInput 
-                        value={childLastName} 
-                        onChange={e => setChildLastName(e.target.value)} 
-                        placeholder="Enter last name" 
-                        className="w-full"
-                        validationRules={commonValidationRules.name}
-                        showToast={showValidationToast}
-                        hideToast={hideValidationToast}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Date of Birth
-                      </label>
-                      <Input 
-                        type="date" 
-                        value={childDob} 
-                        onChange={e => setChildDob(e.target.value)} 
-                        className="w-full" 
-                        min="2000-01-01" 
-                        max="2020-12-31" 
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Gender
-                      </label>
-                      <Select value={childGender} onValueChange={setChildGender}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Classroom
-                      </label>
-                      <Select value={childClassroom} onValueChange={setChildClassroom}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a classroom" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {allClassrooms.map(classroom => 
-                            <SelectItem key={classroom.id} value={classroom.id}>
-                              {classroom.name}
-                            </SelectItem>
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                Cancel
-              </Button>
-              <AsyncButton 
-                onClick={handleInviteParent} 
-                className="bg-amazon-teal hover:bg-amazon-teal/90" 
-                disabled={!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom || (secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}
-              >
-                <Mail className="h-4 w-4 mr-2" />
-                Send Invitation
-              </AsyncButton>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Invite Parent Modal */}
+        <InviteParentModal
+          isOpen={isInviteDialogOpen}
+          onClose={() => {
+            setIsInviteDialogOpen(false);
+            resetInviteForm();
+          }}
+          onInvite={handleInviteParent}
+          parentFirstName={parentFirstName}
+          setParentFirstName={setParentFirstName}
+          parentLastName={parentLastName}
+          setParentLastName={setParentLastName}
+          parentEmail={parentEmail}
+          setParentEmail={setParentEmail}
+          parentPhoneNumber={parentPhoneNumber}
+          setParentPhoneNumber={setParentPhoneNumber}
+          secondaryParentFirstName={secondaryParentFirstName}
+          setSecondaryParentFirstName={setSecondaryParentFirstName}
+          secondaryParentLastName={secondaryParentLastName}
+          setSecondaryParentLastName={setSecondaryParentLastName}
+          secondaryParentEmail={secondaryParentEmail}
+          setSecondaryParentEmail={setSecondaryParentEmail}
+          secondaryParentPhoneNumber={secondaryParentPhoneNumber}
+          setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+          childFirstName={childFirstName}
+          setChildFirstName={setChildFirstName}
+          childLastName={childLastName}
+          setChildLastName={setChildLastName}
+          childDob={childDob}
+          setChildDob={setChildDob}
+          childGender={childGender}
+          setChildGender={setChildGender}
+          childClassroom={childClassroom}
+          setChildClassroom={setChildClassroom}
+          classrooms={allClassrooms}
+          inviteFormErrors={inviteFormErrors}
+          setInviteFormErrors={setInviteFormErrors}
+          isDialogClosing={isDialogClosing}
+        />
 
       </div>
     </AdminLayout>;

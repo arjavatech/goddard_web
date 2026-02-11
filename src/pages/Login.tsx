@@ -8,9 +8,11 @@ import { fetchUserContext } from '../services/api/user';
 import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
 import { useAlertModal } from '../hooks/useAlertModal';
+import { validateEmail } from '../lib/emailValidation';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -25,6 +27,13 @@ export function Login() {
   const { alertState, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const emailError = validateEmail(formData.email);
+    if (emailError) {
+      setEmailError(emailError);
+      return;
+    }
+    
     setIsLoading(true);
     try {
       await signInWithPassword(formData.email, formData.password);
@@ -57,6 +66,12 @@ export function Login() {
       type,
       checked
     } = e.target;
+    
+    // Clear email error when user starts typing
+    if (name === 'email' && emailError) {
+      setEmailError('');
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -92,8 +107,11 @@ export function Login() {
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className="w-full pl-10 pr-4 py-3 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm" placeholder="Enter your email" />
+                  <input id="email" name="email" type="email" required value={formData.email} onChange={handleInputChange} className={`w-full pl-10 pr-4 py-3 border rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm ${emailError ? 'border-red-500' : 'border-input'}`} placeholder="Enter your email" />
                 </div>
+                {emailError && (
+                  <p className="text-sm text-red-600 mt-1">{emailError}</p>
+                )}
               </div>
               {/* Password Field */}
               <div className="space-y-2">

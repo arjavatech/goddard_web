@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, Users, Shield, Settings, LogOut, Menu, X, User } from 'lucide-react';
+import { Home, Users, Shield, Settings, LogOut, Menu, X, User, Crown, School } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -36,8 +36,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const currentPath = location.pathname;
 
   const navigationItems = [
-    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin' },
-    { icon: <Shield className="w-5 h-5" />, label: 'Admins', path: '/superadmin/admins' }
+    { icon: <Home className="w-5 h-5" />, label: 'Dashboard', path: '/superadmin-arjava' },
+    { icon: <Crown className="w-5 h-5" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
+    { icon: <School className="w-5 h-5" />, label: 'Schools', path: '/superadmin-arjava/schools' },
+    { icon: <Users className="w-5 h-5" />, label: 'Clients', path: '/superadmin-arjava/clients' }
   ];
 
   React.useEffect(() => {
@@ -62,7 +64,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       )}
       
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />
