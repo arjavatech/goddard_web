@@ -184,6 +184,11 @@ export function SetPassword() {
         throw updateError;
       }
 
+      // Mark password_set flag in user metadata so backend can track setup completion
+      await supabase.auth.updateUser({
+        data: { password_set: true }
+      });
+
       setSuccess(true);
 
       // Redirect to login after 2 seconds
