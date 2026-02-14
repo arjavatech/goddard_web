@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -81,6 +81,15 @@ export function ClassroomManagement() {
 
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      students: 'Students',
+      forms: 'Forms',
+    };
+    return labels[sortBy] || 'Sort';
+  };
 
   const sortedClassrooms = useMemo(() => {
     return [...filteredClassrooms].sort((a, b) => {
@@ -307,8 +316,10 @@ export function ClassroomManagement() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-10 sm:h-11">
-                      <ArrowUpDown className="h-4 w-4 mr-2" />
-                      Sort
+                      {sortOrder === 'asc'
+                        ? <ArrowUp className="h-4 w-4 mr-2" />
+                        : <ArrowDown className="h-4 w-4 mr-2" />}
+                      {getSortLabel()}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">

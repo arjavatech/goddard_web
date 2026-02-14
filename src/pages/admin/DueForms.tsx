@@ -7,7 +7,7 @@ import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown } from 'lucide-react';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchDueForms, DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
@@ -127,6 +127,17 @@ export function DueForms() {
 
   const [sortBy, setSortBy] = useState('formName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      formName: 'Form',
+      studentName: 'Student',
+      parentName: 'Parent',
+      dueDate: 'Due Date',
+      status: 'Status',
+    };
+    return labels[sortBy] || 'Sort';
+  };
 
   useEffect(() => {
     const sorted = [...filteredFormsData].sort((a, b) => {
@@ -393,8 +404,10 @@ export function DueForms() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-11">
-                      <ArrowUpDown className="h-4 w-4 mr-2" />
-                      Sort
+                      {sortOrder === 'asc'
+                        ? <ArrowUp className="h-4 w-4 mr-2" />
+                        : <ArrowDown className="h-4 w-4 mr-2" />}
+                      {getSortLabel()}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">

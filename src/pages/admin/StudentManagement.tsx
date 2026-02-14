@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUpDown, ChevronDown } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -439,6 +439,17 @@ export function StudentManagement() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      classroom: 'Classroom',
+      parent: 'Parent',
+      progress: 'Progress',
+      status: 'Status',
+    };
+    return labels[sortBy] || 'Sort';
+  };
+
   const filteredAndSortedStudents = useMemo(() => {
     const sorted = [...filteredStudents].sort((a, b) => {
       let aVal: any, bVal: any;
@@ -495,6 +506,20 @@ export function StudentManagement() {
     }
   };
   const toggleFilters = () => setShowFilters(prev => !prev);
+
+  const activeFilterCount = useMemo(() => {
+    return [formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]
+      .filter(arr => arr.length > 0).length;
+  }, [formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
+
+  const clearAllFilters = () => {
+    setFormFilter([]);
+    setStatusFilter([]);
+    setChildStatusFilter([]);
+    setClassroomFilter([]);
+    setYearFilter([]);
+    setCurrentPage(1);
+  };
 
   const handleStatusChange = async () => {
     if (!selectedStudent) return;
@@ -635,11 +660,11 @@ export function StudentManagement() {
                   />
                 </div>
                 <div className="flex gap-2">
-                  <Button 
-                    variant="outline" 
-                    onClick={toggleFilters} 
+                  <Button
+                    variant="outline"
+                    onClick={toggleFilters}
                     size="sm"
-                    className="h-10 sm:h-11"
+                    className="h-10 sm:h-11 relative"
                   >
                     {showFilters ? (
                       <>
@@ -650,13 +675,20 @@ export function StudentManagement() {
                         <Filter className="h-4 w-4 mr-2" /> Filters
                       </>
                     )}
+                    {!showFilters && activeFilterCount > 0 && (
+                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                        {activeFilterCount}
+                      </span>
+                    )}
                   </Button>
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" size="sm" className="h-10 sm:h-11">
-                        <ArrowUpDown className="h-4 w-4 mr-2" />
-                        Sort
+                        {sortOrder === 'asc'
+                          ? <ArrowUp className="h-4 w-4 mr-2" />
+                          : <ArrowDown className="h-4 w-4 mr-2" />}
+                        {getSortLabel()}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -704,7 +736,19 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 p-3 sm:p-4 bg-background rounded-lg border">
+                <div className="p-3 sm:p-4 bg-background rounded-lg border space-y-3">
+                  {activeFilterCount > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                        {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                      </span>
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11">
+                        <X className="h-4 w-4 mr-2" />
+                        Clear All
+                      </Button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form Type</label>
                     <MultiSelectDropdown
@@ -763,6 +807,7 @@ export function StudentManagement() {
                       placeholder="Select years"
                       label="Year"
                     />
+                  </div>
                   </div>
                 </div>
               )}
