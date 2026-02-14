@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUpDown } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -195,6 +195,16 @@ export function ParentManagement() {
 
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      email: 'Email',
+      children: 'Children',
+      status: 'Status',
+    };
+    return labels[sortBy] || 'Sort';
+  };
 
   const sortedParents = useMemo(() => {
     return [...filteredParents].sort((a, b) => {
@@ -600,8 +610,10 @@ export function ParentManagement() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
-                        <ArrowUpDown className="h-4 w-4 mr-2" />
-                        Sort
+                        {sortOrder === 'asc'
+                          ? <ArrowUp className="h-4 w-4 mr-2" />
+                          : <ArrowDown className="h-4 w-4 mr-2" />}
+                        {getSortLabel()}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">

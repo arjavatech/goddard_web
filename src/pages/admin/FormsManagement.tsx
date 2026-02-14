@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUpDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUp, ArrowDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -116,6 +116,15 @@ export function FormsManagement() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      status: 'Status',
+      dueDate: 'Due Date',
+    };
+    return labels[sortBy] || 'Sort';
+  };
+
   const sortedForms = useMemo(() => {
     return [...filteredForms].sort((a, b) => {
       let aVal: any, bVal: any;
@@ -183,24 +192,29 @@ export function FormsManagement() {
   };
   const handleDeleteForm = async () => {
     if (!selectedForm) return;
-    
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
-    
-    await deleteForm(selectedForm.id, user.schoolId);
-    
-    // Refetch forms from server to ensure consistency
-    const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
-    const mappedForms: Form[] = templates.map((template, index) => ({
-      id: template.id,
-      name: template.formName,
-      link: template.filloutFormUrl ?? '#',
-      status: mapStatus(template.status),
-      classroomsCount: 0,
-      dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
-    }));
-    setForms(mappedForms);
-    setIsDeleteDialogOpen(false);
+
+    try {
+      const user = await fetchUserContext();
+      if (!user.schoolId) throw new Error('School context not found');
+
+      await deleteForm(selectedForm.id, user.schoolId);
+
+      // Refetch forms from server to ensure consistency
+      const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+      const mappedForms: Form[] = templates.map((template, index) => ({
+        id: template.id,
+        name: template.formName,
+        link: template.filloutFormUrl ?? '#',
+        status: mapStatus(template.status),
+        classroomsCount: 0,
+        dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
+      }));
+      setForms(mappedForms);
+      setIsDeleteDialogOpen(false);
+      showToast('success', `Form "${selectedForm.name}" deleted successfully`);
+    } catch (error) {
+      showToast('error', 'Failed to delete form. Please try again.');
+    }
   };
   const resetFormFields = () => {
     setFormName('');
@@ -381,8 +395,10 @@ export function FormsManagement() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
-                        <ArrowUpDown className="h-4 w-4 mr-2" />
-                        Sort
+                        {sortOrder === 'asc'
+                          ? <ArrowUp className="h-4 w-4 mr-2" />
+                          : <ArrowDown className="h-4 w-4 mr-2" />}
+                        {getSortLabel()}
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
