@@ -50,6 +50,8 @@ interface Student {
   enrollmentProgress: number;
   enrollmentStatus: EnrollmentStatus;
   formsCompleted: number;
+  formsApproved: number;
+  formsInProgress: number;
   totalForms: number;
   classroom: {
     id: string;
@@ -242,12 +244,19 @@ export function StudentManagement() {
               })
             : [];
 
-          // Count forms with 'approved' status as completed
-          const completed = formsArray.filter(form => {
+          // Count approved forms
+          const approved = formsArray.filter(form => {
             const normalized = normalizeFormStatus(form.status);
             return normalized === 'Approved';
           }).length;
 
+          // Count in-progress forms
+          const inProgress = formsArray.filter(form => {
+            const normalized = normalizeFormStatus(form.status);
+            return normalized === 'In Progress';
+          }).length;
+
+          const completed = approved + inProgress;
           const total = formsArray.length;
 
           // Calculate progress based on completed forms
@@ -280,6 +289,8 @@ export function StudentManagement() {
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
+            formsApproved: approved,
+            formsInProgress: inProgress,
             totalForms: total,
             classroom: {
               id: classroomId,
@@ -988,7 +999,20 @@ export function StudentManagement() {
                               {student.formsCompleted}/{student.totalForms}
                             </div>
                             <div className="flex items-center justify-end space-x-1">
-                              <Progress value={student.enrollmentProgress} className="w-16 h-2" />
+                              <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                {student.totalForms > 0 && student.formsApproved > 0 && (
+                                  <div
+                                    className="h-full bg-green-500 transition-all"
+                                    style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                  />
+                                )}
+                                {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                  <div
+                                    className="h-full bg-amber-400 transition-all"
+                                    style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                  />
+                                )}
+                              </div>
                               <span className="text-xs font-semibold text-foreground min-w-[28px]">
                                 {student.enrollmentProgress}%
                               </span>
@@ -1121,7 +1145,20 @@ export function StudentManagement() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Progress:</span>
                         <div className="flex items-center space-x-1.5">
-                          <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                          <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
+                            {student.totalForms > 0 && student.formsApproved > 0 && (
+                              <div
+                                className="h-full bg-green-500 transition-all"
+                                style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                              />
+                            )}
+                            {student.totalForms > 0 && student.formsInProgress > 0 && (
+                              <div
+                                className="h-full bg-amber-400 transition-all"
+                                style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                              />
+                            )}
+                          </div>
                           <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
                         </div>
                       </div>

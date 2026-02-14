@@ -4,24 +4,94 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown } from 'lucide-react';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchDueForms, DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 
 
 export function DueForms() {
   const [dueForms, setDueForms] = useState<DueForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<DueForm[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
+  const [formFilter, setFormFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
+
+  const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
+    if (currentValues.includes(value)) {
+      setter(currentValues.filter(v => v !== value));
+    } else {
+      setter([...currentValues, value]);
+    }
+  };
+
+  const MultiSelectDropdown = ({
+    value,
+    onValueChange,
+    options,
+    placeholder,
+    label
+  }: {
+    value: string[],
+    onValueChange: (values: string[]) => void,
+    options: string[],
+    placeholder: string,
+    label: string
+  }) => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+      <div className="relative">
+        <button
+          type="button"
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <span className="truncate">
+            {value.length === 0 ? placeholder : `${value.length} selected`}
+          </span>
+          <ChevronDown className="h-4 w-4 opacity-50" />
+        </button>
+        {isOpen && (
+          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
+            <div className="p-1 max-h-60 overflow-y-auto">
+              {options.map((option) => (
+                <div
+                  key={option}
+                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                >
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      checked={value.includes(option)}
+                      onChange={() => {}}
+                      className="pointer-events-none"
+                    />
+                    <span>{option}</span>
+                  </div>
+                </div>
+              ))}
+              {options.length === 0 && (
+                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                  No options available
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -83,6 +153,7 @@ export function DueForms() {
                 id: `${enrollment.enrollment_id}-${formName}`,
                 formName,
                 studentName: `${enrollment.child_first_name} ${enrollment.child_last_name}`,
+                classroomName: enrollment.class_name || 'Unassigned',
                 parentName,
                 parentEmail,
                 dueDate: formData.due_date || null,
@@ -112,18 +183,42 @@ export function DueForms() {
     };
   }, []);
 
+  const allClassrooms = useMemo(() => {
+    const set = new Set<string>();
+    dueForms.forEach(f => { if (f.classroomName && f.classroomName !== 'Unassigned') set.add(f.classroomName); });
+    return Array.from(set).sort();
+  }, [dueForms]);
+
+  const allFormNames = useMemo(() => {
+    const set = new Set<string>();
+    dueForms.forEach(f => set.add(f.formName));
+    return Array.from(set).sort();
+  }, [dueForms]);
+
+  const activeFilterCount = useMemo(() => {
+    return [classroomFilter, formFilter, statusFilter].filter(arr => arr.length > 0).length;
+  }, [classroomFilter, formFilter, statusFilter]);
+
+  const clearAllFilters = () => {
+    setClassroomFilter([]);
+    setFormFilter([]);
+    setStatusFilter([]);
+  };
+
   const filteredFormsData = useMemo(() => {
     return dueForms.filter(form => {
-      const matchesSearch = 
+      const matchesSearch =
         form.formName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         form.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         form.parentName.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
-      
-      return matchesSearch && matchesStatus;
+
+      const matchesClassroom = classroomFilter.length === 0 || classroomFilter.includes(form.classroomName);
+      const matchesForm = formFilter.length === 0 || formFilter.includes(form.formName);
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(form.status);
+
+      return matchesSearch && matchesClassroom && matchesForm && matchesStatus;
     });
-  }, [dueForms, searchQuery, statusFilter]);
+  }, [dueForms, searchQuery, classroomFilter, formFilter, statusFilter]);
 
   const [sortBy, setSortBy] = useState('formName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -132,6 +227,7 @@ export function DueForms() {
     const labels: Record<string, string> = {
       formName: 'Form',
       studentName: 'Student',
+      classroomName: 'Classroom',
       parentName: 'Parent',
       dueDate: 'Due Date',
       status: 'Status',
@@ -145,6 +241,7 @@ export function DueForms() {
       switch (sortBy) {
         case 'formName': aVal = a.formName; bVal = b.formName; break;
         case 'studentName': aVal = a.studentName; bVal = b.studentName; break;
+        case 'classroomName': aVal = a.classroomName; bVal = b.classroomName; break;
         case 'parentName': aVal = a.parentName; bVal = b.parentName; break;
         case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
         case 'status': aVal = a.status; bVal = b.status; break;
@@ -157,6 +254,15 @@ export function DueForms() {
     });
     setFilteredForms(sorted);
   }, [filteredFormsData, sortBy, sortOrder]);
+
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedForms,
+    itemsPerPage,
+    isMobile,
+    setCurrentPage
+  } = usePagination({ data: filteredForms });
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -185,7 +291,7 @@ export function DueForms() {
         parent_email: form.parentEmail,
         parent_name: form.parentName,
         student_name: form.studentName,
-        class_name: 'N/A',
+        class_name: form.classroomName,
         form_name: form.formName,
         due_date: form.dueDate || ''
       }));
@@ -270,50 +376,13 @@ export function DueForms() {
   return (
     <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
-              Due Forms Tracking
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Monitor form completion status and send reminders to parents
-            </p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
-                <Mail className="h-4 w-4 mr-2" />
-                Remind
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {selectedForms.length > 0 && (
-                <DropdownMenuItem 
-                  onClick={() => handleSendReminder(selectedForms)}
-                >
-                  Remind Selected ({selectedForms.length})
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem 
-                onClick={() => {
-                  const pendingForms = filteredForms.filter(f => f.status === 'pending').map(f => f.id);
-                  handleSendReminder(pendingForms);
-                }}
-                disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
-              >
-                Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => {
-                  const overdueForms = filteredForms.filter(f => f.status === 'overdue').map(f => f.id);
-                  handleSendReminder(overdueForms);
-                }}
-                disabled={filteredForms.filter(f => f.status === 'overdue').length === 0}
-              >
-                Remind Overdue ({filteredForms.filter(f => f.status === 'overdue').length})
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            Due Forms Tracking
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Monitor form completion status and send reminders to parents
+          </p>
         </div>
 
         {/* Stats Cards */}
@@ -378,7 +447,7 @@ export function DueForms() {
         {/* Filters */}
         <Card className="glass-card">
           <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
@@ -388,22 +457,27 @@ export function DueForms() {
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-48 h-10 sm:h-11">
-                    <Filter className="h-4 w-4 mr-2" />
-                    <SelectValue placeholder="Filter by status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
-                    <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="overdue">Overdue</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(prev => !prev)}
+                  size="sm"
+                  className="h-10 sm:h-11 relative"
+                >
+                  {showFilters ? (
+                    <><X className="h-4 w-4 mr-2" /> Hide Filters</>
+                  ) : (
+                    <><Filter className="h-4 w-4 mr-2" /> Filters</>
+                  )}
+                  {!showFilters && activeFilterCount > 0 && (
+                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full sm:w-auto h-10 sm:h-11">
+                    <Button variant="outline" size="sm" className="h-10 sm:h-11">
                       {sortOrder === 'asc'
                         ? <ArrowUp className="h-4 w-4 mr-2" />
                         : <ArrowDown className="h-4 w-4 mr-2" />}
@@ -415,6 +489,8 @@ export function DueForms() {
                     <DropdownMenuItem onClick={() => { setSortBy('formName'); setSortOrder('desc'); }}>Form Z-A</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setSortBy('studentName'); setSortOrder('asc'); }}>Student A-Z</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setSortBy('studentName'); setSortOrder('desc'); }}>Student Z-A</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortBy('classroomName'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => { setSortBy('classroomName'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setSortBy('parentName'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setSortBy('parentName'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
@@ -423,13 +499,96 @@ export function DueForms() {
                 </DropdownMenu>
               </div>
             </div>
+
+            {showFilters && (
+              <div className="p-3 sm:p-4 bg-background rounded-lg border space-y-3">
+                {activeFilterCount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                      {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                    </span>
+                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11">
+                      <X className="h-4 w-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Classroom</label>
+                    <MultiSelectDropdown
+                      value={classroomFilter}
+                      onValueChange={setClassroomFilter}
+                      options={allClassrooms}
+                      placeholder="Select classrooms"
+                      label="Classroom"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form</label>
+                    <MultiSelectDropdown
+                      value={formFilter}
+                      onValueChange={setFormFilter}
+                      options={allFormNames}
+                      placeholder="Select forms"
+                      label="Form"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</label>
+                    <MultiSelectDropdown
+                      value={statusFilter}
+                      onValueChange={setStatusFilter}
+                      options={['pending', 'overdue', 'completed']}
+                      placeholder="Select statuses"
+                      label="Status"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
         {/* Forms Table */}
         <Card className="glass-card">
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Due Forms ({filteredForms.length})</CardTitle>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="bg-amazon-teal hover:bg-amazon-teal/90" size="sm">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Remind
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {selectedForms.length > 0 && (
+                  <DropdownMenuItem
+                    onClick={() => handleSendReminder(selectedForms)}
+                  >
+                    Remind Selected ({selectedForms.length})
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem
+                  onClick={() => {
+                    const pendingForms = filteredForms.filter(f => f.status === 'pending').map(f => f.id);
+                    handleSendReminder(pendingForms);
+                  }}
+                  disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
+                >
+                  Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const overdueForms = filteredForms.filter(f => f.status === 'overdue').map(f => f.id);
+                    handleSendReminder(overdueForms);
+                  }}
+                  disabled={filteredForms.filter(f => f.status === 'overdue').length === 0}
+                >
+                  Remind Overdue ({filteredForms.filter(f => f.status === 'overdue').length})
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
@@ -444,27 +603,25 @@ export function DueForms() {
                   <table className="w-full">
                     <thead className="border-b">
                       <tr>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">
-                          <div className="flex items-center gap-2">
-                            <span>Select</span>
-                            {filteredForms.length > 0 && (
-                              <Checkbox
-                                checked={selectedForms.length === filteredForms.length}
-                                onCheckedChange={handleSelectAll}
-                              />
-                            )}
-                          </div>
+                        <th className="text-left p-2 md:p-4">
+                          {filteredForms.length > 0 && (
+                            <Checkbox
+                              checked={selectedForms.length === filteredForms.length}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          )}
                         </th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Form</th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Student</th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Parent</th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Due Date</th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Status</th>
-                        <th className="text-left p-2 md:p-4 font-medium text-xs md:text-sm">Actions</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Form</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Student</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Classroom</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Parent</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Due Date</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Status</th>
+                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredForms.map(form => (
+                      {paginatedForms.map(form => (
                         <tr key={form.id} className="border-b hover:bg-muted/50">
                           <td className="p-2 md:p-4">
                             <Checkbox
@@ -474,6 +631,7 @@ export function DueForms() {
                           </td>
                           <td className="p-2 md:p-4 font-medium text-xs md:text-sm">{form.formName}</td>
                           <td className="p-2 md:p-4 text-xs md:text-sm">{form.studentName}</td>
+                          <td className="p-2 md:p-4 text-xs md:text-sm">{form.classroomName}</td>
                           <td className="p-2 md:p-4 text-xs md:text-sm">
                             <div>
                               <div className="font-medium">{form.parentName.split(' & ')[0]}</div>
@@ -509,7 +667,16 @@ export function DueForms() {
                     </tbody>
                   </table>
                 </div>
-                
+
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  totalItems={filteredForms.length}
+                  itemsPerPage={itemsPerPage}
+                  onPageChange={setCurrentPage}
+                  className="hidden md:flex"
+                />
+
                 {/* Mobile Card View */}
                 <div className="md:hidden space-y-3 p-3">
                   <div className="flex items-center gap-2 pb-2 border-b">
@@ -519,7 +686,7 @@ export function DueForms() {
                       onCheckedChange={handleSelectAll}
                     />
                   </div>
-                  {filteredForms.map(form => (
+                  {paginatedForms.map(form => (
                     <div key={form.id} className="border rounded-lg p-3 space-y-3 bg-card">
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -531,13 +698,14 @@ export function DueForms() {
                           <div className="min-w-0 flex-1">
                             <h3 className="font-medium text-sm truncate">{form.formName}</h3>
                             <p className="text-xs text-muted-foreground">Student: {form.studentName}</p>
+                            <p className="text-xs text-muted-foreground">Classroom: {form.classroomName}</p>
                           </div>
                         </div>
                         <div className="flex-shrink-0">
                           {getStatusBadge(form.status)}
                         </div>
                       </div>
-                      
+
                       <div className="space-y-2">
                         <div>
                           <p className="text-xs text-muted-foreground mb-1">Parent(s):</p>
@@ -554,13 +722,13 @@ export function DueForms() {
                             )}
                           </div>
                         </div>
-                        
+
                         <div className="flex items-center justify-between pt-2 border-t">
                           <div className="min-w-0 flex-1">
                             <p className="text-xs text-muted-foreground">Due:</p>
                             <p className={`text-xs font-medium truncate ${
-                              isOverdue(form.dueDate) && form.status !== 'completed' 
-                                ? 'text-red-600' 
+                              isOverdue(form.dueDate) && form.status !== 'completed'
+                                ? 'text-red-600'
                                 : form.dueDate ? 'text-foreground' : 'text-muted-foreground'
                             }`}>
                               {formatDate(form.dueDate)}
@@ -579,6 +747,12 @@ export function DueForms() {
                       </div>
                     </div>
                   ))}
+
+                  <MobilePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
                 </div>
               </>
             ) : (
