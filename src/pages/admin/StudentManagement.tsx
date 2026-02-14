@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -570,6 +570,101 @@ export function StudentManagement() {
     setAssignDialogClassroomFilter('all');
     setAssignDialogSearchTerm('');
   };
+  const exportToCSV = () => {
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const headers = [
+      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
+      'Secondary Parent', 'Secondary Parent Email',
+      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
+    ];
+
+    const rows = filteredAndSortedStudents.map(student => [
+      `${student.firstName} ${student.lastName}`,
+      student.classroom.name,
+      student.parent.name,
+      student.parent.email,
+      student.secondaryParent?.name ?? '',
+      student.secondaryParent?.email ?? '',
+      student.enrollmentStatus,
+      student.childStatus,
+      `${student.formsCompleted}/${student.totalForms}`,
+      `${student.enrollmentProgress}%`
+    ]);
+
+    const csvContent = [
+      'The Goddard School',
+      '',
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const rows = filteredAndSortedStudents.map(student => [
+      `${student.firstName} ${student.lastName}`,
+      student.classroom.name,
+      student.parent.name,
+      student.parent.email,
+      student.secondaryParent?.name ?? '',
+      student.secondaryParent?.email ?? '',
+      student.enrollmentStatus,
+      student.childStatus,
+      `${student.formsCompleted}/${student.totalForms}`,
+      `${student.enrollmentProgress}%`
+    ]);
+
+    const headers = [
+      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
+      'Secondary Parent', 'Secondary Parent Email',
+      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
+    ];
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Student Directory Export</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .logo { height: 60px; width: auto; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p { font-size: 12px; color: #666; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background-color: #f5f5f5; font-weight: 600; }
+  tr:nth-child(even) { background-color: #fafafa; }
+  @media print { body { margin: 0; } }
+</style></head><body>
+<div class="header">
+  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
+  <h1>Student Directory Export</h1>
+  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} students</p>
+</div>
+<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   if (loading) {
     return <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -712,6 +807,33 @@ export function StudentManagement() {
                       <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                  {filteredAndSortedStudents.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={exportToCSV}>
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToPDF}>
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <div title="No records to export">
+                      <Button size="sm" className="h-10 sm:h-11" disabled>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </Button>
+                    </div>
+                  )}
+
                   {selectedStudentsForBulkAction.length > 0 && (
                     <>
                       <Button
