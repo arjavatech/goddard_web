@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
 import { ValidatedInput } from '../../components/ui/validated-input';
 import { commonValidationRules } from '../../lib/validation';
@@ -29,6 +29,7 @@ export function ClassroomManagement() {
   const [loading, setLoading] = useState(true);
   const [classroomErrors, setClassroomErrors] = useState<{[key: string]: string}>({});
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const validateClassroom = () => {
     const errors: {[key: string]: string} = {};
@@ -112,9 +113,9 @@ export function ClassroomManagement() {
     paginatedData: paginatedClassrooms,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ 
+  } = usePagination({
     data: sortedClassrooms,
-    itemsPerPage: 10,
+    itemsPerPage: 5,
     mobileItemsPerPage: 5
   });
   const handleAddClassroom = async () => {
@@ -363,6 +364,10 @@ export function ClassroomManagement() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Manage Forms
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => openEditDialog(classroom)}>
                               <Edit className="h-4 w-4 mr-2" />
                               Rename
@@ -391,12 +396,6 @@ export function ClassroomManagement() {
                             </Badge>
                           )}
                         </div>
-                        <Link to={`/admin/form-assignments?classroom=${classroom.id}`} className="block">
-                          <Button variant="outline" size="sm" className="w-full flex items-center justify-center h-8 sm:h-9 text-xs sm:text-sm">
-                            <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                            Manage Forms
-                          </Button>
-                        </Link>
                       </div>
                     </CardContent>
                   </Card>
@@ -464,34 +463,27 @@ export function ClassroomManagement() {
                           </div>
                         </td>
                         <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end space-x-2">
-                            <Link to={`/admin/form-assignments?classroom=${classroom.id}`}>
-                              <Button variant="outline" size="sm" className="hidden lg:flex items-center">
-                                <FileText className="h-4 w-4 mr-1" />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+                                <FileText className="h-4 w-4 mr-2" />
                                 Manage Forms
-                              </Button>
-                              <Button variant="outline" size="sm" className="lg:hidden">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => openEditDialog(classroom)}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Rename
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600">
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openEditDialog(classroom)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Rename
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600">
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>) : <tr>
                       <td colSpan={4} className="py-8 text-center text-gray-500">
