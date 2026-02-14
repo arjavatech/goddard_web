@@ -1124,6 +1124,7 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
               formName: form.formName,
               studentName: child.childFullName,
               parentName: combinedParentName,
+              classroomName: child.classroomName || '',
               parentEmail: combinedParentEmail,
               dueDate: dueDateString,
               status,
