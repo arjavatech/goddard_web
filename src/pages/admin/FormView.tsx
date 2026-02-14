@@ -42,30 +42,25 @@ export function FormView() {
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
+    let url: string | undefined;
 
     // Priority 1: Use recent_edit_link if form is filled (has existing submission)
-    // Check for truthy value and not '#' and not null and not undefined
-    if (recentEditLink &&
-        recentEditLink !== '#' &&
-        recentEditLink !== null &&
-        recentEditLink !== undefined &&
-        recentEditLink.trim() !== '') {
-      return recentEditLink;
+    if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
+      url = recentEditLink;
+    } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
+      // Priority 2: Use fillout_form_id if form is empty (no existing submission)
+      url = filloutFormId;
     } else {
+      // Fallback: Use the original filloutFormUrl or form link
+      url = filloutFormUrl || formData?.link;
     }
 
-    // Priority 2: Use fillout_form_id if form is empty (no existing submission)
-    if (filloutFormId &&
-        filloutFormId !== '#' &&
-        filloutFormId !== null &&
-        filloutFormId !== undefined &&
-        filloutFormId.trim() !== '') {
-      return filloutFormId;
+    // Append student_form_assignment_id if available and not already in URL
+    if (url && studentFormAssignmentId && !url.includes('student_form_assignment_id')) {
+      url += `${url.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
     }
 
-    // Fallback: Use the original filloutFormUrl or form link
-    const fallbackUrl = filloutFormUrl || formData?.link;
-    return fallbackUrl;
+    return url;
   };
 
   // Handle back button click

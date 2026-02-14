@@ -6,7 +6,6 @@ import { AsyncButton } from '../../components/ui/async-button';
 import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock, Calendar, Mail } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Progress } from '../../components/ui/progress';
 import { Link, useParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
@@ -14,7 +13,7 @@ import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { usePagination } from '../../hooks/usePagination';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
-import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+import { normalizeFormStatus } from '../../lib/formStatus';
 import { useToast } from '../../contexts/ToastContext';
 interface Form {
   id: string;
@@ -28,6 +27,8 @@ interface Student {
   enrollmentProgress: number;
   enrollmentStatus: 'Complete' | 'In Progress' | 'Not Started';
   formsCompleted: number;
+  formsApproved: number;
+  formsInProgress: number;
   totalForms: number;
   parent: {
     id: string;
@@ -139,7 +140,12 @@ export function ClassroomDetails() {
         // Transform class-based enrollments to Student interface
         const students: Student[] = classEnrollments.map((enrollment: ClassBasedEnrollment) => {
           const entries = Object.entries(enrollment.forms || {});
-          const completed = entries.filter(([, status]) => COMPLETION_STATUSES.has(normalizeFormStatus(status))).length;
+          const approved = entries.filter(([, status]) => normalizeFormStatus(status) === 'Approved').length;
+          const inProgress = entries.filter(([, status]) => {
+            const n = normalizeFormStatus(status);
+            return n === 'Submitted' || n === 'In Progress';
+          }).length;
+          const completed = approved + inProgress;
           const total = entries.length || assignedForms.length || 4;
           const progress = total > 0 ? Math.round(completed / total * 100) : 0;
           const enrollmentStatus: Student['enrollmentStatus'] = progress === 100 ? 'Complete' : completed > 0 ? 'In Progress' : 'Not Started';
@@ -155,6 +161,8 @@ export function ClassroomDetails() {
             enrollmentProgress: progress,
             enrollmentStatus,
             formsCompleted: completed,
+            formsApproved: approved,
+            formsInProgress: inProgress,
             totalForms: total,
             parent: {
               id: enrollment.parent_id,
@@ -206,7 +214,7 @@ export function ClassroomDetails() {
     paginatedData: paginatedStudents,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredStudents });
+  } = usePagination({ data: filteredStudents, itemsPerPage: 5, mobileItemsPerPage: 5 });
   
   const enrollmentStats = useMemo(() => {
     const totalStudents = classroom.students.length;
@@ -301,6 +309,8 @@ export function ClassroomDetails() {
         enrollmentProgress: 0,
         enrollmentStatus: 'Not Started',
         formsCompleted: 0,
+        formsApproved: 0,
+        formsInProgress: 0,
         totalForms: classroom.assignedForms.length || 4,
         parent: {
           id: Math.random().toString(36).substring(2, 9),
@@ -531,21 +541,21 @@ export function ClassroomDetails() {
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
                       <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                        <thead className="border-b">
+                          <tr>
+                            <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">
                               Student
                             </th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">
                               Parent
                             </th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            <th className="text-center p-2 md:p-4 font-semibold text-base text-foreground">
                               Enrollment Status
                             </th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            <th className="text-center p-2 md:p-4 font-semibold text-base text-foreground">
                               Forms Completed
                             </th>
-                            <th className="text-right py-3 px-4 font-medium text-gray-600">
+                            <th className="text-right p-2 md:p-4 font-semibold text-base text-foreground">
                               Progress
                             </th>
                           </tr>
@@ -559,9 +569,13 @@ export function ClassroomDetails() {
                                     {student.lastName.charAt(0)}
                                   </div>
                                   <div>
-                                    <div className="font-medium">
+                                    <Link
+                                      to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                                      state={{ fromStudents: true }}
+                                      className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline"
+                                    >
                                       {student.firstName} {student.lastName}
-                                    </div>
+                                    </Link>
                                   </div>
                                 </div>
                               </td>
@@ -588,9 +602,20 @@ export function ClassroomDetails() {
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <div className="flex items-center justify-end">
-                                  <div className="w-32 mr-2">
-                                    <Progress value={student.enrollmentProgress} className="h-2" />
+                                <div className="flex items-center justify-end space-x-1">
+                                  <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                    {student.totalForms > 0 && student.formsApproved > 0 && (
+                                      <div
+                                        className="h-full bg-green-500 transition-all"
+                                        style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                      />
+                                    )}
+                                    {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                      <div
+                                        className="h-full bg-amber-400 transition-all"
+                                        style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                      />
+                                    )}
                                   </div>
                                   <span className="text-sm font-medium w-8 text-right">
                                     {student.enrollmentProgress}%
@@ -614,9 +639,13 @@ export function ClassroomDetails() {
                                   {student.lastName.charAt(0)}
                                 </div>
                                 <div>
-                                  <div className="font-medium text-sm">
+                                  <Link
+                                    to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                                    state={{ fromStudents: true }}
+                                    className="font-medium text-amazon-teal hover:underline text-sm"
+                                  >
                                     {student.firstName} {student.lastName}
-                                  </div>
+                                  </Link>
                                   <div className="text-xs text-gray-500">
                                     {student.parent.name}
                                   </div>
@@ -644,7 +673,20 @@ export function ClassroomDetails() {
                                   <span className="text-gray-500">Progress</span>
                                   <span className="font-medium">{student.enrollmentProgress}%</span>
                                 </div>
-                                <Progress value={student.enrollmentProgress} className="h-2" />
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                  {student.totalForms > 0 && student.formsApproved > 0 && (
+                                    <div
+                                      className="h-full bg-green-500 transition-all"
+                                      style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                    />
+                                  )}
+                                  {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                    <div
+                                      className="h-full bg-amber-400 transition-all"
+                                      style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                    />
+                                  )}
+                                </div>
                               </div>
                               
                               <div className="text-xs text-gray-500 pt-1">
@@ -714,21 +756,21 @@ export function ClassroomDetails() {
                     {/* Desktop Table View */}
                     <div className="hidden md:block overflow-x-auto">
                       <table className="w-full border-collapse">
-                        <thead>
-                          <tr className="border-b border-gray-200">
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                        <thead className="border-b">
+                          <tr>
+                            <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">
                               Student
                             </th>
-                            <th className="text-left py-3 px-4 font-medium text-gray-600">
+                            <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">
                               Parent
                             </th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            <th className="text-center p-2 md:p-4 font-semibold text-base text-foreground">
                               Enrollment Status
                             </th>
-                            <th className="text-center py-3 px-4 font-medium text-gray-600">
+                            <th className="text-center p-2 md:p-4 font-semibold text-base text-foreground">
                               Forms Completed
                             </th>
-                            <th className="text-right py-3 px-4 font-medium text-gray-600">
+                            <th className="text-right p-2 md:p-4 font-semibold text-base text-foreground">
                               Progress
                             </th>
                           </tr>
@@ -742,9 +784,13 @@ export function ClassroomDetails() {
                                     {student.lastName.charAt(0)}
                                   </div>
                                   <div>
-                                    <div className="font-medium">
+                                    <Link
+                                      to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                                      state={{ fromStudents: true }}
+                                      className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline"
+                                    >
                                       {student.firstName} {student.lastName}
-                                    </div>
+                                    </Link>
                                   </div>
                                 </div>
                               </td>
@@ -771,9 +817,20 @@ export function ClassroomDetails() {
                                 </div>
                               </td>
                               <td className="py-3 px-4">
-                                <div className="flex items-center justify-end">
-                                  <div className="w-32 mr-2">
-                                    <Progress value={student.enrollmentProgress} className="h-2" />
+                                <div className="flex items-center justify-end space-x-1">
+                                  <div className="w-32 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                    {student.totalForms > 0 && student.formsApproved > 0 && (
+                                      <div
+                                        className="h-full bg-green-500 transition-all"
+                                        style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                      />
+                                    )}
+                                    {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                      <div
+                                        className="h-full bg-amber-400 transition-all"
+                                        style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                      />
+                                    )}
                                   </div>
                                   <span className="text-sm font-medium w-8 text-right">
                                     {student.enrollmentProgress}%
@@ -797,9 +854,13 @@ export function ClassroomDetails() {
                                   {student.lastName.charAt(0)}
                                 </div>
                                 <div>
-                                  <div className="font-medium text-sm">
+                                  <Link
+                                    to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                                    state={{ fromStudents: true }}
+                                    className="font-medium text-amazon-teal hover:underline text-sm"
+                                  >
                                     {student.firstName} {student.lastName}
-                                  </div>
+                                  </Link>
                                   <div className="text-xs text-gray-500">
                                     {student.parent.name}
                                   </div>
@@ -827,7 +888,20 @@ export function ClassroomDetails() {
                                   <span className="text-gray-500">Progress</span>
                                   <span className="font-medium">{student.enrollmentProgress}%</span>
                                 </div>
-                                <Progress value={student.enrollmentProgress} className="h-2" />
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                  {student.totalForms > 0 && student.formsApproved > 0 && (
+                                    <div
+                                      className="h-full bg-green-500 transition-all"
+                                      style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                    />
+                                  )}
+                                  {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                    <div
+                                      className="h-full bg-amber-400 transition-all"
+                                      style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                    />
+                                  )}
+                                </div>
                               </div>
                               
                               <div className="text-xs text-gray-500 pt-1">

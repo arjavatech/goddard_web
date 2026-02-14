@@ -11,6 +11,7 @@ interface Child {
   formsCompleted: number;
   totalForms: number;
   parentType?: string;
+  classroom: string;
 }
 interface ChildrenOverviewProps {
   children: Child[];
@@ -57,7 +58,7 @@ export function ChildrenOverview({
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Age: {child.age} • DOB: {child.dob}
+                    Age: {child.age} • DOB: {child.dob} • Classroom - {child.classroom}
                   </p>
                   <div className="mt-2">
                     <Progress value={child.enrollmentProgress} className="h-1.5 sm:h-2" />

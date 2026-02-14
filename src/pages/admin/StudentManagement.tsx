@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -50,6 +50,8 @@ interface Student {
   enrollmentProgress: number;
   enrollmentStatus: EnrollmentStatus;
   formsCompleted: number;
+  formsApproved: number;
+  formsInProgress: number;
   totalForms: number;
   classroom: {
     id: string;
@@ -123,7 +125,6 @@ export function StudentManagement() {
   const [selectedStudentsForTransfer, setSelectedStudentsForTransfer] = useState<string[]>([]);
   const [bulkTransferFromGrade, setBulkTransferFromGrade] = useState('');
   const [bulkTransferToGrade, setBulkTransferToGrade] = useState('');
-  const [isBulkSelectionMode, setIsBulkSelectionMode] = useState(false);
   const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
@@ -242,12 +243,19 @@ export function StudentManagement() {
               })
             : [];
 
-          // Count forms with 'approved' status as completed
-          const completed = formsArray.filter(form => {
+          // Count approved forms
+          const approved = formsArray.filter(form => {
             const normalized = normalizeFormStatus(form.status);
             return normalized === 'Approved';
           }).length;
 
+          // Count in-progress forms
+          const inProgress = formsArray.filter(form => {
+            const normalized = normalizeFormStatus(form.status);
+            return normalized === 'In Progress';
+          }).length;
+
+          const completed = approved + inProgress;
           const total = formsArray.length;
 
           // Calculate progress based on completed forms
@@ -280,6 +288,8 @@ export function StudentManagement() {
             enrollmentProgress: progress,
             enrollmentStatus: statusFromProgress(progress),
             formsCompleted: completed,
+            formsApproved: approved,
+            formsInProgress: inProgress,
             totalForms: total,
             classroom: {
               id: classroomId,
@@ -560,6 +570,101 @@ export function StudentManagement() {
     setAssignDialogClassroomFilter('all');
     setAssignDialogSearchTerm('');
   };
+  const exportToCSV = () => {
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const headers = [
+      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
+      'Secondary Parent', 'Secondary Parent Email',
+      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
+    ];
+
+    const rows = filteredAndSortedStudents.map(student => [
+      `${student.firstName} ${student.lastName}`,
+      student.classroom.name,
+      student.parent.name,
+      student.parent.email,
+      student.secondaryParent?.name ?? '',
+      student.secondaryParent?.email ?? '',
+      student.enrollmentStatus,
+      student.childStatus,
+      `${student.formsCompleted}/${student.totalForms}`,
+      `${student.enrollmentProgress}%`
+    ]);
+
+    const csvContent = [
+      'The Goddard School',
+      '',
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const rows = filteredAndSortedStudents.map(student => [
+      `${student.firstName} ${student.lastName}`,
+      student.classroom.name,
+      student.parent.name,
+      student.parent.email,
+      student.secondaryParent?.name ?? '',
+      student.secondaryParent?.email ?? '',
+      student.enrollmentStatus,
+      student.childStatus,
+      `${student.formsCompleted}/${student.totalForms}`,
+      `${student.enrollmentProgress}%`
+    ]);
+
+    const headers = [
+      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
+      'Secondary Parent', 'Secondary Parent Email',
+      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
+    ];
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Student Directory Export</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .logo { height: 60px; width: auto; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p { font-size: 12px; color: #666; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background-color: #f5f5f5; font-weight: 600; }
+  tr:nth-child(even) { background-color: #fafafa; }
+  @media print { body { margin: 0; } }
+</style></head><body>
+<div class="header">
+  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
+  <h1>Student Directory Export</h1>
+  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} students</p>
+</div>
+<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   if (loading) {
     return <AdminLayout>
         <div className="flex items-center justify-center h-64">
@@ -702,34 +807,60 @@ export function StudentManagement() {
                       <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button 
-                    onClick={() => {
-                      setIsBulkSelectionMode(!isBulkSelectionMode);
-                      setSelectedStudentsForBulkAction([]);
-                    }}
-                    size="sm"
-                    variant={isBulkSelectionMode ? "default" : "outline"}
-                    className={`h-10 sm:h-11 ${isBulkSelectionMode ? 'bg-amazon-teal hover:bg-amazon-teal/90' : ''}`}
-                  >
-                    {isBulkSelectionMode ? 'Cancel Selection' : 'Bulk Select'}
-                  </Button>
-                  {isBulkSelectionMode && selectedStudentsForBulkAction.length > 0 && (
-                    <Button 
-                      onClick={() => {
-                        setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
-                        // Auto-set from grade based on selected students
-                        const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                        if (selectedStudentObjects.length > 0) {
-                          setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
-                        }
-                        setIsBulkTransferDialogOpen(true);
-                      }}
-                      size="sm"
-                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
-                    >
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      Transfer Selected ({selectedStudentsForBulkAction.length})
-                    </Button>
+
+                  {filteredAndSortedStudents.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={exportToCSV}>
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToPDF}>
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <div title="No records to export">
+                      <Button size="sm" className="h-10 sm:h-11" disabled>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </Button>
+                    </div>
+                  )}
+
+                  {selectedStudentsForBulkAction.length > 0 && (
+                    <>
+                      <Button
+                        onClick={() => {
+                          setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
+                          const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
+                          if (selectedStudentObjects.length > 0) {
+                            setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
+                          }
+                          setIsBulkTransferDialogOpen(true);
+                        }}
+                        size="sm"
+                        className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
+                      >
+                        <GraduationCap className="h-4 w-4 mr-2" />
+                        Transfer Selected ({selectedStudentsForBulkAction.length})
+                      </Button>
+                      <Button
+                        onClick={() => setSelectedStudentsForBulkAction([])}
+                        size="sm"
+                        variant="outline"
+                        className="h-10 sm:h-11"
+                      >
+                        <X className="h-4 w-4 mr-2" />
+                        Clear Selection
+                      </Button>
+                    </>
                   )}
                 </div>
               </div>
@@ -818,46 +949,42 @@ export function StudentManagement() {
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    {isBulkSelectionMode && (
-                      <th className="text-center py-3 px-2 font-medium text-gray-600 w-[8%]">
-                        <Checkbox
-                          checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                            } else {
-                              setSelectedStudentsForBulkAction([]);
-                            }
-                          }}
-                        />
-                      </th>
-                    )}
-                    <th className={`text-left py-3 px-3 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[18%]' : 'w-[20%]'}`}>Student</th>
-                    <th className={`text-left py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Classroom</th>
-                    <th className={`text-left py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[16%]' : 'w-[18%]'}`}>Parent</th>
-                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Status</th>
-                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[9%]' : 'w-[10%]'}`}>Child Status</th>
-                    <th className={`text-center py-3 px-2 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[15%]' : 'w-[16%]'}`}>Actions</th>
-                    <th className={`text-right py-3 px-3 font-medium text-gray-600 ${isBulkSelectionMode ? 'w-[11%]' : 'w-[12%]'}`}>Progress</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[5%]">
+                      <Checkbox
+                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                          } else {
+                            setSelectedStudentsForBulkAction([]);
+                          }
+                        }}
+                      />
+                    </th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-[18%]">Student</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[11%]">Classroom</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[16%]">Parent</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[12%]">Status</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[10%]">Child Status</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[16%]">Actions</th>
+                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-[12%]">Progress</th>
                   </tr>
                 </thead>
                   <tbody>
                     {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
                       <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
-                        {isBulkSelectionMode && (
-                          <td className="py-3 px-2 text-center">
-                            <Checkbox
-                              checked={selectedStudentsForBulkAction.includes(student.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                                } else {
-                                  setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                                }
-                              }}
-                            />
-                          </td>
-                        )}
+                        <td className="py-3 px-2 text-center">
+                          <Checkbox
+                            checked={selectedStudentsForBulkAction.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                              } else {
+                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                              }
+                            }}
+                          />
+                        </td>
                         <td className="py-3 px-3">
                           <div className="flex items-center">
                             <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
@@ -988,7 +1115,20 @@ export function StudentManagement() {
                               {student.formsCompleted}/{student.totalForms}
                             </div>
                             <div className="flex items-center justify-end space-x-1">
-                              <Progress value={student.enrollmentProgress} className="w-16 h-2" />
+                              <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                                {student.totalForms > 0 && student.formsApproved > 0 && (
+                                  <div
+                                    className="h-full bg-green-500 transition-all"
+                                    style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                                  />
+                                )}
+                                {student.totalForms > 0 && student.formsInProgress > 0 && (
+                                  <div
+                                    className="h-full bg-amber-400 transition-all"
+                                    style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                                  />
+                                )}
+                              </div>
                               <span className="text-xs font-semibold text-foreground min-w-[28px]">
                                 {student.enrollmentProgress}%
                               </span>
@@ -998,7 +1138,7 @@ export function StudentManagement() {
                     </tr>
                     )) : (
                       <tr>
-                        <td colSpan={isBulkSelectionMode ? 8 : 7} className="py-8 text-center text-gray-500">
+                        <td colSpan={8} className="py-8 text-center text-gray-500">
                           No students match the current filters.
                         </td>
                       </tr>
@@ -1023,19 +1163,17 @@ export function StudentManagement() {
                   <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        {isBulkSelectionMode && (
-                          <Checkbox
-                            checked={selectedStudentsForBulkAction.includes(student.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                              } else {
-                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                              }
-                            }}
-                            className="flex-shrink-0"
-                          />
-                        )}
+                        <Checkbox
+                          checked={selectedStudentsForBulkAction.includes(student.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                            } else {
+                              setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                            }
+                          }}
+                          className="flex-shrink-0"
+                        />
                         <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
                           {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                         </div>
@@ -1121,7 +1259,20 @@ export function StudentManagement() {
                       <div className="flex items-center justify-between">
                         <span className="text-xs text-muted-foreground">Progress:</span>
                         <div className="flex items-center space-x-1.5">
-                          <Progress value={student.enrollmentProgress} className="w-12 h-1.5" />
+                          <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
+                            {student.totalForms > 0 && student.formsApproved > 0 && (
+                              <div
+                                className="h-full bg-green-500 transition-all"
+                                style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                              />
+                            )}
+                            {student.totalForms > 0 && student.formsInProgress > 0 && (
+                              <div
+                                className="h-full bg-amber-400 transition-all"
+                                style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                              />
+                            )}
+                          </div>
                           <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
                         </div>
                       </div>
@@ -1707,7 +1858,6 @@ export function StudentManagement() {
               setSelectedStudentsForTransfer([]);
               setBulkTransferFromGrade('');
               setBulkTransferToGrade('');
-              setIsBulkSelectionMode(false);
               setSelectedStudentsForBulkAction([]);
             }}>
               Cancel

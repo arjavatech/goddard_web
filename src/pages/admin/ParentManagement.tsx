@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown, Download } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -490,6 +490,84 @@ export function ParentManagement() {
         return 'default';
     }
   };
+
+  const exportToCSV = () => {
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
+
+    const headers = ['Parent Name', 'Email', 'Children', 'Classrooms', 'Signup Status'];
+
+    const rows = sortedParents.map(parent => [
+      `${parent.firstName} ${parent.lastName}`,
+      parent.email,
+      parent.children.map(c => `${c.firstName} ${c.lastName}`).join('; '),
+      parent.children.map(c => c.classroom.name).join('; '),
+      parent.signupStatus
+    ]);
+
+    const csvContent = [
+      'The Goddard School',
+      '',
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `parents_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const headers = ['Parent Name', 'Email', 'Children', 'Classrooms', 'Signup Status'];
+
+    const rows = sortedParents.map(parent => [
+      `${parent.firstName} ${parent.lastName}`,
+      parent.email,
+      parent.children.map(c => `${c.firstName} ${c.lastName}`).join(', '),
+      parent.children.map(c => c.classroom.name).join(', '),
+      parent.signupStatus
+    ]);
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Parent Directory Export</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .logo { height: 60px; width: auto; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p { font-size: 12px; color: #666; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background-color: #f5f5f5; font-weight: 600; }
+  tr:nth-child(even) { background-color: #fafafa; }
+  @media print { body { margin: 0; } }
+</style></head><body>
+<div class="header">
+  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
+  <h1>Parent Directory Export</h1>
+  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} parents</p>
+</div>
+<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -566,8 +644,35 @@ export function ParentManagement() {
             <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Parent Directory</h2>
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  {sortedParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
+                <div className="flex items-center gap-3">
+                  <div className="text-xs sm:text-sm text-muted-foreground">
+                    {sortedParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
+                  </div>
+                  {sortedParents.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={exportToCSV}>
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToPDF}>
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <div title="No records to export">
+                      <Button size="sm" disabled>
+                        <Download className="h-4 w-4 mr-2" />
+                        Export
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
               
