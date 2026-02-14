@@ -44,6 +44,7 @@ type DashboardChild = {
   forms: ChildFormCard[];
   childStatus: 'active' | 'archive';
   parentType?: string;
+  classroom: string;
 };
 function getInitials(firstName: string, lastName: string): string {
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -170,7 +171,8 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     nextActionLabel: pendingForm ? `Continue ${pendingForm.title}` : 'View enrollment summary',
     forms,
     childStatus: (child.childStatus || 'active') as 'active' | 'archive',
-    parentType: child.parent_type || child.parentType || 'primary_parent'
+    parentType: child.parent_type || child.parentType || 'primary_parent',
+    classroom: child.classroomName || '—'
   };
 }
 export function Dashboard() {

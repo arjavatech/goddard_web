@@ -201,7 +201,7 @@ export function FormsDocuments({
   onYearFilterChange
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<string>(selectedChildId || 'all');
+  const [activeTab, setActiveTab] = useState<string>(selectedChildId || childSpecificForms[0]?.childId || 'family');
   const previousChildIdRef = useRef<string | undefined>(selectedChildId);
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
@@ -755,7 +755,7 @@ export function FormsDocuments({
         <Tabs value={activeTab} onValueChange={(value) => {
           setActiveTab(value);
           // If a child tab is clicked, notify parent to update selected child
-          if (value !== 'all' && value !== 'family' && onChildSelect) {
+          if (value !== 'family' && onChildSelect) {
             // Find the child by ID and pass their name to onChildSelect
             const child = childSpecificForms.find(c => c.childId === value);
             if (child) {
@@ -763,54 +763,21 @@ export function FormsDocuments({
             }
           }
         }}>
-          <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
-            <TabsList className="w-max h-8 sm:h-10">
-              <TabsTrigger value="all" className="text-xs sm:text-sm px-2 sm:px-3">All Forms</TabsTrigger>
-              {familyForms.length > 0 && (
-                <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
-              )}
-              {childSpecificForms.map((child) => (
-                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
-                  <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
-                  <span className="hidden sm:inline">{child.childName}</span>
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-
-          <TabsContent value="all">
-            {allForms.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
-                No forms available yet. This section will populate once assignments are available from the backend service.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                {getFormsForTab('all').map(form => (
-                  
-                  <FormCard
-                    key={form._key}
-                    title={form.title}
-                    description={form.description}
-                    lastUpdated={form.lastUpdated}
-                    status={form.status}
-                    childName={form.childName}
-                    formId={form.formId || form._key}
-                    recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                    assignedAt={form.assignedAt}
-                    dueDate={form.dueDate}
-                    onView={() => {
-                      console.log('Form ID:', form.formId || form._key);
-                      console.log('Child ID:', form.childId);
-                      handleView(form);
-                    }}
-                    onDownload={() => handleDownload(form)}
-                    onPrint={() => handlePrint(form)}
-                    isLoading={loadingAction}
-                  />
+          {(childSpecificForms.length > 1 || familyForms.length > 0) && (
+            <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
+              <TabsList className="w-max h-8 sm:h-10">
+                {familyForms.length > 0 && (
+                  <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
+                )}
+                {childSpecificForms.length > 1 && childSpecificForms.map((child) => (
+                  <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                    <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
+                    <span className="hidden sm:inline">{child.childName}</span>
+                  </TabsTrigger>
                 ))}
-              </div>
-            )}
-          </TabsContent>
+              </TabsList>
+            </div>
+          )}
 
           {childSpecificForms.map((child) => (
             <TabsContent key={child.childId} value={child.childId}>
