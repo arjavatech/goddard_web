@@ -45,6 +45,7 @@ type DashboardChild = {
   childStatus: 'active' | 'archive';
   parentType?: string;
   classroom: string;
+  enrollmentId: string;
 };
 function getInitials(firstName: string, lastName: string): string {
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -172,7 +173,8 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     forms,
     childStatus: (child.childStatus || 'active') as 'active' | 'archive',
     parentType: child.parent_type || child.parentType || 'primary_parent',
-    classroom: child.classroomName || '—'
+    classroom: child.classroomName || '—',
+    enrollmentId: child.enrollmentId || ''
   };
 }
 export function Dashboard() {
@@ -332,6 +334,7 @@ export function Dashboard() {
                       onContinue={handleViewForm}
                       childStatus={selectedChild.childStatus}
                       childId={selectedChild.id}
+                      enrollmentId={selectedChild.enrollmentId}
                     />
                   </div>
                   {selectedChild.childStatus !== 'archive' && (
@@ -357,6 +360,7 @@ export function Dashboard() {
                         onFormCompleted={handleFormCompleted}
                         yearFilter={yearFilter}
                         onYearFilterChange={setYearFilter}
+                        enrollmentId={selectedChild.enrollmentId}
                       />
                     </div>
                   )}

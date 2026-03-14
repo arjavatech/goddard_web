@@ -1010,6 +1010,31 @@ export async function bulkPromoteStudents(
   }, z.object({}));
 }
 
+export async function downloadAllForms(enrollmentId: string): Promise<void> {
+  const { getAuthToken } = await import('../auth/session');
+  const token = await getAuthToken();
+  const { apiBaseUrl } = await import('../../config/env');
+
+  const response = await fetch(`${apiBaseUrl}/enrollments/${encodeURIComponent(enrollmentId)}/forms/download-zip`, {
+    method: 'GET',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    }
+  });
+
+  if (!response.ok) throw new Error('Failed to download forms');
+
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'enrollment_forms.zip';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 export type DueForm = {
   id: string;
   formName: string;

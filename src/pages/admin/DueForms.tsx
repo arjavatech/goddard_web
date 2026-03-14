@@ -131,9 +131,12 @@ export function DueForms() {
                 }
               }
               
-              let status: 'pending' | 'completed' | 'overdue' = 'pending';
+              const submittedStatuses = new Set(['submitted', 'received', 'in progress', 'in_progress']);
+              let status: 'pending' | 'completed' | 'overdue' | 'submitted' = 'pending';
               if (formData.status === 'approved') {
                 status = 'completed';
+              } else if (formData.status && submittedStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
+                status = 'submitted';
               } else if (dueDate && dueDate < today) {
                 status = 'overdue';
               }
@@ -407,6 +410,8 @@ export function DueForms() {
         return <Badge variant="success" className="text-xs"><CheckCircle className="h-3 w-3 mr-1" />Completed</Badge>;
       case 'overdue':
         return <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Overdue</Badge>;
+      case 'submitted':
+        return <Badge variant="info" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending Approval</Badge>;
       case 'pending':
         return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
@@ -450,6 +455,7 @@ export function DueForms() {
   const stats = {
     total: dueForms.length,
     pending: dueForms.filter(f => f.status === 'pending').length,
+    submitted: dueForms.filter(f => f.status === 'submitted').length,
     overdue: dueForms.filter(f => f.status === 'overdue').length,
     completed: dueForms.filter(f => f.status === 'completed').length
   };
@@ -467,7 +473,7 @@ export function DueForms() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
@@ -505,6 +511,20 @@ export function DueForms() {
                 </div>
                 <div className="p-2 bg-red-100 rounded-full flex-shrink-0 ml-2">
                   <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="glass-card">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Pending Approval</p>
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.submitted}</p>
+                </div>
+                <div className="p-2 bg-blue-100 rounded-full flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -620,7 +640,7 @@ export function DueForms() {
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
-                      options={['pending', 'overdue', 'completed']}
+                      options={['pending', 'submitted', 'overdue', 'completed']}
                       placeholder="Select statuses"
                       label="Status"
                     />
@@ -684,6 +704,15 @@ export function DueForms() {
                   disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
                 >
                   Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    const submittedForms = filteredForms.filter(f => f.status === 'submitted').map(f => f.id);
+                    handleSendReminder(submittedForms);
+                  }}
+                  disabled={filteredForms.filter(f => f.status === 'submitted').length === 0}
+                >
+                  Remind Pending Approval ({filteredForms.filter(f => f.status === 'submitted').length})
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => {
