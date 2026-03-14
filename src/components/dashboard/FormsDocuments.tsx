@@ -185,6 +185,7 @@ interface FormsDocumentsProps {
   onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
   yearFilter?: string; // Year filter value
   onYearFilterChange?: (year: string) => void; // Callback to change year filter
+  enrollmentId?: string; // For downloading all forms
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -198,7 +199,8 @@ export function FormsDocuments({
   onFormOpened,
   onFormCompleted,
   yearFilter = 'all',
-  onYearFilterChange
+  onYearFilterChange,
+  enrollmentId
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || childSpecificForms[0]?.childId || 'family');
@@ -211,6 +213,20 @@ export function FormsDocuments({
   const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+
+  const handleDownloadAll = async () => {
+    if (!enrollmentId) return;
+    setIsDownloadingAll(true);
+    try {
+      const { downloadAllForms } = await import('../../services/api/admin');
+      await downloadAllForms(enrollmentId);
+    } catch (err) {
+      console.error('Download all forms failed:', err);
+    } finally {
+      setIsDownloadingAll(false);
+    }
+  };
 
   // Sync activeTab with selectedChildId only when it actually changes
   useEffect(() => {
@@ -729,27 +745,44 @@ export function FormsDocuments({
           <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
             Forms & Documents
           </h2>
-          {onYearFilterChange && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-              <Select value={yearFilter} onValueChange={onYearFilterChange}>
-                <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
-                  <SelectValue placeholder="Filter by year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
-                    const year = (new Date().getFullYear() - i).toString();
-                    return (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {onYearFilterChange && (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+                <Select value={yearFilter} onValueChange={onYearFilterChange}>
+                  <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
+                    <SelectValue placeholder="Filter by year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Years</SelectItem>
+                    {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                      const year = (new Date().getFullYear() - i).toString();
+                      return (
+                        <SelectItem key={year} value={year}>
+                          {year}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            {enrollmentId && (
+              <button
+                onClick={handleDownloadAll}
+                disabled={isDownloadingAll}
+                title="Download all approved forms as ZIP"
+                className="group flex items-center gap-1.5 rounded-lg border border-dashed border-amazon-teal/50 bg-white/60 px-3 py-1.5 text-xs font-medium text-amazon-teal shadow-sm transition-all duration-200 hover:border-amazon-teal hover:bg-amazon-teal/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amazon-teal/10 transition-colors group-hover:bg-amazon-teal/20">
+                  {isDownloadingAll
+                    ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent" />
+                    : <Download className="h-2.5 w-2.5" />}
+                </span>
+                <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(value) => {

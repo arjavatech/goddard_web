@@ -17,6 +17,7 @@ interface EnrollmentProgressProps {
   onContinue?: (form: any) => void;
   childStatus?: 'active' | 'archive';
   childId?: string;
+  enrollmentId?: string;
 }
 
 export function EnrollmentProgress({
@@ -24,7 +25,8 @@ export function EnrollmentProgress({
   forms,
   onContinue,
   childStatus = 'active',
-  childId
+  childId,
+  enrollmentId
 }: EnrollmentProgressProps) {
   // Sort forms: Approved/Submitted first, then In Progress, then others
   const sortedForms = [...forms].sort((a, b) => {
@@ -150,53 +152,51 @@ export function EnrollmentProgress({
               </span>}
           </div>)}
       </div>
-      <Button
-        className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
-        disabled={progressPercentage === 100}
-        onClick={() => {
-          console.log('Continue button clicked, incomplete form:', incompleteForm);
-          console.log('childId prop:', childId);
-          if (incompleteForm && onContinue) {
-            // Extract student_form_assignment_id from filloutFormId URL
-            let studentFormAssignmentId = null;
-            if (incompleteForm.filloutFormId) {
-              const urlParams = new URLSearchParams(incompleteForm.filloutFormId.split('?')[1]);
-              studentFormAssignmentId = urlParams.get('student_form_assignment_id');
-            }
-            console.log('Extracted student_form_assignment_id:', studentFormAssignmentId);
-            
-            const actualChildId = childId || incompleteForm.childId || 'continue-form';
-            // Validate fillout_form_id before passing it
-            const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
-            const isValidFormId = incompleteForm.filloutFormId && 
-                                 !invalidFormIds.includes(incompleteForm.filloutFormId.toLowerCase());
-            
-            const formWithChildData = {
-              ...incompleteForm,
-              childId: actualChildId,
-              childName,
-              _key: `child-${actualChildId}-form-${incompleteForm.formId}`,
-              fromContinueButton: true,
-              rawData: {
-                form_id: incompleteForm.formId,
-                fillout_form_id: isValidFormId ? incompleteForm.filloutFormId : null,
-                recent_edit_link: incompleteForm.recentEditLink,
-                recent_pdf_link: incompleteForm.recentPdfLink,
-                student_form_assignment_id: studentFormAssignmentId
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Button
+          className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
+          disabled={progressPercentage === 100}
+          onClick={() => {
+            console.log('Continue button clicked, incomplete form:', incompleteForm);
+            console.log('childId prop:', childId);
+            if (incompleteForm && onContinue) {
+              let studentFormAssignmentId = null;
+              if (incompleteForm.filloutFormId) {
+                const urlParams = new URLSearchParams(incompleteForm.filloutFormId.split('?')[1]);
+                studentFormAssignmentId = urlParams.get('student_form_assignment_id');
               }
-            };
-            console.log('Calling onContinue with:', formWithChildData);
-            onContinue(formWithChildData);
-          }
-        }}
-      >
-        <span className="sm:hidden">
-          {progressPercentage === 100 ? 'Complete' : 'Continue'}
-        </span>
-        <span className="hidden sm:inline">
-          {progressPercentage === 100 ? 'Enrollment Complete' : `Continue ${currentStep}`}
-        </span>
-        {progressPercentage < 100 && <ChevronRight className="ml-1 h-4 w-4" />}
-      </Button>
+              console.log('Extracted student_form_assignment_id:', studentFormAssignmentId);
+              const actualChildId = childId || incompleteForm.childId || 'continue-form';
+              const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
+              const isValidFormId = incompleteForm.filloutFormId &&
+                !invalidFormIds.includes(incompleteForm.filloutFormId.toLowerCase());
+              const formWithChildData = {
+                ...incompleteForm,
+                childId: actualChildId,
+                childName,
+                _key: `child-${actualChildId}-form-${incompleteForm.formId}`,
+                fromContinueButton: true,
+                rawData: {
+                  form_id: incompleteForm.formId,
+                  fillout_form_id: isValidFormId ? incompleteForm.filloutFormId : null,
+                  recent_edit_link: incompleteForm.recentEditLink,
+                  recent_pdf_link: incompleteForm.recentPdfLink,
+                  student_form_assignment_id: studentFormAssignmentId
+                }
+              };
+              console.log('Calling onContinue with:', formWithChildData);
+              onContinue(formWithChildData);
+            }
+          }}
+        >
+          <span className="sm:hidden">
+            {progressPercentage === 100 ? 'Complete' : 'Continue'}
+          </span>
+          <span className="hidden sm:inline">
+            {progressPercentage === 100 ? 'Enrollment Complete' : `Continue ${currentStep}`}
+          </span>
+          {progressPercentage < 100 && <ChevronRight className="ml-1 h-4 w-4" />}
+        </Button>
+      </div>
     </div>;
 }
