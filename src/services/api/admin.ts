@@ -1018,17 +1018,42 @@ export async function downloadAllForms(enrollmentId: string): Promise<void> {
   const response = await fetch(`${apiBaseUrl}/enrollments/${encodeURIComponent(enrollmentId)}/forms/download-zip`, {
     method: 'GET',
     headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {})
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'Accept': '*/*'
     }
   });
 
   if (!response.ok) throw new Error('Failed to download forms');
 
-  const blob = await response.blob();
+  // Extract filename from Content-Disposition header
+  const contentDisposition = response.headers.get('content-disposition');
+  const filenameMatch = contentDisposition?.match(/filename="?([^"]+)"?/);
+  const filename = filenameMatch?.[1] || 'enrollment_forms.zip';
+
+  // Read as arrayBuffer to inspect bytes
+  const arrayBuffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(arrayBuffer);
+
+  let blob: Blob;
+
+  // ZIP files start with PK magic bytes (0x50 0x4B)
+  // If API Gateway returns base64 text instead of binary, first bytes will be 'U' 'E' (from UEsDBBQ...)
+  const isZip = bytes.length >= 2 && bytes[0] === 0x50 && bytes[1] === 0x4B;
+
+  if (isZip) {
+    blob = new Blob([arrayBuffer], { type: 'application/zip' });
+  } else {
+    // API Gateway returned base64-encoded text — decode to binary
+    const text = new TextDecoder().decode(bytes);
+    const binary = atob(text);
+    const decoded = Uint8Array.from(binary, c => c.charCodeAt(0));
+    blob = new Blob([decoded], { type: 'application/zip' });
+  }
+
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = 'enrollment_forms.zip';
+  link.download = filename;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
