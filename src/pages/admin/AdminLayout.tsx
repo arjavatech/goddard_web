@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Calendar } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Calendar, Phone, Mail, Globe, MapPin } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -90,7 +90,7 @@ export function AdminLayout({
     };
   }, [isSidebarOpen]);
 
-  return <div className="min-h-screen bg-background flex">
+  return <div className="min-h-screen bg-background flex flex-col">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div 
@@ -99,6 +99,8 @@ export function AdminLayout({
         />
       )}
       
+      {/* Sidebar + Main wrapper */}
+      <div className="flex flex-1">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="p-6 border-b border-gray-200">
@@ -193,8 +195,59 @@ export function AdminLayout({
           </DropdownMenu>
         </header>
         {/* Page content */}
-        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 flex flex-col bg-gray-50`}>{children}</main>
+        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 bg-gray-50`}>{children}</main>
       </div>
+      </div>
+
+      {/* Footer - full width spanning sidebar too */}
+      <footer className="absolute bottom-0 left-0 right-0" style={{position: 'static'}}>
+        <div className="relative overflow-hidden bg-gradient-to-r from-amazon-teal via-cyan-600 to-cyan-700 px-6 sm:px-8 py-8">
+          <div className="absolute inset-y-0 right-0 w-64 pointer-events-none overflow-hidden">
+            <svg viewBox="0 0 256 200" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
+              <circle cx="220" cy="-10" r="120" fill="white" fillOpacity="0.08" />
+              <circle cx="256" cy="180" r="90" fill="white" fillOpacity="0.06" />
+              <circle cx="140" cy="100" r="60" fill="white" fillOpacity="0.05" />
+              <rect x="88" y="90" width="100" height="110" fill="white" fillOpacity="0.07" />
+              <polygon points="88,90 138,45 188,90" fill="white" fillOpacity="0.07" />
+              <rect x="113" y="130" width="25" height="70" fill="white" fillOpacity="0.04" />
+              <rect x="93" y="100" width="20" height="20" fill="white" fillOpacity="0.04" />
+              <rect x="163" y="100" width="20" height="20" fill="white" fillOpacity="0.04" />
+              <circle cx="210" cy="30" r="3" fill="white" fillOpacity="0.3" />
+              <circle cx="235" cy="55" r="2" fill="white" fillOpacity="0.25" />
+              <circle cx="245" cy="15" r="4" fill="white" fillOpacity="0.2" />
+            </svg>
+          </div>
+          <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8">
+            <div className="space-y-3">
+              <div className="bg-white/10 rounded-xl p-3 inline-block">
+                <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain brightness-0 invert" />
+              </div>
+              <p className="text-sm text-white/80 leading-relaxed">Nurturing children through play-based learning and quality early education.</p>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Contact Us</h3>
+              <ul className="space-y-3">
+                <li><a href="tel:+18000000000" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Phone className="h-4 w-4 flex-shrink-0" />+1 (800) 000-0000</a></li>
+                <li><a href="mailto:support@goddardschool.com" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Mail className="h-4 w-4 flex-shrink-0" />support@goddardschool.com</a></li>
+                <li><a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Globe className="h-4 w-4 flex-shrink-0" />goddardschool.com</a></li>
+                <li className="flex items-start gap-3 text-sm text-white/90"><MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />123 School Lane, Lynnwood, WA 98036</li>
+              </ul>
+            </div>
+            <div className="space-y-4">
+              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Resources</h3>
+              <ul className="space-y-2.5">
+                {['Privacy Policy', 'Terms of Service', 'Help Center', 'Admin Guide'].map(link => (
+                  <li key={link}><a href="#" className="text-sm text-white/90 hover:text-white transition-colors">{link}</a></li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div className="bg-cyan-800 px-6 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-1">
+          <p className="text-xs text-white/60">© {new Date().getFullYear()} The Goddard School. All rights reserved.</p>
+          <p className="text-xs text-white/40 tracking-widest font-medium">ADMIN PORTAL</p>
+        </div>
+      </footer>
       
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
