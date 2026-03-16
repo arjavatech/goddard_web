@@ -90,6 +90,18 @@ export function AdminLayout({
     };
   }, [isSidebarOpen]);
 
+  const footerRef = React.useRef<HTMLElement>(null);
+  const [footerHeight, setFooterHeight] = React.useState(0);
+  React.useEffect(() => {
+    if (!footerRef.current) return;
+    const observer = new ResizeObserver(() => {
+      setFooterHeight(footerRef.current?.offsetHeight || 0);
+    });
+    observer.observe(footerRef.current);
+    setFooterHeight(footerRef.current.offsetHeight);
+    return () => observer.disconnect();
+  }, []);
+
   return <div className="min-h-screen bg-background flex flex-col">
       {/* Mobile Overlay */}
       {isSidebarOpen && (
@@ -102,7 +114,7 @@ export function AdminLayout({
       {/* Sidebar + Main wrapper */}
       <div className="flex flex-1">
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <aside className={`fixed top-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{bottom: footerHeight}}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />
@@ -200,18 +212,13 @@ export function AdminLayout({
       </div>
 
       {/* Footer - full width spanning sidebar too */}
-      <footer className="absolute bottom-0 left-0 right-0" style={{position: 'static'}}>
-        <div className="relative overflow-hidden bg-gradient-to-r from-amazon-teal via-cyan-600 to-cyan-700 px-6 sm:px-8 py-8">
+      <footer ref={footerRef} className="relative z-40">
+        <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-cyan-600 to-cyan-700 px-6 sm:px-8 py-8">
           <div className="absolute inset-y-0 right-0 w-64 pointer-events-none overflow-hidden">
             <svg viewBox="0 0 256 200" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
               <circle cx="220" cy="-10" r="120" fill="white" fillOpacity="0.08" />
               <circle cx="256" cy="180" r="90" fill="white" fillOpacity="0.06" />
               <circle cx="140" cy="100" r="60" fill="white" fillOpacity="0.05" />
-              <rect x="88" y="90" width="100" height="110" fill="white" fillOpacity="0.07" />
-              <polygon points="88,90 138,45 188,90" fill="white" fillOpacity="0.07" />
-              <rect x="113" y="130" width="25" height="70" fill="white" fillOpacity="0.04" />
-              <rect x="93" y="100" width="20" height="20" fill="white" fillOpacity="0.04" />
-              <rect x="163" y="100" width="20" height="20" fill="white" fillOpacity="0.04" />
               <circle cx="210" cy="30" r="3" fill="white" fillOpacity="0.3" />
               <circle cx="235" cy="55" r="2" fill="white" fillOpacity="0.25" />
               <circle cx="245" cy="15" r="4" fill="white" fillOpacity="0.2" />
