@@ -117,6 +117,21 @@ export function StudentManagement() {
   const [selectedStudentForTransfer, setSelectedStudentForTransfer] = useState<Student | null>(null);
   const [newClassroomId, setNewClassroomId] = useState('');
   const [isTransferring, setIsTransferring] = useState(false);
+  const [downloadingEnrollmentId, setDownloadingEnrollmentId] = useState<string | null>(null);
+
+  const handleDownloadAllForms = async (enrollmentId: string) => {
+    if (!enrollmentId) return;
+    setDownloadingEnrollmentId(enrollmentId);
+    try {
+      const { downloadAllForms } = await import('../../services/api/admin');
+      await downloadAllForms(enrollmentId);
+    } catch (err) {
+      console.error('Download failed:', err);
+      showToast('error', 'Failed to download forms. Please try again.');
+    } finally {
+      setDownloadingEnrollmentId(null);
+    }
+  };
 
   const [availableClassrooms, setAvailableClassrooms] = useState<{id: string, name: string}[]>([]);
   
@@ -1106,6 +1121,17 @@ export function StudentManagement() {
                               <School className="h-4 w-4 mr-2" />
                               Transfer Class
                             </DropdownMenuItem>
+                            {student.enrollmentId && (
+                              <DropdownMenuItem
+                                disabled={downloadingEnrollmentId === student.enrollmentId}
+                                onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                              >
+                                {downloadingEnrollmentId === student.enrollmentId
+                                  ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                                  : <Download className="h-4 w-4 mr-2" />}
+                                Download All Forms
+                              </DropdownMenuItem>
+                            )}
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
@@ -1303,6 +1329,20 @@ export function StudentManagement() {
                           <School className="h-3 w-3 mr-1" />
                           Transfer Class
                         </Button>
+                        {student.enrollmentId && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={downloadingEnrollmentId === student.enrollmentId}
+                            onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                            className="w-full h-7 text-xs text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                          >
+                            {downloadingEnrollmentId === student.enrollmentId
+                              ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                              : <Download className="h-3 w-3 mr-1" />}
+                            Download All Forms
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </Card>
