@@ -243,9 +243,10 @@ export function AdminLayout({
             <div className="space-y-4">
               <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Resources</h3>
               <ul className="space-y-2.5">
-                {['Privacy Policy', 'Terms of Service', 'Help Center', 'Admin Guide'].map(link => (
-                  <li key={link}><a href="#" className="text-sm text-white/90 hover:text-white transition-colors">{link}</a></li>
-                ))}
+                  {!isSuperAdmin && (
+                    <li><Link to="/admin/help" className="text-sm text-white/90 hover:text-white transition-colors">Help Center</Link></li>
+                  )}
+                  <li><Link to="/admin/guide" className="text-sm text-white/90 hover:text-white transition-colors">Admin Guide</Link></li>
               </ul>
             </div>
           </div>

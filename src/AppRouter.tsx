@@ -20,6 +20,9 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
+import { AdminGuide } from './pages/admin/AdminGuide';
+import { HelpCenter } from './pages/admin/HelpCenter';
+import { ParentHelpCenter } from './pages/ParentHelpCenter';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
 import { SchoolManagement } from './pages/superadmin/SchoolManagement';
@@ -38,6 +41,9 @@ export function AppRouter() {
           <Route path="/" element={<SelectSchool />} />
           <Route path="/dashboard" element={<ProtectedRoute>
                 <App />
+              </ProtectedRoute>} />
+          <Route path="/help" element={<ProtectedRoute>
+                <ParentHelpCenter />
               </ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
@@ -59,6 +65,8 @@ export function AppRouter() {
             <Route path="/admin/students" element={<StudentManagement />} />
             <Route path="/admin/admin-management" element={<AdminManagement />} />
             <Route path="/admin/users" element={<UserManagement />} />
+            <Route path="/admin/guide" element={<AdminGuide />} />
+            <Route path="/admin/help" element={<HelpCenter />} />
           </Route>
 
           {/* SuperAdmin Routes */}
