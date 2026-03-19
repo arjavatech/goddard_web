@@ -1,49 +1,128 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Mail, Globe, MapPin } from 'lucide-react';
+import { Phone, Mail, Globe, MapPin, HelpCircle, BookOpen } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { HelpCenterContent } from '../HelpCenterContent';
+import { ParentGuideContent } from '../ParentGuideContent';
 
 export function Footer() {
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+
   return (
-    <footer>
-      <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-cyan-600 to-cyan-700 px-6 sm:px-8 py-8">
-        <div className="absolute inset-y-0 right-0 w-64 pointer-events-none overflow-hidden">
-          <svg viewBox="0 0 256 200" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
-            <circle cx="220" cy="-10" r="120" fill="white" fillOpacity="0.08" />
-            <circle cx="256" cy="180" r="90" fill="white" fillOpacity="0.06" />
-            <circle cx="140" cy="100" r="60" fill="white" fillOpacity="0.05" />
-            <circle cx="210" cy="30" r="3" fill="white" fillOpacity="0.3" />
-            <circle cx="235" cy="55" r="2" fill="white" fillOpacity="0.25" />
-            <circle cx="245" cy="15" r="4" fill="white" fillOpacity="0.2" />
-          </svg>
-        </div>
-        <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8">
-          <div className="space-y-3">
-            <div className="bg-white/10 rounded-xl p-3 inline-block">
-              <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain brightness-0 invert" />
+    <footer className="relative bg-amazon-teal">
+      {/* Top orange accent line */}
+      
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-5 sm:gap-6 pb-4 sm:pb-5 border-b border-white/20">
+
+          {/* Brand */}
+          <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
+            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
+            <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
+              Nurturing children through play-based learning and quality early childhood education in Lynnwood, WA.
+            </p>
+            <div className="flex items-center gap-2">
+              <a href="tel:+18000000000" aria-label="Call us"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+              <a href="mailto:support@goddardschool.com" aria-label="Email us"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Mail className="h-3.5 w-3.5" />
+              </a>
+              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Globe className="h-3.5 w-3.5" />
+              </a>
             </div>
-            <p className="text-sm text-white/80 leading-relaxed">Nurturing children through play-based learning and quality early education.</p>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Contact Us</h3>
-            <ul className="space-y-3">
-              <li><a href="tel:+18000000000" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Phone className="h-4 w-4 flex-shrink-0" />+1 (800) 000-0000</a></li>
-              <li><a href="mailto:support@goddardschool.com" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Mail className="h-4 w-4 flex-shrink-0" />support@goddardschool.com</a></li>
-              <li><a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Globe className="h-4 w-4 flex-shrink-0" />goddardschool.com</a></li>
-              <li className="flex items-start gap-3 text-sm text-white/90"><MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />123 School Lane, Lynnwood, WA 98036</li>
+
+          {/* Contact */}
+          <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
+            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
+            <ul className="flex flex-col gap-1.5 sm:gap-2">
+              <li>
+                <a href="tel:+18000000000" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                  <Phone className="h-3 w-3 text-white/60 shrink-0" />
+                  +1 (800) 000-0000
+                </a>
+              </li>
+              <li>
+                <a href="mailto:support@goddardschool.com" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                  <Mail className="h-3 w-3 text-white/60 shrink-0" />
+                  <span className="truncate">support@goddardschool.com</span>
+                </a>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-white/80">
+                <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
+                <span>123 School Lane, Lynnwood, WA 98036</span>
+              </li>
             </ul>
           </div>
-          <div className="space-y-4">
-            <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Resources</h3>
-            <ul className="space-y-2.5">
-              <li><Link to="/help" className="text-sm text-white/90 hover:text-white transition-colors">Help Center</Link></li>
+
+          {/* Resources */}
+          <div className="sm:col-span-1 lg:col-span-3 flex flex-col gap-2.5">
+            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Resources</p>
+            <ul className="flex flex-col gap-1.5 sm:gap-2">
+              <li>
+                <button onClick={() => setShowHelpModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
+                  Help Center
+                </button>
+              </li>
+              <li>
+                <button onClick={() => setShowGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
+                  Parent Guide
+                </button>
+              </li>
+              <li>
+                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/80 hover:text-white transition-colors">
+                  Goddard School
+                </a>
+              </li>
             </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom bar */}
+        <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} The Goddard School — Lynnwood. All rights reserved.</p>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
+            <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">Parent Portal</span>
           </div>
         </div>
       </div>
-      <div className="bg-cyan-800 px-6 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-1">
-        <p className="text-xs text-white/60">© {new Date().getFullYear()} The Goddard School. All rights reserved.</p>
-        <p className="text-xs text-white/40 tracking-widest font-medium">PARENT PORTAL</p>
-      </div>
+
+      {/* Parent Guide Modal */}
+      <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-5 w-5 text-amazon-teal" />
+              Parent Guide
+            </DialogTitle>
+            <DialogDescription>Everything you need to complete your child's enrollment</DialogDescription>
+          </DialogHeader>
+          <ParentGuideContent />
+        </DialogContent>
+      </Dialog>
+
+      {/* Help Center Modal */}
+      <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <HelpCircle className="h-5 w-5 text-amazon-teal" />
+              Help Center
+            </DialogTitle>
+            <DialogDescription>Find answers to common questions about your enrollment</DialogDescription>
+          </DialogHeader>
+          <HelpCenterContent role="parent" />
+        </DialogContent>
+      </Dialog>
     </footer>
   );
 }

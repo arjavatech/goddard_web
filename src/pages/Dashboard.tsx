@@ -324,10 +324,9 @@ export function Dashboard() {
               
             </div>
             {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
-                <div className="lg:col-span-2 xl:col-span-7 space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.1s'
-            }}>
+                {/* order-1 mobile: EnrollmentProgress */}
+                <div className="order-1 lg:order-1 lg:col-span-2 xl:col-span-7 lg:row-span-2 space-y-3 sm:space-y-4 md:space-y-6">
+                  <div className="section-fade-in" style={{ animationDelay: '0.1s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
@@ -338,9 +337,7 @@ export function Dashboard() {
                     />
                   </div>
                   {selectedChild.childStatus !== 'archive' && (
-                    <div className="section-fade-in" style={{
-                animationDelay: '0.2s'
-              }} data-forms-section>
+                    <div className="section-fade-in hidden lg:block" style={{ animationDelay: '0.3s' }} data-forms-section>
                       <FormsDocuments
                         childSpecificForms={childSpecificForms}
                         familyForms={familyForms}
@@ -350,9 +347,7 @@ export function Dashboard() {
                         childStatus={selectedChild.childStatus}
                         onChildSelect={(childName) => {
                           const child = children.find(c => c.name === childName);
-                          if (child) {
-                            setSelectedChildId(child.id);
-                          }
+                          if (child) setSelectedChildId(child.id);
                         }}
                         onViewForm={handleViewForm}
                         formToOpen={formToOpen}
@@ -365,18 +360,41 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-                <div className="lg:col-span-1 xl:col-span-3 order-first lg:order-last space-y-4">
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.3s'
-            }}>
+                {/* order-2 mobile: ParentInfo + ChildrenOverview */}
+                <div className="order-2 lg:order-2 lg:col-span-1 xl:col-span-3 space-y-3 sm:space-y-4">
+                  <div className="section-fade-in" style={{ animationDelay: '0.2s' }}>
                     <ParentInfo parentData={parentData} />
                   </div>
-                  <div className="section-fade-in" style={{
-              animationDelay: '0.4s'
-            }}>
+                  <div className="section-fade-in" style={{ animationDelay: '0.25s' }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
+                {/* order-3 mobile: Forms & Documents (hidden on lg+, shown in main col above) */}
+                {selectedChild.childStatus !== 'archive' && (
+                  <div className="order-3 lg:hidden" data-forms-section>
+                    <div className="section-fade-in" style={{ animationDelay: '0.3s' }}>
+                      <FormsDocuments
+                        childSpecificForms={childSpecificForms}
+                        familyForms={familyForms}
+                        rawFormData={parentData}
+                        selectedChildId={selectedChild.id}
+                        selectedChildName={selectedChild.name}
+                        childStatus={selectedChild.childStatus}
+                        onChildSelect={(childName) => {
+                          const child = children.find(c => c.name === childName);
+                          if (child) setSelectedChildId(child.id);
+                        }}
+                        onViewForm={handleViewForm}
+                        formToOpen={formToOpen}
+                        onFormOpened={() => setFormToOpen(null)}
+                        onFormCompleted={handleFormCompleted}
+                        yearFilter={yearFilter}
+                        onYearFilterChange={setYearFilter}
+                        enrollmentId={selectedChild.enrollmentId}
+                      />
+                    </div>
+                  </div>
+                )}
               </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-4 sm:p-6 md:p-8 text-center">
                 <div className="text-base sm:text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
                 <div className="text-sm text-muted-foreground mb-3 sm:mb-4">

@@ -1,5 +1,5 @@
 import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, ChevronDown, User, Settings, UserCog, Calendar, Phone, Mail, Globe, MapPin } from 'lucide-react';
+import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, User, Settings, UserCog, Calendar, Phone, Mail, Globe, MapPin, BookOpen, LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle, Eye, ShieldCheck } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -7,6 +7,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
+import { Loading } from '../../components/ui/loading';
+import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
+import { HelpCenterContent } from '../../components/HelpCenterContent';
+import { SuperAdminGuideContent } from '../../components/SuperAdminGuideContent';
 interface AdminLayoutProps {
   children: ReactNode;
 }
@@ -16,20 +20,18 @@ export function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [showSuperGuideModal, setShowSuperGuideModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const {
     signOut
   } = useAuth();
-  const { userData } = useUserContext();
-  
-  // Check if user is SuperAdmin - temporarily show for all users for testing
+  const { userData, loading: userLoading } = useUserContext();
+
   const isSuperAdmin = userData?.role === 'SuperAdmin';
-  
-  // Debug: Log user data
-  console.log('User data:', userData);
-  console.log('Is SuperAdmin:', isSuperAdmin);
-  
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -70,7 +72,7 @@ export function AdminLayout({
     label: 'Parents',
     path: '/admin/parents'
   }];
-  
+
   // Add Admins menu only for SuperAdmin
   if (isSuperAdmin) {
     navigationItems.push({
@@ -93,32 +95,49 @@ export function AdminLayout({
   const footerRef = React.useRef<HTMLElement>(null);
   const [footerHeight, setFooterHeight] = React.useState(0);
   React.useEffect(() => {
-    if (!footerRef.current) return;
-    const observer = new ResizeObserver(() => {
-      setFooterHeight(footerRef.current?.offsetHeight || 0);
-    });
-    observer.observe(footerRef.current);
-    setFooterHeight(footerRef.current.offsetHeight);
-    return () => observer.disconnect();
+    const update = () => {
+      if (!footerRef.current) return;
+      const rect = footerRef.current.getBoundingClientRect();
+      const visible = Math.max(0, window.innerHeight - rect.top);
+      setFooterHeight(visible);
+    };
+    update();
+    window.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    const observer = new ResizeObserver(update);
+    if (footerRef.current) observer.observe(footerRef.current);
+    return () => {
+      window.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+      observer.disconnect();
+    };
   }, []);
 
+  if (userLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loading size="md" message="" />
+      </div>
+    );
+  }
+
   return <div className="min-h-screen bg-background flex flex-col">
-      {/* Mobile Overlay */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden" 
-          onClick={() => setIsSidebarOpen(false)}
-        />
-      )}
-      
-      {/* Sidebar + Main wrapper */}
-      <div className="flex flex-1">
+    {/* Mobile Overlay */}
+    {isSidebarOpen && (
+      <div
+        className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
+        onClick={() => setIsSidebarOpen(false)}
+      />
+    )}
+
+    {/* Sidebar + Main wrapper */}
+    <div className="flex flex-1">
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{bottom: footerHeight}}>
+      <aside className={`fixed top-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ bottom: footerHeight }}>
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(false)}
               className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0"
             >
@@ -126,14 +145,13 @@ export function AdminLayout({
             </button>
           </div>
         </div>
-        <nav className="flex-1 p-6">
-          
+        <nav className="flex-1 p-6 overflow-y-auto min-h-0">
+
           <ul className="space-y-2">
-            {navigationItems.map((item, index) => {
-              console.log('Rendering nav item:', item.label, item.path);
-              return <li key={index}>
-                <Link 
-                  to={item.path} 
+            {navigationItems.map((item, index) => (
+              <li key={index}>
+                <Link
+                  to={item.path}
                   onClick={() => setIsSidebarOpen(false)}
                   className={`flex items-center space-x-4 px-4 py-3.5 rounded-lg transition-all duration-200 ${currentPath === item.path ? 'bg-amazon-teal text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-amazon-teal'}`}
                 >
@@ -143,18 +161,18 @@ export function AdminLayout({
                   <span className="font-medium">{item.label}</span>
                 </Link>
               </li>
-            })}
+            ))}
           </ul>
         </nav>
-       
+
       </aside>
-      
+
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:ml-64">
         {/* Header */}
         <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white shadow-sm border-b border-gray-100 py-3 px-4 lg:px-6 flex items-center justify-between z-10">
           <div className="flex items-center space-x-3">
-            <button 
+            <button
               onClick={() => setIsSidebarOpen(true)}
               className="lg:hidden p-1.5 rounded-md hover:bg-gray-100"
             >
@@ -175,7 +193,7 @@ export function AdminLayout({
                     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
                     : 'AD'}
                 </div>
-                
+
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
@@ -195,7 +213,7 @@ export function AdminLayout({
                 </div>
               </div>
               <div className="p-3">
-                <button 
+                <button
                   onClick={() => setShowLogoutModal(true)}
                   className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
                 >
@@ -209,72 +227,355 @@ export function AdminLayout({
         {/* Page content */}
         <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 bg-gray-50`}>{children}</main>
       </div>
+    </div>
+
+    {/* Footer */}
+    <footer ref={footerRef} className="relative z-40 bg-amazon-teal">
+      
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
+        {/* Main grid — stacks on mobile, 3-col on sm+ */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-5 sm:gap-6 pb-4 sm:pb-5 border-b border-white/20">
+
+          {/* Brand */}
+          <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
+            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
+            <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
+              Quality early childhood education through play-based learning in Lynnwood, WA.
+            </p>
+            <div className="flex items-center gap-2">
+              <a href="tel:+18000000000" aria-label="Call us"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+              <a href="mailto:support@goddardschool.com" aria-label="Email us"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Mail className="h-3.5 w-3.5" />
+              </a>
+              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
+                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                <Globe className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          </div>
+
+          {/* Contact */}
+          <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
+            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
+            <ul className="flex flex-col gap-1.5 sm:gap-2">
+              <li>
+                <a href="tel:+18000000000" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                  <Phone className="h-3 w-3 text-white/60 shrink-0" />
+                  +1 (800) 000-0000
+                </a>
+              </li>
+              <li>
+                <a href="mailto:support@goddardschool.com" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                  <Mail className="h-3 w-3 text-white/60 shrink-0" />
+                  <span className="truncate">support@goddardschool.com</span>
+                </a>
+              </li>
+              <li className="flex items-start gap-2 text-xs text-white/80">
+                <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
+                <span>123 School Lane, Lynnwood, WA 98036</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Resources */}
+          <div className="sm:col-span-1 lg:col-span-3 flex flex-col gap-2.5">
+            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Resources</p>
+            <ul className="flex flex-col gap-1.5 sm:gap-2">
+              {
+                !isSuperAdmin && (
+                  <li>
+                    <button onClick={() => setShowHelpModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
+                      Help Center
+                    </button>
+                  </li>
+                )
+              }
+              {!isSuperAdmin && (
+                <li>
+                  <button onClick={() => setShowGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
+                    Admin Guide
+                  </button>
+                </li>
+              )}
+
+              {isSuperAdmin && (
+                <li>
+                  <button onClick={() => setShowSuperGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
+                    SuperAdmin Guide
+                  </button>
+                </li>
+              )}
+
+
+              <li>
+                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/80 hover:text-white transition-colors">
+                  Goddard School
+                </a>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+
+        {/* Bottom bar */}
+        <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} The Goddard School — Lynnwood. All rights reserved.</p>
+          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
+            <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
+            <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">
+              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+    {/* SuperAdmin Guide Modal */}
+    <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-amazon-orange" />
+            SuperAdmin Guide
+          </DialogTitle>
+          <DialogDescription>SuperAdmin-exclusive features, roles, and responsibilities</DialogDescription>
+        </DialogHeader>
+        <SuperAdminGuideContent />
+      </DialogContent>
+    </Dialog>
+
+    {/* Help Center Modal */}
+    <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-amazon-teal" />
+            Help Center
+          </DialogTitle>
+          <DialogDescription>Find answers to common admin questions</DialogDescription>
+        </DialogHeader>
+        <HelpCenterContent role="admin" />
+      </DialogContent>
+    </Dialog>
+
+    {/* Admin Guide Modal */}
+    <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
+      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <BookOpen className="h-5 w-5 text-amazon-teal" />
+            Admin Guide
+          </DialogTitle>
+          <DialogDescription>Everything you need to manage your school portal</DialogDescription>
+        </DialogHeader>
+        <AdminGuideContent isSuperAdmin={isSuperAdmin} />
+      </DialogContent>
+    </Dialog>
+
+    {/* Logout Confirmation Modal */}
+    <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+      <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+        <DialogHeader>
+          <DialogTitle>Confirm Logout</DialogTitle>
+          <DialogDescription>
+            Are you sure you want to logout? You will need to sign in again to access the admin portal.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          <Button variant="outline" onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
+            Cancel
+          </Button>
+          <AsyncButton variant="destructive" onClick={handleLogout}>
+            Logout
+          </AsyncButton>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>;
+}
+
+const guidesections = [
+  {
+    id: 'dashboard',
+    icon: <LayoutDashboard className="h-5 w-5 text-amazon-teal" />,
+    title: 'Dashboard',
+    description: 'The admin dashboard gives you a high-level overview of your school.',
+    steps: [
+      'View total students, classrooms, and form completion rates at a glance.',
+      'Monitor class-wise enrollment progress with the metrics chart.',
+      'Use the quick-action cards to navigate to any section instantly.',
+    ],
+  },
+  {
+    id: 'students',
+    icon: <GraduationCap className="h-5 w-5 text-amazon-teal" />,
+    title: 'Student Management',
+    description: 'Manage all enrolled students, their forms, and classroom assignments.',
+    steps: [
+      'Search and filter students by name, classroom, status, or year.',
+      'Click the ⋯ actions menu on any row to Manage Forms, Transfer Class, or Download All Forms.',
+      'Use the checkbox column to select multiple students for bulk class transfers.',
+      "Click a student's name to view their full parent details page.",
+      "Toggle a student's Active / Archived status by clicking the status pill.",
+    ],
+  },
+  {
+    id: 'classrooms',
+    icon: <School className="h-5 w-5 text-amazon-teal" />,
+    title: 'Classroom Management',
+    description: 'Create and manage classrooms, assign forms, and track enrollment.',
+    steps: [
+      'Create a new classroom using the "Add Classroom" button.',
+      'Click a classroom name to view its students and assigned forms.',
+      'Assign form templates to a classroom so all students receive them automatically.',
+      'Rename or delete classrooms from the actions menu.',
+    ],
+  },
+  {
+    id: 'forms',
+    icon: <FileText className="h-5 w-5 text-amazon-teal" />,
+    title: 'Forms Management',
+    description: 'Create, edit, and assign form templates to students or classrooms.',
+    steps: [
+      'Add a new form template with a name, Fillout form ID, and optional due date.',
+      'Assign a form to all students in the school or to a specific classroom.',
+      'Edit or delete existing form templates from the forms list.',
+      'View individual form submissions via the View action.',
+    ],
+  },
+  {
+    id: 'due-forms',
+    icon: <Calendar className="h-5 w-5 text-amazon-teal" />,
+    title: 'Due Forms Tracking',
+    description: 'Monitor form completion status and send reminders to parents.',
+    steps: [
+      'Filter by status: Pending, Pending Approval, Overdue, or Completed.',
+      'Use the Remind button to send an email reminder to a parent for a specific form.',
+      'Use the bulk Remind dropdown to send reminders to all Pending or Overdue forms at once.',
+      'Export the current view as CSV or PDF using the Export button.',
+      'Status meanings: Pending = not started, Pending Approval = submitted by parent, Overdue = past due date, Completed = admin approved.',
+    ],
+  },
+  {
+    id: 'parents',
+    icon: <Users className="h-5 w-5 text-amazon-teal" />,
+    title: 'Parent Management',
+    description: 'Invite, manage, and communicate with parents.',
+    steps: [
+      'Invite a new parent using the "Invite Parent" button — this sends them a signup email.',
+      "Click a parent's name to view their full profile, children, and form statuses.",
+      "Resend confirmation emails to parents who haven't verified their account.",
+      'Deactivate or reactivate parent accounts from the actions menu.',
+    ],
+  },
+  {
+    id: 'downloads',
+    icon: <Download className="h-5 w-5 text-amazon-teal" />,
+    title: 'Downloading Forms',
+    description: 'Download individual or all forms for a student.',
+    steps: [
+      'To download a single approved form: go to Student Management → ⋯ menu → the form card shows Download (↓) and Print icons.',
+      'To download all forms for a student at once: Student Management → ⋯ menu → "Download All Forms" — this downloads a ZIP file.',
+      'In the parent dashboard, the "Download All" button in Forms & Documents also downloads a ZIP of all approved forms.',
+    ],
+  },
+];
+
+const statusGuide = [
+  { icon: <CheckCircle className="h-4 w-4 text-green-600" />, label: 'Completed – Admin Approved', desc: 'Form reviewed and approved by admin.' },
+  { icon: <Clock className="h-4 w-4 text-blue-600" />, label: 'Pending Approval', desc: 'Parent submitted the form, awaiting admin review.' },
+  { icon: <Clock className="h-4 w-4 text-yellow-600" />, label: 'Pending', desc: 'Form assigned but not yet started by parent.' },
+  { icon: <AlertTriangle className="h-4 w-4 text-red-600" />, label: 'Overdue', desc: 'Form not completed past its due date.' },
+  { icon: <Eye className="h-4 w-4 text-gray-500" />, label: 'Draft', desc: 'Form started but not submitted.' },
+];
+
+function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  return (
+    <div className="space-y-4 py-1 px-1 sm:px-0">
+      {/* Quick nav */}
+      <div className="flex flex-wrap gap-1.5 sm:gap-2">
+        {guidesections.map(s => (
+          <a
+            key={s.id}
+            href={`#guide-${s.id}`}
+            className="flex items-center gap-1.5 text-xs px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-amazon-teal/10 text-amazon-teal hover:bg-amazon-teal/20 hover:shadow-sm transition-all duration-200"
+          >
+            {s.icon}
+            <span className="hidden sm:inline">{s.title}</span>
+            <span className="sm:hidden">{s.title.split(' ')[0]}</span>
+          </a>
+        ))}
       </div>
 
-      {/* Footer - full width spanning sidebar too */}
-      <footer ref={footerRef} className="relative z-40">
-        <div className="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-cyan-600 to-cyan-700 px-6 sm:px-8 py-8">
-          <div className="absolute inset-y-0 right-0 w-64 pointer-events-none overflow-hidden">
-            <svg viewBox="0 0 256 200" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 w-full h-full" preserveAspectRatio="xMidYMid slice">
-              <circle cx="220" cy="-10" r="120" fill="white" fillOpacity="0.08" />
-              <circle cx="256" cy="180" r="90" fill="white" fillOpacity="0.06" />
-              <circle cx="140" cy="100" r="60" fill="white" fillOpacity="0.05" />
-              <circle cx="210" cy="30" r="3" fill="white" fillOpacity="0.3" />
-              <circle cx="235" cy="55" r="2" fill="white" fillOpacity="0.25" />
-              <circle cx="245" cy="15" r="4" fill="white" fillOpacity="0.2" />
-            </svg>
-          </div>
-          <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8">
-            <div className="space-y-3">
-              <div className="bg-white/10 rounded-xl p-3 inline-block">
-                <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain brightness-0 invert" />
+      {/* Status legend */}
+      <Card className="glass-card">
+        <CardHeader className="pb-2 px-3 sm:px-6">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+            <Settings className="h-4 w-4 text-amazon-teal" />
+            Form Status Reference
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0 px-3 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+            {statusGuide.map(s => (
+              <div key={s.label} className="flex items-start gap-2.5 p-2.5 sm:p-3 rounded-lg bg-gray-50">
+                <span className="mt-0.5 flex-shrink-0">{s.icon}</span>
+                <div>
+                  <p className="text-xs sm:text-sm font-medium text-foreground">{s.label}</p>
+                  <p className="text-xs text-muted-foreground">{s.desc}</p>
+                </div>
               </div>
-              <p className="text-sm text-white/80 leading-relaxed">Nurturing children through play-based learning and quality early education.</p>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Contact Us</h3>
-              <ul className="space-y-3">
-                <li><a href="tel:+18000000000" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Phone className="h-4 w-4 flex-shrink-0" />+1 (800) 000-0000</a></li>
-                <li><a href="mailto:support@goddardschool.com" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Mail className="h-4 w-4 flex-shrink-0" />support@goddardschool.com</a></li>
-                <li><a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-sm text-white/90 hover:text-white transition-colors"><Globe className="h-4 w-4 flex-shrink-0" />goddardschool.com</a></li>
-                <li className="flex items-start gap-3 text-sm text-white/90"><MapPin className="h-4 w-4 flex-shrink-0 mt-0.5" />123 School Lane, Lynnwood, WA 98036</li>
-              </ul>
-            </div>
-            <div className="space-y-4">
-              <h3 className="text-xs font-semibold text-white/60 uppercase tracking-widest">Resources</h3>
-              <ul className="space-y-2.5">
-                  {!isSuperAdmin && (
-                    <li><Link to="/admin/help" className="text-sm text-white/90 hover:text-white transition-colors">Help Center</Link></li>
-                  )}
-                  <li><Link to="/admin/guide" className="text-sm text-white/90 hover:text-white transition-colors">Admin Guide</Link></li>
-              </ul>
-            </div>
+            ))}
           </div>
-        </div>
-        <div className="bg-cyan-800 px-6 sm:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-1">
-          <p className="text-xs text-white/60">© {new Date().getFullYear()} The Goddard School. All rights reserved.</p>
-          <p className="text-xs text-white/40 tracking-widest font-medium">ADMIN PORTAL</p>
-        </div>
-      </footer>
-      
-      {/* Logout Confirmation Modal */}
-      <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
-          <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to logout? You will need to sign in again to access the admin portal.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
-              Cancel
-            </Button>
-            <AsyncButton variant="destructive" onClick={handleLogout}>
-              Logout
-            </AsyncButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>;
+        </CardContent>
+      </Card>
+
+      {/* Sections */}
+      {guidesections.map(section => (
+        <Card key={section.id} id={`guide-${section.id}`} className="glass-card scroll-mt-4">
+          <CardHeader className="pb-2 px-3 sm:px-6">
+            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
+              {section.icon}
+              {section.title}
+            </CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">{section.description}</p>
+          </CardHeader>
+          <CardContent className="pt-0 px-3 sm:px-6">
+            <ul className="space-y-2">
+              {section.steps.map((step, i) => (
+                <li key={i} className="flex items-start gap-2.5 sm:gap-3">
+                  <span className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amazon-teal/10 text-amazon-teal text-xs font-semibold">
+                    {i + 1}
+                  </span>
+                  <span className="text-xs sm:text-sm text-foreground">{step}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* Contact support */}
+      <Card className="glass-card border-amazon-teal/30 bg-amazon-teal/5">
+        <CardContent className="p-3 sm:p-4 flex items-start gap-3">
+          <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs sm:text-sm font-medium text-foreground">Need more help?</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Contact support at{' '}
+              <a href="mailto:support@goddardschool.com" className="text-amazon-teal hover:underline break-all">
+                support@goddardschool.com
+              </a>{' '}
+              or call <a href="tel:+18000000000" className="text-amazon-teal hover:underline">+1 (800) 000-0000</a>.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
