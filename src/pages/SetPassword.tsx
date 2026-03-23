@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+ import { Shield, Eye, EyeOff, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -21,6 +21,9 @@ export function SetPassword() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -363,10 +366,58 @@ export function SetPassword() {
             </Button>
           </form>
 
-          <div className="mt-6 pt-6 border-t border-border text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="mt-6 pt-6 border-t border-border space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
               Need help? Contact your school administrator
             </p>
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground text-center">Didn't receive or link expired? Resend invite</p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={resendEmail}
+                  onChange={e => { setResendEmail(e.target.value); setResendStatus('idle'); }}
+                  className="h-9 text-sm"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 gap-1.5"
+                  disabled={!resendEmail.trim() || resendLoading}
+                  onClick={async () => {
+                    if (!supabase) return;
+                    setResendLoading(true);
+                    setResendStatus('idle');
+                    try {
+                      const { error } = await supabase.auth.resend({
+                        type: 'signup',
+                        email: resendEmail.trim()
+                      });
+                      setResendStatus(error ? 'error' : 'success');
+                    } catch {
+                      setResendStatus('error');
+                    } finally {
+                      setResendLoading(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${resendLoading ? 'animate-spin' : ''}`} />
+                  Resend
+                </Button>
+              </div>
+              {resendStatus === 'success' && (
+                <p className="text-xs text-green-600 flex items-center gap-1">
+                  <CheckCircle className="h-3.5 w-3.5" /> Invite link sent! Check your inbox.
+                </p>
+              )}
+              {resendStatus === 'error' && (
+                <p className="text-xs text-red-600 flex items-center gap-1">
+                  <XCircle className="h-3.5 w-3.5" /> Could not resend. Check the email and try again.
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
