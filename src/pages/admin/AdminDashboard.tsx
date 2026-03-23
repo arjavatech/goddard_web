@@ -1,22 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { School, FileText, Users, Clock, UserCheck, Plus, UserPlus, Mail, GraduationCap, Settings, BarChart3, BookOpen } from 'lucide-react';
+import { School, FileText, Users, Clock, UserCheck, Plus, Mail } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
-// import { fetchUserContext } from '../../services/api/user';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 
-import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom } from '../../services/api/admin';
+import { fetchDashboardMetrics, createFormTemplate, inviteParent, createClassroom } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { validateEmail } from '../../lib/emailValidation';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { AddFormModal } from '../../components/admin/AddFormModal';
-
-
 
 type StatCard = {
   title: string;
@@ -59,32 +57,26 @@ export function AdminDashboard() {
   const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
-  const [isInvitingParent, setIsInvitingParent] = useState(false);
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
   const [isAddingClassroom, setIsAddingClassroom] = useState(false);
-  const [isClassroomDialogClosing, setIsClassroomDialogClosing] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
-
-  const schoolId = localStorage.getItem('schoolId') || undefined;
-
-console.log('AdminDashboard initialized with schoolId:', schoolId);
+  const schoolId = localStorage.getItem('schoolId');
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setLoading(true);
-        if (schoolId) {
+        if (!schoolId) {
           throw new Error('Unable to determine school context for the current admin.');
         }
 
-        const [metrics, classroomData] = await Promise.all([
-          fetchDashboardMetrics(schoolId ?? ''),
-          fetchClassrooms(schoolId ?? '').catch(() => [])
+        const [metrics] = await Promise.all([
+          fetchDashboardMetrics(schoolId)
         ]);
 
         // Calculate pending enrollments
@@ -140,7 +132,6 @@ console.log('AdminDashboard initialized with schoolId:', schoolId);
         if (!isMounted) return;
         setStats(statCards);
         setEnrollmentProgress(progressItems);
-        setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
         setError(null);
       } catch (err) {
         if (!isMounted) return;
@@ -183,9 +174,9 @@ console.log('AdminDashboard initialized with schoolId:', schoolId);
 
     setIsAddingForm(true);
     try {
-      if (schoolId) return;
+      if (!schoolId) return;
 
-      await createFormTemplate(formName.trim(), formLink.trim(), schoolId?? '', formDueDate, formStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
 
       setIsAddDialogOpen(false);
       setFormName('');
@@ -233,11 +224,10 @@ console.log('AdminDashboard initialized with schoolId:', schoolId);
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
 
-    setIsInvitingParent(true);
     try {
-      if (schoolId) return;
+      if (!schoolId) return;
 
-      await inviteParent(schoolId ?? '', {
+      await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,
         parentEmail,
@@ -273,20 +263,17 @@ console.log('AdminDashboard initialized with schoolId:', schoolId);
     } catch (error) {
       console.error('Error inviting parent:', error);
       showToast('error', 'Failed to send parent invitation. Please try again.');
-    } finally {
-      setIsInvitingParent(false);
     }
   };
 
-  
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
     setIsAddingClassroom(true);
     try {
-      if (schoolId) throw new Error('School context not found');
+      if (!schoolId) throw new Error('School context not found');
       
-      await createClassroom(schoolId ?? '', newClassroomName.trim());
+      await createClassroom(schoolId, newClassroomName.trim());
       
       setIsAddClassroomDialogOpen(false);
       setNewClassroomName('');
@@ -469,13 +456,7 @@ console.log('AdminDashboard initialized with schoolId:', schoolId);
         />
 
         {/* Add Classroom Dialog */}
-        <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsClassroomDialogClosing(true);
-            setTimeout(() => setIsClassroomDialogClosing(false), 100);
-          }
-          setIsAddClassroomDialogOpen(open);
-        }}>
+        <Dialog open={isAddClassroomDialogOpen} onOpenChange={setIsAddClassroomDialogOpen}>
           <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>

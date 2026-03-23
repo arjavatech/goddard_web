@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ArrowUp, ArrowDown, ChevronDown, Download } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -10,14 +10,16 @@ import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Pagination, MobilePagination } from '../../components/ui/pagination';
-import { Checkbox } from '../../components/ui/checkbox';
-import { fetchUserContext } from '../../services/api/user';
 import { usePagination } from '../../hooks/usePagination';
-
-
+import { StatCard } from '../../components/ui/stat-card';
+import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
+import { AvatarInitials } from '../../components/ui/avatar-initials';
+import { downloadCSV, printAsPDF } from '../../lib/export';
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, transferStudentToClass, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
+import { DataTable } from '../../components/ui/data-table';
+import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { Checkbox } from '../../components/ui/checkbox';
+import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
 
@@ -158,13 +160,11 @@ export function StudentManagement() {
     onValueChange, 
     options, 
     placeholder, 
-    label 
   }: { 
     value: string[], 
     onValueChange: (values: string[]) => void, 
     options: string[], 
     placeholder: string,
-    label: string 
   }) => {
     const [isOpen, setIsOpen] = useState(false);
     
@@ -376,36 +376,6 @@ export function StudentManagement() {
     return Array.from(classroomSet).sort();
   }, [students]);
 
-  // Extract all unique years from assigned_at dates
-  const allYears = useMemo(() => {
-    const yearSet = new Set<string>();
-    students.forEach(student => {
-      student.assignedForms.forEach(form => {
-        if (form.assignedAt) {
-          try {
-            const date = new Date(form.assignedAt);
-            if (!isNaN(date.getTime())) {
-              yearSet.add(date.getFullYear().toString());
-            } else {
-              // Handle DD-MM-YYYY format
-              const parts = form.assignedAt.split('-');
-              if (parts.length === 3) {
-                yearSet.add(parts[2]);
-              }
-            }
-          } catch (e) {
-            // Handle DD-MM-YYYY format as fallback
-            const parts = form.assignedAt.split('-');
-            if (parts.length === 3) {
-              yearSet.add(parts[2]);
-            }
-          }
-        }
-      });
-    });
-    return Array.from(yearSet).sort((a, b) => b.localeCompare(a));
-  }, [students]);
-
   const filteredStudents = useMemo(() => {
     return students.filter(student => {
       const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -467,41 +437,33 @@ export function StudentManagement() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const getSortLabel = () => {
-    const labels: Record<string, string> = {
-      name: 'Name',
-      classroom: 'Classroom',
-      parent: 'Parent',
-      progress: 'Progress',
-      status: 'Status',
-    };
-    return labels[sortBy] || 'Sort';
-  };
+  const sortLabels: Record<string, string> = { name: 'Name', classroom: 'Classroom', parent: 'Parent', progress: 'Progress', status: 'Status' };
+  const sortOptions: SortOption[] = [
+    { label: 'Name A-Z', sortBy: 'name', sortOrder: 'asc' },
+    { label: 'Name Z-A', sortBy: 'name', sortOrder: 'desc' },
+    { label: 'Classroom A-Z', sortBy: 'classroom', sortOrder: 'asc' },
+    { label: 'Classroom Z-A', sortBy: 'classroom', sortOrder: 'desc' },
+    { label: 'Parent A-Z', sortBy: 'parent', sortOrder: 'asc' },
+    { label: 'Parent Z-A', sortBy: 'parent', sortOrder: 'desc' },
+    { label: 'Progress High-Low', sortBy: 'progress', sortOrder: 'desc' },
+    { label: 'Status', sortBy: 'status', sortOrder: 'asc' },
+  ];
 
-  const filteredAndSortedStudents = useMemo(() => {
-    const sorted = [...filteredStudents].sort((a, b) => {
-      let aVal: any, bVal: any;
-      switch (sortBy) {
-        case 'name': aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`; break;
-        case 'classroom': aVal = a.classroom.name; bVal = b.classroom.name; break;
-        case 'parent': aVal = a.parent.name; bVal = b.parent.name; break;
-        case 'status': aVal = a.enrollmentStatus; bVal = b.enrollmentStatus; break;
-        case 'progress': aVal = a.enrollmentProgress; bVal = b.enrollmentProgress; break;
-        default: aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`;
-      }
-      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
-    });
-    return sorted;
-  }, [filteredStudents, sortBy, sortOrder]);
+  const filteredAndSortedStudents = useMemo(() =>
+    sortItems(filteredStudents, sortBy, sortOrder, (s, key) => {
+      if (key === 'classroom') return s.classroom.name;
+      if (key === 'parent') return s.parent.name;
+      if (key === 'status') return s.enrollmentStatus;
+      if (key === 'progress') return s.enrollmentProgress;
+      return `${s.firstName} ${s.lastName}`;
+    }),
+  [filteredStudents, sortBy, sortOrder]);
 
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedStudents,
     itemsPerPage,
-    isMobile,
     setCurrentPage
   } = usePagination({ data: filteredAndSortedStudents });
   const completionRate = useMemo(() => {
@@ -519,18 +481,6 @@ export function StudentManagement() {
         return 'outline';
       default:
         return 'default';
-    }
-  };
-  const getStatusIcon = (status: EnrollmentStatus) => {
-    switch (status) {
-      case 'Completed-AdminApproved':
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
-      case 'Completed-Pending Approval':
-        return <Clock className="h-4 w-4 text-amber-500" />;
-      case 'Draft':
-        return <AlertCircle className="h-4 w-4 text-gray-400" />;
-      default:
-        return null;
     }
   };
   const toggleFilters = () => setShowFilters(prev => !prev);
@@ -588,100 +538,24 @@ export function StudentManagement() {
     setAssignDialogClassroomFilter('all');
     setAssignDialogSearchTerm('');
   };
-  const exportToCSV = () => {
-    const escapeCSV = (value: string) => {
-      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    };
+  const studentExportHeaders = [
+    'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
+    'Secondary Parent', 'Secondary Parent Email',
+    'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
+  ];
+  const getStudentExportRows = () => filteredAndSortedStudents.map(s => [
+    `${s.firstName} ${s.lastName}`,
+    s.classroom.name, s.parent.name, s.parent.email,
+    s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+    s.enrollmentStatus, s.childStatus,
+    `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
+  ]);
 
-    const headers = [
-      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
-      'Secondary Parent', 'Secondary Parent Email',
-      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
-    ];
-
-    const rows = filteredAndSortedStudents.map(student => [
-      `${student.firstName} ${student.lastName}`,
-      student.classroom.name,
-      student.parent.name,
-      student.parent.email,
-      student.secondaryParent?.name ?? '',
-      student.secondaryParent?.email ?? '',
-      student.enrollmentStatus,
-      student.childStatus,
-      `${student.formsCompleted}/${student.totalForms}`,
-      `${student.enrollmentProgress}%`
-    ]);
-
-    const csvContent = [
-      'The Goddard School',
-      '',
-      headers.map(escapeCSV).join(','),
-      ...rows.map(row => row.map(escapeCSV).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `students_export_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const rows = filteredAndSortedStudents.map(student => [
-      `${student.firstName} ${student.lastName}`,
-      student.classroom.name,
-      student.parent.name,
-      student.parent.email,
-      student.secondaryParent?.name ?? '',
-      student.secondaryParent?.email ?? '',
-      student.enrollmentStatus,
-      student.childStatus,
-      `${student.formsCompleted}/${student.totalForms}`,
-      `${student.enrollmentProgress}%`
-    ]);
-
-    const headers = [
-      'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
-      'Secondary Parent', 'Secondary Parent Email',
-      'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
-    ];
-
-    printWindow.document.write(`<!DOCTYPE html>
-<html><head><title>Student Directory Export</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  .header { text-align: center; margin-bottom: 16px; }
-  .logo { height: 60px; width: auto; }
-  h1 { font-size: 18px; margin-bottom: 4px; }
-  p { font-size: 12px; color: #666; margin-bottom: 16px; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
-  th { background-color: #f5f5f5; font-weight: 600; }
-  tr:nth-child(even) { background-color: #fafafa; }
-  @media print { body { margin: 0; } }
-</style></head><body>
-<div class="header">
-  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
-  <h1>Student Directory Export</h1>
-  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} students</p>
-</div>
-<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
-</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
+  const exportToCSV = () => downloadCSV(
+    `students_export_${new Date().toISOString().split('T')[0]}.csv`,
+    studentExportHeaders, getStudentExportRows()
+  );
+  const exportToPDF = () => printAsPDF('Student Directory Export', studentExportHeaders, getStudentExportRows());
 
   if (loading) {
     return <AdminLayout>
@@ -707,56 +581,22 @@ export function StudentManagement() {
 
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Students
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{students.length}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
-                  <GraduationCap className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Completion Rate
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{completionRate}%</p>
-                  <div className="w-16 sm:w-20 lg:w-24 mt-2">
-                    <Progress value={completionRate} className="h-2" />
-                  </div>
-                </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Forms Pending
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {students.filter(student => student.enrollmentStatus !== 'Completed-AdminApproved').length}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
-                  <AlertCircle className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard label="Total Students" value={students.length} icon={GraduationCap} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" />
+          <StatCard
+            label="Completion Rate"
+            value={<>{completionRate}%<div className="w-16 sm:w-20 lg:w-24 mt-2"><Progress value={completionRate} className="h-2" /></div></>}
+            icon={Users}
+            iconBgClass="bg-green-100"
+            iconColorClass="text-green-600"
+          />
+          <StatCard
+            label="Forms Pending"
+            value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
+            icon={AlertCircle}
+            iconBgClass="bg-amber-100"
+            iconColorClass="text-amber-600"
+            className="sm:col-span-2 lg:col-span-1"
+          />
         </div>
         <Card className="glass-card">
           <CardContent className="p-0">
@@ -805,26 +645,13 @@ export function StudentManagement() {
                     )}
                   </Button>
 
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-10 sm:h-11">
-                        {sortOrder === 'asc'
-                          ? <ArrowUp className="h-4 w-4 mr-2" />
-                          : <ArrowDown className="h-4 w-4 mr-2" />}
-                        {getSortLabel()}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('classroom'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('classroom'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('parent'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('parent'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('progress'); setSortOrder('desc'); }}>Progress High-Low</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <SortDropdown
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    options={sortOptions}
+                    labels={sortLabels}
+                    onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
+                  />
 
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
@@ -905,8 +732,7 @@ export function StudentManagement() {
                       onValueChange={setFormFilter}
                       options={allFormNames}
                       placeholder="Select forms"
-                      label="Form Type"
-                    />
+                      />
                   </div>
                   
                   <div className="space-y-2">
@@ -919,7 +745,6 @@ export function StudentManagement() {
                         ['Completed-AdminApproved', 'Completed-Pending Approval', 'Completed-Needs Revision', 'Draft']
                       }
                       placeholder="Select statuses"
-                      label="Status"
                     />
                   </div>
                   
@@ -930,7 +755,6 @@ export function StudentManagement() {
                       onValueChange={setChildStatusFilter}
                       options={['active', 'archive']}
                       placeholder="Select child status"
-                      label="Child Status"
                     />
                   </div>
                   
@@ -941,7 +765,6 @@ export function StudentManagement() {
                       onValueChange={setClassroomFilter}
                       options={allClassrooms}
                       placeholder="Select classrooms"
-                      label="Classroom"
                     />
                   </div>
                   
@@ -954,7 +777,6 @@ export function StudentManagement() {
                         (new Date().getFullYear() - i).toString()
                       )}
                       placeholder="Select years"
-                      label="Year"
                     />
                   </div>
                   </div>
@@ -963,245 +785,231 @@ export function StudentManagement() {
             </div>
 
             {/* Table View (md+) */}
-            <div className="hidden md:block relative z-0">
-              <table className="w-full table-fixed border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[5%]">
-                      <Checkbox
-                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                          } else {
-                            setSelectedStudentsForBulkAction([]);
-                          }
-                        }}
-                      />
-                    </th>
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-[22%]">Student</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[14%]">Classroom</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[16%]">Parent</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[14%]">Status</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[10%]">Child Status</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[12%]">Actions</th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-[12%]">Progress</th>
-                  </tr>
-                </thead>
-                  <tbody>
-                    {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
-                      <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
-                        <td className="py-3 px-2 text-center">
-                          <Checkbox
-                            checked={selectedStudentsForBulkAction.includes(student.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                              } else {
-                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                              }
-                            }}
-                          />
-                        </td>
-                        <td className="py-3 px-3">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
-                              {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                              <Link 
-                                to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
-                                state={{ fromStudents: true }}
-                                className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
-                              >
-                                {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                              </Link>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
-                            <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
-                            <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
-                          </Link>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className="min-w-0 space-y-2">
-                            {/* Primary Parent */}
-                            <div>
-                              <Link
-                                to={`/admin/parents/${student.parent.id}`}
-                                state={{ fromStudents: true }}
-                                className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
-                              >
-                                {student.parent.name}
-                              </Link>
-                              <div className="text-xs text-gray-500 truncate">
-                                {student.parent.email}
-                              </div>
-                            </div>
-
-                            {/* Secondary Parent - only show if exists */}
-                            {student.secondaryParent && (
-                              <div className="border-t pt-2">
-                                <Link
-                                  to={`/admin/parents/${student.secondaryParent.id}`}
-                                  state={{ fromStudents: true }}
-                                  className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
-                                >
-                                  {student.secondaryParent.name}
-                                </Link>
-                                <div className="text-xs text-gray-500 truncate">
-                                  {student.secondaryParent.email}
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                      <td className="py-3 px-2 text-center">
-                        {(() => {
-                          if (formFilter.length > 0) {
-                            const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
-                            if (selectedForm) {
-                              const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                              const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
-                              const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
-                              const statusIcon = normalizedStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : normalizedStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
-                              return (
-                                <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
-                                  {statusIcon}
-                                  <span className="truncate">{displayStatus}</span>
-                                </Badge>
-                              );
-                            }
-                            return <span className="text-gray-500 text-xs">N/A</span>;
-                          }
-                          const statusIcon = student.enrollmentStatus === 'Completed-AdminApproved' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'Completed-Pending Approval' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
-                          return (
-                            <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
-                              {statusIcon}
-                              <span className="truncate">{student.enrollmentStatus}</span>
-                            </Badge>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <button
-                          onClick={() => {
-                            setSelectedStudent(student);
-                            setNewStatus(student.childStatus);
-                            setIsStatusDialogOpen(true);
-                          }}
-                          className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-                            student.childStatus === 'active'
-                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {student.childStatus === 'active' ? 'Active' : 'Archived'}
-                        </button>
-                      </td>
-                      <td className="py-3 px-2 text-center">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedStudentForForms(student);
-                              setIsStudentFormDialogOpen(true);
-                            }}>
-                              <Settings className="h-4 w-4 mr-2" />
-                              Manage Forms
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
-                              setSelectedStudentForTransfer(student);
-                              setNewClassroomId('');
-                              setIsTransferDialogOpen(true);
-                            }}>
-                              <School className="h-4 w-4 mr-2" />
-                              Transfer Class
-                            </DropdownMenuItem>
-                            {student.enrollmentId && (
-                              <DropdownMenuItem
-                                disabled={downloadingEnrollmentId === student.enrollmentId}
-                                onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                              >
-                                {downloadingEnrollmentId === student.enrollmentId
-                                  ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
-                                  : <Download className="h-4 w-4 mr-2" />}
-                                Download All Forms
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                        <td className="py-3 px-3">
-                          <div className="text-right">
-                            <div className="text-xs text-gray-600 mb-1">
-                              {student.formsCompleted}/{student.totalForms}
-                            </div>
-                            <div className="flex items-center justify-end space-x-1">
-                              <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                                {student.totalForms > 0 && student.formsApproved > 0 && (
-                                  <div
-                                    className="h-full bg-green-500 transition-all"
-                                    style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
-                                  />
-                                )}
-                                {student.totalForms > 0 && student.formsInProgress > 0 && (
-                                  <div
-                                    className="h-full bg-amber-400 transition-all"
-                                    style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
-                                  />
-                                )}
-                              </div>
-                              <span className="text-xs font-semibold text-foreground min-w-[28px]">
-                                {student.enrollmentProgress}%
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                    </tr>
-                    )) : (
-                      <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-500">
-                          No students match the current filters.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-            </div>
-
-            <Pagination
+            <DataTable
+              className="hidden md:block relative z-0"
+              loading={loading}
+              loadingMessage="Loading students..."
+              emptyMessage="No students match the current filters."
               currentPage={currentPage}
               totalPages={totalPages}
               totalItems={filteredAndSortedStudents.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
-              className="hidden md:flex"
+              columns={[
+                { 
+                  header: (
+                    <Checkbox
+                      checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                        } else {
+                          setSelectedStudentsForBulkAction([]);
+                        }
+                      }}
+                    />
+                  ), 
+                  className: 'text-center w-[5%]' 
+                },
+                { header: 'Student', className: 'w-[22%]' },
+                { header: 'Classroom', className: 'w-[14%]' },
+                { header: 'Parent', className: 'w-[16%]' },
+                { header: 'Status', className: 'text-center w-[14%]' },
+                { header: 'Child Status', className: 'text-center w-[10%]' },
+                { header: 'Actions', className: 'text-center w-[12%]' },
+                { header: 'Progress', className: 'text-right w-[12%]' },
+              ]}
+              rows={paginatedStudents.map((student, index) => (
+                <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
+                  <td className="py-3 px-2 text-center">
+                    <Checkbox
+                      checked={selectedStudentsForBulkAction.includes(student.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                        } else {
+                          setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                        }
+                      }}
+                    />
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="flex items-center">
+                      <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-2" />
+                      <div className="min-w-0">
+                        <Link 
+                          to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                          state={{ fromStudents: true }}
+                          className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
+                        >
+                          {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+                        </Link>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
+                      <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
+                      <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
+                    </Link>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="min-w-0 space-y-2">
+                      <div>
+                        <Link
+                          to={`/admin/parents/${student.parent.id}`}
+                          state={{ fromStudents: true }}
+                          className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                        >
+                          {student.parent.name}
+                        </Link>
+                        <div className="text-xs text-gray-500 truncate">{student.parent.email}</div>
+                      </div>
+                      {student.secondaryParent && (
+                        <div className="border-t pt-2">
+                          <Link
+                            to={`/admin/parents/${student.secondaryParent.id}`}
+                            state={{ fromStudents: true }}
+                            className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
+                          >
+                            {student.secondaryParent.name}
+                          </Link>
+                          <div className="text-xs text-gray-500 truncate">{student.secondaryParent.email}</div>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    {(() => {
+                      if (formFilter.length > 0) {
+                        const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
+                        if (selectedForm) {
+                          const normalizedStatus = normalizeFormStatus(selectedForm.status);
+                          const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
+                          const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
+                          const statusIcon = normalizedStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : normalizedStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                          return (
+                            <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                              {statusIcon}
+                              <span className="truncate">{displayStatus}</span>
+                            </Badge>
+                          );
+                        }
+                        return <span className="text-gray-500 text-xs">N/A</span>;
+                      }
+                      const statusIcon = student.enrollmentStatus === 'Completed-AdminApproved' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'Completed-Pending Approval' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                      return (
+                        <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                          {statusIcon}
+                          <span className="truncate">{student.enrollmentStatus}</span>
+                        </Badge>
+                      );
+                    })()}
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    <button
+                      onClick={() => {
+                        setSelectedStudent(student);
+                        setNewStatus(student.childStatus);
+                        setIsStatusDialogOpen(true);
+                      }}
+                      className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                        student.childStatus === 'active'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                    </button>
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedStudentForForms(student);
+                          setIsStudentFormDialogOpen(true);
+                        }}>
+                          <Settings className="h-4 w-4 mr-2" />
+                          Manage Forms
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedStudentForTransfer(student);
+                          setNewClassroomId('');
+                          setIsTransferDialogOpen(true);
+                        }}>
+                          <School className="h-4 w-4 mr-2" />
+                          Transfer Class
+                        </DropdownMenuItem>
+                        {student.enrollmentId && (
+                          <DropdownMenuItem
+                            disabled={downloadingEnrollmentId === student.enrollmentId}
+                            onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                          >
+                            {downloadingEnrollmentId === student.enrollmentId
+                              ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                              : <Download className="h-4 w-4 mr-2" />}
+                            Download All Forms
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                  <td className="py-3 px-3">
+                    <div className="text-right">
+                      <div className="text-xs text-gray-600 mb-1">{student.formsCompleted}/{student.totalForms}</div>
+                      <div className="flex items-center justify-end space-x-1">
+                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                          {student.totalForms > 0 && student.formsApproved > 0 && (
+                            <div
+                              className="h-full bg-green-500 transition-all"
+                              style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                            />
+                          )}
+                          {student.totalForms > 0 && student.formsInProgress > 0 && (
+                            <div
+                              className="h-full bg-amber-400 transition-all"
+                              style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                            />
+                          )}
+                        </div>
+                        <span className="text-xs font-semibold text-foreground min-w-[28px]">{student.enrollmentProgress}%</span>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              ))}
             />
 
             {/* Mobile Card View */}
-            <div className="md:hidden p-3 space-y-3">
-              <div className="flex items-center gap-2 pb-2 border-b">
-                <Checkbox
-                  checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                  onCheckedChange={(checked) => {
-                    if (checked) {
-                      setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                    } else {
-                      setSelectedStudentsForBulkAction([]);
-                    }
-                  }}
-                />
-                <span className="text-sm font-medium">Select All</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
+            <MobileCardList
+              className="md:hidden p-3 space-y-3"
+              loading={loading}
+              loadingMessage="Loading students..."
+              emptyMessage="No students found matching your search criteria."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              gridClassName="space-y-3"
+              cards={[
+                <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
+                  <Checkbox
+                    checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                      } else {
+                        setSelectedStudentsForBulkAction([]);
+                      }
+                    }}
+                  />
+                  <span className="text-sm font-medium">Select All</span>
+                </div>,
+                ...paginatedStudents.map((student, index) => (
                   <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1216,9 +1024,7 @@ export function StudentManagement() {
                           }}
                           className="flex-shrink-0"
                         />
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
-                          {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-                        </div>
+                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                         <div className="min-w-0 flex-1">
                           <Link
                             to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
@@ -1337,18 +1143,9 @@ export function StudentManagement() {
                       )}
                     </div>
                   </div>
-                )) : (
-                  <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
-                    No students found matching your search criteria.
-                  </div>
-                )}
-              </div>
-              <MobilePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+                ))
+              ]}
+            />
           </CardContent>
         </Card>
       </div>
@@ -1452,9 +1249,7 @@ export function StudentManagement() {
                       checked={selectedStudentsForForm.includes(student.id)}
                       onCheckedChange={() => handleStudentSelectForForm(student.id)}
                     />
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
-                      {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-                    </div>
+                    <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                     <div className="flex-1">
                       <div className="font-medium">{student.firstName} {student.lastName}</div>
                       <div className="text-sm text-muted-foreground">
@@ -1501,9 +1296,7 @@ export function StudentManagement() {
         <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg">
-                {selectedStudentForForms?.firstName.charAt(0)}{selectedStudentForForms?.lastName.charAt(0)}
-              </div>
+              <AvatarInitials initials={`${selectedStudentForForms?.firstName[0] ?? ''}${selectedStudentForForms?.lastName[0] ?? ''}`} size="lg" />
               <div>
                 <DialogTitle className="text-xl font-semibold">
                   {selectedStudentForForms?.firstName} {selectedStudentForForms?.lastName}
@@ -1830,9 +1623,7 @@ export function StudentManagement() {
                           }}
                         />
                       )}
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
-                        {student.firstName.charAt(0)}{student.lastName.charAt(0)}
-                      </div>
+                      <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                       <div className="flex-1">
                         <div className="font-medium">{student.firstName} {student.lastName}</div>
                         <div className="text-sm text-muted-foreground">

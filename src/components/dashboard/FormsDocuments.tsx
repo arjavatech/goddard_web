@@ -40,7 +40,6 @@ function FormCard({
   onPrint,
   isLoading,
   formId,
-  assignedAt,
   dueDate
 }: FormCardProps) {
   const isApproved = status === 'Approved';
@@ -366,7 +365,6 @@ export function FormsDocuments({
         formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
       }
     }
-    
     console.log('Final form URL:', formUrl);
 
     setSelectedForm({

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { AdminLayout } from '../admin/AdminLayout';
+import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -20,7 +21,6 @@ export function AdminManagement() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState<AdminUser | null>(null);
   const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
-  const [adminName, setAdminName] = useState('');
   const [adminFirstName, setAdminFirstName] = useState('');
   const [adminLastName, setAdminLastName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -184,7 +184,6 @@ export function AdminManagement() {
   };
 
   const resetForm = () => {
-    setAdminName('');
     setAdminFirstName('');
     setAdminLastName('');
     setAdminEmail('');
@@ -245,9 +244,7 @@ export function AdminManagement() {
                   <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
-                          {admin.first_name[0]}{admin.last_name[0]}
-                        </div>
+                        <AvatarInitials initials={`${admin.first_name[0]}${admin.last_name[0]}`} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center space-x-2">
                             <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.first_name} {admin.last_name}</h3>
@@ -419,9 +416,7 @@ export function AdminManagement() {
             {selectedAdmin && (
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg">
-                    {selectedAdmin.first_name[0]}{selectedAdmin.last_name[0]}
-                  </div>
+                  <AvatarInitials initials={`${selectedAdmin.first_name[0]}${selectedAdmin.last_name[0]}`} size="lg" />
                   <div>
                     <h3 className="text-lg font-semibold">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
                     <p className="text-sm text-muted-foreground">{selectedAdmin.email}</p>
