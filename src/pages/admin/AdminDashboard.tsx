@@ -5,19 +5,18 @@ import { School, FileText, Users, Clock, UserCheck, Plus, UserPlus, Mail, Gradua
 import { Progress } from '../../components/ui/progress';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
-import { fetchUserContext } from '../../services/api/user';
+// import { fetchUserContext } from '../../services/api/user';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 
 import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectTrigger, SelectValue, SelectItem } from '@/components/ui/select';
-import { AsyncButton } from '../../components/ui/async-button';
-import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
 import { validateEmail } from '../../lib/emailValidation';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { AddFormModal } from '../../components/admin/AddFormModal';
+
+
 
 type StatCard = {
   title: string;
@@ -70,19 +69,22 @@ export function AdminDashboard() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const schoolId = localStorage.getItem('schoolId') || undefined;
+
+console.log('AdminDashboard initialized with schoolId:', schoolId);
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) {
+        if (schoolId) {
           throw new Error('Unable to determine school context for the current admin.');
         }
 
         const [metrics, classroomData] = await Promise.all([
-          fetchDashboardMetrics(user.schoolId),
-          fetchClassrooms(user.schoolId).catch(() => [])
+          fetchDashboardMetrics(schoolId ?? ''),
+          fetchClassrooms(schoolId ?? '').catch(() => [])
         ]);
 
         // Calculate pending enrollments
@@ -181,10 +183,9 @@ export function AdminDashboard() {
 
     setIsAddingForm(true);
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      if (schoolId) return;
 
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), schoolId?? '', formDueDate, formStatus);
 
       setIsAddDialogOpen(false);
       setFormName('');
@@ -234,10 +235,9 @@ export function AdminDashboard() {
 
     setIsInvitingParent(true);
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      if (schoolId) return;
 
-      await inviteParent(user.schoolId, {
+      await inviteParent(schoolId ?? '', {
         parentFirstName,
         parentLastName,
         parentEmail,
@@ -278,25 +278,15 @@ export function AdminDashboard() {
     }
   };
 
-  const showValidationToast = (message: string) => {
-    if (!isClassroomDialogClosing) {
-      console.error(message);
-    }
-  };
-
-  const hideValidationToast = () => {
-    // No-op for compatibility
-  };
-
+  
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
     setIsAddingClassroom(true);
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      if (schoolId) throw new Error('School context not found');
       
-      await createClassroom(user.schoolId, newClassroomName.trim());
+      await createClassroom(schoolId ?? '', newClassroomName.trim());
       
       setIsAddClassroomDialogOpen(false);
       setNewClassroomName('');

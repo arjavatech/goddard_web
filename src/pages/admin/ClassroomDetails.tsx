@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { AsyncButton } from '../../components/ui/async-button';
 import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock, Calendar, Mail } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -11,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { usePagination } from '../../hooks/usePagination';
-import { fetchUserContext } from '../../services/api/user';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { useToast } from '../../contexts/ToastContext';
@@ -91,8 +89,8 @@ export function ClassroomDetails() {
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const { showToast } = useToast();
   
-  const showValidationToast = (message: string) => showToast('error', message);
-  const hideValidationToast = () => {};
+  const schoolId = localStorage.getItem('schoolId');
+
 
   useEffect(() => {
     let isMounted = true;
@@ -104,8 +102,7 @@ export function ClassroomDetails() {
         setLoading(true);
         setError(null);
         
-        const user = await fetchUserContext();
-        if (!user.schoolId) {
+        if (!schoolId) {
           if (isMounted) {
             setError('No school ID found');
             setLoading(false);
@@ -115,9 +112,9 @@ export function ClassroomDetails() {
 
         // Fetch class-based enrollments using the new API
         const [classrooms, classStats, classEnrollments] = await Promise.all([
-          fetchClassrooms(user.schoolId).catch(() => []),
-          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
-          fetchClassBasedEnrollments(user.schoolId, classroomId).catch(() => [])
+          fetchClassrooms(schoolId).catch(() => []),
+          fetchClassEnrollmentStats(schoolId).catch(() => []),
+          fetchClassBasedEnrollments(schoolId, classroomId).catch(() => [])
         ]);
         
         // Set all classrooms for the dropdown
@@ -281,11 +278,10 @@ export function ClassroomDetails() {
     if (!validateInviteForm()) return;
     if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
 
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
+    if (!schoolId) throw new Error('School context not found');
 
     try {
-      await inviteParent(user.schoolId, {
+      await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,
         parentEmail,

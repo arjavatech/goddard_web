@@ -10,15 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
-import { ValidatedInput } from '../../components/ui/validated-input';
-import { commonValidationRules } from '../../lib/validation';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
-import { AddFormModal } from '../../components/admin/AddFormModal';
 
 type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
@@ -58,6 +55,8 @@ export function FormsManagement() {
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const { showToast } = useToast();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
     
@@ -81,9 +80,9 @@ export function FormsManagement() {
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
+        const templates = await fetchFormTemplates(schoolId).catch(() => []);
         if (!isMounted) return;
         if (templates.length === 0) return;
         
@@ -156,10 +155,10 @@ export function FormsManagement() {
     
     try {
       setIsAddingForm(true);
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      // const user = await fetchUserContext();
+      if (!schoolId) return;
       
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -172,15 +171,15 @@ export function FormsManagement() {
     if (!selectedForm || !formName.trim()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
 
       
       
       // Don't send due date if status is inactive
       const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
       
-      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, formStatus, dueDateToSend);
+      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), schoolId, formStatus, dueDateToSend);
       
       showToast('success', 'Form updated successfully');
       resetFormFields();
@@ -194,13 +193,13 @@ export function FormsManagement() {
     if (!selectedForm) return;
 
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
 
-      await deleteForm(selectedForm.id, user.schoolId);
+      await deleteForm(selectedForm.id, schoolId);
 
       // Refetch forms from server to ensure consistency
-      const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+      const templates = await fetchFormTemplates(schoolId).catch(() => []);
       const mappedForms: Form[] = templates.map((template, index) => ({
         id: template.id,
         name: template.formName,
@@ -240,10 +239,10 @@ export function FormsManagement() {
     if (!selectedFormForAssign) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      // const user = await fetchUserContext();
+      if (!schoolId) return;
       
-      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate);
+      await assignFormToAllStudents(schoolId, selectedFormForAssign.id, true, formDueDate);
       showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
       setIsAssignToAllDialogOpen(false);
       setFormDueDate('');

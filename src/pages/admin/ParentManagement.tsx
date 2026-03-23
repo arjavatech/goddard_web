@@ -17,7 +17,6 @@ import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
 
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
-import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
 import { validateEmail } from '../../lib/emailValidation';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
@@ -95,25 +94,27 @@ export function ParentManagement() {
   const [activatingParentId, setActivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
 
         // Fetch both parent details and classrooms
         const [parentDetailsResponse, classroomData] = await Promise.all([
-          fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] })),
-          fetchClassrooms(user.schoolId).catch((error) => {
+          fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] })),
+          fetchClassrooms(schoolId).catch((error) => {
             console.error('fetchClassrooms failed:', error);
             return [];
           })
         ]);
 
         console.log('Classroom data received:', classroomData);
-        console.log('School ID:', user.schoolId);
+        console.log('School ID:', schoolId);
 
         if (!isMounted) return;
 
@@ -267,11 +268,11 @@ export function ParentManagement() {
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
+    // const user = await fetchUserContext();
+    if (!schoolId) throw new Error('School context not found');
     
     try {
-      await inviteParent(user.schoolId, {
+      await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,
         parentEmail,
@@ -345,11 +346,11 @@ export function ParentManagement() {
     if (!selectedParent || !validateAddChildForm()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
       
       const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
-      await addChild(user.schoolId, enrollmentId, {
+      await addChild(schoolId, enrollmentId, {
         childFirstName: newChildFirstName,
         childLastName: newChildLastName,
         childDob: newChildDob,
@@ -732,147 +733,133 @@ export function ParentManagement() {
                 </div>
               </div>
             </div>
-            {/* Desktop Table View - Also visible on mobile with horizontal scroll */}
+            {/* Desktop Table View */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full table-fixed border-collapse min-w-[800px]">
+              <table className="w-full border-collapse">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">Parent</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Email</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Children</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">Signup Status</th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
+                  <tr className="border-b border-gray-200 bg-muted/30">
+                    <th className="text-left py-3 px-3 font-medium text-gray-600">Parent</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 hidden lg:table-cell">Email</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600">Children</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Signup Status</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {loading ? <tr>
+                  {loading ? (
+                    <tr>
                       <td colSpan={5} className="py-8">
                         <Loading message="Loading parents..." size="sm"/>
                       </td>
-                    </tr> : paginatedParents.length > 0 ? paginatedParents.map(parent => <tr key={parent.id} className="border-b border-gray-100">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
-                              {parent.firstName.charAt(0)}
-                              {parent.lastName.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                              {parent.signupStatus === 'Signed' ? (
-                                <Link to={`/admin/parents/${parent.id}`} state={{
-                          parentData: parent
-                        }} className="font-medium text-amazon-teal hover:underline block truncate">
-                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                                </Link>
-                              ) : (
-                                <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
-                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                                </span>
-                              )}
-                            </div>
+                    </tr>
+                  ) : paginatedParents.length > 0 ? paginatedParents.map(parent => (
+                    <tr key={parent.id} className="border-b border-gray-100 hover:bg-muted/50">
+                      <td className="py-3 px-3 max-w-0">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                            {parent.firstName.charAt(0)}{parent.lastName.charAt(0)}
                           </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className="flex items-center text-gray-700 min-w-0">
-                            <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate text-sm max-w-[200px]">{parent.email}</span>
+                          <div className="min-w-0">
+                            {parent.signupStatus === 'Signed' ? (
+                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-medium text-amazon-teal hover:underline block truncate">
+                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                              </Link>
+                            ) : (
+                              <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
+                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                              </span>
+                            )}
+                            <div className="text-xs text-muted-foreground truncate lg:hidden">{parent.email}</div>
                           </div>
-                        </td>
-                        <td className="py-3 px-2 text-sm text-gray-600">
-                          {parent.children.length === 0 ? <span>No children linked yet</span> : <div className="space-y-1">
-                              {parent.children.map(child => <div key={child.id} className="flex items-center gap-2">
-                                  <Users className="h-4 w-4 text-gray-400" />
-                                  <Link 
-                                    to={`/admin/parents/${parent.id}`} 
-                                    state={{
-                                      parentData: parent,
-                                      selectedChildId: child.id
-                                    }} 
-                                    className="text-amazon-teal hover:underline cursor-pointer"
-                                  >
-                                    {child.firstName} {child.lastName}
-                                  </Link>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {child.classroom.name}
-                                  </Badge>
-                                </div>)}
-                            </div>}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto">
-                            {parent.signupStatus === 'Signed' && <CheckCircle className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus === 'Not Signed' && <XCircle className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                                <Link to={`/admin/parents/${parent.id}`} state={{
-                            parentData: parent
-                          }}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 max-w-0 hidden lg:table-cell">
+                        <div className="flex items-center text-gray-700 min-w-0">
+                          <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
+                          <span className="truncate text-sm">{parent.email}</span>
+                        </div>
+                      </td>
+                      <td className="py-3 px-2 text-sm text-gray-600 max-w-0">
+                        {parent.children.length === 0 ? (
+                          <span className="text-muted-foreground">No children linked yet</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {parent.children.map(child => (
+                              <div key={child.id} className="flex items-center gap-1.5 min-w-0">
+                                <Users className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                                <Link
+                                  to={`/admin/parents/${parent.id}`}
+                                  state={{ parentData: parent, selectedChildId: child.id }}
+                                  className="text-amazon-teal hover:underline truncate"
+                                >
+                                  {child.firstName} {child.lastName}
                                 </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                                onClick={() => {
-                          setSelectedParent(parent);
-                          setIsAddChildDialogOpen(true);
-                        }}>
-                                <UserCircle className="h-4 w-4 mr-2" />
-                                Add Child
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleResendConfirmation(parent.id, parent.email);
-                                }}
-                              >
-                                {resendingParentId === parent.id ? (
-                                  <>
-                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                    Sending...
-                                  </>
-                                ) : (
-                                  <>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Resend
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              {activeTab === 'active' ? (
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => setParentToDeactivate(parent)}
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Deactivate
-                                </DropdownMenuItem>
+                                <Badge variant="secondary" className="text-xs flex-shrink-0">
+                                  {child.classroom.name}
+                                </Badge>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto text-xs">
+                          {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                          {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                          {parent.signupStatus}
+                        </Badge>
+                      </td>
+                      <td className="py-3 px-2 text-center">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+                              onClick={() => { setSelectedParent(parent); setIsAddChildDialogOpen(true); }}
+                            >
+                              <UserCircle className="h-4 w-4 mr-2" />
+                              Add Child
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+                              onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
+                            >
+                              {resendingParentId === parent.id ? (
+                                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
                               ) : (
-                                <DropdownMenuItem
-                                  className="text-green-600 focus:text-green-600"
-                                  onClick={() => setParentToActivate(parent)}
-                                >
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Activate
-                                </DropdownMenuItem>
+                                <><RefreshCw className="h-4 w-4 mr-2" />Resend</>
                               )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>) : <tr>
+                            </DropdownMenuItem>
+                            {activeTab === 'active' ? (
+                              <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setParentToDeactivate(parent)}>
+                                <XCircle className="h-4 w-4 mr-2" />Deactivate
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem className="text-green-600 focus:text-green-600" onClick={() => setParentToActivate(parent)}>
+                                <UserCheck className="h-4 w-4 mr-2" />Activate
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
                       <td colSpan={5} className="py-8 text-center text-gray-500">
                         No parents match the current filters.
                       </td>
-                    </tr>}
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -888,13 +875,13 @@ export function ParentManagement() {
             
             {/* Mobile Card View */}
             <div className="md:hidden p-3 sm:p-4">
-              <div className="space-y-2 sm:space-y-3">
               {loading ? (
                 <div className="py-6 sm:py-8">
                   <Loading message="Loading parents..." size="sm" />
                 </div>
               ) : paginatedParents.length > 0 ? (
-                paginatedParents.map(parent => (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {paginatedParents.map(parent => (
                   <Card key={parent.id} className="p-3 sm:p-4">
                     <div className="flex items-start justify-between mb-2">
                       <div className="flex items-center space-x-2 flex-1 min-w-0">
@@ -1018,21 +1005,19 @@ export function ParentManagement() {
                       )}
                     </div>
                   </Card>
-                ))
+                ))}
+                </div>
               ) : (
                 <div className="py-8 text-center text-muted-foreground text-sm">
                   No parents found matching your search criteria.
                 </div>
               )}
-              
-              
-            </div>
-            <MobilePagination
+              <MobilePagination
                 currentPage={currentPage}
                 totalPages={totalPages}
                 onPageChange={setCurrentPage}
               />
-              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

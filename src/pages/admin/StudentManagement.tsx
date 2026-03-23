@@ -119,6 +119,9 @@ export function StudentManagement() {
   const [isTransferring, setIsTransferring] = useState(false);
   const [downloadingEnrollmentId, setDownloadingEnrollmentId] = useState<string | null>(null);
 
+
+  const schoolId = localStorage.getItem('schoolId');
+
   const handleDownloadAllForms = async (enrollmentId: string) => {
     if (!enrollmentId) return;
     setDownloadingEnrollmentId(enrollmentId);
@@ -212,15 +215,15 @@ export function StudentManagement() {
     const loadStudentData = async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) {
+        // const user = await fetchUserContext();
+        if (!schoolId) {
           setStudents([]);
           return;
         }
         const [enrollmentData, classrooms, formsData] = await Promise.all([
-          fetchStudentEnrollments(user.schoolId),
-          fetchClassrooms(user.schoolId),
-          fetchFormTemplates(user.schoolId)
+          fetchStudentEnrollments(schoolId),
+          fetchClassrooms(schoolId),
+          fetchFormTemplates(schoolId)
         ]);
         
         const enrollments = enrollmentData.enrollments || [];
@@ -691,7 +694,7 @@ export function StudentManagement() {
       </AdminLayout>;
   }
   return <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
+      <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
@@ -959,8 +962,8 @@ export function StudentManagement() {
               )}
             </div>
 
-            {/* Desktop Table View */}
-            <div className="hidden lg:block relative z-0">
+            {/* Table View (md+) */}
+            <div className="hidden md:block relative z-0">
               <table className="w-full table-fixed border-collapse">
                 <thead>
                   <tr className="border-b border-gray-200">
@@ -976,12 +979,12 @@ export function StudentManagement() {
                         }}
                       />
                     </th>
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-[18%]">Student</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[11%]">Classroom</th>
+                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-[22%]">Student</th>
+                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-[14%]">Classroom</th>
                     <th className="text-left py-3 px-2 font-medium text-gray-600 w-[16%]">Parent</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[12%]">Status</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[14%]">Status</th>
                     <th className="text-center py-3 px-2 font-medium text-gray-600 w-[10%]">Child Status</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[16%]">Actions</th>
+                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-[12%]">Actions</th>
                     <th className="text-right py-3 px-3 font-medium text-gray-600 w-[12%]">Progress</th>
                   </tr>
                 </thead>
@@ -1179,16 +1182,29 @@ export function StudentManagement() {
               totalItems={filteredAndSortedStudents.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
-              className="hidden lg:flex"
+              className="hidden md:flex"
             />
 
             {/* Mobile Card View */}
-            <div className="lg:hidden p-3 sm:p-4">
-              <div className="space-y-2 sm:space-y-3">
+            <div className="md:hidden p-3 space-y-3">
+              <div className="flex items-center gap-2 pb-2 border-b">
+                <Checkbox
+                  checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                  onCheckedChange={(checked) => {
+                    if (checked) {
+                      setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                    } else {
+                      setSelectedStudentsForBulkAction([]);
+                    }
+                  }}
+                />
+                <span className="text-sm font-medium">Select All</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {paginatedStudents.length > 0 ? paginatedStudents.map((student, index) => (
-                  <Card key={student.id || `card-${index}`} className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2 flex-1 min-w-0">
+                  <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Checkbox
                           checked={selectedStudentsForBulkAction.includes(student.id)}
                           onCheckedChange={(checked) => {
@@ -1204,16 +1220,14 @@ export function StudentManagement() {
                           {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <Link 
-                            to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
+                          <Link
+                            to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
                             state={{ fromStudents: true }}
-                            className="font-medium text-amazon-teal hover:underline text-sm block truncate"
+                            className="font-medium text-sm text-amazon-teal hover:underline block truncate"
                           >
                             {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                           </Link>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {student.classroom.name}
-                          </div>
+                          <p className="text-xs text-muted-foreground truncate">{student.classroom.name}</p>
                         </div>
                       </div>
                       <button
@@ -1223,44 +1237,39 @@ export function StudentManagement() {
                           setIsStatusDialogOpen(true);
                         }}
                         className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                          student.childStatus === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
+                          student.childStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
                         }`}
                       >
                         {student.childStatus === 'active' ? 'Active' : 'Archived'}
                       </button>
                     </div>
-                    
-                    <div className="space-y-1.5">
+
+                    <div className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Parent:</span>
+                        <span className="text-muted-foreground">Parent:</span>
                         <Link
                           to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
-                          className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
+                          className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
                         >
                           {student.parent.name}
                         </Link>
                       </div>
-
-                      {/* Secondary Parent - only show in mobile if exists */}
                       {student.secondaryParent && (
                         <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">Secondary:</span>
+                          <span className="text-muted-foreground">Secondary:</span>
                           <Link
                             to={`/admin/parents/${student.secondaryParent.id}`}
                             state={{ fromStudents: true }}
-                            className="text-xs text-amazon-teal hover:underline truncate max-w-[60%]"
+                            className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
                           >
                             {student.secondaryParent.name}
                           </Link>
                         </div>
                       )}
-
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Status:</span>
-                        <div className="flex-shrink-0">
+                        <span className="text-muted-foreground">Status:</span>
+                        <span className="font-medium truncate max-w-[60%] text-right">
                           {(() => {
                             if (formFilter.length > 0) {
                               const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
@@ -1268,98 +1277,77 @@ export function StudentManagement() {
                                 const normalizedStatus = normalizeFormStatus(selectedForm.status);
                                 const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
                                 const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
-                                return <Badge variant={statusVariant as any} className="text-xs px-1.5 py-0.5">{displayStatus}</Badge>;
+                                return <Badge variant={statusVariant as any} className="text-xs">{displayStatus}</Badge>;
                               }
-                              return <span className="text-muted-foreground text-xs">N/A</span>;
+                              return <span className="text-muted-foreground">N/A</span>;
                             }
-                            return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs px-1.5 py-0.5">{student.enrollmentStatus}</Badge>;
+                            return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs">{student.enrollmentStatus}</Badge>;
                           })()}
-                        </div>
+                        </span>
                       </div>
-                      
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Forms:</span>
-                        <span className="text-xs">{student.formsCompleted}/{student.totalForms}</span>
+                        <span className="text-muted-foreground">Forms:</span>
+                        <span className="font-medium">{student.formsCompleted}/{student.totalForms}</span>
                       </div>
-                      
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">Progress:</span>
-                        <div className="flex items-center space-x-1.5">
+                        <span className="text-muted-foreground">Progress:</span>
+                        <div className="flex items-center gap-1.5">
                           <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
                             {student.totalForms > 0 && student.formsApproved > 0 && (
-                              <div
-                                className="h-full bg-green-500 transition-all"
-                                style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
-                              />
+                              <div className="h-full bg-green-500 transition-all" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
                             )}
                             {student.totalForms > 0 && student.formsInProgress > 0 && (
-                              <div
-                                className="h-full bg-amber-400 transition-all"
-                                style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
-                              />
+                              <div className="h-full bg-amber-400 transition-all" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
                             )}
                           </div>
-                          <span className="text-xs font-medium">{student.enrollmentProgress}%</span>
+                          <span className="font-medium">{student.enrollmentProgress}%</span>
                         </div>
                       </div>
-                      
-                      <div className="mt-2 pt-2 border-t space-y-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudentForForms(student);
-                            setIsStudentFormDialogOpen(true);
-                          }}
-                          className="w-full h-7 text-xs"
-                        >
-                          <Settings className="h-3 w-3 mr-1" />
-                          Manage Forms
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedStudentForTransfer(student);
-                            setNewClassroomId('');
-                            setIsTransferDialogOpen(true);
-                          }}
-                          className="w-full h-7 text-xs"
-                        >
-                          <School className="h-3 w-3 mr-1" />
-                          Transfer Class
-                        </Button>
-                        {student.enrollmentId && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={downloadingEnrollmentId === student.enrollmentId}
-                            onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                            className="w-full h-7 text-xs text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
-                          >
-                            {downloadingEnrollmentId === student.enrollmentId
-                              ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
-                              : <Download className="h-3 w-3 mr-1" />}
-                            Download All Forms
-                          </Button>
-                        )}
-                      </div>
                     </div>
-                  </Card>
+
+                    <div className="pt-2 border-t space-y-2">
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => { setSelectedStudentForForms(student); setIsStudentFormDialogOpen(true); }}
+                        className="w-full h-7 text-xs"
+                      >
+                        <Settings className="h-3 w-3 mr-1" />
+                        Manage Forms
+                      </Button>
+                      <Button
+                        variant="outline" size="sm"
+                        onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}
+                        className="w-full h-7 text-xs"
+                      >
+                        <School className="h-3 w-3 mr-1" />
+                        Transfer Class
+                      </Button>
+                      {student.enrollmentId && (
+                        <Button
+                          variant="outline" size="sm"
+                          disabled={downloadingEnrollmentId === student.enrollmentId}
+                          onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                          className="w-full h-7 text-xs text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                        >
+                          {downloadingEnrollmentId === student.enrollmentId
+                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                            : <Download className="h-3 w-3 mr-1" />}
+                          Download All Forms
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 )) : (
-                  <div className="py-8 text-center text-muted-foreground text-sm">
+                  <div className="col-span-full py-8 text-center text-muted-foreground text-sm">
                     No students found matching your search criteria.
                   </div>
                 )}
               </div>
-              
-              <div className="lg:hidden px-3 sm:px-4">
-                <MobilePagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
-              </div>
+              <MobilePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </CardContent>
         </Card>
@@ -1671,7 +1659,7 @@ export function StudentManagement() {
                   onClick={async () => {
                     if (selectedFormsToAdd.length > 0 && selectedStudentForForms) {
                       try {
-                        const user = await fetchUserContext();
+                        // const user = await fetchUserContext();
                         if (!selectedStudentForForms.enrollmentId) {
                           console.error('No enrollment ID found for student');
                           return;
@@ -1684,7 +1672,7 @@ export function StudentManagement() {
                           is_required: true
                         }));
                         
-                        await assignFormsToStudent(user.schoolId || '', assignments);
+                        await assignFormsToStudent(schoolId || '', assignments);
                         setIsStudentFormDialogOpen(false);
                         setSelectedFormsToAdd([]);
                         window.location.reload();
@@ -1906,7 +1894,7 @@ export function StudentManagement() {
               onClick={async () => {
                 if (!bulkTransferToGrade || selectedStudentsForTransfer.length === 0) return;
                 try {
-                  const user = await fetchUserContext();
+                  // const user = await fetchUserContext();
                   
                   // Prepare promotions array
                   const promotions = selectedStudentsForTransfer.map(studentId => {
@@ -1920,7 +1908,7 @@ export function StudentManagement() {
                   }).filter(p => p.enrollment_id);
                   
                   // Use bulk promotion API
-                  await bulkPromoteStudents(user.schoolId || '', promotions);
+                  await bulkPromoteStudents(schoolId || '', promotions);
                   
                   // Show success message
                   showToast('success', `Successfully transferred ${selectedStudentsForTransfer.length} students!`);

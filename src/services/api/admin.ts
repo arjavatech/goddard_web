@@ -1043,7 +1043,7 @@ export type DueForm = {
   parentName: string;
   parentEmail: string;
   dueDate: string | null;
-  status: 'pending' | 'completed' | 'overdue';
+  status: 'pending' | 'completed' | 'overdue' | 'submitted';
   assignedDate: string;
 };
 
@@ -1129,7 +1129,7 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
             }
             const dueDate = dueDateString ? new Date(dueDateString) : null;
          
-            let status: 'pending' | 'completed' | 'overdue' = 'pending';
+            let status: 'pending' | 'completed' | 'overdue' | 'submitted' = 'pending';
             if (form.status === 'completed' || form.status === 'approved') {
               status = 'completed';
             } else if (dueDate && dueDate < today) {

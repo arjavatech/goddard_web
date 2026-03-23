@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -10,8 +10,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Badge } from '../../components/ui/badge';
 import { Link, useNavigate } from 'react-router-dom';
 import { Loading } from '../../components/ui/loading';
-import { ValidatedInput } from '../../components/ui/validated-input';
-import { commonValidationRules } from '../../lib/validation';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchUserContext } from '../../services/api/user';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
@@ -31,6 +29,8 @@ export function ClassroomManagement() {
   const { showToast } = useToast();
   const navigate = useNavigate();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   const validateClassroom = () => {
     const errors: {[key: string]: string} = {};
     
@@ -45,11 +45,11 @@ export function ClassroomManagement() {
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) {
+        // const user = await fetchUserContext();
+        if (!schoolId) {
           throw new Error('Unable to determine school context for this admin.');
         }
-        const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId).catch(() => []);
+        const enrollmentStats = await fetchClassEnrollmentStats(schoolId).catch(() => []);
         if (!isMounted) return;
         
         const mapped: Classroom[] = enrollmentStats.map((stat) => ({
@@ -122,13 +122,13 @@ export function ClassroomManagement() {
     if (!validateClassroom()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
       
-      await createClassroom(user.schoolId, newClassroomName.trim());
+      await createClassroom(schoolId, newClassroomName.trim());
       
       // Refetch classrooms to get the actual server data
-      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const enrollmentStats = await fetchClassEnrollmentStats(schoolId);
       const mapped: Classroom[] = enrollmentStats.map((stat) => ({
         id: stat.classId || crypto.randomUUID(),
         name: stat.className,
@@ -154,13 +154,13 @@ export function ClassroomManagement() {
     if (!selectedClassroom || !validateClassroom()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
       
-      await renameClassroom(selectedClassroom.name, newClassroomName.trim(), user.schoolId);
+      await renameClassroom(selectedClassroom.name, newClassroomName.trim(), schoolId);
       
       // Refetch classrooms to get updated data
-      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const enrollmentStats = await fetchClassEnrollmentStats(schoolId);
       const mapped: Classroom[] = enrollmentStats.map((stat) => ({
         id: stat.classId || crypto.randomUUID(),
         name: stat.className,
@@ -186,13 +186,13 @@ export function ClassroomManagement() {
     if (!selectedClassroom) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
       
-      await deleteClassroom(selectedClassroom.id, user.schoolId);
+      await deleteClassroom(selectedClassroom.id, schoolId);
       
       // Refetch classrooms after deletion
-      const enrollmentStats = await fetchClassEnrollmentStats(user.schoolId);
+      const enrollmentStats = await fetchClassEnrollmentStats(schoolId);
       const mapped: Classroom[] = enrollmentStats.map((stat) => ({
         id: stat.classId || crypto.randomUUID(),
         name: stat.className,

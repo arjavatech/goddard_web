@@ -9,7 +9,6 @@ import { Shield, Search, Plus, Edit, Trash2, Eye, MoreVertical } from 'lucide-re
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 
 import { useToast } from '../../contexts/ToastContext';
-import { supabase } from '../../lib/supabaseClient';
 import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, type AdminUser } from '../../services/api/admin';
 import { useUserContext } from '../../contexts/UserContext';
 
@@ -193,8 +192,6 @@ export function AdminManagement() {
     setEmailError('');
   };
 
-  // Remove the old handleAddAdmin function and keep only handleInviteAdmin
-  const handleAddAdmin = handleInviteAdmin;
 
   return (
     <AdminLayout>
@@ -213,8 +210,8 @@ export function AdminManagement() {
         </div>
 
         {/* Search */}
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center">
+          <div className="relative w-full sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search admins or emails..."
@@ -245,7 +242,7 @@ export function AdminManagement() {
             ) : (
               <div className="space-y-3 sm:space-y-4">
                 {filteredAdmins.map((admin) => (
-                  <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors space-y-3">
+                  <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-2">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
@@ -256,7 +253,7 @@ export function AdminManagement() {
                             <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{admin.first_name} {admin.last_name}</h3>
                             <Shield className="w-4 h-4 text-amazon-teal flex-shrink-0" />
                           </div>
-                          <p className="text-xs sm:text-sm text-muted-foreground truncate">{admin.email}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground break-all sm:truncate">{admin.email}</p>
                         </div>
                       </div>
                       <DropdownMenu>
@@ -341,9 +338,9 @@ export function AdminManagement() {
                 )}
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="bg-amazon-teal hover:bg-amazon-teal/90 disabled:opacity-50">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="bg-amazon-teal hover:bg-amazon-teal/90 disabled:opacity-50 w-full sm:w-auto">
                 {isInviting ? 'Sending...' : 'Send Invite'}
               </Button>
             </DialogFooter>
@@ -399,9 +396,9 @@ export function AdminManagement() {
                 />
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateAdmin} className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button onClick={handleUpdateAdmin} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
                 Update Admin
               </Button>
             </DialogFooter>
@@ -445,7 +442,7 @@ export function AdminManagement() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -466,9 +463,9 @@ export function AdminManagement() {
                 Are you sure you want to delete <strong>{adminToDelete?.first_name} {adminToDelete?.last_name}</strong>? This action cannot be undone.
               </p>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-              <Button variant="destructive" onClick={confirmDeleteAdmin}>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteAdmin} className="w-full sm:w-auto">
                 Delete Admin
               </Button>
             </DialogFooter>

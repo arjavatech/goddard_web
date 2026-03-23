@@ -45,14 +45,16 @@ export function ClassroomFormAssignment() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [selectedClassroomId, setSelectedClassroomId] = useState<string>(classroomIdFromQuery || '');
   const [loading, setLoading] = useState(true);
+  const schoolId = localStorage.getItem('schoolId');
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        const [templates, classroomList] = await Promise.all([fetchFormTemplates(user.schoolId).catch(() => []), fetchClassEnrollmentStats(user.schoolId).catch(() => [])]);
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
+        const [templates, classroomList] = await Promise.all([fetchFormTemplates(schoolId).catch(() => []), fetchClassEnrollmentStats(schoolId).catch(() => [])]);
         if (!isMounted) return;
         if (templates.length > 0) {
           const mappedForms = templates.map(template => ({
@@ -129,12 +131,12 @@ export function ClassroomFormAssignment() {
   const handleAssignForms = async () => {
     if (!selectedClassroom || selectedFormIds.length === 0) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
+    // const user = await fetchUserContext();
+    if (!schoolId) throw new Error('School context not found');
     
     await Promise.all(
       selectedFormIds.map(formId => 
-        assignFormToClassroom(user.schoolId!, selectedClassroom.id, formId)
+        assignFormToClassroom(schoolId, selectedClassroom.id, formId)
       )
     );
     
@@ -166,8 +168,8 @@ export function ClassroomFormAssignment() {
     setDeleteStatus('deleting');
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext(); 
+      if (!schoolId) throw new Error('School context not found');
       
       await deleteClassFormOverride(formToDelete.id, selectedClassroom.id);
       
