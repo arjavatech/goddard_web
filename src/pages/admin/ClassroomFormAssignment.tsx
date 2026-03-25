@@ -12,7 +12,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { Loading } from '../../components/ui/loading';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchUserContext } from '../../services/api/user';
-import { fetchClassEnrollmentStats, assignFormToClassroom, deleteClassFormOverride } from '../../services/api/admin';
+import { fetchClassEnrollmentStats, assignFormToClassroom, assignFormToClassStudents, deleteClassFormOverride } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
@@ -134,10 +134,14 @@ export function ClassroomFormAssignment() {
     // const user = await fetchUserContext();
     if (!schoolId) throw new Error('School context not found');
     
+    // Use Promise.all to assign forms to classroom and students simultaneously
     await Promise.all(
-      selectedFormIds.map(formId => 
-        assignFormToClassroom(schoolId, selectedClassroom.id, formId)
-      )
+      selectedFormIds.map(async (formId) => {
+        // First assign to classroom (for form management)
+        await assignFormToClassroom(schoolId, selectedClassroom.id, formId);
+        // Then assign to all students in the class
+        await assignFormToClassStudents(schoolId, selectedClassroom.id, formId);
+      })
     );
     
     const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id));

@@ -3,25 +3,24 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown, Download } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { DataTable } from '../../components/ui/data-table';
-import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
+import { DataTable } from '../../components/ui/data-table';
+import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
-import { downloadCSV, printAsPDF } from '../../lib/export';
 
-import { fetchParentDetails, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
+import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
 import { validateEmail } from '../../lib/emailValidation';
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
@@ -63,8 +62,20 @@ export function ParentManagement() {
     id: string;
     name: string;
   }[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
+
+  const loadClassroomsIfNeeded = async () => {
+    if (classroomsLoaded || !schoolId) return;
+    try {
+      const classroomData = await fetchClassrooms(schoolId);
+      if (classroomData.length > 0) {
+        setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
+      }
+      setClassroomsLoaded(true);
+    } catch {}
+  };
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signupFilter, setSignupFilter] = useState<string>('all');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [isAddChildDialogOpen, setIsAddChildDialogOpen] = useState(false);
@@ -107,15 +118,11 @@ export function ParentManagement() {
         // const user = await fetchUserContext();
         if (!schoolId) return;
 
-        // Fetch both parent details and classrooms
-        const [parentDetailsResponse] = await Promise.all([
-          fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] })),
-        ]);
-
-        // console.log('Classroom data received:', classroomData);
-        console.log('School ID:', schoolId);
+        // Fetch parent details only — classrooms are loaded lazily when modals open
+        const parentDetailsResponse = await fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
 
         if (!isMounted) return;
+
         // Helper function to map parent details to Parent type
         const mapParentDetails = (detail: any): Parent => {
           console.log('Mapping parent detail:', { parentId: detail.parentId, email: detail.email, originalDetail: detail });
@@ -169,6 +176,19 @@ export function ParentManagement() {
       isMounted = false;
     };
   }, []);
+  // Sort functionality
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortLabels: Record<string, string> = { name: 'Name', email: 'Email', status: 'Status', children: 'Children' };
+  const sortOptions: SortOption[] = [
+    { label: 'Name A-Z', sortBy: 'name', sortOrder: 'asc' },
+    { label: 'Name Z-A', sortBy: 'name', sortOrder: 'desc' },
+    { label: 'Email A-Z', sortBy: 'email', sortOrder: 'asc' },
+    { label: 'Email Z-A', sortBy: 'email', sortOrder: 'desc' },
+    { label: 'Most Children', sortBy: 'children', sortOrder: 'desc' },
+  ];
+
   const filteredParents = useMemo(() => {
     const currentParents = activeTab === 'active' ? parents : deactivatedParents;
     return currentParents.filter(parent => {
@@ -178,25 +198,13 @@ export function ParentManagement() {
       const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
       return matchesSearch && matchesStatus && matchesSignup;
     });
-  }, [parents, deactivatedParents, activeTab, searchQuery, statusFilter, signupFilter]);
-
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-
-  const sortLabels: Record<string, string> = { name: 'Name', email: 'Email', children: 'Children', status: 'Status' };
-  const sortOptions: SortOption[] = [
-    { label: 'Name A-Z', sortBy: 'name', sortOrder: 'asc' },
-    { label: 'Name Z-A', sortBy: 'name', sortOrder: 'desc' },
-    { label: 'Email A-Z', sortBy: 'email', sortOrder: 'asc' },
-    { label: 'Most Children', sortBy: 'children', sortOrder: 'desc' },
-    { label: 'Signup Status', sortBy: 'status', sortOrder: 'asc' },
-  ];
+  }, [activeTab, parents, deactivatedParents, searchQuery, statusFilter, signupFilter]);
 
   const sortedParents = useMemo(() =>
     sortItems(filteredParents, sortBy, sortOrder, (p, key) => {
-      if (key === 'children') return p.children.length;
       if (key === 'email') return p.email;
-      if (key === 'status') return p.signupStatus;
+      if (key === 'status') return p.status;
+      if (key === 'children') return p.children.length;
       return `${p.firstName} ${p.lastName}`;
     }),
   [filteredParents, sortBy, sortOrder]);
@@ -207,11 +215,9 @@ export function ParentManagement() {
     paginatedData: paginatedParents,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ 
-    data: sortedParents,
-    itemsPerPage: 10,
-    mobileItemsPerPage: 5
-  });
+  } = usePagination({ data: sortedParents });
+
+
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
 
@@ -470,22 +476,82 @@ export function ParentManagement() {
     }
   };
 
-  const parentExportHeaders = ['Parent Name', 'Email', 'Children', 'Classrooms', 'Signup Status'];
-  const getParentExportRows = () => sortedParents.map(p => [
-    `${p.firstName} ${p.lastName}`,
-    p.email,
-    p.children.map(c => `${c.firstName} ${c.lastName}`).join('; '),
-    p.children.map(c => c.classroom.name).join('; '),
-    p.signupStatus
-  ]);
+  const exportToCSV = () => {
+    const escapeCSV = (value: string) => {
+      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value;
+    };
 
-  const exportToCSV = () => downloadCSV(
-    `parents_export_${new Date().toISOString().split('T')[0]}.csv`,
-    parentExportHeaders,
-    getParentExportRows()
-  );
+    const headers = ['Parent Name', 'Email', 'Children', 'Classrooms', 'Signup Status'];
 
-  const exportToPDF = () => printAsPDF('Parent Directory Export', parentExportHeaders, getParentExportRows());
+    const rows = sortedParents.map(parent => [
+      `${parent.firstName} ${parent.lastName}`,
+      parent.email,
+      parent.children.map(c => `${c.firstName} ${c.lastName}`).join('; '),
+      parent.children.map(c => c.classroom.name).join('; '),
+      parent.signupStatus
+    ]);
+
+    const csvContent = [
+      'The Goddard School',
+      '',
+      headers.map(escapeCSV).join(','),
+      ...rows.map(row => row.map(escapeCSV).join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `parents_export_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const headers = ['Parent Name', 'Email', 'Children', 'Classrooms', 'Signup Status'];
+
+    const rows = sortedParents.map(parent => [
+      `${parent.firstName} ${parent.lastName}`,
+      parent.email,
+      parent.children.map(c => `${c.firstName} ${c.lastName}`).join(', '),
+      parent.children.map(c => c.classroom.name).join(', '),
+      parent.signupStatus
+    ]);
+
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Parent Directory Export</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .header { text-align: center; margin-bottom: 16px; }
+  .logo { height: 60px; width: auto; }
+  h1 { font-size: 18px; margin-bottom: 4px; }
+  p { font-size: 12px; color: #666; margin-bottom: 16px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
+  th { background-color: #f5f5f5; font-weight: 600; }
+  tr:nth-child(even) { background-color: #fafafa; }
+  @media print { body { margin: 0; } }
+</style></head><body>
+<div class="header">
+  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
+  <h1>Parent Directory Export</h1>
+  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} parents</p>
+</div>
+<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
+</body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
 
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
@@ -501,6 +567,7 @@ export function ParentManagement() {
           <Button onClick={() => {
           resetInviteForm();
           setInviteFormErrors({});
+          loadClassroomsIfNeeded();
           setIsInviteDialogOpen(true);
         }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
@@ -508,9 +575,28 @@ export function ParentManagement() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard label="Total Parents" value={parents.length} icon={Users} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" />
-          <StatCard label="Signed Up" value={parents.filter(p => p.signupStatus === 'Signed').length} icon={CheckCircle} iconBgClass="bg-green-100" iconColorClass="text-green-600" />
-          <StatCard label="Pending Signup" value={parents.filter(p => p.signupStatus === 'Not Signed').length} icon={Clock} iconBgClass="bg-amber-100" iconColorClass="text-amber-600" className="sm:col-span-2 lg:col-span-1" />
+          <StatCard 
+            label="Total Parents" 
+            value={parents.length} 
+            icon={Users} 
+            iconBgClass="bg-amazon-teal/10" 
+            iconColorClass="text-amazon-teal" 
+          />
+          <StatCard 
+            label="Signed Up" 
+            value={parents.filter(p => p.signupStatus === 'Signed').length} 
+            icon={CheckCircle} 
+            iconBgClass="bg-green-100" 
+            iconColorClass="text-green-600" 
+          />
+          <StatCard 
+            label="Pending Signup" 
+            value={parents.filter(p => p.signupStatus === 'Not Signed').length} 
+            icon={Clock} 
+            iconBgClass="bg-amber-100" 
+            iconColorClass="text-amber-600" 
+            className="sm:col-span-2 lg:col-span-1" 
+          />
         </div>
         <Card className="glass-card h-fit">
           <CardContent className="p-0 overflow-hidden">
@@ -591,34 +677,33 @@ export function ParentManagement() {
                     options={sortOptions}
                     labels={sortLabels}
                     onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
-                    className="w-full justify-between"
                   />
                 </div>
               </div>
             </div>
             {/* Desktop Table View */}
             <DataTable
-              className="hidden md:block overflow-x-auto"
+              className="hidden md:block"
               loading={loading}
               loadingMessage="Loading parents..."
               emptyMessage="No parents match the current filters."
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredParents.length}
+              totalItems={sortedParents.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
-                { header: 'Parent' },
-                { header: 'Email', className: 'hidden lg:table-cell' },
-                { header: 'Children' },
-                { header: 'Signup Status', className: 'text-center' },
-                { header: 'Actions', className: 'text-center' },
+                { header: 'Parent', className: 'w-1/3' },
+                { header: 'Email', className: 'w-1/4 hidden lg:table-cell' },
+                { header: 'Children', className: 'w-1/3' },
+                { header: 'Signup Status', className: 'w-1/6 text-center' },
+                { header: 'Actions', className: 'w-1/6 text-center' },
               ]}
-              rows={paginatedParents.map(parent => (
-                <tr key={parent.id} className="border-b border-gray-100 hover:bg-muted/50">
+              rows={paginatedParents.map((parent, index) => (
+                <tr key={parent.id || `parent-${index}`} className="border-b border-gray-100 hover:bg-muted/50">
                   <td className="py-3 px-3 max-w-0">
                     <div className="flex items-center gap-2">
-                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} />
+                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
                       <div className="min-w-0">
                         {parent.signupStatus === 'Signed' ? (
                           <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-medium text-amazon-teal hover:underline block truncate">
@@ -685,7 +770,7 @@ export function ParentManagement() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                          onClick={() => { setSelectedParent(parent); setIsAddChildDialogOpen(true); }}
+                          onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
                         >
                           <UserCircle className="h-4 w-4 mr-2" />
                           Add Child
@@ -725,11 +810,12 @@ export function ParentManagement() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
-              cards={paginatedParents.map(parent => (
-                <Card key={parent.id} className="p-3 sm:p-4">
+              gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              cards={paginatedParents.map((parent, index) => (
+                <Card key={parent.id || `parent-card-${index}`} className="p-3 sm:p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} />
+                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         {parent.signupStatus === 'Signed' ? (
                           <Link to={`/admin/parents/${parent.id}`} state={{
@@ -766,6 +852,7 @@ export function ParentManagement() {
                           disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
                           onClick={() => {
                             setSelectedParent(parent);
+                            loadClassroomsIfNeeded();
                             setIsAddChildDialogOpen(true);
                           }}>
                           <UserCircle className="h-4 w-4 mr-2" />

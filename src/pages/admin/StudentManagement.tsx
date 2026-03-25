@@ -139,7 +139,17 @@ export function StudentManagement() {
   };
 
   const [availableClassrooms, setAvailableClassrooms] = useState<{id: string, name: string}[]>([]);
-  
+  const [formsLoaded, setFormsLoaded] = useState(false);
+
+  const loadFormsIfNeeded = async () => {
+    if (formsLoaded || !schoolId) return;
+    try {
+      const formsData = await fetchFormTemplates(schoolId);
+      setAvailableForms(formsData.map(t => ({ id: t.id, name: t.formName })));
+      setFormsLoaded(true);
+    } catch {}
+  };
+
   // Bulk transfer states
   const [isBulkTransferDialogOpen, setIsBulkTransferDialogOpen] = useState(false);
   const [selectedStudentsForTransfer, setSelectedStudentsForTransfer] = useState<string[]>([]);
@@ -220,10 +230,9 @@ export function StudentManagement() {
           setStudents([]);
           return;
         }
-        const [enrollmentData, classrooms, formsData] = await Promise.all([
+        const [enrollmentData, classrooms] = await Promise.all([
           fetchStudentEnrollments(schoolId),
-          fetchClassrooms(schoolId),
-          fetchFormTemplates(schoolId)
+          fetchClassrooms(schoolId)
         ]);
         
         const enrollments = enrollmentData.enrollments || [];
@@ -328,13 +337,6 @@ export function StudentManagement() {
         if (mappedStudents.length > 0) {
           setStudents(mappedStudents);
         }
-        
-        // Set available forms from API
-        const formsList = formsData.map((template) => ({
-          id: template.id,
-          name: template.formName
-        }));
-        setAvailableForms(formsList);
         
         // Set available classrooms
         const classroomsList = classrooms.map(classroom => ({
@@ -932,6 +934,7 @@ export function StudentManagement() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => {
                           setSelectedStudentForForms(student);
+                          loadFormsIfNeeded();
                           setIsStudentFormDialogOpen(true);
                         }}>
                           <Settings className="h-4 w-4 mr-2" />
@@ -1114,7 +1117,7 @@ export function StudentManagement() {
                     <div className="pt-2 border-t space-y-2">
                       <Button
                         variant="outline" size="sm"
-                        onClick={() => { setSelectedStudentForForms(student); setIsStudentFormDialogOpen(true); }}
+                        onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}
                         className="w-full h-7 text-xs"
                       >
                         <Settings className="h-3 w-3 mr-1" />

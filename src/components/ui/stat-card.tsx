@@ -8,11 +8,15 @@ interface StatCardProps {
   iconBgClass: string;
   iconColorClass: string;
   className?: string;
+  onClick?: () => void;
 }
 
-export function StatCard({ label, value, icon: Icon, iconBgClass, iconColorClass, className }: StatCardProps) {
+export function StatCard({ label, value, icon: Icon, iconBgClass, iconColorClass, className, onClick }: StatCardProps) {
   return (
-    <Card className={`glass-card hover:shadow-lg transition-shadow ${className ?? ''}`}>
+    <Card 
+      className={`glass-card hover:shadow-lg transition-shadow ${className ?? ''} ${onClick ? 'cursor-pointer' : ''}`}
+      onClick={onClick}
+    >
       <CardContent className="p-4 sm:p-5 lg:p-6">
         <div className="flex items-center justify-between">
           <div className="min-w-0 flex-1">

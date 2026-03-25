@@ -3,12 +3,12 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { School, FileText, Users, Clock, UserCheck, Plus, Mail } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
-import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
-
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { StatCard } from '../../components/ui/stat-card';
+import { AsyncButton } from '../../components/ui/async-button';
 
-import { fetchDashboardMetrics, createFormTemplate, inviteParent, createClassroom } from '../../services/api/admin';
+import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -16,12 +16,16 @@ import { validateEmail } from '../../lib/emailValidation';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { AddFormModal } from '../../components/admin/AddFormModal';
 
-type StatCard = {
-  title: string;
-  value: number;
-  icon: React.ReactNode;
-  change: string;
-  onClick?: () => void;
+type DashboardMetrics = {
+  totalClassrooms: number;
+  totalActiveChildren: number;
+  totalForms: number;
+  totalActiveParents: number;
+  classwiseMetrics: {
+    classroomName: string;
+    completedEnrollments: number;
+    totalEnrollments: number;
+  }[];
 };
 
 type ProgressItem = {
@@ -31,7 +35,7 @@ type ProgressItem = {
 };
 
 export function AdminDashboard() {
-  const [stats, setStats] = useState<StatCard[]>([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -57,6 +61,8 @@ export function AdminDashboard() {
   const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
+  const [isInvitingParent, setIsInvitingParent] = useState(false);
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
@@ -64,6 +70,7 @@ export function AdminDashboard() {
   const [isAddingClassroom, setIsAddingClassroom] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
+
   const schoolId = localStorage.getItem('schoolId');
 
   useEffect(() => {
@@ -71,71 +78,27 @@ export function AdminDashboard() {
     (async () => {
       try {
         setLoading(true);
+      
+
         if (!schoolId) {
           throw new Error('Unable to determine school context for the current admin.');
         }
 
-        const [metrics] = await Promise.all([
-          fetchDashboardMetrics(schoolId)
-        ]);
+        const dashboardMetrics = await fetchDashboardMetrics(schoolId);
 
-        // Calculate pending enrollments
-        const pendingEnrollments = metrics.classwiseMetrics.reduce(
-          (sum, metric) => sum + (metric.totalEnrollments - metric.completedEnrollments),
-          0
-        );
-
-        const statCards: StatCard[] = [
-          {
-            title: 'Total Classrooms',
-            value: metrics.totalClassrooms,
-            icon: <School className="h-6 w-6 text-amazon-teal" />,
-            change: 'Live data',
-            onClick: () => navigate('/admin/classrooms')
-          },
-          {
-            title: 'Active Children',
-            value: metrics.totalActiveChildren,
-            icon: <UserCheck className="h-6 w-6 text-amazon-teal" />,
-            change: 'Live data',
-            onClick: () => navigate('/admin/students')
-          },
-          {
-            title: 'Active Forms',
-            value: metrics.totalForms,
-            icon: <FileText className="h-6 w-6 text-amazon-teal" />,
-            change: 'Live data',
-            onClick: () => navigate('/admin/forms')
-          },
-          {
-            title: 'Active Parents',
-            value: metrics.totalActiveParents,
-            icon: <Users className="h-6 w-6 text-amazon-teal" />,
-            change: 'Live data',
-            onClick: () => navigate('/admin/parents')
-          },
-          {
-            title: 'Pending Enrollments',
-            value: pendingEnrollments,
-            icon: <Clock className="h-6 w-6 text-amazon-orange" />,
-            change: 'Awaiting completion',
-            onClick: () => navigate('/admin/students')
-          }
-        ];
-
-        const progressItems: ProgressItem[] = metrics.classwiseMetrics.map(metric => ({
+        const progressItems: ProgressItem[] = dashboardMetrics.classwiseMetrics.map(metric => ({
           classroom: metric.classroomName,
           completed: metric.completedEnrollments,
           total: metric.totalEnrollments
         })).sort((a, b) => a.classroom.localeCompare(b.classroom));
 
         if (!isMounted) return;
-        setStats(statCards);
+        setMetrics(dashboardMetrics);
         setEnrollmentProgress(progressItems);
         setError(null);
       } catch (err) {
         if (!isMounted) return;
-        setStats([]);
+        setMetrics(null);
         setEnrollmentProgress([]);
         const message = err instanceof Error ? err.message : null;
         setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
@@ -169,11 +132,21 @@ export function AdminDashboard() {
     return Object.keys(errors).length === 0;
   };
 
+  const loadClassroomsIfNeeded = async () => {
+    if (classroomsLoaded || !schoolId) return;
+    try {
+      const classroomData = await fetchClassrooms(schoolId);
+      setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
+      setClassroomsLoaded(true);
+    } catch {}
+  };
+
   const handleAddForm = async () => {
     if (!validateForm()) return;
 
     setIsAddingForm(true);
     try {
+    
       if (!schoolId) return;
 
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
@@ -224,7 +197,9 @@ export function AdminDashboard() {
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
 
+    setIsInvitingParent(true);
     try {
+    
       if (!schoolId) return;
 
       await inviteParent(schoolId, {
@@ -263,14 +238,16 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('Error inviting parent:', error);
       showToast('error', 'Failed to send parent invitation. Please try again.');
+    } finally {
+      setIsInvitingParent(false);
     }
   };
-
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
     setIsAddingClassroom(true);
     try {
+    
       if (!schoolId) throw new Error('School context not found');
       
       await createClassroom(schoolId, newClassroomName.trim());
@@ -301,26 +278,54 @@ export function AdminDashboard() {
         
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
-          {stats.map((stat, index) => (
-            <Card key={index} className="glass-card cursor-pointer hover:shadow-lg transition-all duration-200 hover:scale-[1.02]" onClick={stat.onClick}>
-              <CardContent className="p-4 sm:p-5 lg:p-6">
-                <div className="flex justify-between items-start">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs sm:text-sm font-medium text-muted-foreground">
-                      {stat.title}
-                    </p>
-                    <h3 className="text-2xl sm:text-3xl font-bold mt-1 sm:mt-2 text-foreground">
-                      {stat.value}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-1 truncate">
-                      {stat.change}
-                    </p>
-                  </div>
-                  <div className="p-2 sm:p-3 bg-gray-50 rounded-full flex-shrink-0 ml-2">{stat.icon}</div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          <StatCard
+            label="Total Classrooms"
+            value={metrics?.totalClassrooms || 0}
+            icon={School}
+            iconBgClass="bg-amazon-teal/10"
+            iconColorClass="text-amazon-teal"
+            className="hover:scale-[1.02] transition-all duration-200"
+            onClick={() => navigate('/admin/classrooms')}
+          />
+          <StatCard
+            label="Active Children"
+            value={metrics?.totalActiveChildren || 0}
+            icon={UserCheck}
+            iconBgClass="bg-amazon-teal/10"
+            iconColorClass="text-amazon-teal"
+            className="hover:scale-[1.02] transition-all duration-200"
+            onClick={() => navigate('/admin/students')}
+          />
+          <StatCard
+            label="Active Forms"
+            value={metrics?.totalForms || 0}
+            icon={FileText}
+            iconBgClass="bg-amazon-teal/10"
+            iconColorClass="text-amazon-teal"
+            className="hover:scale-[1.02] transition-all duration-200"
+            onClick={() => navigate('/admin/forms')}
+          />
+          <StatCard
+            label="Active Parents"
+            value={metrics?.totalActiveParents || 0}
+            icon={Users}
+            iconBgClass="bg-amazon-teal/10"
+            iconColorClass="text-amazon-teal"
+            className="hover:scale-[1.02] transition-all duration-200"
+            onClick={() => navigate('/admin/parents')}
+          />
+          <StatCard
+            label="Pending Enrollments"
+            value={metrics ? metrics.classwiseMetrics.reduce(
+              (sum, metric) => sum + (metric.totalEnrollments - metric.completedEnrollments),
+              0
+            ) : 0}
+            icon={Clock}
+            iconBgClass="bg-amber-100"
+            iconColorClass="text-amber-600"
+            className="hover:scale-[1.02] transition-all duration-200"
+            onClick={() => navigate('/admin/students')}
+          />
         </div>
 
         {/* Quick Actions & Enrollment Progress Row */}
@@ -332,7 +337,12 @@ export function AdminDashboard() {
             <CardContent className="pt-0">
               <div className="space-y-3 sm:space-y-4">
                 {loading ? (
-                  <Loading message="Loading enrollment data..." size="sm" />
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+                      <p className="text-muted-foreground text-sm">Loading enrollment data...</p>
+                    </div>
+                  </div>
                 ) : enrollmentProgress.length === 0 ? (
                   <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
                     No enrollment data available yet.
@@ -377,7 +387,7 @@ export function AdminDashboard() {
                 <Button
                   variant="outline"
                   className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => setIsInviteDialogOpen(true)}
+                  onClick={() => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
                 >
                   <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
                   <span className="text-xs font-medium">Invite Parent</span>
@@ -456,7 +466,9 @@ export function AdminDashboard() {
         />
 
         {/* Add Classroom Dialog */}
-        <Dialog open={isAddClassroomDialogOpen} onOpenChange={setIsAddClassroomDialogOpen}>
+        <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
+            setIsAddClassroomDialogOpen(open);
+        }}>
           <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
             <DialogHeader>
               <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
@@ -477,9 +489,9 @@ export function AdminDashboard() {
               <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
                 Cancel
               </Button>
-              <Button onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim() || isAddingClassroom}>
-                {isAddingClassroom ? 'Adding Classroom...' : 'Add Classroom'}
-              </Button>
+              <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
+                Add Classroom
+              </AsyncButton>
             </DialogFooter>
           </DialogContent>
         </Dialog>

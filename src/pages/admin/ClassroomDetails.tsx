@@ -85,11 +85,21 @@ export function ClassroomDetails() {
   const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
   const [allClassrooms, setAllClassrooms] = useState<{id: string; name: string}[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const { showToast } = useToast();
   
   const schoolId = localStorage.getItem('schoolId');
+
+  const loadClassroomsIfNeeded = async () => {
+    if (classroomsLoaded || !schoolId) return;
+    try {
+      const classrooms = await fetchClassrooms(schoolId);
+      setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
+      setClassroomsLoaded(true);
+    } catch {}
+  };
 
 
   useEffect(() => {
@@ -117,9 +127,10 @@ export function ClassroomDetails() {
           fetchClassBasedEnrollments(schoolId, classroomId).catch(() => [])
         ]);
         
-        // Set all classrooms for the dropdown
-        if (isMounted) {
+        // Cache classrooms for the invite modal (lazy load guard)
+        if (isMounted && classrooms.length > 0) {
           setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
+          setClassroomsLoaded(true);
           setChildClassroom(classroomId || '');
         }
 
@@ -417,6 +428,7 @@ export function ClassroomDetails() {
               className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none"
               onClick={() => {
                 setChildClassroom(classroomId || '');
+                loadClassroomsIfNeeded();
                 setIsInviteDialogOpen(true);
               }}
             >
