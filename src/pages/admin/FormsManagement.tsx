@@ -1,22 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUp, ArrowDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
-import { Loading } from '../../components/ui/loading';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { usePagination } from '../../hooks/usePagination';
+import { PageLoader } from '../../components/ui/page-loader';
 
 type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
@@ -284,6 +283,10 @@ export function FormsManagement() {
     forms.forEach((form: Form) => unique.add(form.status));
     return Array.from(unique);
   }, [forms]);
+  if (loading) {
+    return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
+  }
+
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">

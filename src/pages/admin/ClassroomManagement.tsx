@@ -17,6 +17,7 @@ import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
+import { PageLoader } from '../../components/ui/page-loader';
 
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -171,6 +172,9 @@ export function ClassroomManagement() {
     setSelectedClassroom(classroom);
     setIsDeleteDialogOpen(true);
   };
+  if (loading) {
+    return <PageLoader message="Loading classroom data..." Layout={AdminLayout} />;
+  }
   return <AdminLayout>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 space-y-6 sm:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">

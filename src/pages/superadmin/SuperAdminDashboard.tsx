@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { SuperAdminLayout } from './SuperAdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -6,6 +6,7 @@ import { School, Users, Crown, Building, Plus, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../../components/ui/badge';
 import { apiBaseUrl } from '../../config/env';
+import { PageLoader } from '../../components/ui/page-loader';
 
 export function SuperAdminDashboard() {
   const [schools, setSchools] = useState<any[]>([]);
@@ -145,9 +146,7 @@ export function SuperAdminDashboard() {
           </CardHeader>
           <CardContent>
             {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal"></div>
-              </div>
+              <PageLoader message="Loading schools..." Layout={() => <div />} />
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">

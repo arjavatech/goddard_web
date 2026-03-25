@@ -228,8 +228,11 @@ export function AdminManagement() {
           </CardHeader>
           <CardContent className="pt-0">
             {isLoading ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin h-6 w-6 border-2 border-amazon-teal border-t-transparent rounded-full"></div>
+              <div className="flex items-center justify-center h-64">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
+                  <p className="text-muted-foreground">Loading admin data...</p>
+                </div>
               </div>
             ) : loadError ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">

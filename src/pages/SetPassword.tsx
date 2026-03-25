@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
  import { Shield, Eye, EyeOff, CheckCircle, XCircle, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
@@ -25,7 +25,6 @@ export function SetPassword() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendStatus, setResendStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const navigate = useNavigate();
-  const location = useLocation();
 
   const [requirements, setRequirements] = useState<PasswordRequirement[]>([
     { label: 'At least 8 characters long', test: (pwd) => pwd.length >= 8, valid: false },
@@ -60,7 +59,6 @@ export function SetPassword() {
       const params = new URLSearchParams(hash);
       const accessToken = params.get('access_token');
       const refreshToken = params.get('refresh_token');
-      const type = params.get('type');
       const errorParam = params.get('error');
       const errorCode = params.get('error_code');
       const errorDescription = params.get('error_description');

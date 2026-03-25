@@ -24,7 +24,7 @@ export function Signup() {
   } = useAuth();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const { alertState, showAlert, hideAlert } = useAlertModal();
+  const { alertState, hideAlert } = useAlertModal();
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {

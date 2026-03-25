@@ -7,12 +7,12 @@ import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download } from 'lucide-react';
-import { fetchUserContext } from '../../services/api/user';
 import { DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { PageLoader } from '../../components/ui/page-loader';
 
 
 export function DueForms() {
@@ -42,7 +42,7 @@ export function DueForms() {
     onValueChange,
     options,
     placeholder,
-    label
+    
   }: {
     value: string[],
     onValueChange: (values: string[]) => void,
@@ -265,7 +265,6 @@ export function DueForms() {
     totalPages,
     paginatedData: paginatedForms,
     itemsPerPage,
-    isMobile,
     setCurrentPage
   } = usePagination({ data: filteredForms });
 
@@ -461,6 +460,10 @@ export function DueForms() {
     overdue: dueForms.filter(f => f.status === 'overdue').length,
     completed: dueForms.filter(f => f.status === 'completed').length
   };
+
+  if (loading) {
+    return <PageLoader message="Loading due forms tracking..." Layout={AdminLayout} />;
+  }
 
   return (
     <AdminLayout>
@@ -713,12 +716,7 @@ export function DueForms() {
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">Loading forms...</p>
-              </div>
-            ) : filteredForms.length > 0 ? (
+            {filteredForms.length > 0 ? (
               <>
                 {/* Card View — mobile only */}
                 <div className="md:hidden p-3 space-y-3">

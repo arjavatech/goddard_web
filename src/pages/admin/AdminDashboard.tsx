@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { School, FileText, Users, Clock, UserCheck, Plus, Mail } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { StatCard } from '../../components/ui/stat-card';
 import { AsyncButton } from '../../components/ui/async-button';
+import { PageLoader } from '../../components/ui/page-loader';
 
 import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
@@ -62,12 +63,10 @@ export function AdminDashboard() {
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   const [classroomsLoaded, setClassroomsLoaded] = useState(false);
-  const [isInvitingParent, setIsInvitingParent] = useState(false);
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
-  const [isAddingClassroom, setIsAddingClassroom] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -197,7 +196,6 @@ export function AdminDashboard() {
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
 
-    setIsInvitingParent(true);
     try {
     
       if (!schoolId) return;
@@ -238,14 +236,11 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('Error inviting parent:', error);
       showToast('error', 'Failed to send parent invitation. Please try again.');
-    } finally {
-      setIsInvitingParent(false);
-    }
+    } 
   };
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
     
-    setIsAddingClassroom(true);
     try {
     
       if (!schoolId) throw new Error('School context not found');
@@ -259,10 +254,12 @@ export function AdminDashboard() {
       window.location.reload();
     } catch (error) {
       showToast('error', 'Failed to create classroom. Please try again.');
-    } finally {
-      setIsAddingClassroom(false);
-    }
+    } 
   };
+
+  if (loading) {
+    return <PageLoader message="Loading dashboard data..." Layout={AdminLayout} />;
+  }
 
   return (
     <AdminLayout>
@@ -336,14 +333,7 @@ export function AdminDashboard() {
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-3 sm:space-y-4">
-                {loading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
-                      <p className="text-muted-foreground text-sm">Loading enrollment data...</p>
-                    </div>
-                  </div>
-                ) : enrollmentProgress.length === 0 ? (
+                {enrollmentProgress.length === 0 ? (
                   <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
                     No enrollment data available yet.
                   </div>

@@ -1,6 +1,5 @@
 import { authedFetch, z } from './common';
-import { httpFetch } from './http';
-import { fetchUserContext } from './user';
+
 
 export type Classroom = {
   id: string;
@@ -83,48 +82,48 @@ export type StudentFormAssignment = {
   assignedAt: string | null;
   schoolId: string | null;
 };
-const classroomSchema = z.object({
-  classroom_id: z.string().optional(),
-  classroom_name: z.string().optional(),
-  total_children: z.number().optional()
-});
-const classEnrollmentSchema = z.object({
-  class_id: z.union([z.string(), z.number()]).optional(),
-  class_name: z.string().optional(),
-  count: z.number().int().nonnegative().optional(),
-  forms: z.record(z.string()).nullable().optional(),
-  default_forms: z.string().nullable().optional()
-});
-const parentDetailSchema = z.object({
-  parent_id: z.string(),
-  parent_email: z.string(),
-  parent_first_name: z.string().optional(),
-  parent_last_name: z.string().optional(),
-  children: z.array(z.object({
-    child_id: z.string(),
-    child_full_name: z.string(),
-    child_dob: z.string().optional(),
-    classroom_id: z.string().optional(),
-    classroom_name: z.string().optional(),
-    enrollment_id: z.string(),
-    forms: z.array(z.object({
-      form_id: z.string(),
-      form_name: z.string(),
-      status: z.string(),
-      is_required: z.boolean()
-    }))
-  }))
-});
-const schoolEnrollmentSchema = z.object({
-  child_id: z.union([z.string(), z.number()]).optional(),
-  child_first_name: z.string().optional(),
-  child_last_name: z.string().optional(),
-  class_name: z.string().nullable().optional(),
-  form_status: z.string().nullable().optional(),
-  primary_email: z.string().nullable().optional(),
-  additional_parent_email: z.string().nullable().optional(),
-  forms: z.record(z.string()).nullable().optional()
-});
+// const classroomSchema = z.object({
+//   classroom_id: z.string().optional(),
+//   classroom_name: z.string().optional(),
+//   total_children: z.number().optional()
+// });
+// const classEnrollmentSchema = z.object({
+//   class_id: z.union([z.string(), z.number()]).optional(),
+//   class_name: z.string().optional(),
+//   count: z.number().int().nonnegative().optional(),
+//   forms: z.record(z.string()).nullable().optional(),
+//   default_forms: z.string().nullable().optional()
+// });
+// const parentDetailSchema = z.object({
+//   parent_id: z.string(),
+//   parent_email: z.string(),
+//   parent_first_name: z.string().optional(),
+//   parent_last_name: z.string().optional(),
+//   children: z.array(z.object({
+//     child_id: z.string(),
+//     child_full_name: z.string(),
+//     child_dob: z.string().optional(),
+//     classroom_id: z.string().optional(),
+//     classroom_name: z.string().optional(),
+//     enrollment_id: z.string(),
+//     forms: z.array(z.object({
+//       form_id: z.string(),
+//       form_name: z.string(),
+//       status: z.string(),
+//       is_required: z.boolean()
+//     }))
+//   }))
+// });
+// const schoolEnrollmentSchema = z.object({
+//   child_id: z.union([z.string(), z.number()]).optional(),
+//   child_first_name: z.string().optional(),
+//   child_last_name: z.string().optional(),
+//   class_name: z.string().nullable().optional(),
+//   form_status: z.string().nullable().optional(),
+//   primary_email: z.string().nullable().optional(),
+//   additional_parent_email: z.string().nullable().optional(),
+//   forms: z.record(z.string()).nullable().optional()
+// });
 const studentFormAssignmentSchema = z.object({
   id: z.string(),
   child_id: z.string(),

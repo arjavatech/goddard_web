@@ -22,6 +22,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { PageLoader } from '../../components/ui/page-loader';
 
 type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
@@ -560,14 +561,7 @@ export function StudentManagement() {
   const exportToPDF = () => printAsPDF('Student Directory Export', studentExportHeaders, getStudentExportRows());
 
   if (loading) {
-    return <AdminLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading student data...</p>
-          </div>
-        </div>
-      </AdminLayout>;
+    return <PageLoader message="Loading student data..." Layout={AdminLayout} />;
   }
   return <AdminLayout>
       <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">

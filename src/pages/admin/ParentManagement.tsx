@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -17,10 +17,11 @@ import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
+import { PageLoader } from '../../components/ui/page-loader';
 
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
 import { validateEmail } from '../../lib/emailValidation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
@@ -552,6 +553,10 @@ export function ParentManagement() {
     printWindow.focus();
     printWindow.print();
   };
+
+  if (loading) {
+    return <PageLoader message="Loading parent management..." Layout={AdminLayout} />;
+  }
 
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
