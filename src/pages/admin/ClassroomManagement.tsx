@@ -3,8 +3,9 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Users, FileText, MoreHorizontal, AlertCircle, Calendar } from 'lucide-react';
 import { Input } from '../../components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Badge } from '../../components/ui/badge';
@@ -19,13 +20,39 @@ import { SortDropdown, sortItems, type SortOption } from '../../components/ui/so
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { PageLoader } from '../../components/ui/page-loader';
 
+const TERM_OPTIONS = [
+  { value: 'Jan–Mar', label: 'Term 1 — Jan–Mar' },
+  { value: 'Apr–Jun', label: 'Term 2 — Apr–Jun' },
+  { value: 'Jul–Sep', label: 'Term 3 — Jul–Sep' },
+  { value: 'Oct–Dec', label: 'Term 4 — Oct–Dec' },
+];
+
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map(y => ({
+  value: `${y}-${y + 1}`,
+  label: `${y}–${y + 1}`,
+}));
+
+type AcademicPeriod = { term: string; academicYear: string };
+
+const DUMMY_PERIODS: Record<string, AcademicPeriod> = {
+  'Toddler Room A': { term: 'Jan–Mar',  academicYear: '2024-2025' },
+  'Toddler Room B': { term: 'Apr–Jun',  academicYear: '2024-2025' },
+  'Pre-K Room':     { term: 'Jul–Sep',  academicYear: '2024-2025' },
+  'Kindergarten':   { term: 'Oct–Dec',  academicYear: '2024-2025' },
+  'Infant Room':    { term: 'Jan–Mar',  academicYear: '2025-2026' },
+};
+
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [periods, setPeriods] = useState<Record<string, AcademicPeriod>>(DUMMY_PERIODS);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
+  const [newTerm, setNewTerm] = useState(TERM_OPTIONS[0].value);
+  const [newAcademicYear, setNewAcademicYear] = useState(YEAR_OPTIONS[1].value);
   const [selectedClassroom, setSelectedClassroom] = useState<Classroom | null>(null);
   const [loading, setLoading] = useState(true);
   const [classroomErrors, setClassroomErrors] = useState<{[key: string]: string}>({});
@@ -115,34 +142,40 @@ export function ClassroomManagement() {
   });
   const handleAddClassroom = async () => {
     if (!validateClassroom()) return;
-    
     try {
-      // const user = await fetchUserContext();
       if (!schoolId) throw new Error('School context not found');
-      
-      await createClassroom(schoolId, newClassroomName.trim());
+      const name = newClassroomName.trim();
+      await createClassroom(schoolId, name);
       setClassrooms(mapEnrollmentStats(await fetchClassEnrollmentStats(schoolId)));
+      setPeriods(prev => ({ ...prev, [name]: { term: newTerm, academicYear: newAcademicYear } }));
       setNewClassroomName('');
+      setNewTerm(TERM_OPTIONS[0].value);
+      setNewAcademicYear(YEAR_OPTIONS[1].value);
       setClassroomErrors({});
       setIsAddDialogOpen(false);
-      showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
+      showToast('success', `Classroom "${name}" created successfully`);
     } catch (error) {
       showToast('error', 'Failed to create classroom. Please try again.');
     }
   };
   const handleEditClassroom = async () => {
     if (!selectedClassroom || !validateClassroom()) return;
-    
     try {
-      // const user = await fetchUserContext();
       if (!schoolId) throw new Error('School context not found');
-      
-      await renameClassroom(selectedClassroom.name, newClassroomName.trim(), schoolId);
+      const oldName = selectedClassroom.name;
+      const newName = newClassroomName.trim();
+      await renameClassroom(oldName, newName, schoolId);
       setClassrooms(mapEnrollmentStats(await fetchClassEnrollmentStats(schoolId)));
+      setPeriods(prev => {
+        const next = { ...prev };
+        delete next[oldName];
+        next[newName] = { term: newTerm, academicYear: newAcademicYear };
+        return next;
+      });
       setNewClassroomName('');
       setClassroomErrors({});
       setIsEditDialogOpen(false);
-      showToast('success', `Classroom renamed to "${newClassroomName.trim()}" successfully`);
+      showToast('success', `Classroom renamed to "${newName}" successfully`);
     } catch (error) {
       showToast('error', 'Failed to rename classroom. Please try again.');
     }
@@ -165,6 +198,9 @@ export function ClassroomManagement() {
   const openEditDialog = (classroom: Classroom) => {
     setSelectedClassroom(classroom);
     setNewClassroomName(classroom.name);
+    const existing = periods[classroom.name];
+    setNewTerm(existing?.term ?? TERM_OPTIONS[0].value);
+    setNewAcademicYear(existing?.academicYear ?? YEAR_OPTIONS[1].value);
     setClassroomErrors({});
     setIsEditDialogOpen(true);
   };
@@ -254,6 +290,12 @@ export function ClassroomManagement() {
                             <Users className="h-3 w-3 flex-shrink-0" />
                             <span className="truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</span>
                           </p>
+                          {periods[classroom.name] && (
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                              <Calendar className="h-3 w-3 flex-shrink-0" />
+                              <span>{periods[classroom.name].term} &bull; {periods[classroom.name].academicYear.replace('-', '–')}</span>
+                            </p>
+                          )}
                         </div>
                       </div>
                       <DropdownMenu>
@@ -308,10 +350,11 @@ export function ClassroomManagement() {
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
-                { header: 'Classroom', className: 'w-1/3' },
-                { header: 'Students', className: 'w-1/6' },
-                { header: 'Assigned Forms', className: 'w-1/3' },
-                { header: 'Actions', className: 'w-1/6 text-right' },
+                { header: 'Classroom', className: 'w-1/4' },
+                { header: 'Academic Period', className: 'w-1/4' },
+                { header: 'Students', className: 'w-1/8' },
+                { header: 'Assigned Forms', className: 'w-1/4' },
+                { header: 'Actions', className: 'w-1/8 text-right' },
               ]}
               rows={paginatedClassrooms.map((classroom, index) => (
                 <tr key={classroom.id || `classroom-${index}`} className="border-b border-gray-100">
@@ -325,6 +368,19 @@ export function ClassroomManagement() {
                         <div className="text-xs text-gray-500 truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</div>
                       </div>
                     </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    {periods[classroom.name] ? (
+                      <div className="flex flex-col gap-1">
+                        <Badge variant="secondary" className="w-fit text-xs gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {periods[classroom.name].term}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">{periods[classroom.name].academicYear.replace('-', '–')}</span>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-gray-400">Not set</span>
+                    )}
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex items-center text-gray-700">
@@ -370,30 +426,54 @@ export function ClassroomManagement() {
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-3 sm:py-4">
-            <label className="block text-sm font-medium mb-2">
-              Classroom Name
-            </label>
-            <Input 
-              value={newClassroomName} 
-              onChange={e => {
-                setNewClassroomName(e.target.value);
-                if (classroomErrors.newClassroomName) {
-                  setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
-                }
-              }} 
-              placeholder="Enter classroom name" 
-              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`} 
-              autoFocus 
-            />
-            {classroomErrors.newClassroomName && (
-              <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
-            )}
+          <div className="py-3 sm:py-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Classroom Name</label>
+              <Input
+                value={newClassroomName}
+                onChange={e => {
+                  setNewClassroomName(e.target.value);
+                  if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+                }}
+                placeholder="Enter classroom name"
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+                autoFocus
+              />
+              {classroomErrors.newClassroomName && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-2">Term</label>
+                <Select value={newTerm} onValueChange={setNewTerm}>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TERM_OPTIONS.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Academic Year</label>
+                <Select value={newAcademicYear} onValueChange={setNewAcademicYear}>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEAR_OPTIONS.map(y => (
+                      <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">Cancel</Button>
             <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
               Add Classroom
             </AsyncButton>
@@ -406,30 +486,54 @@ export function ClassroomManagement() {
           <DialogHeader>
             <DialogTitle className="text-lg sm:text-xl">Rename Classroom</DialogTitle>
           </DialogHeader>
-          <div className="py-3 sm:py-4">
-            <label className="block text-sm font-medium mb-2">
-              Classroom Name
-            </label>
-            <Input 
-              value={newClassroomName} 
-              onChange={e => {
-                setNewClassroomName(e.target.value);
-                if (classroomErrors.newClassroomName) {
-                  setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
-                }
-              }} 
-              placeholder="Enter new classroom name" 
-              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`} 
-              autoFocus 
-            />
-            {classroomErrors.newClassroomName && (
-              <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
-            )}
+          <div className="py-3 sm:py-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Classroom Name</label>
+              <Input
+                value={newClassroomName}
+                onChange={e => {
+                  setNewClassroomName(e.target.value);
+                  if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+                }}
+                placeholder="Enter new classroom name"
+                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+                autoFocus
+              />
+              {classroomErrors.newClassroomName && (
+                <p className="text-xs sm:text-sm text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-2">Term</label>
+                <Select value={newTerm} onValueChange={setNewTerm}>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TERM_OPTIONS.map(t => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Academic Year</label>
+                <Select value={newAcademicYear} onValueChange={setNewAcademicYear}>
+                  <SelectTrigger className="h-10 sm:h-11 text-sm">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEAR_OPTIONS.map(y => (
+                      <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">Cancel</Button>
             <AsyncButton onClick={handleEditClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
               Save Changes
             </AsyncButton>
