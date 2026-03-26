@@ -73,6 +73,7 @@ export function AdminLayout({
     path: '/admin/academic-periods'
   }, {
     icon: <Users className="w-5 h-5" />,
+    label: 'Parents',
     path: '/admin/parents'
   }];
 
