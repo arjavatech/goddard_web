@@ -130,7 +130,19 @@ export function ParentManagement() {
 
         // Helper function to map parent details to Parent type
         const mapParentDetails = (detail: any): Parent => {
-          console.log('Mapping parent detail:', { parentId: detail.parentId, email: detail.email, originalDetail: detail });
+          console.log('Mapping parent detail:', { 
+            parentId: detail.parentId, 
+            parent_id: detail.parent_id,
+            email: detail.email, 
+            originalDetail: detail 
+          });
+          
+          // Ensure we get a valid parent ID - prioritize parentId (camelCase) since that's what the API returns
+          const parentId = detail.parentId || detail.parent_id || '';
+          if (!parentId) {
+            console.warn('No parent ID found in detail:', detail);
+          }
+          
           const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
           const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
           const children: Child[] = detail.children?.map((child: any) => {
@@ -147,8 +159,9 @@ export function ParentManagement() {
             };
           }) || [];
           const hasCompletedForms = detail.children?.some((child: any) => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
-          return {
-            id: detail.parentId,
+          
+          const mappedParent = {
+            id: parentId,
             firstName,
             lastName,
             email: detail.email,
@@ -156,6 +169,9 @@ export function ParentManagement() {
             status: hasCompletedForms ? 'Active' : 'Archive',
             signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
           } satisfies Parent;
+          
+          console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
+          return mappedParent;
         };
 
         // Map active parents
@@ -404,6 +420,15 @@ export function ParentManagement() {
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
     console.log('Resending confirmation for parentId:', parentId);
     console.log('Parent email:', parentEmail);
+    
+    // Validate parent ID format - should be a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!parentId || !uuidRegex.test(parentId)) {
+      console.error('Invalid parent ID detected:', parentId);
+      showToast('error', 'Invalid parent ID. Please refresh the page and try again.');
+      return;
+    }
+    
     console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
     setResendingParentId(parentId);
     try {
@@ -419,8 +444,8 @@ export function ParentManagement() {
         const status = error.status || error.response?.status;
         if (status === 404) {
           errorMessage = 'Parent not found. Please refresh the page and try again.';
-        } else if (status === 400) {
-          errorMessage = 'Invalid request. Please check the parent information.';
+        } else if (status === 400 || status === 422) {
+          errorMessage = 'Invalid parent ID. Please refresh the page and try again.';
         }
         
         showToast('error', errorMessage);
