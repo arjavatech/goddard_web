@@ -708,7 +708,7 @@ export function ParentManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label><br />
                   <SortDropdown
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}

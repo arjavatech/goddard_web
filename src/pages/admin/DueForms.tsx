@@ -370,7 +370,12 @@ export function DueForms() {
       // const user = await fetchUserContext();
       if (!schoolId) return;
 
-      const formsToRemind = dueForms.filter(f => formIds.includes(f.id));
+      const formsToRemind = dueForms.filter(f => formIds.includes(f.id) && f.status !== 'completed');
+
+      if (formsToRemind.length === 0) {
+        showToast('error', 'No reminders to send — all selected forms are already completed');
+        return;
+      }
       
       const reminders = formsToRemind.map(form => ({
         parent_email: form.parentEmail,
@@ -394,7 +399,7 @@ export function DueForms() {
       });
 
       if (response.ok) {
-        showToast('success', `Reminder emails sent to ${formIds.length} parent(s)`);
+        showToast('success', `Reminder emails sent to ${formsToRemind.length} parent(s)`);
         setSelectedForms([]);
       } else {
         showToast('error', 'Failed to send reminder emails');
