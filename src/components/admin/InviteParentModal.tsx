@@ -7,19 +7,6 @@ import { AsyncButton } from '../ui/async-button';
 import { ValidatedEmailInput } from '../ui/validated-email-input';
 import { Mail } from 'lucide-react';
 
-const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = [CURRENT_YEAR - 1, CURRENT_YEAR, CURRENT_YEAR + 1].map(y => ({
-  value: `${y}-${y + 1}`,
-  label: `${y}–${y + 1}`,
-}));
-
-const TERM_OPTIONS = [
-  { value: 'Jan–Mar', label: 'Term 1 — Jan–Mar' },
-  { value: 'Apr–Jun', label: 'Term 2 — Apr–Jun' },
-  { value: 'Jul–Sep', label: 'Term 3 — Jul–Sep' },
-  { value: 'Oct–Dec', label: 'Term 4 — Oct–Dec' },
-];
-
 interface InviteParentModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -50,10 +37,6 @@ interface InviteParentModalProps {
   setChildGender: (value: string) => void;
   childClassroom: string;
   setChildClassroom: (value: string) => void;
-  childAcademicTerm: string;
-  setChildAcademicTerm: (value: string) => void;
-  childAcademicYear: string;
-  setChildAcademicYear: (value: string) => void;
   classrooms: { id: string; name: string }[];
   inviteFormErrors: { [key: string]: string };
   setInviteFormErrors: (errors: { [key: string]: string } | ((prev: { [key: string]: string }) => { [key: string]: string })) => void;
@@ -90,10 +73,6 @@ export function InviteParentModal({
   setChildGender,
   childClassroom,
   setChildClassroom,
-  childAcademicTerm,
-  setChildAcademicTerm,
-  childAcademicYear,
-  setChildAcademicYear,
   classrooms,
   inviteFormErrors,
   setInviteFormErrors,
@@ -276,32 +255,6 @@ export function InviteParentModal({
                   </SelectContent>
                 </Select>
                 {inviteFormErrors.childClassroom && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>}
-              </div>
-            </div>
-
-            {/* Academic Period */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Academic Term</label>
-                <Select value={childAcademicTerm} onValueChange={setChildAcademicTerm}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select term" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TERM_OPTIONS.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Academic Year</label>
-                <Select value={childAcademicYear} onValueChange={setChildAcademicYear}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YEAR_OPTIONS.map(y => <SelectItem key={y.value} value={y.value}>{y.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
               </div>
             </div>
           </div>

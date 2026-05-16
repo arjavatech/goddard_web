@@ -68,10 +68,6 @@ export function AdminLayout({
     label: 'Due Forms',
     path: '/admin/forms/due'
   }, {
-    icon: <Calendar className="w-5 h-5" />,
-    label: 'Academic Periods',
-    path: '/admin/academic-periods'
-  }, {
     icon: <Users className="w-5 h-5" />,
     label: 'Parents',
     path: '/admin/parents'

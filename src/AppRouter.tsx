@@ -21,7 +21,6 @@ import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
-import { AcademicPeriodManagement } from './pages/admin/AcademicPeriodManagement';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
@@ -66,7 +65,6 @@ export function AppRouter() {
             <Route path="/admin/admin-management" element={<AdminManagement />} />
             <Route path="/admin/users" element={<UserManagement />} />
             <Route path="/admin/help" element={<HelpCenter />} />
-            <Route path="/admin/academic-periods" element={<AcademicPeriodManagement />} />
           </Route>
 
           {/* SuperAdmin Routes */}

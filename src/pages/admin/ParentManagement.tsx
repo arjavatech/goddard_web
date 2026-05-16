@@ -94,10 +94,6 @@ export function ParentManagement() {
   const [childDob, setChildDob] = useState('');
   const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
-  const [childAcademicTerm, setChildAcademicTerm] = useState('');
-  const [childAcademicYear, setChildAcademicYear] = useState('');
-  const [newChildAcademicTerm, setNewChildAcademicTerm] = useState('');
-  const [newChildAcademicYear, setNewChildAcademicYear] = useState('');
   const [newChildFirstName, setNewChildFirstName] = useState('');
   const [newChildLastName, setNewChildLastName] = useState('');
   const [newChildDob, setNewChildDob] = useState('');
@@ -403,8 +399,6 @@ export function ParentManagement() {
     setChildDob('');
     setChildGender('');
     setChildClassroom('');
-    setChildAcademicTerm('');
-    setChildAcademicYear('');
     setInviteFormErrors({});
   };
   const resetAddChildForm = () => {
@@ -413,8 +407,6 @@ export function ParentManagement() {
     setNewChildDob('');
     setNewChildGender('');
     setNewChildClassroom('');
-    setNewChildAcademicTerm('');
-    setNewChildAcademicYear('');
     setAddChildFormErrors({});
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
@@ -1012,10 +1004,6 @@ export function ParentManagement() {
         setChildGender={setChildGender}
         childClassroom={childClassroom}
         setChildClassroom={setChildClassroom}
-        childAcademicTerm={childAcademicTerm}
-        setChildAcademicTerm={setChildAcademicTerm}
-        childAcademicYear={childAcademicYear}
-        setChildAcademicYear={setChildAcademicYear}
         classrooms={classrooms}
         inviteFormErrors={inviteFormErrors}
         setInviteFormErrors={setInviteFormErrors}
@@ -1138,31 +1126,6 @@ export function ParentManagement() {
               {addChildFormErrors.newChildClassroom && (
                 <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildClassroom}</p>
               )}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-2">Academic Term</label>
-                <Select value={newChildAcademicTerm} onValueChange={setNewChildAcademicTerm}>
-                  <SelectTrigger><SelectValue placeholder="Select term" /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Jan–Mar">Term 1 — Jan–Mar</SelectItem>
-                    <SelectItem value="Apr–Jun">Term 2 — Apr–Jun</SelectItem>
-                    <SelectItem value="Jul–Sep">Term 3 — Jul–Sep</SelectItem>
-                    <SelectItem value="Oct–Dec">Term 4 — Oct–Dec</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">Academic Year</label>
-                <Select value={newChildAcademicYear} onValueChange={setNewChildAcademicYear}>
-                  <SelectTrigger><SelectValue placeholder="Select year" /></SelectTrigger>
-                  <SelectContent>
-                    {[new Date().getFullYear()-1, new Date().getFullYear(), new Date().getFullYear()+1].map(y => (
-                      <SelectItem key={y} value={`${y}-${y+1}`}>{y}–{y+1}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
           </div>
           <DialogFooter>
