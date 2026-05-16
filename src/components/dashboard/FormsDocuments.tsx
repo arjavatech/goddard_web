@@ -208,8 +208,8 @@ export function FormsDocuments({
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [countdown, setCountdown] = useState(4);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
@@ -478,7 +478,7 @@ export function FormsDocuments({
   // Handle form completion detection and auto-redirect
   useEffect(() => {
     if (selectedForm && !isFrameLoading) {
-      let urlCheckInterval: NodeJS.Timeout;
+      let urlCheckInterval: ReturnType<typeof setInterval>;
       
       // Function to start thank you countdown
       const startThankYouCountdown = () => {
