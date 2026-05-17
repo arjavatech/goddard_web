@@ -57,8 +57,8 @@ export function ChildrenOverview({
                       {child.enrollmentProgress}% Complete
                     </span>
                   </div>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Age: {child.age} • DOB: {child.dob} • Classroom - {child.classroom}
+                  <p className="text-xs text-muted-foreground mt-1 break-words">
+                    Age: {child.age} • DOB: {child.dob}<br className="sm:hidden" /><span className="hidden sm:inline"> • </span>Classroom - {child.classroom}
                   </p>
                   <div className="mt-2">
                     <Progress value={child.enrollmentProgress} className="h-1.5 sm:h-2" />

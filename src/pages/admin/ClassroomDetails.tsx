@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { AsyncButton } from '../../components/ui/async-button';
-import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock, Calendar, Mail } from 'lucide-react';
+import { ChevronLeft, FileText, Search, Users, UserPlus, AlertCircle, CheckCircle, Clock} from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Link, useParams } from 'react-router-dom';
@@ -11,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { usePagination } from '../../hooks/usePagination';
-import { fetchUserContext } from '../../services/api/user';
-import { fetchClassrooms, fetchClassEnrollmentStats, fetchSchoolEnrollments, renameClassroom, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
+import { fetchClassrooms, fetchClassEnrollmentStats, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
+import { Loading } from '../../components/ui/loading';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { useToast } from '../../contexts/ToastContext';
 interface Form {
@@ -37,13 +36,6 @@ interface Student {
   };
 }
 
-function inferFormStatus(value: string | null | undefined): Form['status'] {
-  const normalized = (value ?? '').toLowerCase();
-  if (normalized.includes('default')) return 'Default';
-  if (normalized.includes('inactive')) return 'Inactive';
-  if (normalized.includes('archive')) return 'Archive';
-  return 'Active';
-}
 function formsFromRecord(record: Record<string, string | null>): Form[] {
   return Object.entries(record).map(([formId, formName]) => ({
     id: formId,
@@ -87,12 +79,22 @@ export function ClassroomDetails() {
   const [childGender, setChildGender] = useState('');
   const [childClassroom, setChildClassroom] = useState('');
   const [allClassrooms, setAllClassrooms] = useState<{id: string; name: string}[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const { showToast } = useToast();
   
-  const showValidationToast = (message: string) => showToast('error', message);
-  const hideValidationToast = () => {};
+  const schoolId = localStorage.getItem('schoolId');
+
+  const loadClassroomsIfNeeded = async () => {
+    if (classroomsLoaded || !schoolId) return;
+    try {
+      const classrooms = await fetchClassrooms(schoolId);
+      setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
+      setClassroomsLoaded(true);
+    } catch {}
+  };
+
 
   useEffect(() => {
     let isMounted = true;
@@ -104,8 +106,7 @@ export function ClassroomDetails() {
         setLoading(true);
         setError(null);
         
-        const user = await fetchUserContext();
-        if (!user.schoolId) {
+        if (!schoolId) {
           if (isMounted) {
             setError('No school ID found');
             setLoading(false);
@@ -115,14 +116,15 @@ export function ClassroomDetails() {
 
         // Fetch class-based enrollments using the new API
         const [classrooms, classStats, classEnrollments] = await Promise.all([
-          fetchClassrooms(user.schoolId).catch(() => []),
-          fetchClassEnrollmentStats(user.schoolId).catch(() => []),
-          fetchClassBasedEnrollments(user.schoolId, classroomId).catch(() => [])
+          fetchClassrooms(schoolId).catch(() => []),
+          fetchClassEnrollmentStats(schoolId).catch(() => []),
+          fetchClassBasedEnrollments(schoolId, classroomId).catch(() => [])
         ]);
         
-        // Set all classrooms for the dropdown
-        if (isMounted) {
+        // Cache classrooms for the invite modal (lazy load guard)
+        if (isMounted && classrooms.length > 0) {
           setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
+          setClassroomsLoaded(true);
           setChildClassroom(classroomId || '');
         }
 
@@ -281,11 +283,10 @@ export function ClassroomDetails() {
     if (!validateInviteForm()) return;
     if (!parentFirstName || !parentLastName || !parentEmail || !childFirstName || !childLastName || !childDob || !childGender || !childClassroom) return;
 
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
+    if (!schoolId) throw new Error('School context not found');
 
     try {
-      await inviteParent(user.schoolId, {
+      await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,
         parentEmail,
@@ -300,8 +301,7 @@ export function ClassroomDetails() {
         secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
       });
       
-      // Success - update UI and show success notification
-      const targetClassroom = allClassrooms.find(c => c.id === childClassroom);
+  
       const newStudent: Student = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         firstName: childFirstName,
@@ -345,14 +345,7 @@ export function ClassroomDetails() {
   };
 
   if (loading) {
-    return <AdminLayout>
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-2"></div>
-          <p className="text-gray-500">Loading classroom details...</p>
-        </div>
-      </div>
-    </AdminLayout>;
+    return <AdminLayout><Loading message="Loading classroom details..." /></AdminLayout>;
   }
 
   if (error) {
@@ -421,6 +414,7 @@ export function ClassroomDetails() {
               className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none"
               onClick={() => {
                 setChildClassroom(classroomId || '');
+                loadClassroomsIfNeeded();
                 setIsInviteDialogOpen(true);
               }}
             >

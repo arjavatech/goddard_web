@@ -40,7 +40,6 @@ function FormCard({
   onPrint,
   isLoading,
   formId,
-  assignedAt,
   dueDate
 }: FormCardProps) {
   const isApproved = status === 'Approved';
@@ -209,8 +208,8 @@ export function FormsDocuments({
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [countdown, setCountdown] = useState(4);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const thankYouTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
@@ -366,7 +365,6 @@ export function FormsDocuments({
         formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
       }
     }
-    
     console.log('Final form URL:', formUrl);
 
     setSelectedForm({
@@ -480,7 +478,7 @@ export function FormsDocuments({
   // Handle form completion detection and auto-redirect
   useEffect(() => {
     if (selectedForm && !isFrameLoading) {
-      let urlCheckInterval: NodeJS.Timeout;
+      let urlCheckInterval: ReturnType<typeof setInterval>;
       
       // Function to start thank you countdown
       const startThankYouCountdown = () => {
@@ -819,7 +817,7 @@ export function FormsDocuments({
                   No forms available for {child.childName} yet.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   {getFormsForTab(child.childId).map(form => (
                     
                     <FormCard

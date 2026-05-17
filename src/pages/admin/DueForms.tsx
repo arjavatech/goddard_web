@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -7,12 +7,12 @@ import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download } from 'lucide-react';
-import { fetchUserContext } from '../../services/api/user';
-import { fetchDueForms, DueForm } from '../../services/api/admin';
+import { DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { PageLoader } from '../../components/ui/page-loader';
 
 
 export function DueForms() {
@@ -27,6 +27,8 @@ export function DueForms() {
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
     if (currentValues.includes(value)) {
       setter(currentValues.filter(v => v !== value));
@@ -40,7 +42,7 @@ export function DueForms() {
     onValueChange,
     options,
     placeholder,
-    label
+    
   }: {
     value: string[],
     onValueChange: (values: string[]) => void,
@@ -98,11 +100,11 @@ export function DueForms() {
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
         
         // Use new enrollments API
-        const response = await fetch(`${apiBaseUrl}/enrollments?school_id=${user.schoolId}`, {
+        const response = await fetch(`${apiBaseUrl}/enrollments?school_id=${schoolId}`, {
           method: 'GET',
           headers: {
             'X-API-Key': 'test-owner-key-2024',
@@ -263,7 +265,6 @@ export function DueForms() {
     totalPages,
     paginatedData: paginatedForms,
     itemsPerPage,
-    isMobile,
     setCurrentPage
   } = usePagination({ data: filteredForms });
 
@@ -366,10 +367,15 @@ export function DueForms() {
 
   const handleSendReminder = async (formIds: string[]) => {
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      // const user = await fetchUserContext();
+      if (!schoolId) return;
 
-      const formsToRemind = dueForms.filter(f => formIds.includes(f.id));
+      const formsToRemind = dueForms.filter(f => formIds.includes(f.id) && f.status !== 'completed');
+
+      if (formsToRemind.length === 0) {
+        showToast('error', 'No reminders to send — all selected forms are already completed');
+        return;
+      }
       
       const reminders = formsToRemind.map(form => ({
         parent_email: form.parentEmail,
@@ -387,13 +393,13 @@ export function DueForms() {
           'X-API-Key': 'test-owner-key-2024'
         },
         body: JSON.stringify({
-          school_id: user.schoolId,
+          school_id: schoolId,
           reminders
         })
       });
 
       if (response.ok) {
-        showToast('success', `Reminder emails sent to ${formIds.length} parent(s)`);
+        showToast('success', `Reminder emails sent to ${formsToRemind.length} parent(s)`);
         setSelectedForms([]);
       } else {
         showToast('error', 'Failed to send reminder emails');
@@ -460,6 +466,10 @@ export function DueForms() {
     completed: dueForms.filter(f => f.status === 'completed').length
   };
 
+  if (loading) {
+    return <PageLoader message="Loading due forms tracking..." Layout={AdminLayout} />;
+  }
+
   return (
     <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
@@ -473,7 +483,7 @@ export function DueForms() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <Card className="glass-card">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-between">
@@ -653,150 +663,212 @@ export function DueForms() {
 
         {/* Forms Table */}
         <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Due Forms ({filteredForms.length})</CardTitle>
-            <div className="flex items-center gap-2">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
+            <CardTitle className="text-base sm:text-lg">Due Forms ({filteredForms.length})</CardTitle>
+            <div className="flex flex-wrap items-center gap-2">
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-amazon-teal hover:bg-amazon-teal/90 text-white">
-                      <Download className="h-4 w-4 mr-2" />
+                    <Button size="sm" className="h-8 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                      <Download className="h-4 w-4 mr-1.5" />
                       Export
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={exportToCSV}>
-                      Export as CSV
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={exportToPDF}>
-                      Export as PDF
-                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <div title="No records to export">
-                  <Button size="sm" disabled>
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </div>
-              )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="bg-amazon-teal hover:bg-amazon-teal/90" size="sm">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Remind
+                <Button size="sm" className="h-8" disabled>
+                  <Download className="h-4 w-4 mr-1.5" />
+                  Export
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {selectedForms.length > 0 && (
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button className="h-8 bg-amazon-teal hover:bg-amazon-teal/90" size="sm">
+                    <Mail className="h-4 w-4 mr-1.5" />
+                    Remind
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {selectedForms.length > 0 && (
+                    <DropdownMenuItem onClick={() => handleSendReminder(selectedForms)}>
+                      Remind Selected ({selectedForms.length})
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
-                    onClick={() => handleSendReminder(selectedForms)}
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'pending').map(f => f.id))}
+                    disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
                   >
-                    Remind Selected ({selectedForms.length})
+                    Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
                   </DropdownMenuItem>
-                )}
-                <DropdownMenuItem
-                  onClick={() => {
-                    const pendingForms = filteredForms.filter(f => f.status === 'pending').map(f => f.id);
-                    handleSendReminder(pendingForms);
-                  }}
-                  disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
-                >
-                  Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    const submittedForms = filteredForms.filter(f => f.status === 'submitted').map(f => f.id);
-                    handleSendReminder(submittedForms);
-                  }}
-                  disabled={filteredForms.filter(f => f.status === 'submitted').length === 0}
-                >
-                  Remind Pending Approval ({filteredForms.filter(f => f.status === 'submitted').length})
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    const overdueForms = filteredForms.filter(f => f.status === 'overdue').map(f => f.id);
-                    handleSendReminder(overdueForms);
-                  }}
-                  disabled={filteredForms.filter(f => f.status === 'overdue').length === 0}
-                >
-                  Remind Overdue ({filteredForms.filter(f => f.status === 'overdue').length})
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'submitted').map(f => f.id))}
+                    disabled={filteredForms.filter(f => f.status === 'submitted').length === 0}
+                  >
+                    Remind Pending Approval ({filteredForms.filter(f => f.status === 'submitted').length})
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id))}
+                    disabled={filteredForms.filter(f => f.status === 'overdue').length === 0}
+                  >
+                    Remind Overdue ({filteredForms.filter(f => f.status === 'overdue').length})
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            {loading ? (
-              <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">Loading forms...</p>
-              </div>
-            ) : filteredForms.length > 0 ? (
+            {filteredForms.length > 0 ? (
               <>
-                {/* Desktop Table View */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="border-b">
-                      <tr>
-                        <th className="text-left p-2 md:p-4">
-                          {filteredForms.length > 0 && (
+                {/* Card View — mobile only */}
+                <div className="md:hidden p-3 space-y-3">
+                  <div className="flex items-center gap-2 pb-2 border-b">
+                    <Checkbox
+                      checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <span className="text-sm font-medium">Select All</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {paginatedForms.map(form => (
+                      <div key={form.id} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
                             <Checkbox
-                              checked={selectedForms.length === filteredForms.length}
-                              onCheckedChange={handleSelectAll}
+                              checked={selectedForms.includes(form.id)}
+                              onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
+                              className="flex-shrink-0"
                             />
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
+                              {form.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium text-sm truncate">{form.formName}</p>
+                              <p className="text-xs text-muted-foreground truncate">{form.studentName} &bull; {form.classroomName}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5 text-xs">
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Parent:</span>
+                            <span className="font-medium truncate max-w-[60%] text-right">{form.parentName.split(' & ')[0]}</span>
+                          </div>
+                          {form.parentName.includes(' & ') && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Secondary:</span>
+                              <span className="font-medium truncate max-w-[60%] text-right">{form.parentName.split(' & ')[1]}</span>
+                            </div>
                           )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Due:</span>
+                            <span className={`font-medium ${
+                              isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600' : form.dueDate ? '' : 'text-muted-foreground'
+                            }`}>{formatDate(form.dueDate)}</span>
+                          </div>
+
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Status:</span>
+                            <span className="font-medium truncate max-w-[60%] text-right">{getStatusBadge(form.status)}</span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleSendReminder([form.id])}
+                            disabled={form.status === 'completed'}
+                            className="w-full h-7 text-xs"
+                          >
+                            <Mail className="h-3 w-3 mr-1" />
+                            Send Reminder
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <MobilePagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
+
+                {/* Table — tablet & desktop */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 bg-muted/30">
+                        <th className="text-center py-3 px-2 font-medium text-gray-600 w-10">
+                          <Checkbox
+                            checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
+                            onCheckedChange={handleSelectAll}
+                          />
                         </th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Form</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Student</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Classroom</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Parent</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Due Date</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Status</th>
-                        <th className="text-left p-2 md:p-4 font-semibold text-base text-foreground">Actions</th>
+                        <th className="text-left py-3 px-3 font-medium text-gray-600">Form</th>
+                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden sm:table-cell">Student</th>
+                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden md:table-cell">Classroom</th>
+                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden md:table-cell">Parent</th>
+                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden lg:table-cell">Due Date</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
+                        <th className="text-center py-3 px-2 font-medium text-gray-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedForms.map(form => (
-                        <tr key={form.id} className="border-b hover:bg-muted/50">
-                          <td className="p-2 md:p-4">
+                        <tr key={form.id} className="border-b border-gray-100 hover:bg-muted/50">
+                          <td className="py-3 px-2 text-center">
                             <Checkbox
                               checked={selectedForms.includes(form.id)}
                               onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
                             />
                           </td>
-                          <td className="p-2 md:p-4 font-medium text-xs md:text-sm">{form.formName}</td>
-                          <td className="p-2 md:p-4 text-xs md:text-sm">{form.studentName}</td>
-                          <td className="p-2 md:p-4 text-xs md:text-sm">{form.classroomName}</td>
-                          <td className="p-2 md:p-4 text-xs md:text-sm">
-                            <div>
-                              <div className="font-medium">{form.parentName.split(' & ')[0]}</div>
-                              <div className="text-xs text-muted-foreground">{form.parentEmail.split(', ')[0]}</div>
-                              {form.parentName.includes(' & ') && (
-                                <div className="mt-1">
-                                  <div className="font-medium">{form.parentName.split(' & ')[1]}</div>
-                                  <div className="text-xs text-muted-foreground">{form.parentEmail.split(', ')[1] || ''}</div>
-                                </div>
-                              )}
+                          <td className="py-3 px-3 font-medium text-sm max-w-0">
+                            <div className="truncate">{form.formName}</div>
+                            <div className="text-xs text-muted-foreground truncate sm:hidden">{form.studentName}</div>
+                            <div className="text-xs text-muted-foreground truncate md:hidden">
+                              {form.parentName.split(' & ')[0]}
                             </div>
-                          </td>
-                          <td className="p-2 md:p-4 text-xs md:text-sm">
-                            <div className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-medium' : form.dueDate ? '' : 'text-muted-foreground'}>
+                            <div className="text-xs text-muted-foreground truncate lg:hidden sm:hidden">
                               {formatDate(form.dueDate)}
                             </div>
                           </td>
-                          <td className="p-2 md:p-4">{getStatusBadge(form.status)}</td>
-                          <td className="p-2 md:p-4">
+                          <td className="py-3 px-2 text-sm max-w-0 hidden sm:table-cell">
+                            <div className="truncate">{form.studentName}</div>
+                          </td>
+                          <td className="py-3 px-2 text-sm max-w-0 hidden md:table-cell">
+                            <div className="truncate">{form.classroomName}</div>
+                          </td>
+                          <td className="py-3 px-2 text-sm max-w-0 hidden md:table-cell">
+                            <div className="font-medium truncate">{form.parentName.split(' & ')[0]}</div>
+                            <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[0]}</div>
+                            {form.parentName.includes(' & ') && (
+                              <div className="mt-1">
+                                <div className="font-medium truncate">{form.parentName.split(' & ')[1]}</div>
+                                <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[1] || ''}</div>
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-2 text-sm whitespace-nowrap hidden lg:table-cell">
+                            <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-medium' : form.dueDate ? '' : 'text-muted-foreground'}>
+                              {formatDate(form.dueDate)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-center">{getStatusBadge(form.status)}</td>
+                          <td className="py-3 px-2 text-center">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed'}
-                              className="text-xs px-2 py-1"
+                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap"
                             >
-                              <Mail className="h-3 w-3 mr-1" />
-                              <span className="hidden lg:inline">Remind</span>
+                              <Mail className="h-3 w-3" />
+                              <span className="hidden sm:inline">Remind</span>
                             </Button>
                           </td>
                         </tr>
@@ -814,83 +886,9 @@ export function DueForms() {
                   className="hidden md:flex"
                 />
 
-                {/* Mobile Card View */}
-                <div className="md:hidden space-y-3 p-3">
-                  <div className="flex items-center gap-2 pb-2 border-b">
-                    <span className="text-sm font-medium">Select All</span>
-                    <Checkbox
-                      checked={selectedForms.length === filteredForms.length}
-                      onCheckedChange={handleSelectAll}
-                    />
-                  </div>
-                  {paginatedForms.map(form => (
-                    <div key={form.id} className="border rounded-lg p-3 space-y-3 bg-card">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2 flex-1 min-w-0">
-                          <Checkbox
-                            checked={selectedForms.includes(form.id)}
-                            onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
-                            className="mt-0.5 flex-shrink-0"
-                          />
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-medium text-sm truncate">{form.formName}</h3>
-                            <p className="text-xs text-muted-foreground">Student: {form.studentName}</p>
-                            <p className="text-xs text-muted-foreground">Classroom: {form.classroomName}</p>
-                          </div>
-                        </div>
-                        <div className="flex-shrink-0">
-                          {getStatusBadge(form.status)}
-                        </div>
-                      </div>
+               
 
-                      <div className="space-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Parent(s):</p>
-                          <div className="text-sm space-y-1">
-                            <div>
-                              <div className="font-medium text-xs">{form.parentName.split(' & ')[0]}</div>
-                              <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[0]}</div>
-                            </div>
-                            {form.parentName.includes(' & ') && (
-                              <div>
-                                <div className="font-medium text-xs">{form.parentName.split(' & ')[1]}</div>
-                                <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[1] || ''}</div>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t">
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs text-muted-foreground">Due:</p>
-                            <p className={`text-xs font-medium truncate ${
-                              isOverdue(form.dueDate) && form.status !== 'completed'
-                                ? 'text-red-600'
-                                : form.dueDate ? 'text-foreground' : 'text-muted-foreground'
-                            }`}>
-                              {formatDate(form.dueDate)}
-                            </p>
-                          </div>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleSendReminder([form.id])}
-                            disabled={form.status === 'completed'}
-                            className="text-xs px-2 py-1 h-7 flex-shrink-0 ml-2"
-                          >
-                            <Mail className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-
-                  <MobilePagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                  />
-                </div>
+            
               </>
             ) : (
               <div className="p-8 text-center">

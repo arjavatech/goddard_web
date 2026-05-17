@@ -11,11 +11,11 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchUserContext } from '../../services/api/user';
 import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+import { Loading } from '../../components/ui/loading';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -100,16 +100,19 @@ export function ParentDetails() {
   const [loadingAction, setLoadingAction] = useState<{formId: string, action: 'download' | 'print'} | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const { showToast } = useToast();
+
+
+  const schoolId = localStorage.getItem('schoolId');
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setIsLoading(true);
         setError(null);
-        const user = await fetchUserContext();
-        if (!user.schoolId || !parentId) return;
+        // const user = await fetchUserContext();
+        if (!schoolId || !parentId) return;
         // Always fetch from parent details API which has the forms data
-        const parentDetailsResponse = await fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
+        const parentDetailsResponse = await fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
         // Search in both active and inactive parents
         let parentRecord = parentDetailsResponse.activeParents.find(detail => detail.parentId === parentId)
           || parentDetailsResponse.inactiveParents.find(detail => detail.parentId === parentId)
@@ -140,7 +143,7 @@ export function ParentDetails() {
           }
           return;
         }
-        const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(user.schoolId).catch(() => []), fetchClassrooms(user.schoolId).catch(() => []), fetchFormTemplates(user.schoolId).catch(() => []), fetchEnrollmentChildren(user.schoolId).catch(() => [])]);
+        const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(schoolId).catch(() => []), fetchClassrooms(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchEnrollmentChildren(schoolId).catch(() => [])]);
         if (!isMounted) return;
         const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
           id: cls.id,
@@ -458,14 +461,7 @@ export function ParentDetails() {
     setIsReviewDialogOpen(false);
   };
   if (isLoading) {
-    return <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading parent details...</p>
-          </div>
-        </div>
-      </AdminLayout>;
+    return <AdminLayout><Loading message="Loading parent details..." /></AdminLayout>;
   }
   if (!parent) {
     return <AdminLayout>

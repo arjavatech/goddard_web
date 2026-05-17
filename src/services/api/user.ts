@@ -26,6 +26,8 @@ export async function fetchUserContext(): Promise<UserContext> {
     url: '/users/me'
   }, userContextSchema);
 
+  localStorage.setItem('schoolId', data.school_id || data.schoolId || '');
+
   const result = {
     role: data.role,
     schoolId: data.school_id || data.schoolId || null,

@@ -1,6 +1,5 @@
 import { authedFetch, z } from './common';
-import { httpFetch } from './http';
-import { fetchUserContext } from './user';
+
 
 export type Classroom = {
   id: string;
@@ -83,48 +82,48 @@ export type StudentFormAssignment = {
   assignedAt: string | null;
   schoolId: string | null;
 };
-const classroomSchema = z.object({
-  classroom_id: z.string().optional(),
-  classroom_name: z.string().optional(),
-  total_children: z.number().optional()
-});
-const classEnrollmentSchema = z.object({
-  class_id: z.union([z.string(), z.number()]).optional(),
-  class_name: z.string().optional(),
-  count: z.number().int().nonnegative().optional(),
-  forms: z.record(z.string()).nullable().optional(),
-  default_forms: z.string().nullable().optional()
-});
-const parentDetailSchema = z.object({
-  parent_id: z.string(),
-  parent_email: z.string(),
-  parent_first_name: z.string().optional(),
-  parent_last_name: z.string().optional(),
-  children: z.array(z.object({
-    child_id: z.string(),
-    child_full_name: z.string(),
-    child_dob: z.string().optional(),
-    classroom_id: z.string().optional(),
-    classroom_name: z.string().optional(),
-    enrollment_id: z.string(),
-    forms: z.array(z.object({
-      form_id: z.string(),
-      form_name: z.string(),
-      status: z.string(),
-      is_required: z.boolean()
-    }))
-  }))
-});
-const schoolEnrollmentSchema = z.object({
-  child_id: z.union([z.string(), z.number()]).optional(),
-  child_first_name: z.string().optional(),
-  child_last_name: z.string().optional(),
-  class_name: z.string().nullable().optional(),
-  form_status: z.string().nullable().optional(),
-  primary_email: z.string().nullable().optional(),
-  additional_parent_email: z.string().nullable().optional(),
-  forms: z.record(z.string()).nullable().optional()
-});
+// const classroomSchema = z.object({
+//   classroom_id: z.string().optional(),
+//   classroom_name: z.string().optional(),
+//   total_children: z.number().optional()
+// });
+// const classEnrollmentSchema = z.object({
+//   class_id: z.union([z.string(), z.number()]).optional(),
+//   class_name: z.string().optional(),
+//   count: z.number().int().nonnegative().optional(),
+//   forms: z.record(z.string()).nullable().optional(),
+//   default_forms: z.string().nullable().optional()
+// });
+// const parentDetailSchema = z.object({
+//   parent_id: z.string(),
+//   parent_email: z.string(),
+//   parent_first_name: z.string().optional(),
+//   parent_last_name: z.string().optional(),
+//   children: z.array(z.object({
+//     child_id: z.string(),
+//     child_full_name: z.string(),
+//     child_dob: z.string().optional(),
+//     classroom_id: z.string().optional(),
+//     classroom_name: z.string().optional(),
+//     enrollment_id: z.string(),
+//     forms: z.array(z.object({
+//       form_id: z.string(),
+//       form_name: z.string(),
+//       status: z.string(),
+//       is_required: z.boolean()
+//     }))
+//   }))
+// });
+// const schoolEnrollmentSchema = z.object({
+//   child_id: z.union([z.string(), z.number()]).optional(),
+//   child_first_name: z.string().optional(),
+//   child_last_name: z.string().optional(),
+//   class_name: z.string().nullable().optional(),
+//   form_status: z.string().nullable().optional(),
+//   primary_email: z.string().nullable().optional(),
+//   additional_parent_email: z.string().nullable().optional(),
+//   forms: z.record(z.string()).nullable().optional()
+// });
 const studentFormAssignmentSchema = z.object({
   id: z.string(),
   child_id: z.string(),
@@ -432,7 +431,7 @@ export async function renameClassroom(classroomId: string, newName: string, scho
   // Find the classroom by name since we don't have proper UUIDs
   const classrooms = await fetchClassEnrollmentStats(schoolId);
   const classroom = classrooms.find(c => c.classId === classroomId || c.className === classroomId);
-  
+
   await authedFetch({
     method: 'PUT',
     url: '/classrooms',
@@ -455,7 +454,7 @@ export async function deleteForm(formId: string, schoolId: string): Promise<void
   // Check if formId is a valid UUID, if not generate one
   const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(formId);
   const validFormId = isValidUUID ? formId : crypto.randomUUID();
-  
+
   await authedFetch({
     method: 'DELETE',
     url: `/form-templates?form_id=${encodeURIComponent(validFormId)}&school_id=${encodeURIComponent(schoolId)}`
@@ -469,11 +468,11 @@ export async function createFormTemplate(formName: string, filloutFormId: string
     fillout_form_id: filloutFormId,
     due_date: dueDate
   };
-  
+
   if (status) {
     body.status = status;
   }
-  
+
   await authedFetch({
     method: 'POST',
     url: '/form-templates',
@@ -487,15 +486,15 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
     form_name: formName,
     fillout_form_id: filloutFormId
   };
-  
+
   if (status) {
     body.status = status;
   }
-  
+
   if (dueDate) {
     body.due_date = dueDate;
   }
-  
+
   await authedFetch({
     method: 'PUT',
     url: '/form-templates',
@@ -614,6 +613,38 @@ export async function assignFormToClassroom(schoolId: string, classroomId: strin
       form_template_id: formTemplateId
     }
   }, z.union([z.object({}), z.string()]));
+}
+
+/**
+ * Assigns a form to all students in a specific class using the new API endpoint
+ */
+export async function assignFormToClassStudents(
+  schoolId: string,
+  classId: string,
+  formTemplateId: string
+): Promise<void> {
+  const { getAuthToken } = await import('../auth/session');
+  const token = await getAuthToken();
+  const { apiBaseUrl } = await import('../../config/env');
+
+  const response = await fetch(`${apiBaseUrl}/student-form-assignments/assign-to-class`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': ' application/json',
+      'Authorization': `Bearer ${token}`,
+      'X-API-Key': 'test-owner-key-2024'
+
+    },
+    body: JSON.stringify({
+      school_id: schoolId,
+      class_id: classId,
+      form_template_id: formTemplateId
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to assign form to class students: ${response.statusText}`);
+  }
 }
 
 export async function deleteClassFormOverride(formTemplateId: string, classroomId: string): Promise<void> {
@@ -902,7 +933,7 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         school_id: z.string()
       }))
     }));
-    
+
     return data.data;
   } catch (error) {
     console.error('fetchAdminUsers error:', error);
@@ -1068,7 +1099,7 @@ export type DueForm = {
   parentName: string;
   parentEmail: string;
   dueDate: string | null;
-  status: 'pending' | 'completed' | 'overdue';
+  status: 'pending' | 'completed' | 'overdue' | 'submitted';
   assignedDate: string;
 };
 
@@ -1076,7 +1107,7 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
   // Remove 'form_' prefix if present
   const cleanFormId = form.formId?.startsWith('form_') ? form.formId.substring(5) : form.formId;
   const formTemplate = formTemplates.find(t => t.id === cleanFormId);
-  
+
   console.log('calculateFormDueDate:', {
     originalFormId: form.formId,
     cleanFormId,
@@ -1084,7 +1115,7 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
     templateDueDate: formTemplate?.due_date,
     assignedAt: form.assigned_at
   });
-  
+
   if (formTemplate?.due_date) {
     const dueDate = new Date(formTemplate.due_date);
     if (!isNaN(dueDate.getTime())) {
@@ -1092,7 +1123,7 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
       return dueDate.toLocaleDateString('en-US');
     }
   }
-  
+
   // Fallback to calculated date
   if (form.assigned_at) {
     const parts = form.assigned_at.split('-');
@@ -1107,7 +1138,7 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
       }
     }
   }
-  
+
   console.log('No due date found');
   return null;
 }
@@ -1115,10 +1146,10 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
 export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
   try {
     const { activeParents } = await fetchParentDetails(schoolId);
-    
+
     const dueFormsMap = new Map<string, DueForm>();
     const childParentsMap = new Map<string, any[]>();
-    
+
     // First, collect all parents for each child
     activeParents.forEach(parent => {
       parent.children?.forEach(child => {
@@ -1128,16 +1159,16 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
         childParentsMap.get(child.childId)?.push(parent);
       });
     });
-    
+
     // Then process forms with combined parent info
     activeParents.forEach(parent => {
       parent.children?.forEach(child => {
         child.forms.forEach(form => {
           const formKey = `${child.childId}-${form.formId}`;
-          
+
           if (!dueFormsMap.has(formKey)) {
             const today = new Date();
-            
+
             // Calculate due date (30 days from assigned date)
             let dueDateString = null;
             if (form.assigned_at) {
@@ -1153,22 +1184,22 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
               }
             }
             const dueDate = dueDateString ? new Date(dueDateString) : null;
-         
-            let status: 'pending' | 'completed' | 'overdue' = 'pending';
+
+            let status: 'pending' | 'completed' | 'overdue' | 'submitted' = 'pending';
             if (form.status === 'completed' || form.status === 'approved') {
               status = 'completed';
             } else if (dueDate && dueDate < today) {
               status = 'overdue';
             }
-            
+
             // Get all parents for this child
             const allParents = childParentsMap.get(child.childId) || [parent];
             const parentNames = allParents.map(p => `${p.firstName || ''} ${p.lastName || ''}`.trim());
             const parentEmails = allParents.map(p => p.email);
-            
+
             const combinedParentName = parentNames.join(' & ');
             const combinedParentEmail = parentEmails.join(', ');
-            
+
             dueFormsMap.set(formKey, {
               id: form.studentFormAssignmentId || formKey,
               formName: form.formName,
@@ -1184,7 +1215,7 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
         });
       });
     });
-    
+
     return Array.from(dueFormsMap.values());
   } catch (error) {
     console.error('fetchDueForms error:', error);

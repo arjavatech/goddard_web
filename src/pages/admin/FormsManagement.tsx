@@ -1,24 +1,21 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, AlertCircle, FileText, Eye, ArrowUp, ArrowDown, MoreVertical, Settings, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
-import { Loading } from '../../components/ui/loading';
-import { ValidatedInput } from '../../components/ui/validated-input';
-import { commonValidationRules } from '../../lib/validation';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchUserContext } from '../../services/api/user';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
-import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { DataTable } from '../../components/ui/data-table';
+import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { usePagination } from '../../hooks/usePagination';
-import { AddFormModal } from '../../components/admin/AddFormModal';
+import { PageLoader } from '../../components/ui/page-loader';
 
 type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
@@ -58,6 +55,8 @@ export function FormsManagement() {
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const { showToast } = useToast();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
     
@@ -81,9 +80,9 @@ export function FormsManagement() {
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
-        const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
+        const templates = await fetchFormTemplates(schoolId).catch(() => []);
         if (!isMounted) return;
         if (templates.length === 0) return;
         
@@ -156,10 +155,10 @@ export function FormsManagement() {
     
     try {
       setIsAddingForm(true);
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      // const user = await fetchUserContext();
+      if (!schoolId) return;
       
-      await createFormTemplate(formName.trim(), formLink.trim(), user.schoolId, formDueDate, formStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
       resetFormFields();
       setIsAddDialogOpen(false);
       window.location.reload();
@@ -172,15 +171,15 @@ export function FormsManagement() {
     if (!selectedForm || !formName.trim()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
 
       
       
       // Don't send due date if status is inactive
       const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
       
-      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), user.schoolId, formStatus, dueDateToSend);
+      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), schoolId, formStatus, dueDateToSend);
       
       showToast('success', 'Form updated successfully');
       resetFormFields();
@@ -194,13 +193,13 @@ export function FormsManagement() {
     if (!selectedForm) return;
 
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
 
-      await deleteForm(selectedForm.id, user.schoolId);
+      await deleteForm(selectedForm.id, schoolId);
 
       // Refetch forms from server to ensure consistency
-      const templates = await fetchFormTemplates(user.schoolId).catch(() => []);
+      const templates = await fetchFormTemplates(schoolId).catch(() => []);
       const mappedForms: Form[] = templates.map((template, index) => ({
         id: template.id,
         name: template.formName,
@@ -240,10 +239,10 @@ export function FormsManagement() {
     if (!selectedFormForAssign) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) return;
+      // const user = await fetchUserContext();
+      if (!schoolId) return;
       
-      await assignFormToAllStudents(user.schoolId, selectedFormForAssign.id, true, formDueDate);
+      await assignFormToAllStudents(schoolId, selectedFormForAssign.id, true, formDueDate);
       showToast('success', `Form "${selectedFormForAssign.name}" assigned to all students successfully!`);
       setIsAssignToAllDialogOpen(false);
       setFormDueDate('');
@@ -284,6 +283,10 @@ export function FormsManagement() {
     forms.forEach((form: Form) => unique.add(form.status));
     return Array.from(unique);
   }, [forms]);
+  if (loading) {
+    return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
+  }
+
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -412,224 +415,196 @@ export function FormsManagement() {
               </div>
             </div>
             {/* Desktop Table View */}
-            <div className="hidden lg:block">
-              <table className="w-full table-fixed border-collapse">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/5">Form Name</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Status</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/8">Due Date</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/3">Form Link</th>
-                    <th className="text-center py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? <tr>
-                      <td colSpan={6} className="py-8">
-                        <Loading message="Loading forms..." size="sm" />
-                      </td>
-                    </tr> : paginatedForms.length > 0 ? paginatedForms.map(form => <tr key={form.id} className="border-b border-gray-100">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center">
-                            <div className="min-w-0">
-                              <div className="font-medium text-foreground truncate">{form.name}</div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
-                            {getStatusDisplayName(form.status)}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className="text-sm text-foreground">
-                            {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
-                          </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className="flex items-center text-amazon-teal min-w-0">
-                            <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
-                            {form.link ? (
-                              <>
-                                <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1">
-                                  {form.link}
-                                </a>
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    navigator.clipboard.writeText(form.link);
-                                    setCopiedFormId(form.id);
-                                    setTimeout(() => setCopiedFormId(null), 3000);
-                                  }}
-                                  className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
-                                  title="Copy link"
-                                >
-                                  {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                                </button>
-                              </>
-                            ) : (
-                              <span className="text-gray-400">Not provided</span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                               <Settings className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {form.link && (
-                                <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Form
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuItem 
-                                onClick={() => openEditDialog(form)}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  setSelectedFormForAssign(form);
-                                  setIsAssignToAllDialogOpen(true);
-                                }}
-                              >
-                                <School className="h-4 w-4 mr-2" />
-                                Assign to All Students
-                              </DropdownMenuItem>
-                              <DropdownMenuItem 
-                                onClick={() => openDeleteDialog(form)} 
-                                className="text-red-600 focus:text-red-600"
-                                disabled={form.status === 'active'}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>) : <tr>
-                      <td colSpan={6} className="py-8 text-center text-gray-500">
-                        No forms match the current filters.
-                      </td>
-                    </tr>}
-                </tbody>
-              </table>
-            </div>
-            
-            <Pagination
+            <DataTable
+              className="hidden lg:block"
+              loading={loading}
+              loadingMessage="Loading forms..."
+              emptyMessage="No forms match the current filters."
               currentPage={currentPage}
               totalPages={totalPages}
               totalItems={filteredForms.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
-              className="hidden lg:flex"
+              columns={[
+                { header: 'Form Name', className: 'w-1/5' },
+                { header: 'Status', className: 'w-1/8' },
+                { header: 'Due Date', className: 'w-1/8' },
+                { header: 'Form Link', className: 'w-1/3' },
+                { header: 'Actions', className: 'w-1/8 text-center' },
+              ]}
+              rows={paginatedForms.map(form => (
+                <tr key={form.id} className="border-b border-gray-100">
+                  <td className="py-3 px-3">
+                    <div className="flex items-center">
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate">{form.name}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
+                      {getStatusDisplayName(form.status)}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="text-sm text-foreground">
+                      {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex items-center text-amazon-teal min-w-0">
+                      <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
+                      {form.link ? (
+                        <>
+                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1">
+                            {form.link}
+                          </a>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(form.link);
+                              setCopiedFormId(form.id);
+                              setTimeout(() => setCopiedFormId(null), 3000);
+                            }}
+                            className="ml-2 p-1 hover:bg-gray-100 rounded transition-colors"
+                            title="Copy link"
+                          >
+                            {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400">Not provided</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-3 px-3 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                         <Settings className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {form.link && (
+                          <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Form
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedFormForAssign(form);
+                          setIsAssignToAllDialogOpen(true);
+                        }}>
+                          <School className="h-4 w-4 mr-2" />
+                          Assign to All Students
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => openDeleteDialog(form)} 
+                          className="text-red-600 focus:text-red-600"
+                          disabled={form.status === 'active'}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
             />
 
             {/* Mobile Card View */}
-            <div className="lg:hidden space-y-2 sm:space-y-3 p-3 sm:p-4">
-              {loading ? (
-                <div className="py-6 sm:py-8">
-                  <Loading message="Loading forms..." size="sm" />
-                </div>
-              ) : paginatedForms.length > 0 ? (
-                paginatedForms.map(form => (
-                  <Card key={form.id} className="p-3 sm:p-4">
-                    <div className="flex justify-between items-start mb-3 gap-2">
-                      <h3 className="font-semibold text-foreground text-sm sm:text-base truncate flex-1">{form.name}</h3>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {form.link && (
-                            <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Form
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem 
-                            onClick={() => openEditDialog(form)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
+            <MobileCardList
+              className="lg:hidden p-3 sm:p-4"
+              loading={loading}
+              loadingMessage="Loading forms..."
+              emptyMessage="No forms found matching your search criteria."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              gridClassName="space-y-2 sm:space-y-3"
+              cards={paginatedForms.map(form => (
+                <Card key={form.id} className="p-3 sm:p-4">
+                  <div className="flex justify-between items-start mb-3 gap-2">
+                    <h3 className="font-semibold text-foreground text-sm sm:text-base truncate flex-1">{form.name}</h3>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {form.link && (
+                          <DropdownMenuItem onClick={() => window.open(form.link, '_blank')}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Form
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setSelectedFormForAssign(form);
-                              setIsAssignToAllDialogOpen(true);
-                            }}
-                          >
-                            <School className="h-4 w-4 mr-2" />
-                            Assign to All Students
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => openDeleteDialog(form)} 
-                            className="text-red-600 focus:text-red-600"
-                            disabled={form.status === 'active'}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        )}
+                        <DropdownMenuItem onClick={() => openEditDialog(form)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          setSelectedFormForAssign(form);
+                          setIsAssignToAllDialogOpen(true);
+                        }}>
+                          <School className="h-4 w-4 mr-2" />
+                          Assign to All Students
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => openDeleteDialog(form)} 
+                          className="text-red-600 focus:text-red-600"
+                          disabled={form.status === 'active'}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
+                        {getStatusDisplayName(form.status)}
+                      </Badge>
+                      <div className="text-xs text-muted-foreground">
+                        Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                      </div>
                     </div>
                     
-                    <div className="space-y-2 sm:space-y-3">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs">
-                          {getStatusDisplayName(form.status)}
-                        </Badge>
-                        <div className="text-xs text-muted-foreground">
-                          Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
-                        <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
-                        {form.link ? (
-                          <>
-                            <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0 flex-1">
-                              {form.link}
-                            </a>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigator.clipboard.writeText(form.link);
-                                setCopiedFormId(form.id);
-                                setTimeout(() => setCopiedFormId(null), 3000);
-                              }}
-                              className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
-                              title="Copy link"
-                            >
-                              {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
-                            </button>
-                          </>
-                        ) : (
-                          <span className="text-gray-400 text-xs sm:text-sm">No link provided</span>
-                        )}
-                      </div>
+                    <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
+                      <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
+                      {form.link ? (
+                        <>
+                          <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline text-xs sm:text-sm break-all min-w-0 flex-1">
+                            {form.link}
+                          </a>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigator.clipboard.writeText(form.link);
+                              setCopiedFormId(form.id);
+                              setTimeout(() => setCopiedFormId(null), 3000);
+                            }}
+                            className="ml-1 p-1 hover:bg-gray-100 rounded transition-colors flex-shrink-0"
+                            title="Copy link"
+                          >
+                            {copiedFormId === form.id ? <Check className="h-3 w-3 text-green-600" /> : <Copy className="h-3 w-3" />}
+                          </button>
+                        </>
+                      ) : (
+                        <span className="text-gray-400 text-xs sm:text-sm">No link provided</span>
+                      )}
                     </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="py-6 sm:py-8 text-center text-muted-foreground text-xs sm:text-sm">
-                  No forms found matching your search criteria.
-                </div>
-              )}
-              
-              <MobilePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-            </div>
+                  </div>
+                </Card>
+              ))}
+            />
           </CardContent>
         </Card>
       </div>

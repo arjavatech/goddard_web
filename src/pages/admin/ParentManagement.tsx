@@ -3,23 +3,25 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, ArrowUp, ArrowDown, Download } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { Link } from 'react-router-dom';
-import { Loading } from '../../components/ui/loading';
-import { fetchUserContext } from '../../services/api/user';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
+import { DataTable } from '../../components/ui/data-table';
+import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { StatCard } from '../../components/ui/stat-card';
+import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
+import { AvatarInitials } from '../../components/ui/avatar-initials';
+import { PageLoader } from '../../components/ui/page-loader';
 
 import { fetchParentDetails, fetchClassrooms, inviteParent, addChild, resendParentConfirmation, deactivateParent, activateParent } from '../../services/api/admin';
-import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
 import { validateEmail } from '../../lib/emailValidation';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 type ParentStatus = 'Active' | 'Archive';
 type SignupStatus = 'Signed' | 'Not Signed';
@@ -61,6 +63,18 @@ export function ParentManagement() {
     id: string;
     name: string;
   }[]>([]);
+  const [classroomsLoaded, setClassroomsLoaded] = useState(false);
+
+  const loadClassroomsIfNeeded = async () => {
+    if (classroomsLoaded || !schoolId) return;
+    try {
+      const classroomData = await fetchClassrooms(schoolId);
+      if (classroomData.length > 0) {
+        setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
+      }
+      setClassroomsLoaded(true);
+    } catch {}
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [signupFilter, setSignupFilter] = useState<string>('all');
@@ -95,43 +109,36 @@ export function ParentManagement() {
   const [activatingParentId, setActivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
 
+  const schoolId = localStorage.getItem('schoolId');
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         setLoading(true);
-        const user = await fetchUserContext();
-        if (!user.schoolId) return;
+        // const user = await fetchUserContext();
+        if (!schoolId) return;
 
-        // Fetch both parent details and classrooms
-        const [parentDetailsResponse, classroomData] = await Promise.all([
-          fetchParentDetails(user.schoolId).catch(() => ({ activeParents: [], inactiveParents: [] })),
-          fetchClassrooms(user.schoolId).catch((error) => {
-            console.error('fetchClassrooms failed:', error);
-            return [];
-          })
-        ]);
-
-        console.log('Classroom data received:', classroomData);
-        console.log('School ID:', user.schoolId);
+        // Fetch parent details only — classrooms are loaded lazily when modals open
+        const parentDetailsResponse = await fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }));
 
         if (!isMounted) return;
 
-        // Set classrooms for the dropdowns
-        if (classroomData.length > 0) {
-          const classroomList = classroomData.map(classroom => ({
-            id: classroom.id,
-            name: classroom.name
-          }));
-          console.log('Setting classrooms:', classroomList);
-          setClassrooms(classroomList);
-        } else {
-          console.warn('No classroom data available');
-        }
-
         // Helper function to map parent details to Parent type
         const mapParentDetails = (detail: any): Parent => {
-          console.log('Mapping parent detail:', { parentId: detail.parentId, email: detail.email, originalDetail: detail });
+          console.log('Mapping parent detail:', { 
+            parentId: detail.parentId, 
+            parent_id: detail.parent_id,
+            email: detail.email, 
+            originalDetail: detail 
+          });
+          
+          // Ensure we get a valid parent ID - prioritize parentId (camelCase) since that's what the API returns
+          const parentId = detail.parentId || detail.parent_id || '';
+          if (!parentId) {
+            console.warn('No parent ID found in detail:', detail);
+          }
+          
           const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
           const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
           const children: Child[] = detail.children?.map((child: any) => {
@@ -148,8 +155,9 @@ export function ParentManagement() {
             };
           }) || [];
           const hasCompletedForms = detail.children?.some((child: any) => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
-          return {
-            id: detail.parentId,
+          
+          const mappedParent = {
+            id: parentId,
             firstName,
             lastName,
             email: detail.email,
@@ -157,6 +165,9 @@ export function ParentManagement() {
             status: hasCompletedForms ? 'Active' : 'Archive',
             signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
           } satisfies Parent;
+          
+          console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
+          return mappedParent;
         };
 
         // Map active parents
@@ -182,6 +193,19 @@ export function ParentManagement() {
       isMounted = false;
     };
   }, []);
+  // Sort functionality
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
+  const sortLabels: Record<string, string> = { name: 'Name', email: 'Email', status: 'Status', children: 'Children' };
+  const sortOptions: SortOption[] = [
+    { label: 'Name A-Z', sortBy: 'name', sortOrder: 'asc' },
+    { label: 'Name Z-A', sortBy: 'name', sortOrder: 'desc' },
+    { label: 'Email A-Z', sortBy: 'email', sortOrder: 'asc' },
+    { label: 'Email Z-A', sortBy: 'email', sortOrder: 'desc' },
+    { label: 'Most Children', sortBy: 'children', sortOrder: 'desc' },
+  ];
+
   const filteredParents = useMemo(() => {
     const currentParents = activeTab === 'active' ? parents : deactivatedParents;
     return currentParents.filter(parent => {
@@ -191,36 +215,16 @@ export function ParentManagement() {
       const matchesSignup = signupFilter === 'all' || parent.signupStatus === signupFilter;
       return matchesSearch && matchesStatus && matchesSignup;
     });
-  }, [parents, deactivatedParents, activeTab, searchQuery, statusFilter, signupFilter]);
+  }, [activeTab, parents, deactivatedParents, searchQuery, statusFilter, signupFilter]);
 
-  const [sortBy, setSortBy] = useState('name');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-
-  const getSortLabel = () => {
-    const labels: Record<string, string> = {
-      name: 'Name',
-      email: 'Email',
-      children: 'Children',
-      status: 'Status',
-    };
-    return labels[sortBy] || 'Sort';
-  };
-
-  const sortedParents = useMemo(() => {
-    return [...filteredParents].sort((a, b) => {
-      let aVal: any, bVal: any;
-      switch (sortBy) {
-        case 'name': aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`; break;
-        case 'email': aVal = a.email; bVal = b.email; break;
-        case 'children': aVal = a.children.length; bVal = b.children.length; break;
-        case 'status': aVal = a.signupStatus; bVal = b.signupStatus; break;
-        default: aVal = `${a.firstName} ${a.lastName}`; bVal = `${b.firstName} ${b.lastName}`;
-      }
-      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
-      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
-    });
-  }, [filteredParents, sortBy, sortOrder]);
+  const sortedParents = useMemo(() =>
+    sortItems(filteredParents, sortBy, sortOrder, (p, key) => {
+      if (key === 'email') return p.email;
+      if (key === 'status') return p.status;
+      if (key === 'children') return p.children.length;
+      return `${p.firstName} ${p.lastName}`;
+    }),
+  [filteredParents, sortBy, sortOrder]);
 
   const {
     currentPage,
@@ -228,11 +232,9 @@ export function ParentManagement() {
     paginatedData: paginatedParents,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ 
-    data: sortedParents,
-    itemsPerPage: 10,
-    mobileItemsPerPage: 5
-  });
+  } = usePagination({ data: sortedParents });
+
+
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
 
@@ -267,11 +269,11 @@ export function ParentManagement() {
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
     
-    const user = await fetchUserContext();
-    if (!user.schoolId) throw new Error('School context not found');
+    // const user = await fetchUserContext();
+    if (!schoolId) throw new Error('School context not found');
     
     try {
-      await inviteParent(user.schoolId, {
+      await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,
         parentEmail,
@@ -345,11 +347,11 @@ export function ParentManagement() {
     if (!selectedParent || !validateAddChildForm()) return;
     
     try {
-      const user = await fetchUserContext();
-      if (!user.schoolId) throw new Error('School context not found');
+      // const user = await fetchUserContext();
+      if (!schoolId) throw new Error('School context not found');
       
       const enrollmentId = selectedParent.children[0]?.id || `enrollment-${Date.now()}`;
-      await addChild(user.schoolId, enrollmentId, {
+      await addChild(schoolId, enrollmentId, {
         childFirstName: newChildFirstName,
         childLastName: newChildLastName,
         childDob: newChildDob,
@@ -410,6 +412,15 @@ export function ParentManagement() {
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
     console.log('Resending confirmation for parentId:', parentId);
     console.log('Parent email:', parentEmail);
+    
+    // Validate parent ID format - should be a valid UUID
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!parentId || !uuidRegex.test(parentId)) {
+      console.error('Invalid parent ID detected:', parentId);
+      showToast('error', 'Invalid parent ID. Please refresh the page and try again.');
+      return;
+    }
+    
     console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
     setResendingParentId(parentId);
     try {
@@ -425,8 +436,8 @@ export function ParentManagement() {
         const status = error.status || error.response?.status;
         if (status === 404) {
           errorMessage = 'Parent not found. Please refresh the page and try again.';
-        } else if (status === 400) {
-          errorMessage = 'Invalid request. Please check the parent information.';
+        } else if (status === 400 || status === 422) {
+          errorMessage = 'Invalid parent ID. Please refresh the page and try again.';
         }
         
         showToast('error', errorMessage);
@@ -568,6 +579,10 @@ export function ParentManagement() {
     printWindow.print();
   };
 
+  if (loading) {
+    return <PageLoader message="Loading parent management..." Layout={AdminLayout} />;
+  }
+
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -582,6 +597,7 @@ export function ParentManagement() {
           <Button onClick={() => {
           resetInviteForm();
           setInviteFormErrors({});
+          loadClassroomsIfNeeded();
           setIsInviteDialogOpen(true);
         }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
@@ -589,55 +605,28 @@ export function ParentManagement() {
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Parents
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{parents.length}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Signed Up
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {parents.filter(p => p.signupStatus === 'Signed').length}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
-                  <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Pending Signup
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {parents.filter(p => p.signupStatus === 'Not Signed').length}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
-                  <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard 
+            label="Total Parents" 
+            value={parents.length} 
+            icon={Users} 
+            iconBgClass="bg-amazon-teal/10" 
+            iconColorClass="text-amazon-teal" 
+          />
+          <StatCard 
+            label="Signed Up" 
+            value={parents.filter(p => p.signupStatus === 'Signed').length} 
+            icon={CheckCircle} 
+            iconBgClass="bg-green-100" 
+            iconColorClass="text-green-600" 
+          />
+          <StatCard 
+            label="Pending Signup" 
+            value={parents.filter(p => p.signupStatus === 'Not Signed').length} 
+            icon={Clock} 
+            iconBgClass="bg-amber-100" 
+            iconColorClass="text-amber-600" 
+            className="sm:col-span-2 lg:col-span-1" 
+          />
         </div>
         <Card className="glass-card h-fit">
           <CardContent className="p-0 overflow-hidden">
@@ -711,328 +700,271 @@ export function ParentManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
-                        {sortOrder === 'asc'
-                          ? <ArrowUp className="h-4 w-4 mr-2" />
-                          : <ArrowDown className="h-4 w-4 mr-2" />}
-                        {getSortLabel()}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('email'); setSortOrder('asc'); }}>Email A-Z</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('children'); setSortOrder('desc'); }}>Most Children</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Signup Status</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label><br />
+                  <SortDropdown
+                    currentSortBy={sortBy}
+                    currentSortOrder={sortOrder}
+                    options={sortOptions}
+                    labels={sortLabels}
+                    onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
+                  />
                 </div>
               </div>
             </div>
-            {/* Desktop Table View - Also visible on mobile with horizontal scroll */}
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full table-fixed border-collapse min-w-[800px]">
-                <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-3 font-medium text-gray-600 w-1/4">Parent</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Email</th>
-                    <th className="text-left py-3 px-2 font-medium text-gray-600 w-1/4">Children</th>
-                    <th className="text-center py-3 px-2 font-medium text-gray-600 w-1/8">Signup Status</th>
-                    <th className="text-right py-3 px-3 font-medium text-gray-600 w-1/8">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {loading ? <tr>
-                      <td colSpan={5} className="py-8">
-                        <Loading message="Loading parents..." size="sm"/>
-                      </td>
-                    </tr> : paginatedParents.length > 0 ? paginatedParents.map(parent => <tr key={parent.id} className="border-b border-gray-100">
-                        <td className="py-3 px-3">
-                          <div className="flex items-center">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-2 flex-shrink-0">
-                              {parent.firstName.charAt(0)}
-                              {parent.lastName.charAt(0)}
-                            </div>
-                            <div className="min-w-0">
-                              {parent.signupStatus === 'Signed' ? (
-                                <Link to={`/admin/parents/${parent.id}`} state={{
-                          parentData: parent
-                        }} className="font-medium text-amazon-teal hover:underline block truncate">
-                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                                </Link>
-                              ) : (
-                                <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
-                                  {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2">
-                          <div className="flex items-center text-gray-700 min-w-0">
-                            <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                            <span className="truncate text-sm max-w-[200px]">{parent.email}</span>
-                          </div>
-                        </td>
-                        <td className="py-3 px-2 text-sm text-gray-600">
-                          {parent.children.length === 0 ? <span>No children linked yet</span> : <div className="space-y-1">
-                              {parent.children.map(child => <div key={child.id} className="flex items-center gap-2">
-                                  <Users className="h-4 w-4 text-gray-400" />
-                                  <Link 
-                                    to={`/admin/parents/${parent.id}`} 
-                                    state={{
-                                      parentData: parent,
-                                      selectedChildId: child.id
-                                    }} 
-                                    className="text-amazon-teal hover:underline cursor-pointer"
-                                  >
-                                    {child.firstName} {child.lastName}
-                                  </Link>
-                                  <Badge variant="secondary" className="text-xs">
-                                    {child.classroom.name}
-                                  </Badge>
-                                </div>)}
-                            </div>}
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto">
-                            {parent.signupStatus === 'Signed' && <CheckCircle className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus === 'Not Signed' && <XCircle className="h-4 w-4 mr-1" />}
-                            {parent.signupStatus}
-                          </Badge>
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                                <Link to={`/admin/parents/${parent.id}`} state={{
-                            parentData: parent
-                          }}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  View Details
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                                onClick={() => {
-                          setSelectedParent(parent);
-                          setIsAddChildDialogOpen(true);
-                        }}>
-                                <UserCircle className="h-4 w-4 mr-2" />
-                                Add Child
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  handleResendConfirmation(parent.id, parent.email);
-                                }}
-                              >
-                                {resendingParentId === parent.id ? (
-                                  <>
-                                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                    Sending...
-                                  </>
-                                ) : (
-                                  <>
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    Resend
-                                  </>
-                                )}
-                              </DropdownMenuItem>
-                              {activeTab === 'active' ? (
-                                <DropdownMenuItem
-                                  className="text-red-600 focus:text-red-600"
-                                  onClick={() => setParentToDeactivate(parent)}
-                                >
-                                  <XCircle className="h-4 w-4 mr-2" />
-                                  Deactivate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  className="text-green-600 focus:text-green-600"
-                                  onClick={() => setParentToActivate(parent)}
-                                >
-                                  <UserCheck className="h-4 w-4 mr-2" />
-                                  Activate
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>) : <tr>
-                      <td colSpan={5} className="py-8 text-center text-gray-500">
-                        No parents match the current filters.
-                      </td>
-                    </tr>}
-                </tbody>
-              </table>
-            </div>
-            
-            <Pagination
+            {/* Desktop Table View */}
+            <DataTable
+              className="hidden md:block"
+              loading={loading}
+              loadingMessage="Loading parents..."
+              emptyMessage="No parents match the current filters."
               currentPage={currentPage}
               totalPages={totalPages}
-              totalItems={filteredParents.length}
+              totalItems={sortedParents.length}
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
-              className="hidden md:flex"
+              columns={[
+                { header: 'Parent', className: 'w-1/3' },
+                { header: 'Email', className: 'w-1/4 hidden lg:table-cell' },
+                { header: 'Children', className: 'w-1/3' },
+                { header: 'Signup Status', className: 'w-1/6 text-center' },
+                { header: 'Actions', className: 'w-1/6 text-center' },
+              ]}
+              rows={paginatedParents.map((parent, index) => (
+                <tr key={parent.id || `parent-${index}`} className="border-b border-gray-100 hover:bg-muted/50">
+                  <td className="py-3 px-3 max-w-0">
+                    <div className="flex items-center gap-2">
+                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
+                      <div className="min-w-0">
+                        {parent.signupStatus === 'Signed' ? (
+                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-medium text-amazon-teal hover:underline block truncate">
+                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
+                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                          </span>
+                        )}
+                        <div className="text-xs text-muted-foreground truncate lg:hidden">{parent.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2 max-w-0 hidden lg:table-cell">
+                    <div className="flex items-center text-gray-700 min-w-0">
+                      <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
+                      <span className="truncate text-sm">{parent.email}</span>
+                    </div>
+                  </td>
+                  <td className="py-3 px-2 text-sm text-gray-600 max-w-0">
+                    {parent.children.length === 0 ? (
+                      <span className="text-muted-foreground">No children linked yet</span>
+                    ) : (
+                      <div className="space-y-1">
+                        {parent.children.map(child => (
+                          <div key={child.id} className="flex items-center gap-1.5 min-w-0">
+                            <Users className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                            <Link
+                              to={`/admin/parents/${parent.id}`}
+                              state={{ parentData: parent, selectedChildId: child.id }}
+                              className="text-amazon-teal hover:underline truncate"
+                            >
+                              {child.firstName} {child.lastName}
+                            </Link>
+                            <Badge variant="secondary" className="text-xs flex-shrink-0">
+                              {child.classroom.name}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto text-xs">
+                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                      {parent.signupStatus}
+                    </Badge>
+                  </td>
+                  <td className="py-3 px-2 text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+                          onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
+                        >
+                          <UserCircle className="h-4 w-4 mr-2" />
+                          Add Child
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+                          onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
+                        >
+                          {resendingParentId === parent.id ? (
+                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                          ) : (
+                            <><RefreshCw className="h-4 w-4 mr-2" />Resend</>
+                          )}
+                        </DropdownMenuItem>
+                        {activeTab === 'active' ? (
+                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setParentToDeactivate(parent)}>
+                            <XCircle className="h-4 w-4 mr-2" />Deactivate
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem className="text-green-600 focus:text-green-600" onClick={() => setParentToActivate(parent)}>
+                            <UserCheck className="h-4 w-4 mr-2" />Activate
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </td>
+                </tr>
+              ))}
             />
             
             {/* Mobile Card View */}
-            <div className="md:hidden p-3 sm:p-4">
-              <div className="space-y-2 sm:space-y-3">
-              {loading ? (
-                <div className="py-6 sm:py-8">
-                  <Loading message="Loading parents..." size="sm" />
-                </div>
-              ) : paginatedParents.length > 0 ? (
-                paginatedParents.map(parent => (
-                  <Card key={parent.id} className="p-3 sm:p-4">
-                    <div className="flex items-start justify-between mb-2">
-                      <div className="flex items-center space-x-2 flex-1 min-w-0">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
-                          {parent.firstName.charAt(0)}
-                          {parent.lastName.charAt(0)}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          {parent.signupStatus === 'Signed' ? (
-                            <Link to={`/admin/parents/${parent.id}`} state={{
-                              parentData: parent
-                            }} className="font-medium text-amazon-teal hover:underline text-sm block truncate">
-                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                            </Link>
-                          ) : (
-                            <span className="font-medium text-gray-400 cursor-not-allowed text-sm block truncate">
-                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                            </span>
-                          )}
-                          <div className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {parent.email}
-                          </div>
+            <MobileCardList
+              className="md:hidden p-3 sm:p-4"
+              loading={loading}
+              loadingMessage="Loading parents..."
+              emptyMessage="No parents found matching your search criteria."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
+              cards={paginatedParents.map((parent, index) => (
+                <Card key={parent.id || `parent-card-${index}`} className="p-3 sm:p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        {parent.signupStatus === 'Signed' ? (
+                          <Link to={`/admin/parents/${parent.id}`} state={{
+                            parentData: parent
+                          }} className="font-medium text-amazon-teal hover:underline text-sm block truncate">
+                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                          </Link>
+                        ) : (
+                          <span className="font-medium text-gray-400 cursor-not-allowed text-sm block truncate">
+                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                          </span>
+                        )}
+                        <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                          {parent.email}
                         </div>
                       </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                            <Link to={`/admin/parents/${parent.id}`} state={{
-                              parentData: parent
-                            }}>
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Details
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                            onClick={() => {
-                              setSelectedParent(parent);
-                              setIsAddChildDialogOpen(true);
-                            }}>
-                            <UserCircle className="h-4 w-4 mr-2" />
-                            Add Child
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleResendConfirmation(parent.id, parent.email);
-                            }}
-                          >
-                            {resendingParentId === parent.id ? (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                                Sending...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Resend
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          {activeTab === 'active' ? (
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-600"
-                              onClick={() => setParentToDeactivate(parent)}
-                            >
-                              <XCircle className="h-4 w-4 mr-2" />
-                              Deactivate
-                            </DropdownMenuItem>
+                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                          <Link to={`/admin/parents/${parent.id}`} state={{
+                            parentData: parent
+                          }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Details
+                          </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+                          onClick={() => {
+                            setSelectedParent(parent);
+                            loadClassroomsIfNeeded();
+                            setIsAddChildDialogOpen(true);
+                          }}>
+                          <UserCircle className="h-4 w-4 mr-2" />
+                          Add Child
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleResendConfirmation(parent.id, parent.email);
+                          }}
+                        >
+                          {resendingParentId === parent.id ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Sending...
+                            </>
                           ) : (
-                            <DropdownMenuItem
-                              className="text-green-600 focus:text-green-600"
-                              onClick={() => setParentToActivate(parent)}
-                            >
-                              <UserCheck className="h-4 w-4 mr-2" />
-                              Activate
-                            </DropdownMenuItem>
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Resend
+                            </>
                           )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="flex items-center justify-between mb-3">
-                      <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-xs px-1.5 py-0.5">
-                        {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
-                        {parent.signupStatus}
-                      </Badge>
-                    </div>
-                    
-                    <div className="space-y-1.5">
-                      {parent.children.length === 0 ? (
-                        <div className="text-muted-foreground text-xs">No children linked yet</div>
-                      ) : (
-                        <div className="space-y-1">
-                          <div className="text-xs text-muted-foreground">Children:</div>
-                          {parent.children.map(child => (
-                            <div key={child.id} className="flex items-center gap-2 text-xs">
-                              <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                              <Link 
-                                to={`/admin/parents/${parent.id}`} 
-                                state={{
-                                  parentData: parent,
-                                  selectedChildId: child.id
-                                }} 
-                                className="text-amazon-teal hover:underline cursor-pointer"
-                              >
-                                {child.firstName} {child.lastName}
-                              </Link>
-                              <Badge variant="secondary" className="text-xs">
-                                {child.classroom.name}
-                              </Badge>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </Card>
-                ))
-              ) : (
-                <div className="py-8 text-center text-muted-foreground text-sm">
-                  No parents found matching your search criteria.
-                </div>
-              )}
-              
-              
-            </div>
-            <MobilePagination
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-              />
-              </div>
+                        </DropdownMenuItem>
+                        {activeTab === 'active' ? (
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            onClick={() => setParentToDeactivate(parent)}
+                          >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Deactivate
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            className="text-green-600 focus:text-green-600"
+                            onClick={() => setParentToActivate(parent)}
+                          >
+                            <UserCheck className="h-4 w-4 mr-2" />
+                            Activate
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  <div className="flex items-center justify-between mb-3">
+                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-xs px-1.5 py-0.5">
+                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                      {parent.signupStatus}
+                    </Badge>
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    {parent.children.length === 0 ? (
+                      <div className="text-muted-foreground text-xs">No children linked yet</div>
+                    ) : (
+                      <div className="space-y-1">
+                        <div className="text-xs text-muted-foreground">Children:</div>
+                        {parent.children.map(child => (
+                          <div key={child.id} className="flex items-center gap-2 text-xs">
+                            <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <Link 
+                              to={`/admin/parents/${parent.id}`} 
+                              state={{
+                                parentData: parent,
+                                selectedChildId: child.id
+                              }} 
+                              className="text-amazon-teal hover:underline cursor-pointer"
+                            >
+                              {child.firstName} {child.lastName}
+                            </Link>
+                            <Badge variant="secondary" className="text-xs">
+                              {child.classroom.name}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            />
           </CardContent>
         </Card>
       </div>

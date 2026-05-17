@@ -39,17 +39,17 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
             Parent Information
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="p-3 bg-gray-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-8 h-8 rounded-full bg-amazon-teal/10 flex items-center justify-center">
-                <User className="w-4 h-4 text-amazon-teal" />
-              </div>
-              <span className="font-medium text-gray-900">{currentParentName}</span>
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-amazon-teal/10 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-amazon-teal" />
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <Mail className="w-3 h-3" />
-              {parentData.email}
+            <div className="min-w-0">
+              <span className="font-medium text-gray-900 block truncate">{currentParentName}</span>
+              <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-0.5">
+                <Mail className="w-3 h-3 flex-shrink-0" />
+                <span className="truncate">{parentData.email}</span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -64,21 +64,21 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
               Additional Parent Info
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-600" />
-                </div>
-                <span className="font-medium text-gray-900">{additionalParentName}</span>
-              </div>
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start gap-2">
+            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
+              <User className="w-4 h-4 text-gray-600" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-medium text-gray-900 block truncate">{additionalParentName}</span>
               {parentData.additional_email && (
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <Mail className="w-3 h-3" />
-                  {parentData.additional_email}
+                <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-0.5">
+                  <Mail className="w-3 h-3 flex-shrink-0" />
+                  <span className="truncate">{parentData.additional_email}</span>
                 </div>
               )}
             </div>
+          </div>
           </CardContent>
         </Card>
       )}

@@ -91,18 +91,18 @@ export function InviteParentModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">First Name</label>
-                <Input 
-                  value={parentFirstName} 
+                <Input
+                  value={parentFirstName}
                   onChange={e => setParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                  placeholder="Enter first name" 
+                  placeholder="Enter first name"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Last Name</label>
-                <Input 
-                  value={parentLastName} 
+                <Input
+                  value={parentLastName}
                   onChange={e => setParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
-                  placeholder="Enter last name" 
+                  placeholder="Enter last name"
                 />
               </div>
             </div>
@@ -117,15 +117,16 @@ export function InviteParentModal({
               />
               <div>
                 <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
-                <Input 
-                  type="tel" 
-                  value={parentPhoneNumber} 
+                <Input
+                  type="tel"
+                  value={parentPhoneNumber}
                   onChange={e => setParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
-                  placeholder="Enter phone number" 
+                  placeholder="Enter phone number"
                 />
               </div>
             </div>
           </div>
+
           {/* Secondary Parent */}
           <div className="space-y-4">
             <h3 className="text-lg font-medium border-b pb-2">Secondary Parent Information (Optional)</h3>
@@ -136,16 +137,12 @@ export function InviteParentModal({
                   value={secondaryParentFirstName}
                   onChange={e => {
                     setSecondaryParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
-                    if (inviteFormErrors.secondaryParentFirstName) {
-                      setInviteFormErrors(prev => ({...prev, secondaryParentFirstName: ''}));
-                    }
+                    if (inviteFormErrors.secondaryParentFirstName) setInviteFormErrors(prev => ({ ...prev, secondaryParentFirstName: '' }));
                   }}
                   placeholder="Enter first name"
                   className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
                 />
-                {inviteFormErrors.secondaryParentFirstName && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
-                )}
+                {inviteFormErrors.secondaryParentFirstName && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Last Name</label>
@@ -153,16 +150,12 @@ export function InviteParentModal({
                   value={secondaryParentLastName}
                   onChange={e => {
                     setSecondaryParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
-                    if (inviteFormErrors.secondaryParentLastName) {
-                      setInviteFormErrors(prev => ({...prev, secondaryParentLastName: ''}));
-                    }
+                    if (inviteFormErrors.secondaryParentLastName) setInviteFormErrors(prev => ({ ...prev, secondaryParentLastName: '' }));
                   }}
                   placeholder="Enter last name"
                   className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
                 />
-                {inviteFormErrors.secondaryParentLastName && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
-                )}
+                {inviteFormErrors.secondaryParentLastName && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>}
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -193,82 +186,54 @@ export function InviteParentModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">First Name</label>
-                <Input 
-                  value={childFirstName} 
+                <Input
+                  value={childFirstName}
                   onChange={e => {
                     setChildFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
-                    if (inviteFormErrors.childFirstName) {
-                      setInviteFormErrors(prev => ({...prev, childFirstName: ''}));
-                    }
+                    if (inviteFormErrors.childFirstName) setInviteFormErrors(prev => ({ ...prev, childFirstName: '' }));
                   }}
-                  onBlur={() => {
-                    if (!childFirstName.trim()) {
-                      setInviteFormErrors(prev => ({...prev, childFirstName: 'Child first name is required'}));
-                    }
-                  }} 
-                  placeholder="Enter first name" 
+                  onBlur={() => { if (!childFirstName.trim()) setInviteFormErrors(prev => ({ ...prev, childFirstName: 'Child first name is required' })); }}
+                  placeholder="Enter first name"
                   className={inviteFormErrors.childFirstName ? 'border-red-500' : ''}
                 />
-                {inviteFormErrors.childFirstName && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>
-                )}
+                {inviteFormErrors.childFirstName && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childFirstName}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Last Name</label>
-                <Input 
-                  value={childLastName} 
+                <Input
+                  value={childLastName}
                   onChange={e => {
                     setChildLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
-                    if (inviteFormErrors.childLastName) {
-                      setInviteFormErrors(prev => ({...prev, childLastName: ''}));
-                    }
+                    if (inviteFormErrors.childLastName) setInviteFormErrors(prev => ({ ...prev, childLastName: '' }));
                   }}
-                  onBlur={() => {
-                    if (!childLastName.trim()) {
-                      setInviteFormErrors(prev => ({...prev, childLastName: 'Child last name is required'}));
-                    }
-                  }} 
-                  placeholder="Enter last name" 
+                  onBlur={() => { if (!childLastName.trim()) setInviteFormErrors(prev => ({ ...prev, childLastName: 'Child last name is required' })); }}
+                  placeholder="Enter last name"
                   className={inviteFormErrors.childLastName ? 'border-red-500' : ''}
                 />
-                {inviteFormErrors.childLastName && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>
-                )}
+                {inviteFormErrors.childLastName && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childLastName}</p>}
               </div>
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-2">Date of Birth</label>
-                <Input 
-                  type="date" 
-                  value={childDob} 
+                <Input
+                  type="date"
+                  value={childDob}
                   onChange={e => {
                     setChildDob(e.target.value);
-                    if (inviteFormErrors.childDob) {
-                      setInviteFormErrors(prev => ({...prev, childDob: ''}));
-                    }
+                    if (inviteFormErrors.childDob) setInviteFormErrors(prev => ({ ...prev, childDob: '' }));
                   }}
-                  onBlur={() => {
-                    if (!childDob) {
-                      setInviteFormErrors(prev => ({...prev, childDob: 'Child date of birth is required'}));
-                    }
-                  }} 
-                  className={inviteFormErrors.childDob ? 'border-red-500' : ''} 
-                  min="2000-01-01" 
-                  max="2020-12-31" 
+                  onBlur={() => { if (!childDob) setInviteFormErrors(prev => ({ ...prev, childDob: 'Child date of birth is required' })); }}
+                  className={inviteFormErrors.childDob ? 'border-red-500' : ''}
+                  min="2000-01-01"
+                  max="2020-12-31"
                 />
-                {inviteFormErrors.childDob && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>
-                )}
+                {inviteFormErrors.childDob && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Gender</label>
-                <Select value={childGender} onValueChange={(value) => {
-                  setChildGender(value);
-                  if (inviteFormErrors.childGender) {
-                    setInviteFormErrors(prev => ({...prev, childGender: ''}));
-                  }
-                }}>
+                <Select value={childGender} onValueChange={v => { setChildGender(v); if (inviteFormErrors.childGender) setInviteFormErrors(prev => ({ ...prev, childGender: '' })); }}>
                   <SelectTrigger className={inviteFormErrors.childGender ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
@@ -277,42 +242,28 @@ export function InviteParentModal({
                     <SelectItem value="female">Female</SelectItem>
                   </SelectContent>
                 </Select>
-                {inviteFormErrors.childGender && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>
-                )}
+                {inviteFormErrors.childGender && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childGender}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Classroom</label>
-                <Select value={childClassroom} onValueChange={(value) => {
-                  setChildClassroom(value);
-                  if (inviteFormErrors.childClassroom) {
-                    setInviteFormErrors(prev => ({...prev, childClassroom: ''}));
-                  }
-                }}>
+                <Select value={childClassroom} onValueChange={v => { setChildClassroom(v); if (inviteFormErrors.childClassroom) setInviteFormErrors(prev => ({ ...prev, childClassroom: '' })); }}>
                   <SelectTrigger className={inviteFormErrors.childClassroom ? 'border-red-500' : ''}>
                     <SelectValue placeholder="Select a classroom" />
                   </SelectTrigger>
                   <SelectContent>
-                    {classrooms.map(classroom => (
-                      <SelectItem key={classroom.id} value={classroom.id}>
-                        {classroom.name}
-                      </SelectItem>
-                    ))}
+                    {classrooms.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
-                {inviteFormErrors.childClassroom && (
-                  <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>
-                )}
+                {inviteFormErrors.childClassroom && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childClassroom}</p>}
               </div>
             </div>
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <AsyncButton 
-            onClick={onInvite} 
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <AsyncButton
+            onClick={onInvite}
             className="bg-amazon-teal hover:bg-amazon-teal/90"
             disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || (!!secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}
           >
