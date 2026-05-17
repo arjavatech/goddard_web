@@ -30,7 +30,12 @@ export function AdminLayout({
   } = useAuth();
   const { userData, schoolName, loading: userLoading } = useUserContext();
 
+  console.log('AdminLayout schoolName:', schoolName);
+
   const isSuperAdmin = userData?.role === 'SuperAdmin';
+  const schoolAddress = schoolName.toLowerCase().includes('lynnwood')
+    ? '123 School Lane, Lynnwood, WA 98036'
+    : '4200 228th Ave NE, Redmond, WA 98053';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -241,7 +246,7 @@ export function AdminLayout({
           <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
             <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
             <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
-              Quality early childhood education through play-based learning in Lynnwood, WA.
+              Nurturing children through play-based learning and quality early childhood education.
             </p>
             <div className="flex items-center gap-2">
               <a href="tel:+18000000000" aria-label="Call us"
@@ -275,10 +280,12 @@ export function AdminLayout({
                   <span className="truncate">support@goddardschool.com</span>
                 </a>
               </li>
-              <li className="flex items-start gap-2 text-xs text-white/80">
-                <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
-                <span>123 School Lane, Lynnwood, WA 98036</span>
-              </li>
+              {schoolAddress && (
+                <li className="flex items-start gap-2 text-xs text-white/80">
+                  <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
+                  <span>{schoolAddress}</span>
+                </li>
+              )}
             </ul>
           </div>
 

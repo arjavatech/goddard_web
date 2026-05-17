@@ -33,10 +33,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       const data = await fetchUserContext();
       setUserData(data);
       if (data.schoolId) {
-        fetchSchools().then(schools => {
+        try {
+          const schools = await fetchSchools();
           const match = schools.find(s => s.id === data.schoolId);
           if (match) setSchoolName(match.name);
-        }).catch(() => {});
+        } catch {}
       }
     } catch (err) {
       console.error('Failed to fetch user context:', err);

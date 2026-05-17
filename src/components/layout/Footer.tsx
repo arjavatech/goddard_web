@@ -10,6 +10,16 @@ export function Footer() {
   const [showGuideModal, setShowGuideModal] = useState(false);
   const { schoolName } = useUserContext();
 
+  console.log('Footer rendered with schoolName:', schoolName);
+
+  console.log('Footer schoolName:', schoolName);
+
+  const location = schoolName.toLowerCase().includes('lynnwood')
+    ? '123 School Lane, Lynnwood, WA 98036'
+    : '4200 228th Ave NE, Redmond, WA 98053';
+
+  console.log('Footer location:', location);
+
   return (
     <footer className="relative bg-amazon-teal">
       {/* Top orange accent line */}
@@ -56,10 +66,12 @@ export function Footer() {
                   <span className="truncate">support@goddardschool.com</span>
                 </a>
               </li>
-              <li className="flex items-start gap-2 text-xs text-white/80">
-                <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
-                <span>123 School Lane, Lynnwood, WA 98036</span>
-              </li>
+              {location && (
+                <li className="flex items-start gap-2 text-xs text-white/80">
+                  <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
+                  <span>{location}</span>
+                </li>
+              )}
             </ul>
           </div>
 
