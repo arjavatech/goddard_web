@@ -4,12 +4,14 @@ import { httpFetch } from './http';
 export interface School {
   id: string;
   name: string;
+  subdomain?: string;
   location?: string;
 }
 
 const schoolSchema = z.object({
   id: z.string(),
   name: z.string(),
+  subdomain: z.string().optional(),
   location: z.string().optional()
 });
 
@@ -28,4 +30,20 @@ export async function fetchSchools(): Promise<School[]> {
     console.error('fetchSchools error:', error);
     return [];
   }
+}
+
+export function getSelectedSchool(): School | null {
+  const stored = localStorage.getItem('selectedSchool');
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function setSelectedSchool(school: School): void {
+  localStorage.setItem('selectedSchool', JSON.stringify(school));
 }

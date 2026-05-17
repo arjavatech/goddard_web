@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Building2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
@@ -9,6 +9,8 @@ import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
+import { fetchSchools, getSelectedSchool, setSelectedSchool, School } from '../services/api/schools';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -18,15 +20,54 @@ export function Login() {
     password: '',
     rememberMe: false
   });
+  const [schools, setSchools] = useState<School[]>([]);
+  const [selectedSchool, setSelectedSchoolState] = useState<School | null>(null);
+  const [showSchoolSelector, setShowSchoolSelector] = useState(false);
+  const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const {
-    signInWithPassword
+    signInWithPassword,
+    signOut
   } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
+
+  // Load schools on mount
+  useEffect(() => {
+    const loadSchools = async () => {
+      setIsLoadingSchools(true);
+      try {
+        const fetchedSchools = await fetchSchools();
+        setSchools(fetchedSchools);
+        const storedSchool = getSelectedSchool();
+        if (storedSchool) {
+          setSelectedSchoolState(storedSchool);
+        } else if (fetchedSchools.length > 0) {
+          setSelectedSchoolState(fetchedSchools[0]);
+        }
+      } catch (error) {
+        console.error('Failed to load schools:', error);
+      } finally {
+        setIsLoadingSchools(false);
+      }
+    };
+    loadSchools();
+  }, []);
+
+  const handleSchoolChange = (school: School) => {
+    setSelectedSchoolState(school);
+    setSelectedSchool(school);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if school is selected
+    if (!selectedSchool) {
+      setShowSchoolSelector(true);
+      return;
+    }
     
     const emailError = validateEmail(formData.email);
     if (emailError) {
@@ -36,10 +77,22 @@ export function Login() {
     
     setIsLoading(true);
     try {
+      // First, sign in with password
       await signInWithPassword(formData.email, formData.password);
 
-      // Fetch user context to determine role-based redirect
+      // Fetch user context to get the user's school_id
       const userContext = await fetchUserContext();
+      const userSchoolId = userContext.school_id || userContext.schoolId;
+
+      // Validate that the selected school matches the user's school_id
+      if (userSchoolId && userSchoolId !== selectedSchool.id) {
+        // School ID doesn't match - sign out and show error
+        await signOut();
+        showToast('error', `Your account is registered to a different school. Please select the correct school.`, 'School Mismatch');
+        setShowSchoolSelector(true);
+        setIsLoading(false);
+        return;
+      }
 
       let redirectTo = location.state?.from?.pathname;
 
@@ -165,5 +218,52 @@ export function Login() {
         title={alertState.title}
         message={alertState.message}
       />
+
+      {/* School Selector Modal */}
+      <Dialog open={showSchoolSelector} onOpenChange={setShowSchoolSelector}>
+        <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-amazon-teal" />
+              Select School
+            </DialogTitle>
+            <DialogDescription>Choose the Goddard School location you want to view</DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {isLoadingSchools ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal"></div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {schools.map((school) => (
+                  <button
+                    key={school.id}
+                    onClick={() => handleSchoolChange(school)}
+                    className={`w-full text-left px-4 py-3 rounded-lg border transition-all duration-200 ${
+                      selectedSchool?.id === school.id
+                        ? 'border-amazon-teal bg-amazon-teal/10'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="font-medium text-gray-900">{school.name}</div>
+                    {school.subdomain && (
+                      <div className="text-xs text-gray-500 mt-1">Subdomain: {school.subdomain}</div>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSchoolSelector(false)}>
+              Cancel
+            </Button>
+            <Button onClick={() => setShowSchoolSelector(false)}>
+              Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>;
 }
