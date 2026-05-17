@@ -768,8 +768,8 @@ export function FormsDocuments({
             {enrollmentId && (
               <button
                 onClick={handleDownloadAll}
-                disabled={isDownloadingAll}
-                title="Download all approved forms as ZIP"
+                disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
+                title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available to download' : 'Download all approved forms as ZIP'}
                 className="group flex items-center gap-1.5 rounded-lg border border-dashed border-amazon-teal/50 bg-white/60 px-3 py-1.5 text-xs font-medium text-amazon-teal shadow-sm transition-all duration-200 hover:border-amazon-teal hover:bg-amazon-teal/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-amazon-teal/10 transition-colors group-hover:bg-amazon-teal/20">

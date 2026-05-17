@@ -3,10 +3,12 @@ import { Phone, Mail, Globe, MapPin, HelpCircle, BookOpen } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
 import { HelpCenterContent } from '../HelpCenterContent';
 import { ParentGuideContent } from '../ParentGuideContent';
+import { useUserContext } from '../../contexts/UserContext';
 
 export function Footer() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const { schoolName } = useUserContext();
 
   return (
     <footer className="relative bg-amazon-teal">
@@ -20,7 +22,7 @@ export function Footer() {
           <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
             <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
             <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
-              Nurturing children through play-based learning and quality early childhood education in Lynnwood, WA.
+              Nurturing children through play-based learning and quality early childhood education.
             </p>
             <div className="flex items-center gap-2">
               <a href="tel:+18000000000" aria-label="Call us"
@@ -87,7 +89,7 @@ export function Footer() {
 
         {/* Bottom bar */}
         <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} The Goddard School — Lynnwood. All rights reserved.</p>
+          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} {schoolName}. All rights reserved.</p>
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
             <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
             <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">Parent Portal</span>

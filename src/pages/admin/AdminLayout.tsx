@@ -28,7 +28,7 @@ export function AdminLayout({
   const {
     signOut
   } = useAuth();
-  const { userData, loading: userLoading } = useUserContext();
+  const { userData, schoolName, loading: userLoading } = useUserContext();
 
   const isSuperAdmin = userData?.role === 'SuperAdmin';
 
@@ -324,7 +324,7 @@ export function AdminLayout({
 
         {/* Bottom bar */}
         <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} The Goddard School — Lynnwood. All rights reserved.</p>
+          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} {schoolName}. All rights reserved.</p>
           <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
             <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
             <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">
