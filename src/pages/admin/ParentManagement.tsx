@@ -816,11 +816,19 @@ export function ParentManagement() {
                           )}
                         </DropdownMenuItem>
                         {activeTab === 'active' ? (
-                          <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={() => setParentToDeactivate(parent)}>
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600"
+                            disabled={parent.signupStatus === 'Not Signed'}
+                            onClick={() => setParentToDeactivate(parent)}
+                          >
                             <XCircle className="h-4 w-4 mr-2" />Deactivate
                           </DropdownMenuItem>
                         ) : (
-                          <DropdownMenuItem className="text-green-600 focus:text-green-600" onClick={() => setParentToActivate(parent)}>
+                          <DropdownMenuItem
+                            className="text-green-600 focus:text-green-600"
+                            disabled={parent.signupStatus === 'Not Signed'}
+                            onClick={() => setParentToActivate(parent)}
+                          >
                             <UserCheck className="h-4 w-4 mr-2" />Activate
                           </DropdownMenuItem>
                         )}
@@ -910,6 +918,7 @@ export function ParentManagement() {
                         {activeTab === 'active' ? (
                           <DropdownMenuItem
                             className="text-red-600 focus:text-red-600"
+                            disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToDeactivate(parent)}
                           >
                             <XCircle className="h-4 w-4 mr-2" />
@@ -918,6 +927,7 @@ export function ParentManagement() {
                         ) : (
                           <DropdownMenuItem
                             className="text-green-600 focus:text-green-600"
+                            disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToActivate(parent)}
                           >
                             <UserCheck className="h-4 w-4 mr-2" />

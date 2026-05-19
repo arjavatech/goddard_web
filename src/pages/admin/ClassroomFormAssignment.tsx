@@ -174,6 +174,7 @@ export function ClassroomFormAssignment() {
     const form = selectedClassroom?.assignedForms.find(f => f.id === formId);
     if (!form) return;
 
+    setFormToDelete(form);
     setIsDeleteDialogOpen(true);
   };
 
