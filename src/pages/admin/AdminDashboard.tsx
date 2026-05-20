@@ -16,6 +16,7 @@ import { Input } from '@/components/ui/input';
 import { validateEmail } from '../../lib/emailValidation';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { AddFormModal } from '../../components/admin/AddFormModal';
+import { validateAddFormFields } from '../../lib/addFormValidation';
 
 type DashboardMetrics = {
   totalClassrooms: number;
@@ -47,6 +48,7 @@ export function AdminDashboard() {
   const [formDueDate, setFormDueDate] = useState('');
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
+  const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [parentFirstName, setParentFirstName] = useState('');
   const [parentLastName, setParentLastName] = useState('');
@@ -113,23 +115,25 @@ export function AdminDashboard() {
   }, []);
 
   const validateForm = () => {
-    const errors: {[key: string]: string} = {};
-    
-    if (!formName.trim()) errors.formName = 'Form name is required';
-    if (!formDueDate) errors.formDueDate = 'Due date is required';
-    else {
-      const today = new Date();
-      const selectedDate = new Date(formDueDate);
-      today.setHours(0, 0, 0, 0);
-      selectedDate.setHours(0, 0, 0, 0);
-      if (selectedDate <= today) {
-        errors.formDueDate = 'Due date must be greater than today';
-      }
-    }
-    
+    const errors = validateAddFormFields({ formName, formLink, formDueDate });
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  const resetAddFormState = () => {
+    setFormName('');
+    setFormLink('');
+    setFormStatus('school_default');
+    setFormDueDate('');
+    setFormErrors({});
+    setHasTriedAddFormSubmit(false);
+  };
+
+  useEffect(() => {
+    if (!isAddDialogOpen) return;
+    if (!hasTriedAddFormSubmit && Object.keys(formErrors).length === 0) return;
+    setFormErrors(validateAddFormFields({ formName, formLink, formDueDate }));
+  }, [formName, formLink, formDueDate, hasTriedAddFormSubmit, isAddDialogOpen]);
 
   const loadClassroomsIfNeeded = async () => {
     if (classroomsLoaded || !schoolId) return;
@@ -141,6 +145,7 @@ export function AdminDashboard() {
   };
 
   const handleAddForm = async () => {
+    setHasTriedAddFormSubmit(true);
     if (!validateForm()) return;
 
     setIsAddingForm(true);
@@ -151,15 +156,28 @@ export function AdminDashboard() {
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
 
       setIsAddDialogOpen(false);
-      setFormName('');
-      setFormLink('');
-      setFormStatus('school_default');
-      setFormDueDate('');
-      setFormErrors({});
+      resetAddFormState();
 
       window.location.reload();
     } catch (error) {
-      showToast('error', 'Failed to create form. Please try again.');
+      const errorText =
+        (error as any)?.response?.error ||
+        (error as any)?.response?.message ||
+        (error instanceof Error ? error.message : '');
+
+      if (
+        typeof errorText === 'string' &&
+        (errorText.includes('unique_active_form_name_per_school') ||
+          errorText.includes('duplicate key value violates unique constraint'))
+      ) {
+        setFormErrors((prev) => ({
+          ...prev,
+          formName: 'A form with this name already exists.'
+        }));
+        showToast('error', 'Form already exists with the same name.');
+      } else {
+        showToast('error', 'Failed to create form. Please try again.');
+      }
     } finally {
       setIsAddingForm(false);
     }
@@ -398,7 +416,10 @@ export function AdminDashboard() {
         {/* Add Form Modal */}
         <AddFormModal
           isOpen={isAddDialogOpen}
-          onClose={() => setIsAddDialogOpen(false)}
+          onClose={() => {
+            resetAddFormState();
+            setIsAddDialogOpen(false);
+          }}
           onSubmit={handleAddForm}
           formName={formName}
           setFormName={setFormName}

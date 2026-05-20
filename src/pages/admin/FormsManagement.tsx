@@ -16,6 +16,8 @@ import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { usePagination } from '../../hooks/usePagination';
 import { PageLoader } from '../../components/ui/page-loader';
+import { AddFormModal } from '../../components/admin/AddFormModal';
+import { validateAddFormFields } from '../../lib/addFormValidation';
 
 type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
 interface Form {
@@ -51,6 +53,7 @@ export function FormsManagement() {
   const [loading, setLoading] = useState(true);
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
   const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const { showToast } = useToast();
@@ -58,23 +61,25 @@ export function FormsManagement() {
   const schoolId = localStorage.getItem('schoolId');
 
   const validateForm = () => {
-    const errors: {[key: string]: string} = {};
-    
-    if (!formName.trim()) errors.formName = 'Form name is required';
-    if (!formDueDate) errors.formDueDate = 'Due date is required';
-    else {
-      const today = new Date();
-      const selectedDate = new Date(formDueDate);
-      today.setHours(0, 0, 0, 0);
-      selectedDate.setHours(0, 0, 0, 0);
-      if (selectedDate <= today) {
-        errors.formDueDate = 'Due date must be greater than today';
-      }
-    }
-    
+    const errors = validateAddFormFields({ formName, formLink, formDueDate });
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
+
+  const resetAddFormState = () => {
+    setFormName('');
+    setFormLink('');
+    setFormStatus('school_default');
+    setFormDueDate('');
+    setFormErrors({});
+    setHasTriedAddFormSubmit(false);
+  };
+
+  useEffect(() => {
+    if (!isAddDialogOpen) return;
+    if (!hasTriedAddFormSubmit && Object.keys(formErrors).length === 0) return;
+    setFormErrors(validateAddFormFields({ formName, formLink, formDueDate }));
+  }, [formName, formLink, formDueDate, hasTriedAddFormSubmit, isAddDialogOpen]);
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -151,20 +156,38 @@ export function FormsManagement() {
     mobileItemsPerPage: 5
   });
   const handleAddForm = async () => {
+    setHasTriedAddFormSubmit(true);
     if (!validateForm()) return;
-    
+     
     try {
       setIsAddingForm(true);
       // const user = await fetchUserContext();
       if (!schoolId) return;
       
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
-      resetFormFields();
+      resetAddFormState();
       setIsAddDialogOpen(false);
       window.location.reload();
     } catch (error) {
       setIsAddingForm(false);
-      showToast('error', 'Failed to create form. Please try again.');
+      const errorText =
+        (error as any)?.response?.error ||
+        (error as any)?.response?.message ||
+        (error instanceof Error ? error.message : '');
+
+      if (
+        typeof errorText === 'string' &&
+        (errorText.includes('unique_active_form_name_per_school') ||
+          errorText.includes('duplicate key value violates unique constraint'))
+      ) {
+        setFormErrors((prev) => ({
+          ...prev,
+          formName: 'A form with this name already exists.'
+        }));
+        showToast('error', 'Form already exists with the same name.');
+      } else {
+        showToast('error', 'Failed to create form. Please try again.');
+      }
     }
   };
   const handleEditForm = async () => {
@@ -608,96 +631,25 @@ export function FormsManagement() {
           </CardContent>
         </Card>
       </div>
-      {/* Add Form Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Add New Form</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Form Name
-              </label>
-              <Input 
-                value={formName} 
-                onChange={e => {
-                  setFormName(e.target.value);
-                  if (formErrors.formName) {
-                    setFormErrors(prev => ({...prev, formName: ''}));
-                  }
-                }} 
-                placeholder="Enter form name" 
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`} 
-                autoFocus 
-              />
-              {formErrors.formName && (
-                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Form Link
-              </label>
-              <Input 
-                value={formLink} 
-                onChange={e => {
-                  setFormLink(e.target.value);
-                  if (formErrors.formLink) {
-                    setFormErrors(prev => ({...prev, formLink: ''}));
-                  }
-                }} 
-                placeholder="https://example.com/form" 
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
-              />
-              {formErrors.formLink && (
-                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
-              <Select value={formStatus} onValueChange={value => setFormStatus(value as FormStatus)}>
-                <SelectTrigger className="h-10 sm:h-11">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="school_default">Default</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="archived">Archive</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Due Date</label>
-              <Input
-                type="date"
-                value={formDueDate}
-                onChange={e => {
-                  setFormDueDate(e.target.value);
-                  if (formErrors.formDueDate) {
-                    setFormErrors(prev => ({...prev, formDueDate: ''}));
-                  }
-                }}
-                className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
-                min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-              />
-              {formErrors.formDueDate && (
-                <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
-              )}
-            </div>
-
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
-            <AsyncButton onClick={handleAddForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim() || !formDueDate || isAddingForm || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}>
-              {isAddingForm ? 'Adding Form...' : 'Add Form'}
-            </AsyncButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AddFormModal
+        isOpen={isAddDialogOpen}
+        onClose={() => {
+          resetAddFormState();
+          setIsAddDialogOpen(false);
+        }}
+        onSubmit={handleAddForm}
+        formName={formName}
+        setFormName={setFormName}
+        formLink={formLink}
+        setFormLink={setFormLink}
+        formStatus={formStatus}
+        setFormStatus={(value) => setFormStatus(value as FormStatus)}
+        formDueDate={formDueDate}
+        setFormDueDate={setFormDueDate}
+        formErrors={formErrors}
+        setFormErrors={setFormErrors}
+        isSubmitting={isAddingForm}
+      />
       {/* Edit Form Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>

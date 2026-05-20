@@ -1,4 +1,3 @@
-import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -43,7 +42,12 @@ export function AddFormModal({
   submitButtonText = "Add Form"
 }: AddFormModalProps) {
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
       <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
         <DialogHeader>
           <DialogTitle className="text-lg sm:text-xl">{title}</DialogTitle>
@@ -68,8 +72,8 @@ export function AddFormModal({
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Form Link (Optional)</label>
-            <Input 
+            <label className="block text-sm font-medium mb-2">Form Link (Fillout Form ID or URL)</label>
+            <Input
               value={formLink} 
               onChange={e => {
                 setFormLink(e.target.value);
@@ -77,7 +81,7 @@ export function AddFormModal({
                   setFormErrors(prev => ({...prev, formLink: ''}));
                 }
               }} 
-              placeholder="https://example.com/form" 
+              placeholder="parent_handbook or https://goddard.fillout.com/parent_handbook"
               className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
             />
             {formErrors.formLink && (
@@ -124,7 +128,7 @@ export function AddFormModal({
           <AsyncButton 
             onClick={onSubmit} 
             className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" 
-            disabled={!formName.trim() || !formDueDate || isSubmitting || !!formErrors.formName || !!formErrors.formDueDate}
+            disabled={!formName.trim() || !formLink.trim() || !formDueDate || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
           >
             {isSubmitting ? `${submitButtonText.includes('Add') ? 'Adding' : 'Updating'} Form...` : submitButtonText}
           </AsyncButton>

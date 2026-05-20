@@ -29,6 +29,7 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
     let errorCode: string | undefined;
+    let shouldRedirectToLogin = false;
 
     if (typeof data === 'string') {
       message = data;
@@ -40,16 +41,29 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
 
       // Check for session expiration - error_code is nested in the error string
       if (errorCode === 'AUTHORIZATION_ERROR' && errorString && errorString.includes('session_not_found')) {
-        // Session expired - redirect to login page (only once)
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          // Use a flag to prevent multiple redirects
-          if (!(window as any).__redirecting) {
-            (window as any).__redirecting = true;
-            setTimeout(() => {
-              window.location.href = '/login';
-            }, 100);
-          }
-        }
+        shouldRedirectToLogin = true;
+      }
+
+      // Missing auth headers or similar auth-required errors
+      if (
+        res.status === 401 ||
+        errorCode === 'AUTHORIZATION_ERROR' ||
+        (typeof errorString === 'string' &&
+          (errorString.toLowerCase().includes('authentication required') ||
+            errorString.toLowerCase().includes('bearer token') ||
+            errorString.toLowerCase().includes('x-api key')))
+      ) {
+        shouldRedirectToLogin = true;
+      }
+    }
+
+    // Redirect to login page (only once)
+    if (shouldRedirectToLogin && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+      if (!(window as any).__redirecting) {
+        (window as any).__redirecting = true;
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
       }
     }
 
