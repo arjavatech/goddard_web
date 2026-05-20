@@ -21,6 +21,7 @@ type ChildFormCard = {
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
   filloutFormId?: string | null;
+  studentFormAssignmentId?: string | null;
   assignedAt?: string | null;
   dueDate?: string | null;
 };
@@ -99,6 +100,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
       recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
       recentEditLink: form.recent_edit_link || form.recentEditLink || null,
       filloutFormId: form.fillout_form_id || form.filloutFormId || null,
+      studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
       assignedAt: form.assigned_at || null,
       dueDate: form.due_date ? (() => {
         // Handle DD-MM-YYYY format from API

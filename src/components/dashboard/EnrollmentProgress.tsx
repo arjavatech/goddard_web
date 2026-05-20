@@ -49,6 +49,20 @@ export function EnrollmentProgress({
   const incompleteForm = sortedForms.find(form => !COMPLETION_STATUSES.has(form.status));
   const currentStep = incompleteForm?.title || 'Enrollment complete';
 
+  const continueStudentFormAssignmentId = (() => {
+    const direct = incompleteForm?.studentFormAssignmentId;
+    if (typeof direct === 'string' && direct.trim()) return direct.trim();
+    if (typeof incompleteForm?.filloutFormId === 'string') {
+      const parts = incompleteForm.filloutFormId.split('?');
+      if (parts.length > 1) {
+        const params = new URLSearchParams(parts[1]);
+        const fromUrl = params.get('student_form_assignment_id');
+        if (fromUrl && fromUrl.trim()) return fromUrl.trim();
+      }
+    }
+    return null;
+  })();
+
   // State for showing all forms
   const [showAllForms, setShowAllForms] = useState(false);
 
@@ -155,17 +169,16 @@ export function EnrollmentProgress({
       <div className="flex flex-col sm:flex-row gap-3">
         <Button
           className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 font-medium transition-colors text-sm sm:text-base px-4 sm:px-6 py-2.5 sm:py-3"
-          disabled={progressPercentage === 100}
+          disabled={progressPercentage === 100 || !continueStudentFormAssignmentId}
           onClick={() => {
             console.log('Continue button clicked, incomplete form:', incompleteForm);
             console.log('childId prop:', childId);
+            if (!continueStudentFormAssignmentId) {
+              console.error('[Fillout] BLOCKED continue: Missing student_form_assignment_id', { incompleteForm });
+              return;
+            }
             if (incompleteForm && onContinue) {
-              let studentFormAssignmentId = null;
-              if (incompleteForm.filloutFormId) {
-                const urlParams = new URLSearchParams(incompleteForm.filloutFormId.split('?')[1]);
-                studentFormAssignmentId = urlParams.get('student_form_assignment_id');
-              }
-              console.log('Extracted student_form_assignment_id:', studentFormAssignmentId);
+              console.log('Resolved student_form_assignment_id:', continueStudentFormAssignmentId);
               const actualChildId = childId || incompleteForm.childId || 'continue-form';
               const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
               const isValidFormId = incompleteForm.filloutFormId &&
@@ -181,7 +194,7 @@ export function EnrollmentProgress({
                   fillout_form_id: isValidFormId ? incompleteForm.filloutFormId : null,
                   recent_edit_link: incompleteForm.recentEditLink,
                   recent_pdf_link: incompleteForm.recentPdfLink,
-                  student_form_assignment_id: studentFormAssignmentId
+                  student_form_assignment_id: continueStudentFormAssignmentId
                 }
               };
               console.log('Calling onContinue with:', formWithChildData);

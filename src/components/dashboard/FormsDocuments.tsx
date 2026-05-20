@@ -24,6 +24,8 @@ interface FormCardProps {
   onView?: () => void;
   onDownload?: () => void;
   onPrint?: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
   isLoading?: { action: string; formId: string } | null;
   formId?: string;
   assignedAt?: string | null;
@@ -38,6 +40,8 @@ function FormCard({
   onView,
   onDownload,
   onPrint,
+  disabled = false,
+  disabledReason,
   isLoading,
   formId,
   dueDate
@@ -52,7 +56,15 @@ function FormCard({
     return 'border-amber-500';
   };
 
-  return <Card className={`glass-card h-full transition-shadow cursor-pointer hover:shadow-md ${getBorderColor()}`} onClick={onView}>
+  return (
+    <Card
+      className={`glass-card h-full transition-shadow hover:shadow-md ${getBorderColor()} ${disabled ? 'cursor-not-allowed opacity-60 hover:shadow-none' : 'cursor-pointer'}`}
+      onClick={() => {
+        if (disabled) return;
+        onView?.();
+      }}
+      title={disabled ? (disabledReason || 'Form is not ready yet') : undefined}
+    >
       <CardHeader className="pb-2">
         <div className="flex flex-col">
           <div className="flex items-center justify-between">
@@ -87,6 +99,7 @@ function FormCard({
                 className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (disabled) return;
                   onView?.();
                 }}
                 title="View Form (Read-only)"
@@ -101,6 +114,7 @@ function FormCard({
                     className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (disabled) return;
                       onDownload?.();
                     }}
                     disabled={isLoadingThis}
@@ -118,6 +132,7 @@ function FormCard({
                     className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
                     onClick={(e) => {
                       e.stopPropagation();
+                      if (disabled) return;
                       onPrint?.();
                     }}
                     disabled={isLoadingThis}
@@ -140,6 +155,7 @@ function FormCard({
               className="h-8 w-8 text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
               onClick={(e) => {
                 e.stopPropagation();
+                if (disabled) return;
                 onView();
               }}
               title="View Form"
@@ -149,7 +165,14 @@ function FormCard({
           )}
         </div>
       </CardFooter>
-    </Card>;
+      {disabled && disabledReason && (
+        <div className="px-4 pb-4 text-xs text-amber-700 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          <span className="truncate">{disabledReason}</span>
+        </div>
+      )}
+    </Card>
+  );
 }
 interface FormData {
   title: string;
@@ -160,6 +183,7 @@ interface FormData {
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
   filloutFormId?: string | null;
+  studentFormAssignmentId?: string | null;
   assignedAt?: string | null;
   dueDate?: string | null;
   fromContinueButton?: boolean;
@@ -206,6 +230,8 @@ export function FormsDocuments({
   const previousChildIdRef = useRef<string | undefined>(selectedChildId);
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
+  const [openError, setOpenError] = useState<string | null>(null);
+  const isOpeningRef = useRef(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -234,12 +260,42 @@ export function FormsDocuments({
       previousChildIdRef.current = selectedChildId;
       // Close any open form when child changes
       setSelectedForm(null);
+      setOpenError(null);
       setShowThankYou(false);
       setIsFrameLoading(false);
       if (countdownRef.current) clearInterval(countdownRef.current);
       if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
     }
   }, [selectedChildId]);
+
+  const extractStudentFormAssignmentId = (value: unknown): string | null => {
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value);
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '#') return null;
+    return trimmed;
+  };
+
+  const extractStudentFormAssignmentIdFromUrl = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (!trimmed || trimmed === '#') return null;
+    try {
+      const paramsPart = trimmed.includes('?') ? trimmed.split('?')[1] : '';
+      if (!paramsPart) return null;
+      const urlParams = new URLSearchParams(paramsPart);
+      return extractStudentFormAssignmentId(urlParams.get('student_form_assignment_id'));
+    } catch {
+      return null;
+    }
+  };
+
+  const coerceStudentFormAssignmentIdForPayload = (value: unknown): { raw: string | null; asNumber: number | null; isValid: boolean } => {
+    const raw = extractStudentFormAssignmentId(value);
+    if (!raw) return { raw: null, asNumber: null, isValid: false };
+    const numeric = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
+    return { raw, asNumber: Number.isFinite(numeric) ? numeric : null, isValid: true };
+  };
 
   // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
@@ -267,12 +323,22 @@ export function FormsDocuments({
           });
           
           console.log('Final matching result:', matchingRawForm);
+          const rawData = matchingRawForm || null;
+          const studentFormAssignmentId =
+            extractStudentFormAssignmentId(rawData?.student_form_assignment_id) ||
+            extractStudentFormAssignmentId(rawData?.studentFormAssignmentId) ||
+            extractStudentFormAssignmentIdFromUrl(rawData?.recent_edit_link) ||
+            extractStudentFormAssignmentIdFromUrl(rawData?.fillout_form_id) ||
+            extractStudentFormAssignmentIdFromUrl(form.filloutFormId) ||
+            extractStudentFormAssignmentIdFromUrl(form.recentEditLink) ||
+            null;
           return {
             ...form,
             childId: child.childId,
             childName: child.childName,
             _key: `child-${child.childId}-form-${form.formId || formIndex}`,
-            rawData: matchingRawForm || null
+            rawData,
+            studentFormAssignmentId
           };
         });
       })
@@ -280,6 +346,13 @@ export function FormsDocuments({
   }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
 
   const handleView = (form: any) => {
+    if (isOpeningRef.current) return;
+    isOpeningRef.current = true;
+    setTimeout(() => {
+      isOpeningRef.current = false;
+    }, 500);
+
+    setOpenError(null);
     console.log('handleView called with form:', form);
     console.log('Form ID:', form.formId || form._key);
     console.log('Child ID form opening:', form.childId);
@@ -305,11 +378,21 @@ export function FormsDocuments({
     // Extract all possible URL sources from rawData and form object
     const rawData = form.rawData || {};
     console.log('Raw data for form:', form);
-    const recentEditLink = rawData.recentEditLink || form.recentEditLink;
-    const recentPdfLink = rawData.recentPdfLink || form.recentPdfLink;
-    const filloutFormId = rawData.filloutFormId || form.filloutFormId;
-    let studentFormAssignmentId = rawData.studentFormAssignmentId;
+    const recentEditLink = rawData.recent_edit_link || rawData.recentEditLink || form.recentEditLink;
+    const recentPdfLink = rawData.recent_pdf_link || rawData.recentPdfLink || form.recentPdfLink;
+    const filloutFormId = rawData.fillout_form_id || rawData.filloutFormId || form.filloutFormId;
+    const studentFormAssignmentId =
+      extractStudentFormAssignmentId(form.studentFormAssignmentId) ||
+      extractStudentFormAssignmentId(rawData.student_form_assignment_id) ||
+      extractStudentFormAssignmentId(rawData.studentFormAssignmentId) ||
+      extractStudentFormAssignmentId(form.student_form_assignment_id) ||
+      extractStudentFormAssignmentIdFromUrl(recentEditLink) ||
+      extractStudentFormAssignmentIdFromUrl(filloutFormId) ||
+      extractStudentFormAssignmentIdFromUrl(form.filloutFormId) ||
+      extractStudentFormAssignmentIdFromUrl(form.recentEditLink) ||
+      null;
     const formId = rawData.formId || form.formId;
+    const idForPayload = coerceStudentFormAssignmentIdForPayload(studentFormAssignmentId);
     
     console.log('Form data for URL construction:', {
       status: form.status,
@@ -317,6 +400,7 @@ export function FormsDocuments({
       recentPdfLink,
       filloutFormId,
       studentFormAssignmentId,
+      studentFormAssignmentIdNumber: idForPayload.asNumber,
       formId,
       rawData
     });
@@ -332,6 +416,22 @@ export function FormsDocuments({
         return;
       }
     } else {
+      // Backend validation requires this hidden field; do not open Fillout without it.
+      if (!idForPayload.isValid) {
+        const debugPayload = {
+          formId: form.formId || form._key,
+          status: form.status,
+          recentEditLink,
+          filloutFormId,
+          extractedStudentFormAssignmentId: studentFormAssignmentId,
+          coerced: idForPayload,
+          expectedHiddenFieldKey: 'student_form_assignment_id'
+        };
+        console.error('[Fillout] BLOCKED: Missing or invalid student_form_assignment_id', debugPayload);
+        setOpenError('This form is not ready yet (missing assignment ID). Please refresh and try again. If it still fails, contact support.');
+        return;
+      }
+
       // For non-approved forms, prioritize recent_edit_link first
       if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
         formUrl = recentEditLink;
@@ -341,19 +441,15 @@ export function FormsDocuments({
           // Already a full URL
           formUrl = filloutFormId;
           // Add student_form_assignment_id if available and not already in URL
-          if (studentFormAssignmentId && !formUrl.includes('student_form_assignment_id')) {
-            formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
+          if (idForPayload.raw && !formUrl.includes('student_form_assignment_id')) {
+            formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
           }
         } else {
           // Construct fillout URL
           const baseUrl = `https://goddard.fillout.com/${filloutFormId}`;
-          if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
-            formUrl = `${baseUrl}?student_form_assignment_id=${studentFormAssignmentId}`;
-          } else {
-            formUrl = baseUrl;
-          }
+          formUrl = `${baseUrl}?student_form_assignment_id=${idForPayload.raw}`;
         }
-      } else if (studentFormAssignmentId && studentFormAssignmentId !== '#' && studentFormAssignmentId.trim() !== '') {
+      } else if (idForPayload.raw) {
         // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
         let defaultFormId = rawData.fillout_form_id || 'parent_handbook';
         // Validate the default form ID - if it's invalid test data, use parent_handbook
@@ -362,10 +458,16 @@ export function FormsDocuments({
           defaultFormId = 'parent_handbook';
         }
         console.log('Default form ID used:', defaultFormId)
-        formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${studentFormAssignmentId}`;
+        formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${idForPayload.raw}`;
       }
     }
     console.log('Final form URL:', formUrl);
+    console.log('[Fillout] READY payload (frontend):', {
+      student_form_assignment_id: idForPayload.asNumber ?? idForPayload.raw,
+      student_form_assignment_id_raw: idForPayload.raw,
+      student_form_assignment_id_number: idForPayload.asNumber,
+      viewUrl: formUrl
+    });
 
     setSelectedForm({
       ...form,
@@ -743,6 +845,12 @@ export function FormsDocuments({
           <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
             Forms & Documents
           </h2>
+          {openError && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+              <span>{openError}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             {onYearFilterChange && (
               <div className="flex items-center gap-2">
@@ -831,6 +939,8 @@ export function FormsDocuments({
                       recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
                       assignedAt={form.assignedAt}
                       dueDate={form.dueDate}
+                      disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
+                      disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
                       onView={() => {
                         console.log('Form ID:', form.formId || form._key);
                         console.log('Child ID:', form.childId);
