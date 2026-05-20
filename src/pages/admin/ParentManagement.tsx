@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -111,6 +111,50 @@ export function ParentManagement() {
 
   const schoolId = localStorage.getItem('schoolId');
 
+  const mapParentDetails = useCallback((detail: any): Parent => {
+    console.log('Mapping parent detail:', {
+      parentId: detail.parentId,
+      parent_id: detail.parent_id,
+      email: detail.email,
+      originalDetail: detail
+    });
+
+    const parentId = detail.parentId || detail.parent_id || '';
+    if (!parentId) {
+      console.warn('No parent ID found in detail:', detail);
+    }
+
+    const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
+    const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
+    const children: Child[] = detail.children?.map((child: any) => {
+      const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
+      return {
+        id: child.childId,
+        firstName: childFirstName || 'Unknown',
+        lastName: childLastNameParts.join(' ') || 'Child',
+        dob: child.childDob || '—',
+        classroom: {
+          id: child.classroomId || 'unassigned',
+          name: child.classroomName || 'Unassigned'
+        }
+      };
+    }) || [];
+    const hasCompletedForms = detail.children?.some((child: any) => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
+
+    const mappedParent = {
+      id: parentId,
+      firstName,
+      lastName,
+      email: detail.email,
+      children,
+      status: hasCompletedForms ? 'Active' : 'Archive',
+      signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
+    } satisfies Parent;
+
+    console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
+    return mappedParent;
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -124,56 +168,10 @@ export function ParentManagement() {
 
         if (!isMounted) return;
 
-        // Helper function to map parent details to Parent type
-        const mapParentDetails = (detail: any): Parent => {
-          console.log('Mapping parent detail:', { 
-            parentId: detail.parentId, 
-            parent_id: detail.parent_id,
-            email: detail.email, 
-            originalDetail: detail 
-          });
-          
-          // Ensure we get a valid parent ID - prioritize parentId (camelCase) since that's what the API returns
-          const parentId = detail.parentId || detail.parent_id || '';
-          if (!parentId) {
-            console.warn('No parent ID found in detail:', detail);
-          }
-          
-          const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
-          const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
-          const children: Child[] = detail.children?.map((child: any) => {
-            const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
-            return {
-              id: child.childId,
-              firstName: childFirstName || 'Unknown',
-              lastName: childLastNameParts.join(' ') || 'Child',
-              dob: child.childDob || '—',
-              classroom: {
-                id: child.classroomId || 'unassigned',
-                name: child.classroomName || 'Unassigned'
-              }
-            };
-          }) || [];
-          const hasCompletedForms = detail.children?.some((child: any) => Array.isArray(child.forms) && child.forms.some((form: any) => form.status === 'completed')) || false;
-          
-          const mappedParent = {
-            id: parentId,
-            firstName,
-            lastName,
-            email: detail.email,
-            children,
-            status: hasCompletedForms ? 'Active' : 'Archive',
-            signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
-          } satisfies Parent;
-          
-          console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
-          return mappedParent;
-        };
-
         // Map active parents
         if (parentDetailsResponse.activeParents.length > 0) {
           const mappedActiveParents = parentDetailsResponse.activeParents.map(mapParentDetails);
-          console.log('Mapped active parents:', mappedActiveParents.map(p => ({ id: p.id, email: p.email, originalParentId: parentDetailsResponse.activeParents.find(orig => orig.email === p.email)?.parentId })));
+          console.log('Mapped active parents:', mappedActiveParents.map(p => ({ id: p.id, email: p.email, originalParentId: parentDetailsResponse.activeParents.find((orig: any) => orig.email === p.email)?.parentId })));
           setParents(mappedActiveParents);
         }
 
@@ -288,27 +286,12 @@ export function ParentManagement() {
         secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
       });
       
-      // Success - update UI and show success notification
-      const classroom = classrooms.find(c => c.id === childClassroom);
-      const newParent: Parent = {
-        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        firstName: parentFirstName,
-        lastName: parentLastName,
-        email: parentEmail,
-        children: [{
-          id: Math.random().toString(36).substring(2, 9),
-          firstName: childFirstName,
-          lastName: childLastName,
-          dob: childDob,
-          classroom: {
-            id: childClassroom,
-            name: classroom?.name || 'Unassigned'
-          }
-        }],
-        status: 'Active',
-        signupStatus: 'Not Signed'
-      };
-      setParents([...parents, newParent]);
+      // Re-fetch to get the real parent_id assigned by the DB
+      const refreshed = await fetchParentDetails(schoolId).catch(() => null);
+      if (refreshed) {
+        setParents(refreshed.activeParents.map(mapParentDetails));
+        setDeactivatedParents(refreshed.inactiveParents.map(mapParentDetails));
+      }
       resetInviteForm();
       setIsInviteDialogOpen(false);
       
