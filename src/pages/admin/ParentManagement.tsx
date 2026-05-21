@@ -267,10 +267,30 @@ export function ParentManagement() {
   const handleInviteParent = async () => {
     if (!validateInviteForm()) return;
     
-    // const user = await fetchUserContext();
     if (!schoolId) throw new Error('School context not found');
     
     try {
+      // Check if primary parent email already exists
+      const existingParents = await fetchParentDetails(schoolId);
+      const allParents = [...existingParents.activeParents, ...existingParents.inactiveParents];
+      
+      const primaryEmailExists = allParents.some(p => p.email.toLowerCase() === parentEmail.toLowerCase());
+      if (primaryEmailExists) {
+        setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
+        showToast('error', 'Primary parent email already exists');
+        return;
+      }
+      
+      // Check if secondary parent email already exists (if provided)
+      if (secondaryParentEmail.trim()) {
+        const secondaryEmailExists = allParents.some(p => p.email.toLowerCase() === secondaryParentEmail.toLowerCase());
+        if (secondaryEmailExists) {
+          setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: 'Email already exists' }));
+          showToast('error', 'Secondary parent email already exists');
+          return;
+        }
+      }
+      
       await inviteParent(schoolId, {
         parentFirstName,
         parentLastName,

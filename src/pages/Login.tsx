@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Building2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useAuth } from '../services/auth/useAuth';
@@ -22,6 +22,7 @@ export function Login() {
   });
   const [schools, setSchools] = useState<School[]>([]);
   const [selectedSchool, setSelectedSchoolState] = useState<School | null>(null);
+  const [schoolMismatchError, setSchoolMismatchError] = useState('');
   const [showSchoolSelector, setShowSchoolSelector] = useState(false);
   const [isLoadingSchools, setIsLoadingSchools] = useState(false);
   const {
@@ -82,14 +83,12 @@ export function Login() {
 
       // Fetch user context to get the user's school_id
       const userContext = await fetchUserContext();
-      const userSchoolId = userContext.school_id || userContext.schoolId;
+      const userSchoolId = userContext.schoolId;
 
       // Validate that the selected school matches the user's school_id
       if (userSchoolId && userSchoolId !== selectedSchool.id) {
-        // School ID doesn't match - sign out and show error
         await signOut();
-        showToast('error', `Your account is registered to a different school. Please select the correct school.`, 'School Mismatch');
-        setShowSchoolSelector(true);
+        setSchoolMismatchError('Your account is registered to a different school. Please go back and select the correct school.');
         setIsLoading(false);
         return;
       }
@@ -132,6 +131,8 @@ export function Login() {
   };
   return <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-4">
+        {/* Back Button */}
+       
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex justify-center">
@@ -189,6 +190,21 @@ export function Login() {
                   Forgot password?
                 </Link>
               </div>
+              {/* School Mismatch Error */}
+              {schoolMismatchError && (
+                <div className="flex items-start gap-2 px-3 py-2 bg-red-50 border border-red-200 rounded-md">
+                  <div className="flex-1">
+                    <p className="text-sm text-red-700">{schoolMismatchError}</p>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/')}
+                      className="mt-1 text-sm font-medium text-red-700 underline hover:text-red-800"
+                    >
+                      Go back and select correct school
+                    </button>
+                  </div>
+                </div>
+              )}
               {/* Sign In Button */}
               <Button type="submit" disabled={isLoading} className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed py-3">
                 {isLoading ? (

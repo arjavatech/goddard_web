@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
+import { useUserContext } from '../../contexts/UserContext';
 type ProtectedRouteProps = {
   children: React.ReactNode;
 };
@@ -13,11 +14,13 @@ export function ProtectedRoute({
     isBypassed,
     loading
   } = useAuth();
+  const { userData } = useUserContext();
   console.log('🛡️ ProtectedRoute check:', {
     isAuthenticated,
     isBypassed,
     loading,
-    path: location.pathname
+    path: location.pathname,
+    role: userData?.role
   });
   if (isBypassed) {
     console.log('🛡️ Access granted: Auth bypassed');
@@ -33,6 +36,12 @@ export function ProtectedRoute({
   if (location.pathname.startsWith('/superadmin')) {
     console.log('🛡️ Access granted: Superadmin route');
     return children;
+  }
+
+  // Prevent non-superadmin from accessing admin-management page directly
+  if (location.pathname === '/admin/admin-management' && userData?.role?.toLowerCase() !== 'superadmin') {
+    console.log('🛡️ Access denied: Only superadmin can access admin-management, redirecting to /admin');
+    return <Navigate to="/admin" replace />;
   }
 
   if (!isAuthenticated) {

@@ -9,6 +9,7 @@ interface UserContextValue {
   loading: boolean;
   error: string | null;
   refreshUserData: () => Promise<void>;
+  isReady: boolean;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -18,12 +19,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [schoolName, setSchoolName] = useState('The Goddard School');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
   const loadUserData = async () => {
     if (!isAuthenticated || !user) {
       setUserData(null);
       setLoading(false);
+      setIsReady(true);
       return;
     }
 
@@ -44,15 +47,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setError(err instanceof Error ? err.message : 'Failed to load user data');
     } finally {
       setLoading(false);
+      setIsReady(true);
     }
   };
 
   useEffect(() => {
     loadUserData();
-  }, [isAuthenticated, user?.id]); // Use user.id instead of the whole user object
+  }, [isAuthenticated, user?.id, user?.email]); // Include email to detect re-login with same user
 
   return (
-    <UserContext.Provider value={{ userData, schoolName, loading, error, refreshUserData: loadUserData }}>
+    <UserContext.Provider value={{ userData, schoolName, loading, error, refreshUserData: loadUserData, isReady }}>
       {children}
     </UserContext.Provider>
   );
@@ -64,4 +68,9 @@ export function useUserContext() {
     throw new Error('useUserContext must be used within a UserProvider');
   }
   return context;
+}
+
+export function useUserData() {
+  const { userData, loading } = useUserContext();
+  return { userData, loading };
 }

@@ -28,7 +28,7 @@ export function AdminLayout({
   const {
     signOut
   } = useAuth();
-  const { userData, schoolName, loading: userLoading } = useUserContext();
+  const { userData, schoolName, loading: userLoading, isReady } = useUserContext();
 
   console.log('AdminLayout schoolName:', schoolName);
 
@@ -118,7 +118,7 @@ export function AdminLayout({
     };
   }, []);
 
-  if (userLoading) {
+  if (!isReady) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <Loading size="md" message="" />
