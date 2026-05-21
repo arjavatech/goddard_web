@@ -174,63 +174,65 @@ export function AdminLayout({
 
       {/* Main content */}
       <div className="flex-1 flex flex-col lg:ml-64">
-        {/* Header */}
-        <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white shadow-sm border-b border-gray-100 py-3 px-4 lg:px-6 flex items-center justify-between z-10">
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setIsSidebarOpen(true)}
-              className="lg:hidden p-1.5 rounded-md hover:bg-gray-100"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div>
-              <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-                {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-              </h1>
-              <p className="text-xs text-gray-500">Role: {userData?.role || 'Loading...'}</p>
-            </div>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                  {userData?.firstName && userData?.lastName
-                    ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-                    : 'AD'}
-                </div>
-
+        {/* Header - Only show after role is fetched */}
+        {userData?.role && (
+          <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white shadow-sm border-b border-gray-100 py-3 px-4 lg:px-6 flex items-center justify-between z-10">
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="lg:hidden p-1.5 rounded-md hover:bg-gray-100"
+              >
+                <Menu className="w-5 h-5" />
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
-              <div className="p-4 border-b border-gray-100">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                    <User className="w-5 h-5 text-gray-600" />
+              <div>
+                <h1 className="text-lg lg:text-xl font-semibold text-foreground">
+                  {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                </h1>
+                <p className="text-xs text-gray-500">Role: {userData?.role}</p>
+              </div>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                    {userData?.firstName && userData?.lastName
+                      ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
+                      : 'AD'}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {userData?.firstName && userData?.lastName
-                        ? `${userData.firstName} ${userData.lastName}`
-                        : 'Administrator'}
-                    </p>
-                    <p className="text-xs text-gray-500">System Administrator</p>
+
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
+                <div className="p-4 border-b border-gray-100">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+                      <User className="w-5 h-5 text-gray-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-gray-900">
+                        {userData?.firstName && userData?.lastName
+                          ? `${userData.firstName} ${userData.lastName}`
+                          : 'Administrator'}
+                      </p>
+                      <p className="text-xs text-gray-500">System Administrator</p>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="p-3">
-                <button
-                  onClick={() => setShowLogoutModal(true)}
-                  className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </button>
-              </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </header>
+                <div className="p-3">
+                  <button
+                    onClick={() => setShowLogoutModal(true)}
+                    className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                  >
+                    <LogOut className="w-4 h-4 mr-2" />
+                    Logout
+                  </button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </header>
+        )}
         {/* Page content */}
-        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} sm:pt-20 pt-20 bg-gray-50`}>{children}</main>
+        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} ${userData?.role ? 'sm:pt-20 pt-20' : 'sm:pt-0 pt-0'} bg-gray-50`}>{children}</main>
       </div>
     </div>
 
