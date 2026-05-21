@@ -391,12 +391,7 @@ export function StudentManagement() {
 
       // Filter by status
       const matchesStatus = statusFilter.length === 0 || statusFilter.some(status => {
-        // Check for new form_status values (incomplete, complete)
-        if (status === 'incomplete' || status === 'complete') {
-          return student.formStatus === status;
-        }
-        // Check for old enrollment status values
-        return student.enrollmentStatus === status;
+        return student.formStatus === status;
       });
 
       // Filter by child status
@@ -730,7 +725,7 @@ export function StudentManagement() {
                       onValueChange={setStatusFilter}
                       options={[
                         'incomplete',
-                        'complete'
+                        'completed'
                       ]}
                       placeholder="Select statuses"
                     />
@@ -873,7 +868,7 @@ export function StudentManagement() {
                   <td className="py-3 px-2 text-center">
                     {(() => {
                       const apiFormStatus = student.formStatus || 'incomplete';
-                      const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : 'Pending';
+                      const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
                       const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
                       const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />;
                       return (

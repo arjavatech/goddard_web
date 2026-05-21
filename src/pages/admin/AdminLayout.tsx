@@ -187,7 +187,7 @@ export function AdminLayout({
               <h1 className="text-lg lg:text-xl font-semibold text-foreground">
                 {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
               </h1>
-              <p className="text-xs text-gray-500">Role: {userData?.role || 'Unknown'}</p>
+              <p className="text-xs text-gray-500">Role: {userData?.role || 'Loading...'}</p>
             </div>
           </div>
           <DropdownMenu>
