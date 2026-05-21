@@ -40,10 +40,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           const schools = await fetchSchools();
           const match = schools.find(s => s.id === data.schoolId);
           if (match) setSchoolName(match.name);
-        } catch {}
+        } catch (err) {
+          console.error('Failed to fetch school name:', err);
+        }
       }
     } catch (err) {
       console.error('Failed to fetch user context:', err);
+      // If it's an auth error, clear the session
+      if (err instanceof Error && (err.message.includes('session_not_found') || err.message.includes('Invalid JWT'))) {
+        console.log('Session invalid, clearing...');
+        setUserData(null);
+      }
       setError(err instanceof Error ? err.message : 'Failed to load user data');
     } finally {
       setLoading(false);

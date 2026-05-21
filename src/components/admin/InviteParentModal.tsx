@@ -265,7 +265,32 @@ export function InviteParentModal({
           <AsyncButton
             onClick={onInvite}
             className="bg-amazon-teal hover:bg-amazon-teal/90"
-            disabled={!parentFirstName.trim() || !parentLastName.trim() || !parentEmail.trim() || !childFirstName.trim() || !childLastName.trim() || !childDob || !childGender || !childClassroom || (!!secondaryParentEmail.trim() && (!secondaryParentFirstName.trim() || !secondaryParentLastName.trim()))}
+            disabled={(() => {
+              // Primary parent and child fields are always required
+              const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
+              const childValid = childFirstName.trim() && childLastName.trim() && childDob && childGender && childClassroom;
+              
+              if (!primaryParentValid || !childValid) return true;
+              
+              // Check if any secondary parent field is filled
+              const hasSecondaryParentData = 
+                secondaryParentFirstName.trim() || 
+                secondaryParentLastName.trim() || 
+                secondaryParentEmail.trim() || 
+                secondaryParentPhoneNumber.trim();
+              
+              // If any secondary parent field is filled, all required fields must be filled
+              if (hasSecondaryParentData) {
+                return !(
+                  secondaryParentFirstName.trim() && 
+                  secondaryParentLastName.trim() && 
+                  secondaryParentEmail.trim()
+                );
+              }
+              
+              // If no secondary parent fields are filled, button is enabled
+              return false;
+            })()}
           >
             <Mail className="h-4 w-4 mr-2" />
             Send Invitation

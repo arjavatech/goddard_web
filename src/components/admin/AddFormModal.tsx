@@ -1,7 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AsyncButton } from '../ui/async-button';
 
 interface AddFormModalProps {
@@ -12,8 +11,6 @@ interface AddFormModalProps {
   setFormName: (value: string) => void;
   formLink: string;
   setFormLink: (value: string) => void;
-  formStatus: string;
-  setFormStatus: (value: string) => void;
   formDueDate: string;
   setFormDueDate: (value: string) => void;
   formErrors: { [key: string]: string };
@@ -31,8 +28,6 @@ export function AddFormModal({
   setFormName,
   formLink,
   setFormLink,
-  formStatus,
-  setFormStatus,
   formDueDate,
   setFormDueDate,
   formErrors,
@@ -87,20 +82,6 @@ export function AddFormModal({
             {formErrors.formLink && (
               <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
             )}
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Status</label>
-            <Select value={formStatus} onValueChange={setFormStatus}>
-              <SelectTrigger className="h-10 sm:h-11">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="school_default">Default</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archive</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <div>
             <label className="block text-sm font-medium mb-2">Due Date</label>

@@ -2,10 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { useUserContext } from './contexts/UserContext';
+import { useSessionValidation } from './hooks/useSessionValidation';
 
 export function App() {
   const { userData, loading } = useUserContext();
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
+  
+  // Validate session on app load and periodically
+  useSessionValidation();
 
   useEffect(() => {
     if (!loading && userData) {

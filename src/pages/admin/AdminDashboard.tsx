@@ -44,7 +44,6 @@ export function AdminDashboard() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
-  const [formStatus, setFormStatus] = useState('school_default');
   const [formDueDate, setFormDueDate] = useState('');
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
@@ -120,10 +119,26 @@ export function AdminDashboard() {
     return Object.keys(errors).length === 0;
   };
 
+  const resetInviteFormState = () => {
+    setParentFirstName('');
+    setParentLastName('');
+    setParentEmail('');
+    setParentPhoneNumber('');
+    setSecondaryParentFirstName('');
+    setSecondaryParentLastName('');
+    setSecondaryParentEmail('');
+    setSecondaryParentPhoneNumber('');
+    setChildFirstName('');
+    setChildLastName('');
+    setChildDob('');
+    setChildGender('');
+    setChildClassroom('');
+    setInviteFormErrors({});
+  };
+
   const resetAddFormState = () => {
     setFormName('');
     setFormLink('');
-    setFormStatus('school_default');
     setFormDueDate('');
     setFormErrors({});
     setHasTriedAddFormSubmit(false);
@@ -153,7 +168,7 @@ export function AdminDashboard() {
     
       if (!schoolId) return;
 
-      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
+      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate);
 
       setIsAddDialogOpen(false);
       resetAddFormState();
@@ -254,20 +269,7 @@ export function AdminDashboard() {
       });
 
       setIsInviteDialogOpen(false);
-      setParentFirstName('');
-      setParentLastName('');
-      setParentEmail('');
-      setParentPhoneNumber('');
-      setSecondaryParentFirstName('');
-      setSecondaryParentLastName('');
-      setSecondaryParentEmail('');
-      setSecondaryParentPhoneNumber('');
-      setChildFirstName('');
-      setChildLastName('');
-      setChildDob('');
-      setChildGender('');
-      setChildClassroom('');
-      setInviteFormErrors({});
+      resetInviteFormState();
 
       showToast('success', 'Parent invitation sent successfully');
       window.location.reload();
@@ -445,8 +447,6 @@ export function AdminDashboard() {
           setFormName={setFormName}
           formLink={formLink}
           setFormLink={setFormLink}
-          formStatus={formStatus}
-          setFormStatus={setFormStatus}
           formDueDate={formDueDate}
           setFormDueDate={setFormDueDate}
           formErrors={formErrors}
@@ -459,7 +459,7 @@ export function AdminDashboard() {
           isOpen={isInviteDialogOpen}
           onClose={() => {
             setIsDialogClosing(true);
-            setInviteFormErrors({});
+            resetInviteFormState();
             setTimeout(() => setIsDialogClosing(false), 100);
             setIsInviteDialogOpen(false);
           }}

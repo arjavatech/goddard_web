@@ -1,12 +1,19 @@
 import { apiBaseUrl, isDev } from '../../config/env';
+import { SESSION_CONFIG, isSessionError, isRetryableStatus } from '../../config/session';
 import type { HttpRequest, HttpResponse } from './types';
+import { clearSession } from '../auth/session';
+
 type FetchOptions = {
   authToken?: string | null;
+  retryCount?: number;
 };
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): Promise<HttpResponse<T>> {
-  const {
-    authToken
-  } = opts;
+  const { authToken, retryCount = 0 } = opts;
   const url = req.url.startsWith('http') ? req.url : `${apiBaseUrl}${req.url}`;
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -14,22 +21,39 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   };
 
   if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
   const start = isDev ? performance.now() : 0;
-  const res = await fetch(url, {
-    method: req.method,
-    headers,
-    body: req.body ? JSON.stringify(req.body) : undefined
-  });
-  const contentType = res.headers.get('content-type') || '';
-  const data = (contentType.includes('application/json') ? await res.json() : await res.text()) as unknown;
+  let res: Response;
+  let data: unknown;
+
+  try {
+    res = await fetch(url, {
+      method: req.method,
+      headers,
+      body: req.body ? JSON.stringify(req.body) : undefined
+    });
+
+    const contentType = res.headers.get('content-type') || '';
+    data = (contentType.includes('application/json') ? await res.json() : await res.text()) as unknown;
+  } catch (fetchError) {
+    // Network error - retry if we haven't exceeded max retries
+    if (retryCount < SESSION_CONFIG.MAX_RETRIES) {
+      await delay(SESSION_CONFIG.RETRY_DELAY * (retryCount + 1));
+      return httpFetch(req, { ...opts, retryCount: retryCount + 1 });
+    }
+    throw new Error(`Network error: ${fetchError instanceof Error ? fetchError.message : 'Unknown error'}`);
+  }
+
   if (isDev) {
     const ms = Math.round(performance.now() - start);
     console.debug(`[HTTP] ${req.method} ${url} -> ${res.status} (${ms}ms)`, data);
   }
+
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
     let errorCode: string | undefined;
     let shouldRedirectToLogin = false;
+    let isSessionErrorFlag = false;
 
     if (typeof data === 'string') {
       message = data;
@@ -39,28 +63,35 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
       const errorString = (errorData.error || errorData.message || errorData.detail) as string;
       message = errorString || message;
 
-      // Check for session expiration - error_code is nested in the error string
-      if (errorCode === 'AUTHORIZATION_ERROR' && errorString && errorString.includes('session_not_found')) {
+      // Check for session errors using centralized config
+      if (isSessionError(message)) {
         shouldRedirectToLogin = true;
+        isSessionErrorFlag = true;
       }
 
-      // Missing auth headers or similar auth-required errors
-      if (
-        res.status === 401 ||
-        errorCode === 'AUTHORIZATION_ERROR' ||
-        (typeof errorString === 'string' &&
-          (errorString.toLowerCase().includes('authentication required') ||
-            errorString.toLowerCase().includes('bearer token') ||
-            errorString.toLowerCase().includes('x-api key')))
-      ) {
+      // Check for auth errors
+      if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status) || isSessionError(message)) {
         shouldRedirectToLogin = true;
       }
+    }
+
+    // Retry on retryable errors
+    if (isRetryableStatus(res.status) && retryCount < SESSION_CONFIG.MAX_RETRIES) {
+      await delay(SESSION_CONFIG.RETRY_DELAY * (retryCount + 1));
+      return httpFetch(req, { ...opts, retryCount: retryCount + 1 });
+    }
+
+    // Handle session errors - clear session and redirect
+    if (isSessionErrorFlag) {
+      await clearSession();
     }
 
     // Redirect to login page (only once)
     if (shouldRedirectToLogin && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
       if (!(window as any).__redirecting) {
         (window as any).__redirecting = true;
+        // Clear session before redirecting
+        await clearSession();
         setTimeout(() => {
           window.location.href = '/login';
         }, 100);
@@ -73,6 +104,7 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
     (error as any).code = errorCode;
     throw error;
   }
+
   return {
     status: res.status,
     ok: res.ok,

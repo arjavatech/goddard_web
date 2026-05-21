@@ -79,6 +79,7 @@ interface Student {
   }[];
   childStatus: 'active' | 'archive';
   enrollmentId?: string;
+  formStatus?: string;
 }
 export function StudentManagement() {
   const { showToast } = useToast();
@@ -157,6 +158,7 @@ export function StudentManagement() {
   const [bulkTransferFromGrade, setBulkTransferFromGrade] = useState('');
   const [bulkTransferToGrade, setBulkTransferToGrade] = useState('');
   const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
+  const [showBulkSelectCheckboxes, setShowBulkSelectCheckboxes] = useState(false);
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
     if (currentValues.includes(value)) {
@@ -331,7 +333,8 @@ export function StudentManagement() {
             secondaryParent,
             assignedForms: formsArray,
             childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
-            enrollmentId: enrollment.enrollment_id
+            enrollmentId: enrollment.enrollment_id,
+            formStatus: enrollment.form_status
           };
           return student;
         });
@@ -388,24 +391,12 @@ export function StudentManagement() {
 
       // Filter by status
       const matchesStatus = statusFilter.length === 0 || statusFilter.some(status => {
-        if (formFilter.length === 0) {
-          return student.enrollmentStatus === status;
-        } else {
-          return formFilter.some(form => {
-            const selectedForm = student.assignedForms.find(assignedForm => assignedForm.name === form);
-            if (selectedForm) {
-              const normalizedStatus = normalizeFormStatus(selectedForm.status);
-              if (status.toLowerCase() === 'incomplete') {
-                return normalizedStatus.toLowerCase() === 'incomplete' ||
-                       selectedForm.status.toLowerCase() === 'draft' ||
-                       normalizedStatus.toLowerCase() === 'draft';
-              } else {
-                return normalizedStatus.toLowerCase() === status.toLowerCase();
-              }
-            }
-            return false;
-          });
+        // Check for new form_status values (incomplete, complete)
+        if (status === 'incomplete' || status === 'complete') {
+          return student.formStatus === status;
         }
+        // Check for old enrollment status values
+        return student.enrollmentStatus === status;
       });
 
       // Filter by child status
@@ -620,6 +611,14 @@ export function StudentManagement() {
                 </div>
                 <div className="flex gap-2">
                   <Button
+                    onClick={() => setShowBulkSelectCheckboxes(true)}
+                    size="sm"
+                    className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
+                  >
+                    <GraduationCap className="h-4 w-4 mr-2" />
+                    Select Students to Transfer
+                  </Button>
+                  <Button
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
@@ -675,7 +674,7 @@ export function StudentManagement() {
                     </div>
                   )}
 
-                  {selectedStudentsForBulkAction.length > 0 && (
+                  {showBulkSelectCheckboxes && selectedStudentsForBulkAction.length > 0 && (
                     <>
                       <Button
                         onClick={() => {
@@ -693,13 +692,16 @@ export function StudentManagement() {
                         Transfer Selected ({selectedStudentsForBulkAction.length})
                       </Button>
                       <Button
-                        onClick={() => setSelectedStudentsForBulkAction([])}
+                        onClick={() => {
+                          setSelectedStudentsForBulkAction([]);
+                          setShowBulkSelectCheckboxes(false);
+                        }}
                         size="sm"
                         variant="outline"
                         className="h-10 sm:h-11"
                       >
                         <X className="h-4 w-4 mr-2" />
-                        Clear Selection
+                        Cancel Selection
                       </Button>
                     </>
                   )}
@@ -720,29 +722,20 @@ export function StudentManagement() {
                       </Button>
                     </div>
                   )}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form Type</label>
-                    <MultiSelectDropdown
-                      value={formFilter}
-                      onValueChange={setFormFilter}
-                      options={allFormNames}
-                      placeholder="Select forms"
-                      />
-                  </div>
-                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</label>
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
-                      options={formFilter.length === 0 ? 
-                        ['Completed-AdminApproved', 'Completed-Pending Approval', 'Draft'] :
-                        ['Completed-AdminApproved', 'Completed-Pending Approval', 'Completed-Needs Revision', 'Draft']
-                      }
+                      options={[
+                        'incomplete',
+                        'complete'
+                      ]}
                       placeholder="Select statuses"
                     />
                   </div>
+                  
                   
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Child Status</label>
@@ -793,7 +786,7 @@ export function StudentManagement() {
               onPageChange={setCurrentPage}
               columns={[
                 { 
-                  header: (
+                  header: showBulkSelectCheckboxes ? (
                     <Checkbox
                       checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
                       onCheckedChange={(checked) => {
@@ -804,8 +797,8 @@ export function StudentManagement() {
                         }
                       }}
                     />
-                  ), 
-                  className: 'text-center w-[5%]' 
+                  ) : null, 
+                  className: showBulkSelectCheckboxes ? 'text-center w-[5%]' : 'hidden' 
                 },
                 { header: 'Student', className: 'w-[22%]' },
                 { header: 'Classroom', className: 'w-[14%]' },
@@ -817,18 +810,20 @@ export function StudentManagement() {
               ]}
               rows={paginatedStudents.map((student, index) => (
                 <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
-                  <td className="py-3 px-2 text-center">
-                    <Checkbox
-                      checked={selectedStudentsForBulkAction.includes(student.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                        } else {
-                          setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                        }
-                      }}
-                    />
-                  </td>
+                  {showBulkSelectCheckboxes && (
+                    <td className="py-3 px-2 text-center">
+                      <Checkbox
+                        checked={selectedStudentsForBulkAction.includes(student.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                          } else {
+                            setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                          }
+                        }}
+                      />
+                    </td>
+                  )}
                   <td className="py-3 px-3">
                     <div className="flex items-center">
                       <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-2" />
@@ -877,27 +872,14 @@ export function StudentManagement() {
                   </td>
                   <td className="py-3 px-2 text-center">
                     {(() => {
-                      if (formFilter.length > 0) {
-                        const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
-                        if (selectedForm) {
-                          const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                          const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
-                          const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
-                          const statusIcon = normalizedStatus === 'Approved' ? <CheckCircle className="h-3 w-3 mr-1" /> : normalizedStatus === 'In Progress' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
-                          return (
-                            <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
-                              {statusIcon}
-                              <span className="truncate">{displayStatus}</span>
-                            </Badge>
-                          );
-                        }
-                        return <span className="text-gray-500 text-xs">N/A</span>;
-                      }
-                      const statusIcon = student.enrollmentStatus === 'Completed-AdminApproved' ? <CheckCircle className="h-3 w-3 mr-1" /> : student.enrollmentStatus === 'Completed-Pending Approval' ? <Clock className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />;
+                      const apiFormStatus = student.formStatus || 'incomplete';
+                      const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : 'Pending';
+                      const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
+                      const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />;
                       return (
-                        <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                        <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
                           {statusIcon}
-                          <span className="truncate">{student.enrollmentStatus}</span>
+                          <span className="truncate">{displayStatus}</span>
                         </Badge>
                       );
                     })()}
@@ -993,34 +975,38 @@ export function StudentManagement() {
               onPageChange={setCurrentPage}
               gridClassName="space-y-3"
               cards={[
-                <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
-                  <Checkbox
-                    checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                      } else {
-                        setSelectedStudentsForBulkAction([]);
-                      }
-                    }}
-                  />
-                  <span className="text-sm font-medium">Select All</span>
-                </div>,
+                ...(showBulkSelectCheckboxes ? [(
+                  <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
+                    <Checkbox
+                      checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                        } else {
+                          setSelectedStudentsForBulkAction([]);
+                        }
+                      }}
+                    />
+                    <span className="text-sm font-medium">Select All</span>
+                  </div>
+                )] : []),
                 ...paginatedStudents.map((student, index) => (
                   <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Checkbox
-                          checked={selectedStudentsForBulkAction.includes(student.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                            } else {
-                              setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                            }
-                          }}
-                          className="flex-shrink-0"
-                        />
+                        {showBulkSelectCheckboxes && (
+                          <Checkbox
+                            checked={selectedStudentsForBulkAction.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                              } else {
+                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                              }
+                            }}
+                            className="flex-shrink-0"
+                          />
+                        )}
                         <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                         <div className="min-w-0 flex-1">
                           <Link

@@ -1,8 +1,11 @@
 import { type User } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
+
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
+let lastTokenRefreshTime = 0;
+const TOKEN_REFRESH_INTERVAL = 5 * 60 * 1000; // Refresh every 5 minutes
 
 export async function getAuthToken(): Promise<string | null> {
   if (isAuthBypassed) return 'bypass-token';
@@ -13,6 +16,13 @@ export async function getAuthToken(): Promise<string | null> {
 
   // If session exists and is valid, return the token
   if (sessionData.session?.access_token) {
+    // Proactively refresh if token is getting old
+    const now = Date.now();
+    if (now - lastTokenRefreshTime > TOKEN_REFRESH_INTERVAL) {
+      lastTokenRefreshTime = now;
+      // Refresh in background without blocking
+      refreshSessionInBackground();
+    }
     return sessionData.session.access_token;
   }
 
@@ -22,17 +32,23 @@ export async function getAuthToken(): Promise<string | null> {
   }
 
   // Start refresh process
+  return performSessionRefresh();
+}
+
+async function performSessionRefresh(): Promise<string | null> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
       const { data: refreshData, error } = await supabase.auth.refreshSession();
 
       if (error || !refreshData.session?.access_token) {
-        // Session refresh failed - user needs to log in again
         console.error('Failed to refresh session:', error);
+        // Clear session on refresh failure
+        await clearSession();
         return null;
       }
 
+      lastTokenRefreshTime = Date.now();
       return refreshData.session.access_token;
     } finally {
       isRefreshing = false;
@@ -42,6 +58,26 @@ export async function getAuthToken(): Promise<string | null> {
 
   return refreshPromise;
 }
+
+function refreshSessionInBackground(): void {
+  if (!supabase || isRefreshing) return;
+  supabase.auth.refreshSession().catch(err => {
+    console.error('Background session refresh failed:', err);
+  });
+}
+
+export async function clearSession(): Promise<void> {
+  if (!supabase) return;
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    console.error('Error clearing session:', err);
+  }
+  lastTokenRefreshTime = 0;
+  isRefreshing = false;
+  refreshPromise = null;
+}
+
 export async function getCurrentUser(): Promise<User | null> {
   if (isAuthBypassed) {
     return {
