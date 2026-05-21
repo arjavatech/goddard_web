@@ -25,7 +25,7 @@ export type UserContext = {
 
 const schoolSettingsSchema = z.object({
   contact_no: z.string().optional(),
-  email: z.string().optional(),
+  mail: z.string().optional(),
   address: z.string().optional(),
   timezone: z.string().optional(),
   enrollment_capacity: z.number().optional(),
