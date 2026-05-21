@@ -8,23 +8,10 @@ import { useUserContext } from '../../contexts/UserContext';
 export function Footer() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const { schoolName } = useUserContext();
-
-  console.log('Footer rendered with schoolName:', schoolName);
-
-  console.log('Footer schoolName:', schoolName);
-
-  const location = schoolName.toLowerCase().includes('lynnwood')
-    ? '123 School Lane, Lynnwood, WA 98036'
-    : '4200 228th Ave NE, Redmond, WA 98053';
-
-  console.log('Footer location:', location);
+  const { schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
 
   return (
     <footer className="relative bg-amazon-teal">
-      {/* Top orange accent line */}
-      
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-5 sm:gap-6 pb-4 sm:pb-5 border-b border-white/20">
 
@@ -35,14 +22,18 @@ export function Footer() {
               Nurturing children through play-based learning and quality early childhood education.
             </p>
             <div className="flex items-center gap-2">
-              <a href="tel:+18000000000" aria-label="Call us"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-              <a href="mailto:support@goddardschool.com" aria-label="Email us"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Mail className="h-3.5 w-3.5" />
-              </a>
+              {schoolPhone && (
+                <a href={`tel:${schoolPhone}`} aria-label="Call us"
+                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              )}
+              {schoolEmail && (
+                <a href={`mailto:${schoolEmail}`} aria-label="Email us"
+                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                  <Mail className="h-3.5 w-3.5" />
+                </a>
+              )}
               <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
                 className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
                 <Globe className="h-3.5 w-3.5" />
@@ -54,22 +45,26 @@ export function Footer() {
           <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
             <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
             <ul className="flex flex-col gap-1.5 sm:gap-2">
-              <li>
-                <a href="tel:+18000000000" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                  <Phone className="h-3 w-3 text-white/60 shrink-0" />
-                  +1 (800) 000-0000
-                </a>
-              </li>
-              <li>
-                <a href="mailto:support@goddardschool.com" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                  <Mail className="h-3 w-3 text-white/60 shrink-0" />
-                  <span className="truncate">support@goddardschool.com</span>
-                </a>
-              </li>
-              {location && (
+              {schoolPhone && (
+                <li>
+                  <a href={`tel:${schoolPhone}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                    <Phone className="h-3 w-3 text-white/60 shrink-0" />
+                    {schoolPhone}
+                  </a>
+                </li>
+              )}
+              {schoolEmail && (
+                <li>
+                  <a href={`mailto:${schoolEmail}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                    <Mail className="h-3 w-3 text-white/60 shrink-0" />
+                    <span className="truncate">{schoolEmail}</span>
+                  </a>
+                </li>
+              )}
+              {schoolAddress && (
                 <li className="flex items-start gap-2 text-xs text-white/80">
                   <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
-                  <span>{location}</span>
+                  <span>{schoolAddress}</span>
                 </li>
               )}
             </ul>

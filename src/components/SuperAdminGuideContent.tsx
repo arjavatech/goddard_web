@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { UserCog, ShieldCheck, Users, Settings, Eye, AlertTriangle, Mail, LayoutDashboard, Key } from 'lucide-react';
+import { useUserContext } from '../contexts/UserContext';
 
 const sections = [
   {
@@ -93,6 +94,7 @@ const sections = [
 ];
 
 export function SuperAdminGuideContent() {
+  const { schoolPhone, schoolEmail } = useUserContext();
   return (
     <div className="space-y-4 py-1 px-1 sm:px-0">
       {/* Quick nav */}
@@ -155,11 +157,11 @@ export function SuperAdminGuideContent() {
           <div>
             <p className="text-xs sm:text-sm font-medium text-foreground">Need system-level support?</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Contact support at{' '}
-              <a href="mailto:support@goddardschool.com" className="text-amazon-teal hover:underline break-all">
-                support@goddardschool.com
-              </a>{' '}
-              or call <a href="tel:+18000000000" className="text-amazon-teal hover:underline">+1 (800) 000-0000</a>.
+              {schoolEmail && <>Contact support at{' '}
+                <a href={`mailto:${schoolEmail}`} className="text-amazon-teal hover:underline break-all">
+                  {schoolEmail}
+                </a>{' '}</>}
+              {schoolPhone && <>or call <a href={`tel:${schoolPhone}`} className="text-amazon-teal hover:underline">{schoolPhone}</a>.</>}
             </p>
           </div>
         </CardContent>

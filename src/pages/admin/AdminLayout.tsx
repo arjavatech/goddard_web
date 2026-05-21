@@ -28,14 +28,9 @@ export function AdminLayout({
   const {
     signOut
   } = useAuth();
-  const { userData, schoolName, loading: userLoading, isReady } = useUserContext();
-
-  console.log('AdminLayout schoolName:', schoolName);
+  const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
 
   const isSuperAdmin = userData?.role === 'SuperAdmin';
-  const schoolAddress = schoolName.toLowerCase().includes('lynnwood')
-    ? '123 School Lane, Lynnwood, WA 98036'
-    : '4200 228th Ave NE, Redmond, WA 98053';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -251,14 +246,18 @@ export function AdminLayout({
               Nurturing children through play-based learning and quality early childhood education.
             </p>
             <div className="flex items-center gap-2">
-              <a href="tel:+18000000000" aria-label="Call us"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-              <a href="mailto:support@goddardschool.com" aria-label="Email us"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Mail className="h-3.5 w-3.5" />
-              </a>
+              {schoolPhone && (
+                <a href={`tel:${schoolPhone}`} aria-label="Call us"
+                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                  <Phone className="h-3.5 w-3.5" />
+                </a>
+              )}
+              {schoolEmail && (
+                <a href={`mailto:${schoolEmail}`} aria-label="Email us"
+                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
+                  <Mail className="h-3.5 w-3.5" />
+                </a>
+              )}
               <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
                 className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
                 <Globe className="h-3.5 w-3.5" />
@@ -270,18 +269,22 @@ export function AdminLayout({
           <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
             <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
             <ul className="flex flex-col gap-1.5 sm:gap-2">
-              <li>
-                <a href="tel:+18000000000" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                  <Phone className="h-3 w-3 text-white/60 shrink-0" />
-                  +1 (800) 000-0000
-                </a>
-              </li>
-              <li>
-                <a href="mailto:support@goddardschool.com" className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                  <Mail className="h-3 w-3 text-white/60 shrink-0" />
-                  <span className="truncate">support@goddardschool.com</span>
-                </a>
-              </li>
+              {schoolPhone && (
+                <li>
+                  <a href={`tel:${schoolPhone}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                    <Phone className="h-3 w-3 text-white/60 shrink-0" />
+                    {schoolPhone}
+                  </a>
+                </li>
+              )}
+              {schoolEmail && (
+                <li>
+                  <a href={`mailto:${schoolEmail}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
+                    <Mail className="h-3 w-3 text-white/60 shrink-0" />
+                    <span className="truncate">{schoolEmail}</span>
+                  </a>
+                </li>
+              )}
               {schoolAddress && (
                 <li className="flex items-start gap-2 text-xs text-white/80">
                   <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
@@ -504,6 +507,7 @@ const statusGuide = [
 ];
 
 function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+  const { schoolPhone, schoolEmail } = useUserContext();
   return (
     <div className="space-y-4 py-1 px-1 sm:px-0">
       {/* Quick nav */}
@@ -576,11 +580,11 @@ function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
           <div>
             <p className="text-xs sm:text-sm font-medium text-foreground">Need more help?</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Contact support at{' '}
-              <a href="mailto:support@goddardschool.com" className="text-amazon-teal hover:underline break-all">
-                support@goddardschool.com
-              </a>{' '}
-              or call <a href="tel:+18000000000" className="text-amazon-teal hover:underline">+1 (800) 000-0000</a>.
+              {schoolEmail && <>Contact support at{' '}
+                <a href={`mailto:${schoolEmail}`} className="text-amazon-teal hover:underline break-all">
+                  {schoolEmail}
+                </a>{' '}</>}
+              {schoolPhone && <>or call <a href={`tel:${schoolPhone}`} className="text-amazon-teal hover:underline">{schoolPhone}</a>.</>}
             </p>
           </div>
         </CardContent>
