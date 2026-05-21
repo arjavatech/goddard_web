@@ -30,6 +30,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    setIsReady(false);
     try {
       setLoading(true);
       setError(null);
