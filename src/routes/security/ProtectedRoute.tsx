@@ -14,7 +14,7 @@ export function ProtectedRoute({
     isBypassed,
     loading
   } = useAuth();
-  const { userData } = useUserContext();
+  const { userData, isReady } = useUserContext();
   console.log('🛡️ ProtectedRoute check:', {
     isAuthenticated,
     isBypassed,
@@ -28,6 +28,13 @@ export function ProtectedRoute({
   }
   if (loading) {
     console.log('🛡️ Loading auth state...');
+    return <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>;
+  }
+  // Wait for userData to be ready before checking role
+  if (!isReady) {
+    console.log('🛡️ Loading user data...');
     return <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
       </div>;
