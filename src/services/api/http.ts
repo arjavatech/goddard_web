@@ -65,12 +65,15 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
 
       // Check for session errors using centralized config
       if (isSessionError(message)) {
-        shouldRedirectToLogin = true;
         isSessionErrorFlag = true;
+        // Only redirect on 401/403 status codes, not on other errors
+        if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status)) {
+          shouldRedirectToLogin = true;
+        }
       }
 
       // Check for auth errors
-      if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status) || isSessionError(message)) {
+      if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status)) {
         shouldRedirectToLogin = true;
       }
     }
@@ -81,21 +84,9 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
       return httpFetch(req, { ...opts, retryCount: retryCount + 1 });
     }
 
-    // Handle session errors - clear session and redirect
-    if (isSessionErrorFlag) {
+    // Handle session errors - clear session and redirect only on 401/403
+    if (shouldRedirectToLogin) {
       await clearSession();
-    }
-
-    // Redirect to login page (only once)
-    if (shouldRedirectToLogin && typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-      if (!(window as any).__redirecting) {
-        (window as any).__redirecting = true;
-        // Clear session before redirecting
-        await clearSession();
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 100);
-      }
     }
 
     const error = new Error(message);

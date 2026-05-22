@@ -5,6 +5,7 @@ import { supabase } from './authClient';
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 let lastTokenRefreshTime = 0;
+let isClearing = false;
 const TOKEN_REFRESH_INTERVAL = 5 * 60 * 1000; // Refresh every 5 minutes
 
 export async function getAuthToken(): Promise<string | null> {
@@ -43,8 +44,6 @@ async function performSessionRefresh(): Promise<string | null> {
 
       if (error || !refreshData.session?.access_token) {
         console.error('Failed to refresh session:', error);
-        // Clear session on refresh failure
-        await clearSession();
         return null;
       }
 
@@ -67,6 +66,10 @@ function refreshSessionInBackground(): void {
 }
 
 export async function clearSession(): Promise<void> {
+  // Prevent multiple simultaneous clears
+  if (isClearing) return;
+  isClearing = true;
+  
   if (!supabase) return;
   try {
     await supabase.auth.signOut();
@@ -80,7 +83,11 @@ export async function clearSession(): Promise<void> {
   // Clear localStorage and redirect to school selection for auto-logout
   localStorage.removeItem('schoolId');
   localStorage.removeItem('selectedSchool');
-  window.location.href = '/';
+  
+  // Use a small delay to ensure state is cleared before redirect
+  setTimeout(() => {
+    window.location.href = '/';
+  }, 100);
 }
 
 export async function getCurrentUser(): Promise<User | null> {

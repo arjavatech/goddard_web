@@ -47,11 +47,21 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
     } catch (err) {
       console.error('Failed to fetch user context:', err);
-      if (err instanceof Error && (err.message.includes('session_not_found') || err.message.includes('Invalid JWT'))) {
-        console.log('Session invalid, clearing...');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load user data';
+      
+      // Only clear user data on actual auth errors (401/403), not on other errors
+      const status = (err as any)?.status;
+      if (status === 401 || status === 403) {
         setUserData(null);
       }
-      setError(err instanceof Error ? err.message : 'Failed to load user data');
+      
+      // Don't show error to user on first load - just log it
+      // This prevents the "Session Error" modal from appearing unnecessarily
+      if (loading) {
+        console.warn('Initial user data load failed, will retry:', errorMessage);
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
       setIsReady(true);

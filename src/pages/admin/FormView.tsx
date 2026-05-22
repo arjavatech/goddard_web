@@ -17,7 +17,8 @@ export function FormView() {
   const { user } = useAuth();
   const { showToast } = useToast();
   const [isFrameLoading, setIsFrameLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
@@ -80,7 +81,7 @@ export function FormView() {
       return;
     }
 
-    setIsProcessing(true);
+    setIsApproving(true);
     try {
       await reviewStudentFormAssignment(
         studentFormAssignmentId,
@@ -99,7 +100,7 @@ export function FormView() {
       console.error('Error approving form:', error);
       showToast('error', 'Failed to approve form');
     } finally {
-      setIsProcessing(false);
+      setIsApproving(false);
     }
   };
 
@@ -120,7 +121,7 @@ export function FormView() {
       return;
     }
 
-    setIsProcessing(true);
+    setIsRejecting(true);
     try {
       await reviewStudentFormAssignment(
         studentFormAssignmentId,
@@ -139,7 +140,7 @@ export function FormView() {
       console.error('Error rejecting form:', error);
       showToast('error', 'Failed to reject form');
     } finally {
-      setIsProcessing(false);
+      setIsRejecting(false);
     }
   };
   if (!formData) {
@@ -214,9 +215,9 @@ export function FormView() {
                     onClick={handleApprove}
                     className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
                     size="sm"
-                    disabled={!isReviewable || isProcessing}
+                    disabled={!isReviewable || isApproving || isRejecting}
                   >
-                    {isProcessing ? (
+                    {isApproving ? (
                       <span className="flex items-center">
                         <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
                         Processing...
@@ -232,9 +233,9 @@ export function FormView() {
                     onClick={handleReject}
                     variant="destructive"
                     size="sm"
-                    disabled={!isReviewable || isProcessing}
+                    disabled={!isReviewable || isApproving || isRejecting}
                   >
-                    {isProcessing ? (
+                    {isRejecting ? (
                       <span className="flex items-center">
                         <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
                         Processing...
