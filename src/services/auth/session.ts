@@ -76,6 +76,11 @@ export async function clearSession(): Promise<void> {
   lastTokenRefreshTime = 0;
   isRefreshing = false;
   refreshPromise = null;
+  
+  // Clear localStorage and redirect to school selection for auto-logout
+  localStorage.removeItem('schoolId');
+  localStorage.removeItem('selectedSchool');
+  window.location.href = '/';
 }
 
 export async function getCurrentUser(): Promise<User | null> {

@@ -53,7 +53,7 @@ export function ProtectedRoute({
 
   if (!isAuthenticated) {
     console.log('🛡️ Access denied: Not authenticated, redirecting to login');
-    return <Navigate to="/login" state={{
+    return <Navigate to="/" state={{
       from: location
     }} replace />;
   }

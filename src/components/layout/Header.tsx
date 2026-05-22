@@ -13,18 +13,16 @@ export function Header() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      await signOut();
-      navigate('/login', {
-        replace: true
-      });
-    } catch (err) {
-    } finally {
-      setIsLoggingOut(false);
-      setShowLogoutModal(false);
-    }
+  const handleLogout = () => {
+    // Clear localStorage immediately
+    localStorage.removeItem('schoolId');
+    localStorage.removeItem('selectedSchool');
+    
+    // Sign out in background (don't await)
+    signOut().catch(err => console.error('Logout error:', err));
+    
+    // Immediately redirect - don't wait for signOut
+    window.location.href = '/';
   };
   return <header className="bg-white shadow-sm border-b border-gray-100 py-3 sm:py-4 px-4 sm:px-6 flex items-center justify-between">
       <div className="flex items-center space-x-2">

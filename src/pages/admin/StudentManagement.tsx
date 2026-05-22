@@ -158,7 +158,6 @@ export function StudentManagement() {
   const [bulkTransferFromGrade, setBulkTransferFromGrade] = useState('');
   const [bulkTransferToGrade, setBulkTransferToGrade] = useState('');
   const [selectedStudentsForBulkAction, setSelectedStudentsForBulkAction] = useState<string[]>([]);
-  const [showBulkSelectCheckboxes, setShowBulkSelectCheckboxes] = useState(false);
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
     if (currentValues.includes(value)) {
@@ -604,15 +603,7 @@ export function StudentManagement() {
                     onChange={e => setSearchQuery(e.target.value)} 
                   />
                 </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => setShowBulkSelectCheckboxes(true)}
-                    size="sm"
-                    className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
-                  >
-                    <GraduationCap className="h-4 w-4 mr-2" />
-                    Select Students to Transfer
-                  </Button>
+                <div className="flex gap-2 flex-wrap">
                   <Button
                     variant="outline"
                     onClick={toggleFilters}
@@ -643,12 +634,74 @@ export function StudentManagement() {
                     onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
                   />
 
+                  {selectedStudentsForBulkAction.length > 0 && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Selected ({selectedStudentsForBulkAction.length})
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => {
+                          const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
+                          const headers = studentExportHeaders;
+                          const rows = selectedStudentObjects.map(s => [
+                            `${s.firstName} ${s.lastName}`,
+                            s.classroom.name, s.parent.name, s.parent.email,
+                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+                            s.enrollmentStatus, s.childStatus,
+                            `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
+                          ]);
+                          downloadCSV(
+                            `selected_students_export_${new Date().toISOString().split('T')[0]}.csv`,
+                            headers, rows
+                          );
+                        }}>
+                          Export as CSV
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => {
+                          const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
+                          const headers = studentExportHeaders;
+                          const rows = selectedStudentObjects.map(s => [
+                            `${s.firstName} ${s.lastName}`,
+                            s.classroom.name, s.parent.name, s.parent.email,
+                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+                            s.enrollmentStatus, s.childStatus,
+                            `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
+                          ]);
+                          printAsPDF('Selected Students Export', headers, rows);
+                        }}>
+                          Export as PDF
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+
+                  {selectedStudentsForBulkAction.length > 0 && (
+                    <Button
+                      onClick={() => {
+                        setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
+                        const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
+                        if (selectedStudentObjects.length > 0) {
+                          setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
+                        }
+                        setIsBulkTransferDialogOpen(true);
+                      }}
+                      size="sm"
+                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
+                    >
+                      <GraduationCap className="h-4 w-4 mr-2" />
+                      Transfer Selected ({selectedStudentsForBulkAction.length})
+                    </Button>
+                  )}
+
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
                           <Download className="h-4 w-4 mr-2" />
-                          Export
+                          Export All
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -664,41 +717,9 @@ export function StudentManagement() {
                     <div title="No records to export">
                       <Button size="sm" className="h-10 sm:h-11" disabled>
                         <Download className="h-4 w-4 mr-2" />
-                        Export
+                        Export All
                       </Button>
                     </div>
-                  )}
-
-                  {showBulkSelectCheckboxes && selectedStudentsForBulkAction.length > 0 && (
-                    <>
-                      <Button
-                        onClick={() => {
-                          setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
-                          const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                          if (selectedStudentObjects.length > 0) {
-                            setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
-                          }
-                          setIsBulkTransferDialogOpen(true);
-                        }}
-                        size="sm"
-                        className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
-                      >
-                        <GraduationCap className="h-4 w-4 mr-2" />
-                        Transfer Selected ({selectedStudentsForBulkAction.length})
-                      </Button>
-                      <Button
-                        onClick={() => {
-                          setSelectedStudentsForBulkAction([]);
-                          setShowBulkSelectCheckboxes(false);
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="h-10 sm:h-11"
-                      >
-                        <X className="h-4 w-4 mr-2" />
-                        Cancel Selection
-                      </Button>
-                    </>
                   )}
                 </div>
               </div>
@@ -781,7 +802,7 @@ export function StudentManagement() {
               onPageChange={setCurrentPage}
               columns={[
                 { 
-                  header: showBulkSelectCheckboxes ? (
+                  header: (
                     <Checkbox
                       checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
                       onCheckedChange={(checked) => {
@@ -792,8 +813,8 @@ export function StudentManagement() {
                         }
                       }}
                     />
-                  ) : null, 
-                  className: showBulkSelectCheckboxes ? 'text-center w-[5%]' : 'hidden' 
+                  ), 
+                  className: 'text-center w-[5%]' 
                 },
                 { header: 'Student', className: 'w-[22%]' },
                 { header: 'Classroom', className: 'w-[14%]' },
@@ -805,20 +826,18 @@ export function StudentManagement() {
               ]}
               rows={paginatedStudents.map((student, index) => (
                 <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
-                  {showBulkSelectCheckboxes && (
-                    <td className="py-3 px-2 text-center">
-                      <Checkbox
-                        checked={selectedStudentsForBulkAction.includes(student.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                          } else {
-                            setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                          }
-                        }}
-                      />
-                    </td>
-                  )}
+                  <td className="py-3 px-2 text-center">
+                    <Checkbox
+                      checked={selectedStudentsForBulkAction.includes(student.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                        } else {
+                          setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                        }
+                      }}
+                    />
+                  </td>
                   <td className="py-3 px-3">
                     <div className="flex items-center">
                       <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-2" />
@@ -970,38 +989,34 @@ export function StudentManagement() {
               onPageChange={setCurrentPage}
               gridClassName="space-y-3"
               cards={[
-                ...(showBulkSelectCheckboxes ? [(
-                  <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
-                    <Checkbox
-                      checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                        } else {
-                          setSelectedStudentsForBulkAction([]);
-                        }
-                      }}
-                    />
-                    <span className="text-sm font-medium">Select All</span>
-                  </div>
-                )] : []),
+                <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
+                  <Checkbox
+                    checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                      } else {
+                        setSelectedStudentsForBulkAction([]);
+                      }
+                    }}
+                  />
+                  <span className="text-sm font-medium">Select All</span>
+                </div>,
                 ...paginatedStudents.map((student, index) => (
                   <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {showBulkSelectCheckboxes && (
-                          <Checkbox
-                            checked={selectedStudentsForBulkAction.includes(student.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                              } else {
-                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                              }
-                            }}
-                            className="flex-shrink-0"
-                          />
-                        )}
+                        <Checkbox
+                          checked={selectedStudentsForBulkAction.includes(student.id)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                            } else {
+                              setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                            }
+                          }}
+                          className="flex-shrink-0"
+                        />
                         <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                         <div className="min-w-0 flex-1">
                           <Link

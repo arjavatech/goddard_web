@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { useUserContext } from './contexts/UserContext';
 import { useSessionValidation } from './hooks/useSessionValidation';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 export function App() {
   const { userData, loading } = useUserContext();
@@ -10,6 +11,9 @@ export function App() {
   
   // Validate session on app load and periodically
   useSessionValidation();
+  
+  // Auto-logout after inactivity
+  useSessionTimeout();
 
   useEffect(() => {
     if (!loading && userData) {

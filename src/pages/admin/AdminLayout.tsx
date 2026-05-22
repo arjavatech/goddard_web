@@ -41,7 +41,7 @@ export function AdminLayout({
     setIsLoggingOut(true);
     try {
       await signOut();
-      navigate('/login', {
+      navigate('/', {
         replace: true
       });
     } catch (err) {

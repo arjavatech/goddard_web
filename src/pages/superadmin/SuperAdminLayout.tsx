@@ -25,8 +25,9 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     setIsLoggingOut(true);
     try {
       await signOut();
-      navigate('/login', { replace: true });
+      navigate('/', { replace: true });
     } catch (err) {
+      console.error('Logout error:', err);
     } finally {
       setIsLoggingOut(false);
       setShowLogoutModal(false);
