@@ -305,7 +305,7 @@ export function FormsManagement() {
         return status;
     }
   };
-  const statuses: FormStatus[] = ['active', 'inactive', 'draft', 'archived', 'school_default', 'available'];
+  const statuses: FormStatus[] = ['active', 'inactive', 'archived', 'school_default'];
   if (loading) {
     return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
   }
@@ -721,8 +721,6 @@ export function FormsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="school_default">School Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
