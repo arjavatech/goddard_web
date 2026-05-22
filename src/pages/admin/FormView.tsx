@@ -11,6 +11,22 @@ import { reviewStudentFormAssignment } from '../../services/api/admin';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 
+const isInvalidFormId = (id: string | null | undefined): boolean => {
+  if (!id) return true;
+  const trimmed = id.trim().toLowerCase();
+  return (
+    trimmed === '' ||
+    trimmed === '#' ||
+    trimmed === 'test' ||
+    trimmed === 'undefined' ||
+    trimmed === 'null' ||
+    trimmed === 'placeholder' ||
+    trimmed === 'none' ||
+    trimmed === 'dummy' ||
+    (trimmed.length < 4 && !/^https?:\/\//i.test(trimmed))
+  );
+};
+
 export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,14 +62,25 @@ export function FormView() {
     let url: string | undefined;
 
     // Priority 1: Use recent_edit_link if form is filled (has existing submission)
-    if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
+    if (recentEditLink && !isInvalidFormId(recentEditLink)) {
       url = recentEditLink;
-    } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
+    } else if (filloutFormId && !isInvalidFormId(filloutFormId)) {
       // Priority 2: Use fillout_form_id if form is empty (no existing submission)
       url = filloutFormId;
     } else {
       // Fallback: Use the original filloutFormUrl or form link
-      url = filloutFormUrl || formData?.link;
+      const fallbackUrl = filloutFormUrl || formData?.link;
+      if (fallbackUrl && !isInvalidFormId(fallbackUrl)) {
+        url = fallbackUrl;
+      }
+    }
+
+    if (url && url !== '#') {
+      url = url.trim();
+      // If it is just a form ID/slug (e.g. not starting with http/https), prepend the fillout base URL
+      if (!/^https?:\/\//i.test(url)) {
+        url = `https://goddard.fillout.com/${url}`;
+      }
     }
 
     // Append student_form_assignment_id if available and not already in URL
