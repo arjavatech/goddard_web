@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Input } from '../components/ui/input';
-import { supabase } from '../lib/supabaseClient';
+import { supabase } from '../services/auth/authClient';
 
 interface PasswordRequirement {
   label: string;
@@ -35,11 +35,25 @@ export function SetPassword() {
   ]);
 
   useEffect(() => {
+    let isMounted = true;
+    let authSubscription: any = null;
+
     const initializeSession = async () => {
       if (!supabase) {
         setError('Supabase client is not configured');
         return;
       }
+
+      // Set up auth state change listener to catch any session transitions
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+        if (!isMounted) return;
+        console.log('Auth state change in SetPassword:', event, session?.user?.email);
+        if (session) {
+          setSessionReady(true);
+          setError('');
+        }
+      });
+      authSubscription = subscription;
 
       // FIRST: Check if we already have a valid session (handles page reloads/reopens)
       try {
@@ -47,89 +61,144 @@ export function SetPassword() {
 
         if (!sessionCheckError && existingSession?.session) {
           console.log('Existing session found, reusing session for user:', existingSession.session.user?.email);
-          setSessionReady(true);
-          return;
+          if (isMounted) {
+            setSessionReady(true);
+            return;
+          }
         }
       } catch (err) {
-        console.log('No existing session, will create new one from URL tokens');
+        console.log('No existing session, will check URL parameters');
       }
 
-      // SECOND: Try to create session from URL tokens (first time clicking link)
+      // SECOND: Try to parse tokens or code from both hash and search query params
       const hash = window.location.hash.substring(1);
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-      const errorParam = params.get('error');
-      const errorCode = params.get('error_code');
-      const errorDescription = params.get('error_description');
+      const search = window.location.search.substring(1);
+      
+      const hashParams = new URLSearchParams(hash);
+      const searchParams = new URLSearchParams(search);
+      
+      const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+      const code = hashParams.get('code') || searchParams.get('code');
+      const errorParam = hashParams.get('error') || searchParams.get('error');
+      const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
+      const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
 
       // Handle error cases (e.g., expired token from URL)
       if (errorParam) {
-        if (errorParam === 'access_denied' || errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
-          setError('This link has expired or is no longer valid. Please request a new password reset link from your school administrator.');
-        } else {
-          setError(`Authentication error: ${errorDescription || errorParam}. Please contact support.`);
+        if (isMounted) {
+          if (errorParam === 'access_denied' || errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
+            setError('This link has expired or is no longer valid. Please request a new password reset link.');
+          } else {
+            setError(`Authentication error: ${errorDescription || errorParam}. Please contact support.`);
+          }
         }
         return;
       }
 
-      if (!accessToken) {
-        setError('Invalid or missing authentication token. Please check your email and click the invitation link again.');
-        return;
-      }
-
-      try {
-        // Set the session using the tokens from URL
-        const { data, error: sessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken || ''
-        });
-
-        if (sessionError) {
-          // Check for token expiration or already-used errors
-          if (sessionError.message?.includes('expired') ||
-              sessionError.message?.includes('invalid') ||
-              sessionError.message?.includes('already') ||
-              sessionError.status === 401 ||
-              sessionError.status === 422) {
-
-            // Token might have been used already - check if we have a valid session anyway
-            const { data: fallbackSession } = await supabase.auth.getSession();
-            if (fallbackSession?.session) {
-              console.log('Token was already used, but valid session exists. Continuing...');
+      // If we have an authorization code (PKCE flow), exchange it for a session
+      if (code) {
+        try {
+          console.log('Exchanging authorization code for session...');
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (exchangeError) throw exchangeError;
+          if (data?.session) {
+            console.log('Session established via code exchange for user:', data.session.user?.email);
+            if (isMounted) {
               setSessionReady(true);
-              return;
             }
-
-            setError('This link has expired or has already been used. Please request a new password reset link from your school administrator.');
-          } else {
-            throw sessionError;
+            return;
+          }
+        } catch (err) {
+          console.error('Code exchange failed:', err);
+          if (isMounted) {
+            setError('This link has expired or is no longer valid. Please request a new password reset link.');
           }
           return;
         }
+      }
 
-        // Verify the session was actually created
-        if (!data?.session) {
-          setError('Failed to create session. Please try clicking the link in your email again.');
-          return;
+      // If we have access and refresh tokens (Implicit flow), establish session manually
+      if (accessToken) {
+        try {
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || ''
+          });
+
+          if (sessionError) {
+            if (sessionError.message?.includes('expired') ||
+                sessionError.message?.includes('invalid') ||
+                sessionError.message?.includes('already') ||
+                sessionError.status === 401 ||
+                sessionError.status === 422) {
+
+              // Fallback check
+              const { data: fallbackSession } = await supabase.auth.getSession();
+              if (fallbackSession?.session) {
+                console.log('Token was already used, but valid session exists. Continuing...');
+                if (isMounted) {
+                  setSessionReady(true);
+                }
+                return;
+              }
+
+              if (isMounted) {
+                setError('This link has expired or has already been used. Please request a new password reset link.');
+              }
+            } else {
+              throw sessionError;
+            }
+            return;
+          }
+
+          if (!data?.session) {
+            if (isMounted) {
+              setError('Failed to create session. Please try clicking the link in your email again.');
+            }
+            return;
+          }
+
+          console.log('Session established successfully via tokens for user:', data.session.user?.email);
+          if (isMounted) {
+            setSessionReady(true);
+          }
+        } catch (err) {
+          console.error('Error setting session:', err);
+          const errorMessage = (err as Error).message || 'Unknown error';
+          if (isMounted) {
+            if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('already')) {
+              setError('This link has expired or has already been used. Please request a new password reset link.');
+            } else {
+              setError(`Failed to authenticate: ${errorMessage}. Please try clicking the link in your email again.`);
+            }
+          }
         }
+        return;
+      }
 
-        console.log('Session established successfully for user:', data.session.user?.email);
-        setSessionReady(true);
-      } catch (err) {
-        console.error('Error setting session:', err);
-        const errorMessage = (err as Error).message || 'Unknown error';
-
-        // Provide specific error messages for common issues
-        if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('already')) {
-          setError('This link has expired or has already been used. Please request a new password reset link from your school administrator.');
-        } else {
-          setError(`Failed to authenticate: ${errorMessage}. Please try clicking the link in your email again.`);
+      // If no valid session is established and no tokens/code are present in the URL,
+      // check getSession once more to be absolutely sure
+      const { data: finalSession } = await supabase.auth.getSession();
+      if (finalSession?.session) {
+        if (isMounted) {
+          setSessionReady(true);
+        }
+      } else {
+        if (isMounted) {
+          setError('Invalid or missing authentication token. Please check your email and click the invitation link again.');
         }
       }
     };
 
     initializeSession();
+
+    return () => {
+      isMounted = false;
+      if (authSubscription) {
+        authSubscription.unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -346,14 +415,14 @@ export function SetPassword() {
             <Button
               type="submit"
               className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!allRequirementsMet || loading || !sessionReady}
+              disabled={!allRequirementsMet || loading || !sessionReady || !!error}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                   Setting Password...
                 </div>
-              ) : !sessionReady ? (
+              ) : !sessionReady && !error ? (
                 <div className="flex items-center justify-center gap-2">
                   <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                   Authenticating...
