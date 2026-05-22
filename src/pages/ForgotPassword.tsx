@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
-import { useAuth } from '../services/auth/useAuth';
 import { useToast } from '../contexts/ToastContext';
+import { httpFetch } from '../services/api/http';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
-  const { resetPassword } = useAuth();
   const { showToast } = useToast();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,9 +20,22 @@ export function ForgotPassword() {
       return;
     }
 
+    const selectedSchool = localStorage.getItem('selectedSchool');
+    const schoolId = selectedSchool ? JSON.parse(selectedSchool).id : null;
+
+    if (!schoolId) {
+      showToast('error', 'Please select a school first.', 'School Required');
+      navigate('/select-school');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await resetPassword(email.trim());
+      await httpFetch({
+        method: 'POST',
+        url: '/auth/forgot-password',
+        body: { email: email.trim(), school_id: schoolId },
+      });
       setIsEmailSent(true);
       showToast('success', 'Password reset email sent successfully');
     } catch (err) {

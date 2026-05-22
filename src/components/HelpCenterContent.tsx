@@ -6,6 +6,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { SuperAdminGuideContent } from './SuperAdminGuideContent';
+import { useUserContext } from '../contexts/UserContext';
 import {
   HelpCircle, Mail, Phone, BookOpen, MessageSquare, AlertCircle, ChevronDown, ChevronUp, ArrowLeft, Send, CheckCircle
 } from 'lucide-react';
@@ -15,6 +16,7 @@ interface HelpCenterContentProps {
 }
 
 export function HelpCenterContent({ role }: HelpCenterContentProps) {
+  const { schoolPhone, schoolEmail } = useUserContext();
   const [guideOpen, setGuideOpen] = useState(false);
   const [msgName, setMsgName] = useState('');
   const [msgEmail, setMsgEmail] = useState('');
@@ -33,28 +35,32 @@ export function HelpCenterContent({ role }: HelpCenterContentProps) {
 
       {/* Contact cards */}
       <div className={`grid grid-cols-2 gap-3 ${role === 'admin' ? 'sm:grid-cols-2' : 'sm:grid-cols-2'}`}>
-        <a href="mailto:support@goddardschool.com" className="group">
-          <Card className="glass-card h-full hover:border-amazon-teal/40 transition-colors">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
-              <div className="p-1.5 sm:p-2 bg-amazon-teal/10 rounded-full group-hover:bg-amazon-teal/20 transition-colors">
-                <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
-              </div>
-              <p className="text-xs sm:text-sm font-medium text-foreground">Email Support</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground break-all">support@goddardschool.com</p>
-            </CardContent>
-          </Card>
-        </a>
-        <a href="tel:+18000000000" className="group">
-          <Card className="glass-card h-full hover:border-amazon-teal/40 transition-colors">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
-              <div className="p-1.5 sm:p-2 bg-amazon-teal/10 rounded-full group-hover:bg-amazon-teal/20 transition-colors">
-                <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
-              </div>
-              <p className="text-xs sm:text-sm font-medium text-foreground">Phone Support</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">+1 (800) 000-0000</p>
-            </CardContent>
-          </Card>
-        </a>
+        {schoolEmail && (
+          <a href={`mailto:${schoolEmail}`} className="group">
+            <Card className="glass-card h-full hover:border-amazon-teal/40 transition-colors">
+              <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
+                <div className="p-1.5 sm:p-2 bg-amazon-teal/10 rounded-full group-hover:bg-amazon-teal/20 transition-colors">
+                  <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-foreground">Email Support</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground break-all">{schoolEmail}</p>
+              </CardContent>
+            </Card>
+          </a>
+        )}
+        {schoolPhone && (
+          <a href={`tel:${schoolPhone}`} className="group">
+            <Card className="glass-card h-full hover:border-amazon-teal/40 transition-colors">
+              <CardContent className="p-3 sm:p-4 flex flex-col items-center text-center gap-1.5 sm:gap-2">
+                <div className="p-1.5 sm:p-2 bg-amazon-teal/10 rounded-full group-hover:bg-amazon-teal/20 transition-colors">
+                  <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
+                </div>
+                <p className="text-xs sm:text-sm font-medium text-foreground">Phone Support</p>
+                <p className="text-[10px] sm:text-xs text-muted-foreground">{schoolPhone}</p>
+              </CardContent>
+            </Card>
+          </a>
+        )}
         
       </div>
 
@@ -122,13 +128,13 @@ export function HelpCenterContent({ role }: HelpCenterContentProps) {
           <div>
             <p className="text-xs sm:text-sm font-medium text-foreground">Still need help?</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Email us at{' '}
-              <a href="mailto:support@goddardschool.com" className="text-amazon-teal hover:underline break-all">
-                support@goddardschool.com
-              </a>{' '}
-              or call{' '}
-              <a href="tel:+18000000000" className="text-amazon-teal hover:underline">+1 (800) 000-0000</a>.
-              We'll get back to you within one business day.
+              {schoolEmail && <>Email us at{' '}
+                <a href={`mailto:${schoolEmail}`} className="text-amazon-teal hover:underline break-all">
+                  {schoolEmail}
+                </a>{' '}</>}
+              {schoolPhone && <>or call{' '}
+                <a href={`tel:${schoolPhone}`} className="text-amazon-teal hover:underline">{schoolPhone}</a>.</>}
+              {' '}We'll get back to you within one business day.
             </p>
           </div>
         </CardContent>

@@ -1,6 +1,7 @@
 import { BookOpen, ClipboardList, UserCheck, Bell, FileText, HelpCircle } from 'lucide-react';
+import { useUserContext } from '../contexts/UserContext';
 
-const sections = [
+const staticSections = [
   {
     icon: UserCheck,
     title: 'Getting Started',
@@ -40,18 +41,24 @@ const sections = [
       'Approved — Form has been reviewed and approved by the school.',
     ],
   },
-  {
-    icon: HelpCircle,
-    title: 'Need Help?',
-    items: [
-      'Contact your school administrator if you cannot find a form or have questions.',
-      'For technical issues, email support@goddardschool.com.',
-      'Visit the Help Center for answers to common enrollment questions.',
-    ],
-  },
 ];
 
 export function ParentGuideContent() {
+  const { schoolEmail } = useUserContext();
+
+  const sections = [
+    ...staticSections,
+    {
+      icon: HelpCircle,
+      title: 'Need Help?',
+      items: [
+        'Contact your school administrator if you cannot find a form or have questions.',
+        ...(schoolEmail ? [`For technical issues, email ${schoolEmail}.`] : []),
+        'Visit the Help Center for answers to common enrollment questions.',
+      ],
+    },
+  ];
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-3 p-3 rounded-lg bg-amazon-teal/5 border border-amazon-teal/20">

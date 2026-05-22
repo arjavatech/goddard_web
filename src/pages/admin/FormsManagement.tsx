@@ -329,7 +329,7 @@ export function FormsManagement() {
           </Button>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
@@ -362,7 +362,7 @@ export function FormsManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+          <Card className="glass-card hover:shadow-lg transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -375,6 +375,23 @@ export function FormsManagement() {
                 </div>
                 <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
                   <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="glass-card hover:shadow-lg transition-shadow">
+            <CardContent className="p-4 sm:p-5 lg:p-6">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
+                    Inactive Forms
+                  </p>
+                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
+                    {forms.filter(f => f.status === 'inactive').length}
+                  </p>
+                </div>
+                <div className="p-2 sm:p-3 bg-gray-100 rounded-full flex-shrink-0 ml-2">
+                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
                 </div>
               </div>
             </CardContent>
