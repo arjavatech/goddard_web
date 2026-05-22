@@ -305,7 +305,7 @@ export function FormsManagement() {
         return status;
     }
   };
-  const statuses: FormStatus[] = ['active', 'inactive', 'archived', 'school_default'];
+  const statuses: FormStatus[] = ['active', 'inactive', 'school_default'];
   if (loading) {
     return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
   }
@@ -723,7 +723,6 @@ export function FormsManagement() {
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="school_default">School Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
             </div>

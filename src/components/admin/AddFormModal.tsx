@@ -98,7 +98,6 @@ export function AddFormModal({
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="school_default">School Default</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
               </SelectContent>
             </Select>
           </div>
