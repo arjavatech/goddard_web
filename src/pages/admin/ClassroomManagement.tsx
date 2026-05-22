@@ -268,7 +268,7 @@ export function ClassroomManagement() {
                             <Edit className="h-4 w-4 mr-2" />
                             Rename
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600">
+                          <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600" disabled={classroom.studentsCount > 0}>
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
                           </DropdownMenuItem>
@@ -349,7 +349,7 @@ export function ClassroomManagement() {
                         <DropdownMenuItem onClick={() => openEditDialog(classroom)}>
                           <Edit className="h-4 w-4 mr-2" />Rename
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600">
+                        <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className={`${classroom.studentsCount > 0 ? 'text-gray-400 cursor-not-allowed' : 'text-red-600 focus:text-red-600'}`} disabled={classroom.studentsCount > 0}>
                           <Trash2 className="h-4 w-4 mr-2" />Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -432,25 +432,27 @@ export function ClassroomManagement() {
             <DialogTitle className="text-lg sm:text-xl">Delete Classroom</DialogTitle>
           </DialogHeader>
           <div className="py-3 sm:py-4">
-            <p className="text-sm sm:text-base text-gray-600">
-              Are you sure you want to delete{' '}
-              <span className="font-medium">{selectedClassroom?.name}</span>?
-              This action cannot be undone.
-            </p>
-            {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 && <div className="mt-3 sm:mt-4 p-3 bg-amber-50 border border-amber-200 rounded-md flex items-start">
-                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-500 mr-2 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs sm:text-sm text-amber-800">
-                    This classroom has {selectedClassroom?.studentsCount}{' '}
-                    student{selectedClassroom?.studentsCount !== 1 ? 's' : ''}{' '}
-                    enrolled. Deleting it will remove all student associations.
-                  </p>
-                </div>}
+            {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 ? (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-md flex items-start">
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                <p className="text-xs sm:text-sm text-red-800">
+                  Cannot delete this classroom. It has {selectedClassroom?.studentsCount}{' '}
+                  student{selectedClassroom?.studentsCount !== 1 ? 's' : ''} enrolled.
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm sm:text-base text-gray-600">
+                Are you sure you want to delete{' '}
+                <span className="font-medium">{selectedClassroom?.name}</span>?
+                This action cannot be undone.
+              </p>
+            )}
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} disabled={(selectedClassroom?.studentsCount ?? 0) > 0} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Delete Classroom
             </AsyncButton>
           </DialogFooter>

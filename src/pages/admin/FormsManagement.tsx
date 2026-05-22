@@ -337,7 +337,12 @@ export function FormsManagement() {
         return status;
     }
   };
+
   const statuses: FormStatus[] = ['active', 'inactive', 'draft', 'archived', 'school_default', 'available'];
+  if (loading) {
+    return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
+  }
+
   return <AdminLayout>
       <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -761,8 +766,6 @@ export function FormsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="school_default">School Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                   <SelectItem value="archived">Archived</SelectItem>
