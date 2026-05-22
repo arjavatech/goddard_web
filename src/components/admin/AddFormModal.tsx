@@ -96,7 +96,7 @@ export function AddFormModal({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="school_default">School Default</SelectItem>
+                <SelectItem value="school_default">Default</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
               </SelectContent>
             </Select>

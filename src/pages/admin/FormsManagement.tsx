@@ -322,17 +322,17 @@ export function FormsManagement() {
   const getStatusDisplayName = (status: FormStatus): string => {
     switch (status) {
       case 'school_default':
-        return 'School Default';
+        return 'Default';
       case 'active':
         return 'Active';
-      case 'available':
-        return 'Available';
-      case 'draft':
-        return 'Draft';
       case 'inactive':
         return 'Inactive';
       case 'archived':
         return 'Archived';
+      case 'draft':
+        return 'Draft';
+      case 'available':
+        return 'Available';
       default:
         return status;
     }
@@ -765,7 +765,7 @@ export function FormsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="school_default">School Default</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>
               </Select>
