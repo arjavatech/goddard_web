@@ -13,6 +13,7 @@ import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { PageLoader } from '../../components/ui/page-loader';
+import { StatCard } from '../../components/ui/stat-card';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 
 
@@ -429,61 +430,10 @@ export function DueForms() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="glass-card">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Total Forms</p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.total}</p>
-                </div>
-                <div className="p-2 bg-blue-100 rounded-full flex-shrink-0 ml-2">
-                  <Calendar className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Pending</p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.pending}</p>
-                </div>
-                <div className="p-2 bg-yellow-100 rounded-full flex-shrink-0 ml-2">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">In Progress</p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.in_progress}</p>
-                </div>
-                <div className="p-2 bg-blue-100 rounded-full flex-shrink-0 ml-2">
-                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">Overdue</p>
-                  <p className="text-xl sm:text-2xl font-bold text-foreground">{stats.overdue}</p>
-                </div>
-                <div className="p-2 bg-red-100 rounded-full flex-shrink-0 ml-2">
-                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <StatCard label="Total Forms" value={stats.total} icon={Calendar} iconBgClass="bg-blue-100" iconColorClass="text-blue-600" />
+          <StatCard label="Pending" value={stats.pending} icon={Clock} iconBgClass="bg-yellow-100" iconColorClass="text-yellow-600" />
+          <StatCard label="In Progress" value={stats.in_progress} icon={Clock} iconBgClass="bg-blue-100" iconColorClass="text-blue-600" />
+          <StatCard label="Overdue" value={stats.overdue} icon={AlertTriangle} iconBgClass="bg-red-100" iconColorClass="text-red-600" />
         </div>
 
         {/* Filters */}
