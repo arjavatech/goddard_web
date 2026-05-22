@@ -1,6 +1,6 @@
 import React, { ReactNode, useState } from 'react';
 import { Home, Users, Shield, Settings, LogOut, Menu, X, User, Crown, School } from 'lucide-react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -17,7 +17,6 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData } = useUserContext();
 
@@ -25,12 +24,18 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     setIsLoggingOut(true);
     try {
       await signOut();
-      navigate('/', { replace: true });
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error('Logout error during SuperAdmin sign out:', err);
     } finally {
+      // Clear all stored data to reset tokens, auth state, and user data completely
+      localStorage.clear();
+      sessionStorage.clear();
+      
       setIsLoggingOut(false);
       setShowLogoutModal(false);
+      
+      // Perform a full redirect to clean/reset all React memory context/states
+      window.location.href = '/';
     }
   };
 

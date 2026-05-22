@@ -36,13 +36,18 @@ export function AdminLayout({
     setIsLoggingOut(true);
     try {
       await signOut();
-      navigate('/', {
-        replace: true
-      });
     } catch (err) {
+      console.error('Logout error during Admin sign out:', err);
     } finally {
+      // Clear all stored data to reset tokens, auth state, and user data completely
+      localStorage.clear();
+      sessionStorage.clear();
+      
       setIsLoggingOut(false);
       setShowLogoutModal(false);
+      
+      // Perform a full redirect to clean/reset all React memory context/states
+      window.location.href = '/';
     }
   };
   const currentPath = location.pathname;

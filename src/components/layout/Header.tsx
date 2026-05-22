@@ -14,12 +14,12 @@ export function Header() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const handleLogout = () => {
-    // Clear localStorage immediately
-    localStorage.removeItem('schoolId');
-    localStorage.removeItem('selectedSchool');
+    // Clear all stored data to reset tokens, auth state, and user data completely
+    localStorage.clear();
+    sessionStorage.clear();
     
     // Sign out in background (don't await)
-    signOut().catch(err => console.error('Logout error:', err));
+    signOut().catch(err => console.error('Logout error during Header sign out:', err));
     
     // Immediately redirect - don't wait for signOut
     window.location.href = '/';
