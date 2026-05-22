@@ -88,10 +88,9 @@ export function AddFormModal({
               <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
             )}
           </div>
-<<<<<<< HEAD
           <div>
             <label className="block text-sm font-medium mb-2">Form Status</label>
-            <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available')}>
+            <Select value={formStatus} onValueChange={(value) => setFormStatus?.(value as 'active' | 'inactive' | 'school_default')}>
               <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
                 <SelectValue />
               </SelectTrigger>
@@ -102,26 +101,6 @@ export function AddFormModal({
               </SelectContent>
             </Select>
           </div>
-=======
-          {formStatus && setFormStatus && (
-            <div>
-              <label className="block text-sm font-medium mb-2">Form Status</label>
-              <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available')}>
-                <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="available">Available</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="school_default">School Default</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
->>>>>>> 64025f460b504ff74cf589e91ab831da5983fe6f
           <div>
             <label className="block text-sm font-medium mb-2">Due Date</label>
             <Input
