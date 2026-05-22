@@ -16,10 +16,12 @@ import { PageLoader } from '../../components/ui/page-loader';
 import { StatCard } from '../../components/ui/stat-card';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 
+type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
+type LocalDueForm = Omit<DueForm, 'status'> & { status: DueFormStatus };
 
 export function DueForms() {
-  const [dueForms, setDueForms] = useState<DueForm[]>([]);
-  const [filteredForms, setFilteredForms] = useState<DueForm[]>([]);
+  const [dueForms, setDueForms] = useState<LocalDueForm[]>([]);
+  const [filteredForms, setFilteredForms] = useState<LocalDueForm[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
   const [formFilter, setFormFilter] = useState<string[]>([]);
@@ -119,7 +121,7 @@ export function DueForms() {
           const enrollments = data.enrollments || [];
           
           // Map enrollments to due forms
-          const mappedForms: DueForm[] = [];
+          const mappedForms: LocalDueForm[] = [];
           
           enrollments.forEach((enrollment: any) => {
             Object.entries(enrollment.forms || {}).forEach(([formName, formData]: [string, any]) => {

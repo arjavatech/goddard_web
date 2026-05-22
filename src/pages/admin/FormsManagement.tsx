@@ -32,7 +32,9 @@ const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
   if (value.includes('default') || value.includes('school_default')) return 'school_default';
   if (value.includes('inactive')) return 'inactive';
-  if (value.includes('archive')) return 'archived';
+  if (value.includes('archive') || value.includes('archived')) return 'archived';
+  if (value.includes('draft')) return 'draft';
+  if (value.includes('available')) return 'available';
   if (value.includes('active')) return 'active';
   return 'active';
 };
@@ -101,6 +103,7 @@ export function FormsManagement() {
         }));
         setForms(mappedForms);
       } catch (error) {
+        console.error('Failed to load forms on mount:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -155,6 +158,28 @@ export function FormsManagement() {
     itemsPerPage: 10,
     mobileItemsPerPage: 5
   });
+  const fetchForms = async (showLoader = true) => {
+    if (!schoolId) return;
+    try {
+      if (showLoader) setLoading(true);
+      const templates = await fetchFormTemplates(schoolId).catch(() => []);
+      
+      const mappedForms: Form[] = templates.map((template, index) => ({
+        id: template.id,
+        name: template.formName,
+        link: template.filloutFormUrl ?? '#',
+        status: mapStatus(template.status),
+        classroomsCount: 0,
+        dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
+      }));
+      setForms(mappedForms);
+    } catch (error) {
+      console.error('Failed to fetch forms:', error);
+    } finally {
+      if (showLoader) setLoading(false);
+    }
+  };
+
   const handleAddForm = async () => {
     setHasTriedAddFormSubmit(true);
     if (!validateForm()) return;
@@ -165,11 +190,11 @@ export function FormsManagement() {
       if (!schoolId) return;
       
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
+      showToast('success', 'Form created successfully');
       resetAddFormState();
       setIsAddDialogOpen(false);
-      window.location.reload();
+      await fetchForms(true);
     } catch (error) {
-      setIsAddingForm(false);
       const errorText =
         (error as any)?.response?.error ||
         (error as any)?.response?.message ||
@@ -188,8 +213,11 @@ export function FormsManagement() {
       } else {
         showToast('error', 'Failed to create form. Please try again.');
       }
+    } finally {
+      setIsAddingForm(false);
     }
   };
+
   const handleEditForm = async () => {
     if (!selectedForm || !formName.trim()) return;
     
@@ -207,7 +235,7 @@ export function FormsManagement() {
       showToast('success', 'Form updated successfully');
       resetFormFields();
       setIsEditDialogOpen(false);
-      window.location.reload();
+      await fetchForms(true);
     } catch (error) {
       showToast('error', 'Failed to update form. Please try again.');
     }
@@ -273,7 +301,7 @@ export function FormsManagement() {
       showToast('error', 'Failed to assign form to all students. Please try again.');
     }
   };
-  const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
+  const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' | 'info' | 'warning' => {
     switch (status) {
       case 'active':
         return 'success';
@@ -283,6 +311,10 @@ export function FormsManagement() {
         return 'secondary';
       case 'archived':
         return 'outline';
+      case 'draft':
+        return 'warning';
+      case 'available':
+        return 'info';
       default:
         return 'default';
     }
@@ -305,7 +337,12 @@ export function FormsManagement() {
         return status;
     }
   };
+<<<<<<< HEAD
   const statuses: FormStatus[] = ['active', 'inactive', 'school_default'];
+=======
+
+  const statuses: FormStatus[] = ['active', 'inactive', 'draft', 'archived', 'school_default', 'available'];
+>>>>>>> 64025f460b504ff74cf589e91ab831da5983fe6f
   if (loading) {
     return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
   }
@@ -328,6 +365,16 @@ export function FormsManagement() {
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
+        
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[400px] bg-white rounded-lg border border-gray-100 shadow-sm">
+            <div className="text-center">
+              <div className="animate-spin rounded-full border-b-2 border-amazon-teal mx-auto mb-4 h-8 w-8"></div>
+              <p className="text-muted-foreground text-sm font-medium">Loading forms management...</p>
+            </div>
+          </div>
+        ) : (
+          <>
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <Card className="glass-card hover:shadow-lg transition-shadow">
@@ -647,6 +694,8 @@ export function FormsManagement() {
             />
           </CardContent>
         </Card>
+        </>
+      )}
       </div>
       <AddFormModal
         isOpen={isAddDialogOpen}
@@ -721,6 +770,8 @@ export function FormsManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="school_default">School Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
                 </SelectContent>

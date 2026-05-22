@@ -452,7 +452,7 @@ export function ClassroomManagement() {
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Cancel
             </Button>
-            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} disabled={selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <AsyncButton variant="destructive" onClick={handleDeleteClassroom} disabled={(selectedClassroom?.studentsCount ?? 0) > 0} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
               Delete Classroom
             </AsyncButton>
           </DialogFooter>

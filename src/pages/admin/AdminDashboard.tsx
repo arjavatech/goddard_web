@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { School, FileText, Users, Clock, UserCheck, Plus, Mail } from 'lucide-react';
+import { School, FileText, Users, UserCheck, Plus, Mail } from 'lucide-react';
 import { Progress } from '../../components/ui/progress';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -156,7 +156,9 @@ export function AdminDashboard() {
       const classroomData = await fetchClassrooms(schoolId);
       setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
       setClassroomsLoaded(true);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to load classrooms:', err);
+    }
   };
 
   const handleAddForm = async () => {
@@ -314,7 +316,7 @@ export function AdminDashboard() {
         )}
         
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 lg:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
           <StatCard
             label="Total Classrooms"
             value={metrics?.totalClassrooms || 0}
@@ -350,18 +352,6 @@ export function AdminDashboard() {
             iconColorClass="text-amazon-teal"
             className="hover:scale-[1.02] transition-all duration-200"
             onClick={() => navigate('/admin/parents')}
-          />
-          <StatCard
-            label="Pending Enrollments"
-            value={metrics ? metrics.classwiseMetrics.reduce(
-              (sum, metric) => sum + (metric.totalEnrollments - metric.completedEnrollments),
-              0
-            ) : 0}
-            icon={Clock}
-            iconBgClass="bg-amber-100"
-            iconColorClass="text-amber-600"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/students')}
           />
         </div>
 
