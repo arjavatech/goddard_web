@@ -22,31 +22,15 @@ export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, Error
 
   componentDidCatch(error: Error) {
     console.error('Auth error caught:', error);
-    
-    // Check if it's an authorization error
-    if (
-      error.message.includes('session_not_found') ||
-      error.message.includes('Invalid JWT') ||
-      error.message.includes('AUTHORIZATION_ERROR')
-    ) {
-      // Redirect to login
-      window.location.href = '/login';
-    }
+    // Redirect to login immediately on any error
+    window.location.href = '/login';
   }
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-50">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Session Error</h1>
-            <p className="text-gray-600 mb-4">Your session has expired. Please log in again.</p>
-            <a href="/login" className="inline-block px-4 py-2 bg-amazon-teal text-white rounded-lg hover:bg-amazon-teal/90">
-              Go to Login
-            </a>
-          </div>
-        </div>
-      );
+      // Redirect to login immediately
+      window.location.href = '/login';
+      return null;
     }
 
     return this.props.children;

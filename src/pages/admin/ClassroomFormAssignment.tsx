@@ -103,16 +103,25 @@ export function ClassroomFormAssignment() {
   }, [classroomIdFromQuery]);
   const [formSearchQuery, setFormSearchQuery] = useState('');
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
-  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
+  const [selectedFormStatus, setSelectedFormStatus] = useState<'active' | 'inactive' | 'school_default'>('active');
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formToDelete, setFormToDelete] = useState<Form | null>(null);
+  const [selectedFormIds, setSelectedFormIds] = useState<string[]>([]);
   // Reset search query when component mounts
   useEffect(() => {
     setFormSearchQuery('');
   }, []);
   const selectedClassroom = classrooms.find(c => c.id === selectedClassroomId) || classrooms[0];
-  // Filter forms that are not already assigned to the selected classroom
-  const availableForms = allForms.filter(form => !selectedClassroom?.assignedForms.some(f => f.id === form.id)).filter(form => form.name.toLowerCase().includes(formSearchQuery.toLowerCase()));
+  // Filter forms based on search and status, excluding already assigned forms
+  const availableForms = allForms
+    .filter(form => !selectedClassroom?.assignedForms.some(f => f.id === form.id))
+    .filter(form => form.name.toLowerCase().includes(formSearchQuery.toLowerCase()))
+    .filter(form => {
+      if (selectedFormStatus === 'active') return form.status === 'Active';
+      if (selectedFormStatus === 'school_default') return form.status === 'Default';
+      if (selectedFormStatus === 'inactive') return form.status === 'Inactive';
+      return true;
+    });
   const getStatusBadgeVariant = (status: FormStatus): 'success' | 'default' | 'secondary' | 'outline' => {
     switch (status) {
       case 'Active':
@@ -130,11 +139,16 @@ export function ClassroomFormAssignment() {
 
     if (!schoolId) throw new Error('School context not found');
 
+    const apiStatus = selectedFormStatus === 'school_default' ? 'default' : selectedFormStatus;
+
     await Promise.all(
-      selectedFormIds.map(formId => assignFormToAllStudents(schoolId, formId))
+      selectedFormIds.map(formId => assignFormToClassroom(schoolId, selectedClassroom.id, formId, apiStatus))
     );
 
-    const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id));
+    const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id)).map(form => ({
+      ...form,
+      status: selectedFormStatus === 'school_default' ? 'Default' : selectedFormStatus.charAt(0).toUpperCase() + selectedFormStatus.slice(1) as FormStatus
+    }));
     setClassrooms(classrooms.map(classroom => {
       if (classroom.id === selectedClassroom.id) {
         return {
@@ -145,6 +159,7 @@ export function ClassroomFormAssignment() {
       return classroom;
     }));
     setSelectedFormIds([]);
+    setSelectedFormStatus('active');
     setIsAssignDialogOpen(false);
   };
 
@@ -153,11 +168,16 @@ export function ClassroomFormAssignment() {
 
     if (!schoolId) throw new Error('School context not found');
 
+    const apiStatus = selectedFormStatus === 'school_default' ? 'default' : selectedFormStatus;
+
     await Promise.all(
-      selectedFormIds.map(formId => assignFormToClassroom(schoolId, selectedClassroom.id, formId))
+      selectedFormIds.map(formId => assignFormToClassroom(schoolId, selectedClassroom.id, formId, apiStatus))
     );
 
-    const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id));
+    const formsToAssign = allForms.filter(form => selectedFormIds.includes(form.id)).map(form => ({
+      ...form,
+      status: selectedFormStatus === 'school_default' ? 'Default' : selectedFormStatus.charAt(0).toUpperCase() + selectedFormStatus.slice(1) as FormStatus
+    }));
     setClassrooms(classrooms.map(classroom => {
       if (classroom.id === selectedClassroom.id) {
         return {
@@ -168,6 +188,7 @@ export function ClassroomFormAssignment() {
       return classroom;
     }));
     setSelectedFormIds([]);
+    setSelectedFormStatus('active');
     setIsAssignDialogOpen(false);
   };
   const handleRemoveForm = (formId: string) => {
@@ -345,6 +366,7 @@ export function ClassroomFormAssignment() {
                   <Button
                     onClick={() => {
                       setFormSearchQuery('');
+                      setSelectedFormIds([]);
                       setIsAssignDialogOpen(true);
                     }}
                     className="bg-amazon-teal hover:bg-amazon-teal/90 w-full lg:w-auto lg:min-w-[140px]"
@@ -405,6 +427,7 @@ export function ClassroomFormAssignment() {
                     <Button
                       onClick={() => {
                         setFormSearchQuery('');
+                        setSelectedFormIds([]);
                         setIsAssignDialogOpen(true);
                       }}
                       variant="outline"
@@ -555,14 +578,19 @@ export function ClassroomFormAssignment() {
                   </Button>
                 )}
               </div>
-              <div className="flex items-center justify-between sm:justify-start gap-4 sm:gap-6 text-xs sm:text-sm">
-                <div className="flex items-center gap-2 text-gray-600">
-                  <div className="w-2 h-2 bg-amazon-teal rounded-full"></div>
-                  <span>{availableForms.length} available</span>
-                </div>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span>{selectedFormIds.length} selected</span>
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Form Status</label>
+                  <Select value={selectedFormStatus} onValueChange={(value) => setSelectedFormStatus(value as 'active' | 'inactive' | 'school_default')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="school_default">Default</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -588,7 +616,7 @@ export function ClassroomFormAssignment() {
                     </p>
                   ) : (
                     <p className="text-sm text-gray-600">
-                      No forms are currently available for assignment.
+                      No active forms are currently available for assignment.
                     </p>
                   )}
                 </div>
@@ -597,14 +625,16 @@ export function ClassroomFormAssignment() {
               <div className="grid gap-2 sm:gap-3">
                 {availableForms.map(form => {
                   const isSelected = selectedFormIds.includes(form.id);
+                  const isInactive = form.status === 'Inactive';
                   return (
                     <div
                       key={form.id}
-                      className={`group relative flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 cursor-pointer ${isSelected
+                      className={`group relative flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${isInactive ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isSelected
                           ? 'border-amazon-teal bg-amazon-teal/5 shadow-sm'
-                          : 'border-gray-200 hover:border-amazon-teal/40 hover:bg-gray-50/50'
+                          : isInactive ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 hover:border-amazon-teal/40 hover:bg-gray-50/50'
                         }`}
                       onClick={() => {
+                        if (isInactive) return;
                         if (isSelected) {
                           setSelectedFormIds(selectedFormIds.filter(id => id !== form.id));
                         } else {
@@ -615,7 +645,7 @@ export function ClassroomFormAssignment() {
                       {/* Selection Indicator */}
                       <div className={`absolute top-2 sm:top-3 right-2 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 transition-all ${isSelected
                           ? 'bg-amazon-teal border-amazon-teal'
-                          : 'border-gray-300 group-hover:border-amazon-teal/60'
+                          : isInactive ? 'border-gray-300' : 'border-gray-300 group-hover:border-amazon-teal/60'
                         }`}>
                         {isSelected && (
                           <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white absolute top-0.5 left-0.5" />
@@ -625,6 +655,7 @@ export function ClassroomFormAssignment() {
                       <Checkbox
                         id={`form-${form.id}`}
                         checked={isSelected}
+                        disabled={isInactive}
                         className="mr-3 sm:mr-4 flex-shrink-0"
                       />
 
@@ -635,7 +666,7 @@ export function ClassroomFormAssignment() {
                             }`} />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="font-semibold text-gray-900 truncate text-sm sm:text-base mb-1">
+                          <h4 className={`font-semibold truncate text-sm sm:text-base mb-1 ${isInactive ? 'text-gray-500' : 'text-gray-900'}`}>
                             {form.name}
                           </h4>
                           <div className="flex items-center gap-2">
@@ -645,6 +676,9 @@ export function ClassroomFormAssignment() {
                             >
                               {form.status}
                             </Badge>
+                            {isInactive && (
+                              <span className="text-xs text-gray-500 font-medium">Not available</span>
+                            )}
                           </div>
                         </div>
                       </div>

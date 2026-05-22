@@ -109,7 +109,7 @@ export function StudentManagement() {
   const [selectedFormToAssign, setSelectedFormToAssign] = useState('');
   const [assignDialogClassroomFilter, setAssignDialogClassroomFilter] = useState('all');
   const [assignDialogSearchTerm, setAssignDialogSearchTerm] = useState('');
-  const [availableForms, setAvailableForms] = useState<{id: string, name: string}[]>([]);
+  const [availableForms, setAvailableForms] = useState<{id: string, name: string, status?: string}[]>([]);
   
   // Individual student form assignment states
   const [isStudentFormDialogOpen, setIsStudentFormDialogOpen] = useState(false);
@@ -147,7 +147,7 @@ export function StudentManagement() {
     if (formsLoaded || !schoolId) return;
     try {
       const formsData = await fetchFormTemplates(schoolId);
-      setAvailableForms(formsData.map(t => ({ id: t.id, name: t.formName })));
+      setAvailableForms(formsData.map(t => ({ id: t.id, name: t.formName, status: t.status })));
       setFormsLoaded(true);
     } catch {}
   };
@@ -1380,33 +1380,43 @@ export function StudentManagement() {
                 ).length > 0 ? (
                   availableForms.filter(form => 
                     !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
-                  ).map((form) => (
-                    <Card key={form.id} className={`p-4 cursor-pointer transition-all hover:shadow-md ${
-                      selectedFormsToAdd.includes(form.id) ? 'ring-2 ring-amazon-teal bg-amazon-teal/5' : 'hover:bg-gray-50'
-                    }`}>
-                      <div className="flex items-center space-x-3"
-                           onClick={() => {
-                             if (selectedFormsToAdd.includes(form.id)) {
-                               setSelectedFormsToAdd(prev => prev.filter(id => id !== form.id));
-                             } else {
-                               setSelectedFormsToAdd(prev => [...prev, form.id]);
-                             }
-                           }}>
-                        <Checkbox
-                          checked={selectedFormsToAdd.includes(form.id)}
-                          onChange={() => {}}
-                          className="pointer-events-none"
-                        />
-                        <div className="p-2 bg-gray-100 rounded-lg">
-                          <FileText className="h-4 w-4 text-gray-600" />
+                  ).map((form) => {
+                    const isInactive = form.status === 'inactive';
+                    return (
+                      <Card key={form.id} className={`p-4 cursor-pointer transition-all hover:shadow-md ${
+                        isInactive ? 'opacity-60 cursor-not-allowed' : selectedFormsToAdd.includes(form.id) ? 'ring-2 ring-amazon-teal bg-amazon-teal/5' : 'hover:bg-gray-50'
+                      }`}>
+                        <div className="flex items-center space-x-3"
+                             onClick={() => {
+                               if (isInactive) return;
+                               if (selectedFormsToAdd.includes(form.id)) {
+                                 setSelectedFormsToAdd(prev => prev.filter(id => id !== form.id));
+                               } else {
+                                 setSelectedFormsToAdd(prev => [...prev, form.id]);
+                               }
+                             }}>
+                          <Checkbox
+                            checked={selectedFormsToAdd.includes(form.id)}
+                            onChange={() => {}}
+                            className="pointer-events-none"
+                            disabled={isInactive}
+                          />
+                          <div className="p-2 bg-gray-100 rounded-lg">
+                            <FileText className="h-4 w-4 text-gray-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-medium text-sm">{form.name}</h4>
+                            <p className="text-xs text-muted-foreground">Click to select</p>
+                          </div>
+                          {isInactive && (
+                            <Badge variant="secondary" className="text-xs flex-shrink-0">
+                              Inactive
+                            </Badge>
+                          )}
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-sm">{form.name}</h4>
-                          <p className="text-xs text-muted-foreground">Click to select</p>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
+                      </Card>
+                    );
+                  })
                 ) : (
                   <Card className="p-8 text-center">
                     <div className="flex flex-col items-center space-y-3">

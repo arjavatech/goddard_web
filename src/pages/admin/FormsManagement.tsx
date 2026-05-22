@@ -19,7 +19,7 @@ import { PageLoader } from '../../components/ui/page-loader';
 import { AddFormModal } from '../../components/admin/AddFormModal';
 import { validateAddFormFields } from '../../lib/addFormValidation';
 
-type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived';
+type FormStatus = 'school_default' | 'active' | 'inactive' | 'archived' | 'draft' | 'available';
 interface Form {
   id: string;
   name: string;
@@ -290,9 +290,13 @@ export function FormsManagement() {
   const getStatusDisplayName = (status: FormStatus): string => {
     switch (status) {
       case 'school_default':
-        return 'Default';
+        return 'School Default';
       case 'active':
         return 'Active';
+      case 'available':
+        return 'Available';
+      case 'draft':
+        return 'Draft';
       case 'inactive':
         return 'Inactive';
       case 'archived':
@@ -301,11 +305,7 @@ export function FormsManagement() {
         return status;
     }
   };
-  const statuses = useMemo(() => {
-    const unique = new Set<FormStatus>();
-    forms.forEach((form: Form) => unique.add(form.status));
-    return Array.from(unique);
-  }, [forms]);
+  const statuses: FormStatus[] = ['active', 'inactive', 'draft', 'archived', 'school_default', 'available'];
   if (loading) {
     return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
   }
@@ -720,9 +720,12 @@ export function FormsManagement() {
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="school_default">Default</SelectItem>
                   <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="school_default">School Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
                 </SelectContent>
               </Select>
             </div>

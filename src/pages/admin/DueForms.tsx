@@ -13,6 +13,7 @@ import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { PageLoader } from '../../components/ui/page-loader';
+import { downloadCSV, printAsPDF } from '../../lib/export';
 
 
 export function DueForms() {
@@ -276,86 +277,25 @@ export function DueForms() {
     setCurrentPage
   } = usePagination({ data: filteredForms });
 
-  const exportToCSV = () => {
-    const escapeCSV = (value: string) => {
-      if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`;
-      }
-      return value;
-    };
+  const dueFormsExportHeaders = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
+  
+  const getDueFormsExportRows = () => filteredForms.map(form => [
+    form.formName,
+    form.studentName,
+    form.classroomName,
+    form.parentName,
+    form.parentEmail,
+    formatDate(form.dueDate),
+    form.status
+  ]);
 
-    const headers = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
+  const exportToCSV = () => downloadCSV(
+    `due_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
+    dueFormsExportHeaders,
+    getDueFormsExportRows()
+  );
 
-    const rows = filteredForms.map(form => [
-      form.formName,
-      form.studentName,
-      form.classroomName,
-      form.parentName,
-      form.parentEmail,
-      formatDate(form.dueDate),
-      form.status
-    ]);
-
-    const csvContent = [
-      'The Goddard School',
-      '',
-      headers.map(escapeCSV).join(','),
-      ...rows.map(row => row.map(escapeCSV).join(','))
-    ].join('\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `due_forms_export_${new Date().toISOString().split('T')[0]}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const exportToPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const headers = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
-
-    const rows = filteredForms.map(form => [
-      form.formName,
-      form.studentName,
-      form.classroomName,
-      form.parentName,
-      form.parentEmail,
-      formatDate(form.dueDate),
-      form.status
-    ]);
-
-    printWindow.document.write(`<!DOCTYPE html>
-<html><head><title>Due Forms Export</title>
-<style>
-  body { font-family: Arial, sans-serif; margin: 20px; }
-  .header { text-align: center; margin-bottom: 16px; }
-  .logo { height: 60px; width: auto; }
-  h1 { font-size: 18px; margin-bottom: 4px; }
-  p { font-size: 12px; color: #666; margin-bottom: 16px; }
-  table { width: 100%; border-collapse: collapse; font-size: 11px; }
-  th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; }
-  th { background-color: #f5f5f5; font-weight: 600; }
-  tr:nth-child(even) { background-color: #fafafa; }
-  @media print { body { margin: 0; } }
-</style></head><body>
-<div class="header">
-  <img src="${window.location.origin}/images/gs_logo_lynnwood.png" alt="The Goddard School" class="logo" />
-  <h1>Due Forms Export</h1>
-  <p>Exported on ${new Date().toLocaleDateString()} &bull; ${rows.length} forms</p>
-</div>
-<table><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
-<tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${cell.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>`).join('')}</tr>`).join('')}</tbody></table>
-</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
+  const exportToPDF = () => printAsPDF('Due Forms Export', dueFormsExportHeaders, getDueFormsExportRows());
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -657,12 +597,56 @@ export function DueForms() {
           <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
             <CardTitle className="text-base sm:text-lg">Due Forms ({filteredForms.length})</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
+              {selectedForms.length > 0 && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" className="h-8 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                      <Download className="h-4 w-4 mr-1.5" />
+                      Export Selected ({selectedForms.length})
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => {
+                      const selectedFormObjects = dueForms.filter(f => selectedForms.includes(f.id));
+                      const headers = dueFormsExportHeaders;
+                      const rows = selectedFormObjects.map(form => [
+                        form.formName,
+                        form.studentName,
+                        form.classroomName,
+                        form.parentName,
+                        form.parentEmail,
+                        formatDate(form.dueDate),
+                        form.status
+                      ]);
+                      downloadCSV(
+                        `selected_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
+                        headers,
+                        rows
+                      );
+                    }}>Export as CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => {
+                      const selectedFormObjects = dueForms.filter(f => selectedForms.includes(f.id));
+                      const headers = dueFormsExportHeaders;
+                      const rows = selectedFormObjects.map(form => [
+                        form.formName,
+                        form.studentName,
+                        form.classroomName,
+                        form.parentName,
+                        form.parentEmail,
+                        formatDate(form.dueDate),
+                        form.status
+                      ]);
+                      printAsPDF('Selected Forms Export', headers, rows);
+                    }}>Export as PDF</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button size="sm" className="h-8 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
                       <Download className="h-4 w-4 mr-1.5" />
-                      Export
+                      Export All
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
@@ -673,7 +657,7 @@ export function DueForms() {
               ) : (
                 <Button size="sm" className="h-8" disabled>
                   <Download className="h-4 w-4 mr-1.5" />
-                  Export
+                  Export All
                 </Button>
               )}
               <DropdownMenu>

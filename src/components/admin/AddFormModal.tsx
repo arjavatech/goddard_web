@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { AsyncButton } from '../ui/async-button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 
 interface AddFormModalProps {
   isOpen: boolean;
@@ -13,6 +14,8 @@ interface AddFormModalProps {
   setFormLink: (value: string) => void;
   formDueDate: string;
   setFormDueDate: (value: string) => void;
+  formStatus: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available';
+  setFormStatus: (value: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available') => void;
   formErrors: { [key: string]: string };
   setFormErrors: (errors: { [key: string]: string } | ((prev: { [key: string]: string }) => { [key: string]: string })) => void;
   isSubmitting: boolean;
@@ -30,6 +33,8 @@ export function AddFormModal({
   setFormLink,
   formDueDate,
   setFormDueDate,
+  formStatus,
+  setFormStatus,
   formErrors,
   setFormErrors,
   isSubmitting,
@@ -84,6 +89,22 @@ export function AddFormModal({
             )}
           </div>
           <div>
+            <label className="block text-sm font-medium mb-2">Form Status</label>
+            <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available')}>
+              <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">Active</SelectItem>
+                <SelectItem value="available">Available</SelectItem>
+                <SelectItem value="draft">Draft</SelectItem>
+                <SelectItem value="school_default">School Default</SelectItem>
+                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="archived">Archived</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
             <label className="block text-sm font-medium mb-2">Due Date</label>
             <Input
               type="date"
@@ -109,7 +130,7 @@ export function AddFormModal({
           <AsyncButton 
             onClick={onSubmit} 
             className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" 
-            disabled={!formName.trim() || !formLink.trim() || !formDueDate || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
+            disabled={!formName.trim() || !formLink.trim() || !formDueDate || !formStatus || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
           >
             {isSubmitting ? `${submitButtonText.includes('Add') ? 'Adding' : 'Updating'} Form...` : submitButtonText}
           </AsyncButton>

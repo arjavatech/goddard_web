@@ -570,7 +570,7 @@ export function ParentDetails() {
                             DOB: {child.dob}
                           </div>
                         </div>
-                        <Badge variant={child.enrollmentProgress === 100 ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}>
+                        <Badge variant={child.forms.every(f => f.status === 'Approved') ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}>
                           {child.enrollmentProgress}%
                         </Badge>
                       </div>

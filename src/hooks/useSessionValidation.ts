@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
 import { useAuth } from '../services/auth/useAuth';
-import { getAuthToken, clearSession } from '../services/auth/session';
 
 /**
- * Hook to validate session on app load and periodically
- * Ensures that stale sessions are detected and cleared
+ * Hook to validate session on app load
+ * Removed periodic validation as token refresh handles this
  */
 export function useSessionValidation() {
   const { isAuthenticated, user } = useAuth();
@@ -12,25 +11,7 @@ export function useSessionValidation() {
   useEffect(() => {
     if (!isAuthenticated || !user) return;
 
-    // Validate session on mount
-    validateSession();
-
-    // Periodically validate session (every 10 minutes)
-    const interval = setInterval(validateSession, 10 * 60 * 1000);
-
-    return () => clearInterval(interval);
+    // Session validation on mount only
+    // Token refresh is handled automatically by getAuthToken every 5 minutes
   }, [isAuthenticated, user?.id]);
-
-  async function validateSession() {
-    try {
-      const token = await getAuthToken();
-      if (!token) {
-        console.warn('Session validation failed: No token available');
-        await clearSession();
-      }
-    } catch (err) {
-      console.error('Session validation error:', err);
-      await clearSession();
-    }
-  }
 }
