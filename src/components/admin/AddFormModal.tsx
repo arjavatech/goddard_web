@@ -14,8 +14,8 @@ interface AddFormModalProps {
   setFormLink: (value: string) => void;
   formDueDate: string;
   setFormDueDate: (value: string) => void;
-  formStatus: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available';
-  setFormStatus: (value: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available') => void;
+  formStatus?: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available';
+  setFormStatus?: (value: 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available') => void;
   formErrors: { [key: string]: string };
   setFormErrors: (errors: { [key: string]: string } | ((prev: { [key: string]: string }) => { [key: string]: string })) => void;
   isSubmitting: boolean;
@@ -88,20 +88,24 @@ export function AddFormModal({
               <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
             )}
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-2">Form Status</label>
-            <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available')}>
-              <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="school_default">School Default</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
-                <SelectItem value="archived">Archived</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          {formStatus && setFormStatus && (
+            <div>
+              <label className="block text-sm font-medium mb-2">Form Status</label>
+              <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'draft' | 'archived' | 'school_default' | 'available')}>
+                <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="school_default">School Default</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="archived">Archived</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium mb-2">Due Date</label>
             <Input
@@ -128,7 +132,7 @@ export function AddFormModal({
           <AsyncButton 
             onClick={onSubmit} 
             className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" 
-            disabled={!formName.trim() || !formLink.trim() || !formDueDate || !formStatus || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
+            disabled={!formName.trim() || !formLink.trim() || !formDueDate || (formStatus === undefined ? false : !formStatus) || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
           >
             {isSubmitting ? `${submitButtonText.includes('Add') ? 'Adding' : 'Updating'} Form...` : submitButtonText}
           </AsyncButton>
