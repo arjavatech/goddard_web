@@ -145,6 +145,12 @@ export function Login() {
             <p className="text-sm text-muted-foreground">
               Sign in to your account
             </p>
+            {selectedSchool && (
+              <div className="flex items-center justify-center gap-2 mt-3 pt-3 border-t border-gray-200">
+                <Building2 className="h-4 w-4 text-amazon-teal" />
+                <p className="text-sm font-medium text-amazon-teal">{selectedSchool.name}</p>
+              </div>
+            )}
           </div>
         </div>
         {/* Login Form */}
