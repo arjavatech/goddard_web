@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download, GraduationCap } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -99,6 +99,10 @@ export function ParentManagement() {
   const [newChildDob, setNewChildDob] = useState('');
   const [newChildGender, setNewChildGender] = useState('');
   const [newChildClassroom, setNewChildClassroom] = useState('');
+  const [expandedParents, setExpandedParents] = useState<Record<string, boolean>>({});
+  const toggleParentExpanded = (parentId: string) => {
+    setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
+  };
   const [loading, setLoading] = useState(true);
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
@@ -759,24 +763,39 @@ export function ParentManagement() {
                   </td>
                   <td className="py-3 px-2 text-sm text-gray-600 max-w-0">
                     {parent.children.length === 0 ? (
-                      <span className="text-muted-foreground">No children linked yet</span>
+                      <span className="text-muted-foreground text-xs italic">No children linked yet</span>
                     ) : (
-                      <div className="space-y-1">
-                        {parent.children.map(child => (
-                          <div key={child.id} className="flex items-center gap-1.5 min-w-0">
-                            <Users className="h-3.5 w-3.5 text-gray-400 flex-shrink-0" />
+                      <div className="flex flex-wrap gap-2 py-1 max-w-sm">
+                        {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                          <div 
+                            key={child.id} 
+                            className="inline-flex items-center gap-1.5 bg-amazon-teal/[0.04] border border-amazon-teal/10 hover:border-amazon-teal/30 hover:bg-amazon-teal/[0.08] rounded-full pl-2 pr-2.5 py-1 text-xs transition-all shadow-sm duration-200 group"
+                          >
+                            <GraduationCap className="h-3.5 w-3.5 text-amazon-teal/70 group-hover:text-amazon-teal flex-shrink-0" />
                             <Link
                               to={`/admin/parents/${parent.id}`}
                               state={{ parentData: parent, selectedChildId: child.id }}
-                              className="text-amazon-teal hover:underline truncate"
+                              className="font-semibold text-amazon-teal/90 group-hover:text-amazon-teal hover:underline truncate max-w-[110px]"
                             >
                               {child.firstName} {child.lastName}
                             </Link>
-                            <Badge variant="secondary" className="text-xs flex-shrink-0">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amazon-teal/20 group-hover:bg-amazon-teal/40 flex-shrink-0" />
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
                               {child.classroom.name}
-                            </Badge>
+                            </span>
                           </div>
                         ))}
+                        {parent.children.length > 2 && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              toggleParentExpanded(parent.id);
+                            }}
+                            className="inline-flex items-center justify-center bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full px-3 py-1 text-[11px] font-bold text-gray-600 transition-all duration-200 shadow-sm"
+                          >
+                            {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
+                          </button>
+                        )}
                       </div>
                     )}
                   </td>
@@ -950,28 +969,45 @@ export function ParentManagement() {
                   
                   <div className="space-y-1.5">
                     {parent.children.length === 0 ? (
-                      <div className="text-muted-foreground text-xs">No children linked yet</div>
+                      <div className="text-muted-foreground text-xs italic">No children linked yet</div>
                     ) : (
-                      <div className="space-y-1">
-                        <div className="text-xs text-muted-foreground">Children:</div>
-                        {parent.children.map(child => (
-                          <div key={child.id} className="flex items-center gap-2 text-xs">
-                            <Users className="h-3 w-3 text-gray-400 flex-shrink-0" />
-                            <Link 
-                              to={`/admin/parents/${parent.id}`} 
-                              state={{
-                                parentData: parent,
-                                selectedChildId: child.id
-                              }} 
-                              className="text-amazon-teal hover:underline cursor-pointer"
+                      <div className="space-y-2 mt-2 border-t pt-2.5">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Children</div>
+                        <div className="flex flex-wrap gap-2">
+                          {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                            <div 
+                              key={child.id} 
+                              className="inline-flex items-center gap-1.5 bg-amazon-teal/[0.04] border border-amazon-teal/10 hover:border-amazon-teal/30 hover:bg-amazon-teal/[0.08] rounded-full pl-2 pr-2.5 py-1 text-xs transition-all shadow-sm duration-200 group"
                             >
-                              {child.firstName} {child.lastName}
-                            </Link>
-                            <Badge variant="secondary" className="text-xs">
-                              {child.classroom.name}
-                            </Badge>
-                          </div>
-                        ))}
+                              <GraduationCap className="h-3.5 w-3.5 text-amazon-teal/70 group-hover:text-amazon-teal flex-shrink-0" />
+                              <Link 
+                                to={`/admin/parents/${parent.id}`} 
+                                state={{
+                                  parentData: parent,
+                                  selectedChildId: child.id
+                                }} 
+                                className="font-semibold text-amazon-teal/90 group-hover:text-amazon-teal hover:underline truncate max-w-[110px]"
+                              >
+                                {child.firstName} {child.lastName}
+                              </Link>
+                              <span className="h-1.5 w-1.5 rounded-full bg-amazon-teal/20 group-hover:bg-amazon-teal/40 flex-shrink-0" />
+                              <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                                {child.classroom.name}
+                              </span>
+                            </div>
+                          ))}
+                          {parent.children.length > 2 && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                toggleParentExpanded(parent.id);
+                              }}
+                              className="inline-flex items-center justify-center bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full px-3 py-1 text-[11px] font-bold text-gray-600 transition-all duration-200 shadow-sm"
+                            >
+                              {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
