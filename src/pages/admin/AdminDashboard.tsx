@@ -73,44 +73,39 @@ export function AdminDashboard() {
 
   const schoolId = localStorage.getItem('schoolId');
 
-  useEffect(() => {
-    let isMounted = true;
-    (async () => {
-      try {
-        setLoading(true);
-      
-
-        if (!schoolId) {
-          throw new Error('Unable to determine school context for the current admin.');
-        }
-
-        const dashboardMetrics = await fetchDashboardMetrics(schoolId);
-
-        const progressItems: ProgressItem[] = dashboardMetrics.classwiseMetrics.map(metric => ({
-          classroom: metric.classroomName,
-          completed: metric.completedEnrollments,
-          total: metric.totalEnrollments
-        })).sort((a, b) => a.classroom.localeCompare(b.classroom));
-
-        if (!isMounted) return;
-        setMetrics(dashboardMetrics);
-        setEnrollmentProgress(progressItems);
-        setError(null);
-      } catch (err) {
-        if (!isMounted) return;
-        setMetrics(null);
-        setEnrollmentProgress([]);
-        const message = err instanceof Error ? err.message : null;
-        setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  const loadDashboardData = async (showLoader = false) => {
+    if (showLoader) {
+      setLoading(true);
+    }
+    try {
+      if (!schoolId) {
+        throw new Error('Unable to determine school context for the current admin.');
       }
-    })();
-    return () => {
-      isMounted = false;
-    };
+
+      const dashboardMetrics = await fetchDashboardMetrics(schoolId);
+
+      const progressItems: ProgressItem[] = dashboardMetrics.classwiseMetrics.map(metric => ({
+        classroom: metric.classroomName,
+        completed: metric.completedEnrollments,
+        total: metric.totalEnrollments
+      })).sort((a, b) => a.classroom.localeCompare(b.classroom));
+
+      setMetrics(dashboardMetrics);
+      setEnrollmentProgress(progressItems);
+      setError(null);
+    } catch (err) {
+      setMetrics(null);
+      setEnrollmentProgress([]);
+      const message = err instanceof Error ? err.message : null;
+      setError(message && message !== 'Received unexpected response from the server.' ? message : "We couldn't load the admin dashboard data right now. Please try again shortly.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadDashboardData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const validateForm = () => {
@@ -175,7 +170,8 @@ export function AdminDashboard() {
       setIsAddDialogOpen(false);
       resetAddFormState();
 
-      window.location.reload();
+      showToast('success', 'Form template created successfully');
+      await loadDashboardData(true);
     } catch (error) {
       const errorText =
         (error as any)?.response?.error ||
@@ -274,7 +270,7 @@ export function AdminDashboard() {
       resetInviteFormState();
 
       showToast('success', 'Parent invitation sent successfully');
-      window.location.reload();
+      await loadDashboardData(true);
     } catch (error) {
       console.error('Error inviting parent:', error);
       showToast('error', 'Failed to send parent invitation. Please try again.');
@@ -293,9 +289,25 @@ export function AdminDashboard() {
       setNewClassroomName('');
       showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
       
-      window.location.reload();
+      setClassroomsLoaded(false);
+      await loadDashboardData(true);
     } catch (error) {
-      showToast('error', 'Failed to create classroom. Please try again.');
+      const errorText =
+        (error as any)?.response?.error ||
+        (error as any)?.response?.message ||
+        (error instanceof Error ? error.message : '');
+
+      if (
+        typeof errorText === 'string' &&
+        (errorText.includes('duplicate key value violates unique constraint') ||
+         errorText.toLowerCase().includes('already exists') ||
+         errorText.toLowerCase().includes('unique'))
+      ) {
+        showToast('error', 'Classroom name already exists');
+      } else {
+        showToast('error', 'Failed to create classroom. Please try again.');
+      }
+      throw error;
     } 
   };
 

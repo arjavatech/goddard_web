@@ -69,6 +69,7 @@ export function ClassroomManagement() {
         if (!isMounted) return;
         setClassrooms(mapEnrollmentStats(enrollmentStats));
       } catch (err) {
+        console.error('Failed to load classroom stats:', err);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -125,7 +126,22 @@ export function ClassroomManagement() {
       setIsAddDialogOpen(false);
       showToast('success', `Classroom "${name}" created successfully`);
     } catch (error) {
-      showToast('error', 'Failed to create classroom. Please try again.');
+      const errorText =
+        (error as any)?.response?.error ||
+        (error as any)?.response?.message ||
+        (error instanceof Error ? error.message : '');
+
+      if (
+        typeof errorText === 'string' &&
+        (errorText.includes('duplicate key value violates unique constraint') ||
+         errorText.toLowerCase().includes('already exists') ||
+         errorText.toLowerCase().includes('unique'))
+      ) {
+        showToast('error', 'Classroom name already exists');
+      } else {
+        showToast('error', 'Failed to create classroom. Please try again.');
+      }
+      throw error;
     }
   };
   const handleEditClassroom = async () => {
