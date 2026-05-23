@@ -147,9 +147,11 @@ export function StudentManagement() {
     if (formsLoaded || !schoolId) return;
     try {
       const formsData = await fetchFormTemplates(schoolId);
-      setAvailableForms(formsData.map(t => ({ id: t.id, name: t.formName, status: t.status })));
+      setAvailableForms(formsData.map(t => ({ id: t.id, name: t.formName, status: t.status || undefined })));
       setFormsLoaded(true);
-    } catch {}
+    } catch (err) {
+      console.error('Failed to load forms:', err);
+    }
   };
 
   // Bulk transfer states
@@ -204,7 +206,7 @@ export function StudentManagement() {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={value.includes(option)}
-                      onChange={() => {}}
+                      onChange={() => { /* noop */ }}
                       className="pointer-events-none"
                     />
                     <span>{option}</span>
@@ -222,142 +224,139 @@ export function StudentManagement() {
       </div>
     );
   };
-  useEffect(() => {
-    let isMounted = true;
-    const loadStudentData = async () => {
-      try {
-        setLoading(true);
-        // const user = await fetchUserContext();
-        if (!schoolId) {
-          setStudents([]);
-          return;
-        }
-        const [enrollmentData, classrooms] = await Promise.all([
-          fetchStudentEnrollments(schoolId),
-          fetchClassrooms(schoolId)
-        ]);
-        
-        const enrollments = enrollmentData.enrollments || [];
-        if (!isMounted) return;
-        if (!enrollments || enrollments.length === 0) {
-          setStudents([]);
-          return;
-        }
-        const mappedStudents: Student[] = enrollments.map((enrollment: EnrollmentData, index: number) => {
-          const studentId = enrollment.child_id || `student-${index}`;
-          const firstName = enrollment.child_first_name || 'Unknown';
-          const lastName = enrollment.child_last_name || 'Student';
-
-          // Map forms from new API response format
-          const formsArray = enrollment.forms && typeof enrollment.forms === 'object'
-            ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => {
-                const assignedDate = formData.assigned_at;
-                let dueDate = null;
-                if (assignedDate) {
-                  // Add 30 days to assigned date for due date
-                  const assigned = new Date(assignedDate);
-                  if (!isNaN(assigned.getTime())) {
-                    const due = new Date(assigned);
-                    due.setDate(due.getDate() + 30);
-                    dueDate = due.toISOString().split('T')[0];
-                  }
-                }
-                return {
-                  id: formName,
-                  name: formName,
-                  status: formData.status || 'Not Started',
-                  assignedAt: assignedDate || null,
-                  dueDate
-                };
-              })
-            : [];
-
-          // Count approved forms
-          const approved = formsArray.filter(form => {
-            const normalized = normalizeFormStatus(form.status);
-            return normalized === 'Approved';
-          }).length;
-
-          // Count in-progress forms
-          const inProgress = formsArray.filter(form => {
-            const normalized = normalizeFormStatus(form.status);
-            return normalized === 'In Progress';
-          }).length;
-
-          const completed = approved + inProgress;
-          const total = formsArray.length;
-
-          // Calculate progress based on completed forms
-          const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-          const classroomName = enrollment.class_name;
-          // Find the classroom ID by matching the name
-          const classroom = classrooms.find(c => c.name === classroomName);
-          const classroomId = classroom?.id || 'unassigned';
-
-          const parentEmail = enrollment.primary_email || 'parent@example.com';
-          const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
-          const parentId = enrollment.parent_id;
-
-          // Extract secondary parent info when available
-          let secondaryParent = null;
-          if (enrollment.secondary_parent_id) {
-            secondaryParent = {
-              id: enrollment.secondary_parent_id,
-              name: `${enrollment.secondary_parent_first_name || ''} ${enrollment.secondary_parent_last_name || ''}`.trim(),
-              email: enrollment.secondary_parent_email || ''
-            };
-          }
-
-          const student = {
-            id: studentId,
-            firstName,
-            lastName,
-            dateOfBirth: undefined, // API doesn't provide DOB
-            enrollmentProgress: progress,
-            enrollmentStatus: statusFromProgress(progress),
-            formsCompleted: completed,
-            formsApproved: approved,
-            formsInProgress: inProgress,
-            totalForms: total,
-            classroom: {
-              id: classroomId,
-              name: classroomName || 'Unassigned'
-            },
-            parent: {
-              id: parentId,
-              name: parentName,
-              email: parentEmail
-            },
-            secondaryParent,
-            assignedForms: formsArray,
-            childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
-            enrollmentId: enrollment.enrollment_id,
-            formStatus: enrollment.form_status
-          };
-          return student;
-        });
-        if (mappedStudents.length > 0) {
-          setStudents(mappedStudents);
-        }
-        
-        // Set available classrooms
-        const classroomsList = classrooms.map(classroom => ({
-          id: classroom.id,
-          name: classroom.name
-        }));
-        setAvailableClassrooms(classroomsList);
-      } catch (error) {
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+  const loadStudentData = async (showLoader = false) => {
+    if (showLoader) {
+      setLoading(true);
+    }
+    try {
+      if (!schoolId) {
+        setStudents([]);
+        return;
       }
-    };
-    loadStudentData();
-    return () => {
-      isMounted = false;
-    };
+      const [enrollmentData, classrooms] = await Promise.all([
+        fetchStudentEnrollments(schoolId),
+        fetchClassrooms(schoolId)
+      ]);
+      
+      const enrollments = enrollmentData.enrollments || [];
+      if (!enrollments || enrollments.length === 0) {
+        setStudents([]);
+        return;
+      }
+      const mappedStudents: Student[] = enrollments.map((enrollment: EnrollmentData, index: number) => {
+        const studentId = enrollment.child_id || `student-${index}`;
+        const firstName = enrollment.child_first_name || 'Unknown';
+        const lastName = enrollment.child_last_name || 'Student';
+
+        // Map forms from new API response format
+        const formsArray = enrollment.forms && typeof enrollment.forms === 'object'
+          ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => {
+              const assignedDate = formData.assigned_at;
+              let dueDate = null;
+              if (assignedDate) {
+                // Add 30 days to assigned date for due date
+                const assigned = new Date(assignedDate);
+                if (!isNaN(assigned.getTime())) {
+                  const due = new Date(assigned);
+                  due.setDate(due.getDate() + 30);
+                  dueDate = due.toISOString().split('T')[0];
+                }
+              }
+              return {
+                id: formName,
+                name: formName,
+                status: formData.status || 'Not Started',
+                assignedAt: assignedDate || null,
+                dueDate
+              };
+            })
+          : [];
+
+        // Count approved forms
+        const approved = formsArray.filter(form => {
+          const normalized = normalizeFormStatus(form.status);
+          return normalized === 'Approved';
+        }).length;
+
+        // Count in-progress forms
+        const inProgress = formsArray.filter(form => {
+          const normalized = normalizeFormStatus(form.status);
+          return normalized === 'In Progress';
+        }).length;
+
+        const completed = approved + inProgress;
+        const total = formsArray.length;
+
+        // Calculate progress based on completed forms
+        const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+        const classroomName = enrollment.class_name;
+        // Find the classroom ID by matching the name
+        const classroom = classrooms.find(c => c.name === classroomName);
+        const classroomId = classroom?.id || 'unassigned';
+
+        const parentEmail = enrollment.primary_email || 'parent@example.com';
+        const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
+        const parentId = enrollment.parent_id;
+
+        // Extract secondary parent info when available
+        let secondaryParent = null;
+        if (enrollment.secondary_parent_id) {
+          secondaryParent = {
+            id: enrollment.secondary_parent_id,
+            name: `${enrollment.secondary_parent_first_name || ''} ${enrollment.secondary_parent_last_name || ''}`.trim(),
+            email: enrollment.secondary_parent_email || ''
+          };
+        }
+
+        const student = {
+          id: studentId,
+          firstName,
+          lastName,
+          dateOfBirth: undefined, // API doesn't provide DOB
+          enrollmentProgress: progress,
+          enrollmentStatus: statusFromProgress(progress),
+          formsCompleted: completed,
+          formsApproved: approved,
+          formsInProgress: inProgress,
+          totalForms: total,
+          classroom: {
+            id: classroomId,
+            name: classroomName || 'Unassigned'
+          },
+          parent: {
+            id: parentId,
+            name: parentName,
+            email: parentEmail
+          },
+          secondaryParent,
+          assignedForms: formsArray,
+          childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
+          enrollmentId: enrollment.enrollment_id,
+          formStatus: enrollment.form_status
+        };
+        return student;
+      });
+      if (mappedStudents.length > 0) {
+        setStudents(mappedStudents);
+      }
+      
+      // Set available classrooms
+      const classroomsList = classrooms.map(classroom => ({
+        id: classroom.id,
+        name: classroom.name
+      }));
+      setAvailableClassrooms(classroomsList);
+    } catch (error) {
+      console.error('Failed to load student data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadStudentData(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Extract all unique form names from students
   const allFormNames = useMemo(() => {
@@ -1397,7 +1396,7 @@ export function StudentManagement() {
                              }}>
                           <Checkbox
                             checked={selectedFormsToAdd.includes(form.id)}
-                            onChange={() => {}}
+                            onChange={() => { /* noop */ }}
                             className="pointer-events-none"
                             disabled={isInactive}
                           />
@@ -1471,7 +1470,7 @@ export function StudentManagement() {
                         await assignFormsToStudent(schoolId || '', assignments);
                         setIsStudentFormDialogOpen(false);
                         setSelectedFormsToAdd([]);
-                        window.location.reload();
+                        await loadStudentData(true);
                       } catch (error) {
                         console.error('Error assigning forms:', error);
                       }
@@ -1543,8 +1542,9 @@ export function StudentManagement() {
                     new Date().toISOString()
                   );
                   
+                  setIsTransferDialogOpen(false);
                   showToast('success', 'Student transferred successfully!');
-                  setTimeout(() => window.location.reload(), 1000);
+                  await loadStudentData(true);
                 } catch (error) {
                   console.error('Error transferring student:', error);
                   showToast('error', 'Error transferring student. Please try again.');
@@ -1707,8 +1707,12 @@ export function StudentManagement() {
                   // Show success message
                   showToast('success', `Successfully transferred ${selectedStudentsForTransfer.length} students!`);
                   
-                  // Refresh the page
-                  setTimeout(() => window.location.reload(), 1000);
+                  setIsBulkTransferDialogOpen(false);
+                  setSelectedStudentsForTransfer([]);
+                  setBulkTransferFromGrade('');
+                  setBulkTransferToGrade('');
+                  setSelectedStudentsForBulkAction([]);
+                  await loadStudentData(true);
                 } catch (error) {
                   console.error('Error in bulk transfer:', error);
                   showToast('error', 'Error transferring students. Please try again.');
