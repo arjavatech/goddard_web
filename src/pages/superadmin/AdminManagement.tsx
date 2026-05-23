@@ -112,7 +112,19 @@ export function AdminManagement() {
       const adminUsers = await fetchAdminUsers(userData.schoolId);
       setAdmins(adminUsers);
     } catch (err: any) {
-      if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
+      const errorText =
+        err?.response?.message ||
+        err?.response?.error ||
+        err?.message ||
+        '';
+
+      if (
+        errorText.includes('Already registered with different role') ||
+        errorText.includes('Conflict: Already registered with different role') ||
+        errorText.includes('different role')
+      ) {
+        showToast('error', 'Already registered with different role');
+      } else if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
         setEmailError('Email already exists');
       } else {
         showToast('error', 'Failed to send invitation');
