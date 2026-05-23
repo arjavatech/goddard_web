@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download, Edit } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
@@ -904,13 +904,14 @@ export function StudentManagement() {
                         setNewStatus(student.childStatus);
                         setIsStatusDialogOpen(true);
                       }}
-                      className={`px-2 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
                         student.childStatus === 'active'
                           ? 'bg-green-100 text-green-700 hover:bg-green-200'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                      <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+                      <Edit className="h-3 w-3 opacity-70" />
                     </button>
                   </td>
                   <td className="py-3 px-2 text-center">
@@ -1034,11 +1035,14 @@ export function StudentManagement() {
                           setNewStatus(student.childStatus);
                           setIsStatusDialogOpen(true);
                         }}
-                        className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
-                          student.childStatus === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 transition-all ${
+                          student.childStatus === 'active'
+                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
-                        {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                        <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+                        <Edit className="h-3 w-3 opacity-70" />
                       </button>
                     </div>
 

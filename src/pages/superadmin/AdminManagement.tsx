@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Shield, Search, Plus, Edit, Trash2, Eye, MoreVertical, Mail } from 'lucide-react';
+import { Shield, Search, Plus, Edit, Trash2, Eye, MoreVertical, Mail, RefreshCw } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 
 import { useToast } from '../../contexts/ToastContext';
@@ -32,6 +32,7 @@ export function AdminManagement() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
 
+  const [resendingAdminId, setResendingAdminId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
 
   const filteredAdmins = admins.filter(admin =>
@@ -135,12 +136,15 @@ export function AdminManagement() {
   };
 
   const handleResendInvite = async (admin: AdminUser) => {
+    setResendingAdminId(admin.id);
     try {
       await resendAdminInvite(admin.id);
       showToast('success', 'Invitation resent successfully to ' + admin.email);
     } catch (error) {
       console.error('Error resending invitation:', error);
       showToast('error', 'Failed to resend invitation');
+    } finally {
+      setResendingAdminId(null);
     }
   };
 
@@ -294,9 +298,24 @@ export function AdminManagement() {
                             Edit Admin
                           </DropdownMenuItem>
                           {!admin.is_verified && (
-                            <DropdownMenuItem onClick={() => handleResendInvite(admin)}>
-                              <Mail className="w-4 h-4 mr-2" />
-                              Resend Invite
+                            <DropdownMenuItem
+                              disabled={resendingAdminId === admin.id}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleResendInvite(admin);
+                              }}
+                            >
+                              {resendingAdminId === admin.id ? (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="w-4 h-4 mr-2" />
+                                  Resend Invite
+                                </>
+                              )}
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem onClick={() => handleDeleteAdmin(admin)} className="text-red-600">
