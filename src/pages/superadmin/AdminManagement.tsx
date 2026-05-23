@@ -6,11 +6,11 @@ import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { Shield, Search, Plus, Edit, Trash2, Eye, MoreVertical } from 'lucide-react';
+import { Shield, Search, Plus, Edit, Trash2, Eye, MoreVertical, Mail } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 
 import { useToast } from '../../contexts/ToastContext';
-import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, type AdminUser } from '../../services/api/admin';
+import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, type AdminUser } from '../../services/api/admin';
 import { useUserContext } from '../../contexts/UserContext';
 
 export function AdminManagement() {
@@ -131,6 +131,16 @@ export function AdminManagement() {
       }
     } finally {
       setIsInviting(false);
+    }
+  };
+
+  const handleResendInvite = async (admin: AdminUser) => {
+    try {
+      await resendAdminInvite(admin.id);
+      showToast('success', 'Invitation resent successfully to ' + admin.email);
+    } catch (error) {
+      console.error('Error resending invitation:', error);
+      showToast('error', 'Failed to resend invitation');
     }
   };
 
@@ -283,6 +293,12 @@ export function AdminManagement() {
                             <Edit className="w-4 h-4 mr-2" />
                             Edit Admin
                           </DropdownMenuItem>
+                          {!admin.is_verified && (
+                            <DropdownMenuItem onClick={() => handleResendInvite(admin)}>
+                              <Mail className="w-4 h-4 mr-2" />
+                              Resend Invite
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem onClick={() => handleDeleteAdmin(admin)} className="text-red-600">
                             <Trash2 className="w-4 h-4 mr-2" />
                             Delete Admin

@@ -962,6 +962,16 @@ export async function inviteAdmin(
   }, z.object({}));
 }
 
+export async function resendAdminInvite(userId: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: '/auth/admin-resend-invite',
+    body: {
+      user_id: userId
+    }
+  }, z.any());
+}
+
 export async function updateAdmin(
   userId: string,
   firstName: string,
