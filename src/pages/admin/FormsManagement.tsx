@@ -3,15 +3,16 @@ import { AdminLayout } from './AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Trash2, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchFormTemplates } from '../../services/api/dashboard';
-import { deleteForm, createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
+import { createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { usePagination } from '../../hooks/usePagination';
@@ -42,9 +43,9 @@ export function FormsManagement() {
   const [forms, setForms] = useState<Form[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
@@ -116,9 +117,15 @@ export function FormsManagement() {
   }, []);
   const filteredForms = useMemo(() => forms.filter((form: Form) => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Tab filter: Active tab contains 'active' and 'school_default', Inactive tab contains 'inactive'
+    const matchesTab = activeTab === 'active'
+      ? (form.status === 'active' || form.status === 'school_default')
+      : (form.status === 'inactive');
+
     const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  }), [forms, searchQuery, statusFilter]);
+    return matchesSearch && matchesTab && matchesStatus;
+  }), [forms, searchQuery, activeTab, statusFilter]);
 
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -240,32 +247,6 @@ export function FormsManagement() {
       showToast('error', 'Failed to update form. Please try again.');
     }
   };
-  const handleDeleteForm = async () => {
-    if (!selectedForm) return;
-
-    try {
-      // const user = await fetchUserContext();
-      if (!schoolId) throw new Error('School context not found');
-
-      await deleteForm(selectedForm.id, schoolId);
-
-      // Refetch forms from server to ensure consistency
-      const templates = await fetchFormTemplates(schoolId).catch(() => []);
-      const mappedForms: Form[] = templates.map((template, index) => ({
-        id: template.id,
-        name: template.formName,
-        link: template.filloutFormUrl ?? '#',
-        status: mapStatus(template.status),
-        classroomsCount: 0,
-        dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
-      }));
-      setForms(mappedForms);
-      setIsDeleteDialogOpen(false);
-      showToast('success', `Form "${selectedForm.name}" deleted successfully`);
-    } catch (error) {
-      showToast('error', 'Failed to delete form. Please try again.');
-    }
-  };
   const resetFormFields = () => {
     setFormName('');
     setFormLink('');
@@ -281,10 +262,7 @@ export function FormsManagement() {
     setFormDueDate(form.dueDate || '');
     setIsEditDialogOpen(true);
   };
-  const openDeleteDialog = (form: Form) => {
-    setSelectedForm(form);
-    setIsDeleteDialogOpen(true);
-  };
+
   
   const handleAssignToAllStudents = async () => {
     if (!selectedFormForAssign) return;
@@ -449,6 +427,18 @@ export function FormsManagement() {
                   {sortedForms.length} of {forms.length} forms
                 </div>
               </div>
+
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as 'active' | 'inactive')} className="mb-4 sm:mb-6">
+                <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
+                  <TabsTrigger value="active" className="text-xs sm:text-sm">
+                    Active ({forms.filter(f => f.status === 'active' || f.status === 'school_default').length})
+                  </TabsTrigger>
+                  <TabsTrigger value="inactive" className="text-xs sm:text-sm">
+                    Inactive ({forms.filter(f => f.status === 'inactive').length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
               
               <div className="relative mb-3 sm:mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -509,9 +499,9 @@ export function FormsManagement() {
               onPageChange={setCurrentPage}
               columns={[
                 { header: 'Form Name', className: 'w-1/5' },
-                { header: 'Status', className: 'w-1/8' },
                 { header: 'Due Date', className: 'w-1/8' },
-                { header: 'Form Link', className: 'w-1/3' },
+                { header: 'Form Link', className: 'w-1/3 pr-10' },
+                { header: 'Status', className: 'w-1/8 pl-2' },
                 { header: 'Actions', className: 'w-1/8 text-center' },
               ]}
               rows={paginatedForms.map(form => (
@@ -524,16 +514,11 @@ export function FormsManagement() {
                     </div>
                   </td>
                   <td className="py-3 px-2">
-                    <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
-                      {getStatusDisplayName(form.status)}
-                    </Badge>
-                  </td>
-                  <td className="py-3 px-2">
                     <div className="text-sm text-foreground">
                       {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
                     </div>
                   </td>
-                  <td className="py-3 px-2">
+                  <td className="py-3 px-2 pr-10">
                     <div className="flex items-center text-amazon-teal min-w-0">
                       <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
                       {form.link ? (
@@ -559,6 +544,11 @@ export function FormsManagement() {
                       )}
                     </div>
                   </td>
+                  <td className="py-3 px-2 pl-4">
+                    <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
+                      {getStatusDisplayName(form.status)}
+                    </Badge>
+                  </td>
                   <td className="py-3 px-3 text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -577,20 +567,15 @@ export function FormsManagement() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedFormForAssign(form);
-                          setIsAssignToAllDialogOpen(true);
-                        }}>
+                        <DropdownMenuItem
+                          disabled={form.status === 'inactive'}
+                          onClick={() => {
+                            setSelectedFormForAssign(form);
+                            setIsAssignToAllDialogOpen(true);
+                          }}
+                        >
                           <School className="h-4 w-4 mr-2" />
                           Assign to All Students
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => openDeleteDialog(form)} 
-                          className="text-red-600 focus:text-red-600"
-                          disabled={form.status === 'active'}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -630,20 +615,15 @@ export function FormsManagement() {
                           <Edit className="h-4 w-4 mr-2" />
                           Edit
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedFormForAssign(form);
-                          setIsAssignToAllDialogOpen(true);
-                        }}>
+                        <DropdownMenuItem
+                          disabled={form.status === 'inactive'}
+                          onClick={() => {
+                            setSelectedFormForAssign(form);
+                            setIsAssignToAllDialogOpen(true);
+                          }}
+                        >
                           <School className="h-4 w-4 mr-2" />
                           Assign to All Students
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => openDeleteDialog(form)} 
-                          className="text-red-600 focus:text-red-600"
-                          disabled={form.status === 'active'}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -795,30 +775,7 @@ export function FormsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Delete Form Dialog */}
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Delete Form</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4">
-            <p className="text-sm sm:text-base text-gray-600">
-              Are you sure you want to delete{' '}
-              <span className="font-medium">{selectedForm?.name}</span>? This
-              action cannot be undone.
-            </p>
 
-          </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Cancel
-            </Button>
-            <AsyncButton variant="destructive" onClick={handleDeleteForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
-              Delete Form
-            </AsyncButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Assign to All Students Dialog */}
       <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
