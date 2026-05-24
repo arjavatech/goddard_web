@@ -543,20 +543,49 @@ export async function inviteParent(schoolId: string, parentData: {
     }
   }
 
-  await authedFetch({
-    method: 'POST',
-    url: '/enrollments/parent-invite',
-    body
-  }, z.union([z.object({}), z.string()]));
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/enrollments/parent-invite',
+      body
+    }, z.union([z.object({}), z.string()]));
+  } catch (error: any) {
+    // Check for conflict error (email already exists)
+    if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+        (error?.message && error.message.includes('User with this email already exists'))) {
+      const conflictError = new Error('Email already exists');
+      (conflictError as any).code = 'CONFLICT';
+      throw conflictError;
+    }
+    // Check for email bounce error (external service error)
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
+    }
+    throw error;
+  }
 }
 export async function resendParentConfirmation(parentId: string): Promise<void> {
-  await authedFetch({
-    method: 'POST',
-    url: '/enrollments/resend-confirmation',
-    body: {
-      parent_id: parentId
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/enrollments/resend-confirmation',
+      body: {
+        parent_id: parentId
+      }
+    }, z.any());
+  } catch (error: any) {
+    // Check for email bounce error (external service error)
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
     }
-  }, z.any());
+    throw error;
+  }
 }
 export async function deactivateParent(parentId: string): Promise<void> {
   await authedFetch({
@@ -949,27 +978,49 @@ export async function inviteAdmin(
   schoolId: string,
   phoneNumber?: string
 ): Promise<void> {
-  await authedFetch({
-    method: 'POST',
-    url: '/auth/invite-create',
-    body: {
-      email,
-      school_id: schoolId,
-      first_name: firstName,
-      last_name: lastName,
-      phone_number: phoneNumber || null
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/auth/invite-create',
+      body: {
+        email,
+        school_id: schoolId,
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber || null
+      }
+    }, z.object({}));
+  } catch (error: any) {
+    // Check for email bounce error (external service error)
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
     }
-  }, z.object({}));
+    throw error;
+  }
 }
 
 export async function resendAdminInvite(userId: string): Promise<void> {
-  await authedFetch({
-    method: 'POST',
-    url: '/auth/admin-resend-invite',
-    body: {
-      user_id: userId
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/auth/admin-resend-invite',
+      body: {
+        user_id: userId
+      }
+    }, z.any());
+  } catch (error: any) {
+    // Check for email bounce error (external service error)
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
     }
-  }, z.any());
+    throw error;
+  }
 }
 
 export async function updateAdmin(

@@ -355,6 +355,11 @@ export function DueForms() {
         })
       });
 
+      if (response.status === 502) {
+        showToast('error', 'Email delivery failed. Please try again later or use a different email address.');
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         const { total_sent, total_failed, failed_emails, message } = data;

@@ -271,9 +271,24 @@ export function AdminDashboard() {
 
       showToast('success', 'Parent invitation sent successfully');
       await loadDashboardData(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error inviting parent:', error);
-      showToast('error', 'Failed to send parent invitation. Please try again.');
+      
+      // Check for email bounce error
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
+        setInviteFormErrors(prev => ({ ...prev, parentEmail: error.message }));
+        showToast('error', error.message);
+      }
+      // Check for conflict error (email already exists)
+      else if (error?.code === 'CONFLICT' || error?.message?.includes('Email already exists')) {
+        setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
+        showToast('error', 'Email already exists');
+      } else if (error?.response?.status === 409 || error?.message?.includes('User with this email already exists')) {
+        setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
+        showToast('error', 'Email already exists');
+      } else {
+        showToast('error', 'Failed to send parent invitation. Please try again.');
+      }
     } 
   };
   const handleAddClassroom = async () => {

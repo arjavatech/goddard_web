@@ -258,9 +258,8 @@ export function SetPassword() {
 
       setSuccess(true);
 
-      // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/login', { replace: true });
+        navigate('/', { replace: true });
       }, 2000);
 
     } catch (err) {

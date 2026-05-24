@@ -325,7 +325,12 @@ export function ParentManagement() {
       // Handle specific error cases and show notification
       let errorMessage = 'Failed to send invitation. Please try again.';
       
-      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+      // Check for email bounce error
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
+        errorMessage = error.message || 'Email delivery failed. The email address may have bounced or been suppressed by the mail provider.';
+      }
+      // Check for conflict error (email already exists)
+      else if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
           (error?.message && error.message.includes('User with this email already exists'))) {
         errorMessage = 'Email already exists';
       }
@@ -435,6 +440,12 @@ export function ParentManagement() {
       showToast('success', `Confirmation email resent to ${parentEmail}`);
     } catch (error: any) {
       console.error('Resend confirmation error:', error);
+      
+      // Check for email bounce error
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
+        showToast('error', error.message);
+        throw error;
+      }
       
       // Check if it's a real HTTP error (status code >= 400)
       if (error?.status >= 400 || error?.response?.status >= 400) {

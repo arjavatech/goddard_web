@@ -84,7 +84,6 @@ export function AdminManagement() {
       return;
     }
 
-    // Check for existing email
     if (admins.some(admin => admin.email.toLowerCase() === adminEmail.toLowerCase())) {
       setEmailError('Email already exists');
       return;
@@ -109,10 +108,14 @@ export function AdminManagement() {
       setIsAddDialogOpen(false);
       resetForm();
       
-      // Reload admin list
       const adminUsers = await fetchAdminUsers(userData.schoolId);
       setAdmins(adminUsers);
     } catch (err: any) {
+      if (err?.code === 'EMAIL_BOUNCE' || err?.status === 502) {
+        showToast('error', err.message);
+        return;
+      }
+
       const errorText =
         err?.response?.message ||
         err?.response?.error ||
@@ -140,9 +143,13 @@ export function AdminManagement() {
     try {
       await resendAdminInvite(admin.id);
       showToast('success', 'Invitation resent successfully to ' + admin.email);
-    } catch (error) {
-      console.error('Error resending invitation:', error);
-      showToast('error', 'Failed to resend invitation');
+    } catch (error: any) {
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
+        showToast('error', error.message);
+      } else {
+        console.error('Error resending invitation:', error);
+        showToast('error', 'Failed to resend invitation');
+      }
     } finally {
       setResendingAdminId(null);
     }
