@@ -53,6 +53,8 @@ interface ParentDetailView {
   familyForms: Form[];
   additionalParentEmail?: string | null;
   additionalParentName?: string | null;
+  primaryParentEmail?: string | null;
+  secondaryParentEmail?: string | null;
 }
 const mapToFormStatus = (value: string | null | undefined): FormStatus => {
   const normalized = normalizeFormStatus(value);
@@ -264,7 +266,9 @@ export function ParentDetails() {
           children: processedChildren,
           familyForms: Array.from(allForms.values()),
           additionalParentEmail,
-          additionalParentName
+          additionalParentName,
+          primaryParentEmail: firstChild ? (firstChild as any).primaryParentEmail : null,
+          secondaryParentEmail: firstChild ? (firstChild as any).secondaryParentEmail : null
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
@@ -608,34 +612,43 @@ export function ParentDetails() {
             <CardTitle>Contact Information</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
-            {/* Parent */}
-            <div className="flex items-center gap-2">
-              <MailIcon className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <div className="font-medium text-foreground">{parent.firstName} {parent.lastName}</div>
-                <div>{parent.email}</div>
-                <div className="text-xs text-muted-foreground">Parent</div>
-              </div>
-            </div>
+            {(() => {
+              const primaryEmail = parent.primaryParentEmail;
+              const isPrimaryParent = parent.email === primaryEmail;
+              
+              return (
+                <>
+                  {/* Current Parent */}
+                  <div className="flex items-center gap-2">
+                    <MailIcon className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <div className="font-medium text-foreground">{parent.firstName} {parent.lastName}</div>
+                      <div>{parent.email}</div>
+                      <div className="text-xs text-muted-foreground">{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</div>
+                    </div>
+                  </div>
 
-            {/* Additional Parent - only show if exists */}
-            {parent.additionalParentEmail && (
-              <div className="flex items-center gap-2">
-                <MailIcon className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  {parent.additionalParentName && (
-                    <div className="font-medium text-foreground">{parent.additionalParentName}</div>
+                  {/* Additional Parent - only show if exists */}
+                  {parent.additionalParentEmail && (
+                    <div className="flex items-center gap-2">
+                      <MailIcon className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        {parent.additionalParentName && (
+                          <div className="font-medium text-foreground">{parent.additionalParentName}</div>
+                        )}
+                        <div>{parent.additionalParentEmail}</div>
+                        <div className="text-xs text-muted-foreground">{isPrimaryParent ? 'Secondary Parent' : 'Primary Parent'}</div>
+                      </div>
+                    </div>
                   )}
-                  <div>{parent.additionalParentEmail}</div>
-                  <div className="text-xs text-muted-foreground">Additional Parent</div>
-                </div>
-              </div>
-            )}
 
-            <div className="flex items-center gap-2">
-              <School className="h-4 w-4" />
-              Primary Guardian
-            </div>
+                  <div className="flex items-center gap-2">
+                    <School className="h-4 w-4" />
+                    {isPrimaryParent ? 'Primary Guardian' : 'Secondary Guardian'}
+                  </div>
+                </>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
