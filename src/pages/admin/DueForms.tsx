@@ -29,6 +29,8 @@ export function DueForms() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
+  const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
 
   const schoolId = localStorage.getItem('schoolId');
@@ -316,9 +318,13 @@ export function DueForms() {
     }
   };
 
-  const handleSendReminder = async (formIds: string[]) => {
+  const handleSendReminder = async (formIds: string[], isBulk: boolean = false) => {
     try {
-      // const user = await fetchUserContext();
+      if (isBulk) {
+        setBulkRemindLoading(true);
+      } else {
+        setRemindingFormIds(prev => new Set([...prev, ...formIds]));
+      }
       if (!schoolId) return;
 
       const formsToRemind = dueForms.filter(f => formIds.includes(f.id) && f.status !== 'completed');
@@ -350,7 +356,15 @@ export function DueForms() {
       });
 
       if (response.ok) {
-        showToast('success', `Reminder emails sent to ${formsToRemind.length} parent(s)`);
+        const data = await response.json();
+        const { total_sent, total_failed, failed_emails, message } = data;
+        
+        if (total_failed > 0) {
+          const failedEmailsList = failed_emails.filter((email: string) => email).join(', ');
+          showToast('warning', `${message}. Failed emails: ${failedEmailsList}`);
+        } else {
+          showToast('success', message);
+        }
         setSelectedForms([]);
       } else {
         showToast('error', 'Failed to send reminder emails');
@@ -358,6 +372,16 @@ export function DueForms() {
     } catch (error) {
       console.error('Error sending reminders:', error);
       showToast('error', 'Failed to send reminder emails');
+    } finally {
+      if (isBulk) {
+        setBulkRemindLoading(false);
+      } else {
+        setRemindingFormIds(prev => {
+          const updated = new Set(prev);
+          formIds.forEach(id => updated.delete(id));
+          return updated;
+        });
+      }
     }
   };
 
@@ -614,32 +638,41 @@ export function DueForms() {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-8 bg-amazon-teal hover:bg-amazon-teal/90" size="sm">
-                    <Mail className="h-4 w-4 mr-1.5" />
-                    Remind
+                  <Button className="h-8 bg-amazon-teal hover:bg-amazon-teal/90" size="sm" disabled={bulkRemindLoading}>
+                    {bulkRemindLoading ? (
+                      <>
+                        <div className="h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <Mail className="h-4 w-4 mr-1.5" />
+                        Remind
+                      </>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {selectedForms.length > 0 && (
-                    <DropdownMenuItem onClick={() => handleSendReminder(selectedForms)}>
+                    <DropdownMenuItem onClick={() => handleSendReminder(selectedForms, true)} disabled={bulkRemindLoading}>
                       Remind Selected ({selectedForms.length})
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
-                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'pending').map(f => f.id))}
-                    disabled={filteredForms.filter(f => f.status === 'pending').length === 0}
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'pending').map(f => f.id), true)}
+                    disabled={filteredForms.filter(f => f.status === 'pending').length === 0 || bulkRemindLoading}
                   >
                     Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id))}
-                    disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0}
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id), true)}
+                    disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0 || bulkRemindLoading}
                   >
                     Remind In Progress ({filteredForms.filter(f => f.status === 'in_progress').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id))}
-                    disabled={filteredForms.filter(f => f.status === 'overdue').length === 0}
+                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id), true)}
+                    disabled={filteredForms.filter(f => f.status === 'overdue').length === 0 || bulkRemindLoading}
                   >
                     Remind Overdue ({filteredForms.filter(f => f.status === 'overdue').length})
                   </DropdownMenuItem>
@@ -708,11 +741,20 @@ export function DueForms() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleSendReminder([form.id])}
-                            disabled={form.status === 'completed'}
+                            disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
                             className="w-full h-7 text-xs"
                           >
-                            <Mail className="h-3 w-3 mr-1" />
-                            Send Reminder
+                            {remindingFormIds.has(form.id) ? (
+                              <>
+                                <div className="h-3 w-3 mr-1 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                Sending...
+                              </>
+                            ) : (
+                              <>
+                                <Mail className="h-3 w-3 mr-1" />
+                                Send Reminder
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -791,11 +833,15 @@ export function DueForms() {
                               size="sm"
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
-                              disabled={form.status === 'completed'}
+                              disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
                               className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap"
                             >
-                              <Mail className="h-3 w-3" />
-                              <span className="hidden sm:inline">Remind</span>
+                              {remindingFormIds.has(form.id) ? (
+                                <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                              ) : (
+                                <Mail className="h-3 w-3" />
+                              )}
+                              <span className="hidden sm:inline">{remindingFormIds.has(form.id) ? 'Sending...' : 'Remind'}</span>
                             </Button>
                           </td>
                         </tr>
