@@ -2,6 +2,7 @@ import { apiBaseUrl, isDev } from '../../config/env';
 import { SESSION_CONFIG, isSessionError, isRetryableStatus } from '../../config/session';
 import type { HttpRequest, HttpResponse } from './types';
 import { clearSession } from '../auth/session';
+import { fetchWithTokenRefresh } from '../auth/apiInterceptor';
 
 type FetchOptions = {
   authToken?: string | null;
@@ -27,7 +28,7 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   let data: unknown;
 
   try {
-    res = await fetch(url, {
+    res = await fetchWithTokenRefresh(url, {
       method: req.method,
       headers,
       body: req.body ? JSON.stringify(req.body) : undefined

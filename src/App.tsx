@@ -3,11 +3,21 @@ import { Navigate } from 'react-router-dom';
 import { Dashboard } from './pages/Dashboard';
 import { useUserContext } from './contexts/UserContext';
 import { useSessionValidation } from './hooks/useSessionValidation';
+import { startBackgroundTokenRefresh, stopBackgroundTokenRefresh } from './services/auth/tokenRefreshService';
 // import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 export function App() {
   const { userData, loading } = useUserContext();
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
+  
+  // Start background token refresh on app load
+  useEffect(() => {
+    startBackgroundTokenRefresh();
+    
+    return () => {
+      stopBackgroundTokenRefresh();
+    };
+  }, []);
   
   // Validate session on app load and periodically
   useSessionValidation();
