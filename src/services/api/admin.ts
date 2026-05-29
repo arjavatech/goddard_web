@@ -550,19 +550,20 @@ export async function inviteParent(schoolId: string, parentData: {
       body
     }, z.union([z.object({}), z.string()]));
   } catch (error: any) {
+    // Check for email bounce error (external service error) - 502 indicates email was suppressed
+    if (error?.status === 502 || error?.code === 'EXTERNAL_SERVICE_ERROR') {
+      const bounceError = new Error('External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = 502;
+      (bounceError as any).noRetry = true; // Flag to prevent retry
+      throw bounceError;
+    }
     // Check for conflict error (email already exists)
     if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
         (error?.message && error.message.includes('User with this email already exists'))) {
       const conflictError = new Error('Email already exists');
       (conflictError as any).code = 'CONFLICT';
       throw conflictError;
-    }
-    // Check for email bounce error (external service error)
-    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
-      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
-      (bounceError as any).code = 'EMAIL_BOUNCE';
-      (bounceError as any).status = error?.status;
-      throw bounceError;
     }
     throw error;
   }
@@ -577,11 +578,12 @@ export async function resendParentConfirmation(parentId: string): Promise<void> 
       }
     }, z.any());
   } catch (error: any) {
-    // Check for email bounce error (external service error)
-    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
-      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+    // Check for email bounce error (external service error) - 502 indicates email was suppressed
+    if (error?.status === 502 || error?.code === 'EXTERNAL_SERVICE_ERROR') {
+      const bounceError = new Error('External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.');
       (bounceError as any).code = 'EMAIL_BOUNCE';
-      (bounceError as any).status = error?.status;
+      (bounceError as any).status = 502;
+      (bounceError as any).noRetry = true; // Flag to prevent retry
       throw bounceError;
     }
     throw error;

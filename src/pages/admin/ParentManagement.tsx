@@ -322,21 +322,24 @@ export function ParentManagement() {
       showToast('success', `Invitation sent to ${parentEmail}`);
       
     } catch (error: any) {
+      // Check for email bounce error - don't retry
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502 || error?.noRetry) {
+        const errorMessage = error.message || 'External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.';
+        showToast('error', errorMessage);
+        // Don't throw - just show error and keep dialog open for user to fix
+        return;
+      }
+      
       // Handle specific error cases and show notification
       let errorMessage = 'Failed to send invitation. Please try again.';
       
-      // Check for email bounce error
-      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
-        errorMessage = error.message || 'Email delivery failed. The email address may have bounced or been suppressed by the mail provider.';
-      }
       // Check for conflict error (email already exists)
-      else if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
           (error?.message && error.message.includes('User with this email already exists'))) {
         errorMessage = 'Email already exists';
       }
       
       showToast('error', errorMessage);
-      
       throw new Error(errorMessage);
     }
   };
@@ -441,10 +444,12 @@ export function ParentManagement() {
     } catch (error: any) {
       console.error('Resend confirmation error:', error);
       
-      // Check for email bounce error
-      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
-        showToast('error', error.message);
-        throw error;
+      // Check for email bounce error - don't retry
+      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502 || error?.noRetry) {
+        const errorMessage = error.message || 'External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.';
+        showToast('error', errorMessage);
+        // Don't throw - just show error
+        return;
       }
       
       // Check if it's a real HTTP error (status code >= 400)
