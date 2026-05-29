@@ -248,7 +248,6 @@ export function ParentManagement() {
     
     if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
     if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
-    if (!childDob) errors.childDob = 'Child date of birth is required';
     if (!childGender) errors.childGender = 'Child gender is required';
     if (!childClassroom) errors.childClassroom = 'Child classroom is required';
 
@@ -301,7 +300,7 @@ export function ParentManagement() {
         parentEmail,
         parentPhoneNumber: parentPhoneNumber.trim() || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
-        childDob,
+        childDob: childDob || undefined,
         classroomId: childClassroom,
         gender: childGender,
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
@@ -350,7 +349,6 @@ export function ParentManagement() {
     
     if (!newChildFirstName.trim()) errors.newChildFirstName = 'Child first name is required';
     if (!newChildLastName.trim()) errors.newChildLastName = 'Child last name is required';
-    if (!newChildDob) errors.newChildDob = 'Child date of birth is required';
     if (!newChildGender) errors.newChildGender = 'Child gender is required';
     if (!newChildClassroom) errors.newChildClassroom = 'Child classroom is required';
     
@@ -369,7 +367,7 @@ export function ParentManagement() {
       await addChild(schoolId, enrollmentId, {
         childFirstName: newChildFirstName,
         childLastName: newChildLastName,
-        childDob: newChildDob,
+        childDob: newChildDob || undefined,
         gender: newChildGender,
         classroomId: newChildClassroom,
         parentId: selectedParent.id
@@ -1127,7 +1125,7 @@ export function ParentManagement() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">
-                Date of Birth
+                Date of Birth (Optional)
               </label>
               <Input 
                 type="date" 

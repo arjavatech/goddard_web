@@ -507,7 +507,7 @@ export async function inviteParent(schoolId: string, parentData: {
   parentEmail: string;
   parentPhoneNumber?: string;
   childFullName: string;
-  childDob: string;
+  childDob?: string;
   classroomId: string;
   gender: string;
   secondaryParentEmail?: string;
@@ -522,13 +522,16 @@ export async function inviteParent(schoolId: string, parentData: {
     school_id: schoolId,
     child_first_name: childFirstName || parentData.childFullName,
     child_last_name: childLastName || '',
-    child_birth_date: parentData.childDob,
     class_id: parentData.classroomId,
     parent_email: parentData.parentEmail,
     parent_first_name: parentData.parentFirstName,
     parent_last_name: parentData.parentLastName,
     gender: parentData.gender
   };
+
+  if (parentData.childDob) {
+    body.child_birth_date = parentData.childDob;
+  }
 
   if (parentData.parentPhoneNumber) {
     body.parent_phone_number = parentData.parentPhoneNumber;
