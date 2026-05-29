@@ -136,8 +136,11 @@ export function InviteParentModal({
                 <Input
                   value={secondaryParentFirstName}
                   onChange={e => {
-                    setSecondaryParentFirstName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                    setSecondaryParentFirstName(val);
                     if (inviteFormErrors.secondaryParentFirstName) setInviteFormErrors(prev => ({ ...prev, secondaryParentFirstName: '' }));
+                    if (!val.trim() && !secondaryParentLastName.trim() && !secondaryParentPhoneNumber.trim())
+                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
                   }}
                   placeholder="Enter first name"
                   className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
@@ -149,8 +152,11 @@ export function InviteParentModal({
                 <Input
                   value={secondaryParentLastName}
                   onChange={e => {
-                    setSecondaryParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''));
+                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                    setSecondaryParentLastName(val);
                     if (inviteFormErrors.secondaryParentLastName) setInviteFormErrors(prev => ({ ...prev, secondaryParentLastName: '' }));
+                    if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentPhoneNumber.trim())
+                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
                   }}
                   placeholder="Enter last name"
                   className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
@@ -167,13 +173,23 @@ export function InviteParentModal({
                 setErrors={setInviteFormErrors}
                 isDialogClosing={isDialogClosing}
                 required={false}
+                skipRequiredCheck={() => !
+                  (secondaryParentFirstName.trim() ||
+                  secondaryParentLastName.trim() ||
+                  secondaryParentPhoneNumber.trim())
+                }
               />
               <div>
                 <label className="block text-sm font-medium mb-2">Phone Number (Optional)</label>
                 <Input
                   type="tel"
                   value={secondaryParentPhoneNumber}
-                  onChange={e => setSecondaryParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                    setSecondaryParentPhoneNumber(val);
+                    if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentLastName.trim())
+                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
+                  }}
                   placeholder="Enter phone number"
                 />
               </div>
@@ -226,8 +242,8 @@ export function InviteParentModal({
                   }}
                   onBlur={() => { if (!childDob) setInviteFormErrors(prev => ({ ...prev, childDob: 'Child date of birth is required' })); }}
                   className={inviteFormErrors.childDob ? 'border-red-500' : ''}
-                  min="2000-01-01"
-                  max="2020-12-31"
+                 
+                  max={new Date().toISOString().split('T')[0]}
                 />
                 {inviteFormErrors.childDob && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>}
               </div>

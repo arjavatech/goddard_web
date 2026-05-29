@@ -12,6 +12,7 @@ interface ValidatedEmailInputProps {
   errorKey: string;
   setErrors: (fn: (prev: Record<string, string>) => Record<string, string>) => void;
   isDialogClosing?: boolean;
+  skipRequiredCheck?: () => boolean;
 }
 
 export function ValidatedEmailInput({
@@ -23,7 +24,8 @@ export function ValidatedEmailInput({
   errors,
   errorKey,
   setErrors,
-  isDialogClosing = false
+  isDialogClosing = false,
+  skipRequiredCheck
 }: ValidatedEmailInputProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onChange(e.target.value);
@@ -32,6 +34,7 @@ export function ValidatedEmailInput({
 
   const handleBlur = () => {
     if (!isDialogClosing) {
+      if (!value.trim() && skipRequiredCheck?.()) return;
       const error = validateEmail(value);
       if (error) {
         setErrors(prev => ({...prev, [errorKey]: error}));
