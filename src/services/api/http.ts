@@ -79,8 +79,11 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
       }
     }
 
-    // Retry on retryable errors
-    if (isRetryableStatus(res.status) && retryCount < SESSION_CONFIG.MAX_RETRIES) {
+    // Don't retry on email bounce errors (502 with EXTERNAL_SERVICE_ERROR code)
+    const isEmailBounceError = res.status === 502 && errorCode === 'EXTERNAL_SERVICE_ERROR';
+    
+    // Retry on retryable errors (but not email bounce errors)
+    if (!isEmailBounceError && isRetryableStatus(res.status) && retryCount < SESSION_CONFIG.MAX_RETRIES) {
       await delay(SESSION_CONFIG.RETRY_DELAY * (retryCount + 1));
       return httpFetch(req, { ...opts, retryCount: retryCount + 1 });
     }

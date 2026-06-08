@@ -204,7 +204,6 @@ export function AdminDashboard() {
     
     if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
     if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
-    if (!childDob) errors.childDob = 'Child date of birth is required';
     if (!childGender) errors.childGender = 'Child gender is required';
     if (!childClassroom) errors.childClassroom = 'Child classroom is required';
 
@@ -257,7 +256,7 @@ export function AdminDashboard() {
         parentEmail,
         parentPhoneNumber: parentPhoneNumber.trim() || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
-        childDob,
+        childDob: childDob || undefined,
         classroomId: childClassroom,
         gender: childGender,
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
@@ -287,7 +286,7 @@ export function AdminDashboard() {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Email already exists');
       } else {
-        showToast('error', 'Failed to send parent invitation. Please try again.');
+        showToast('error', error?.message || 'Failed to send parent invitation. Please try again.');
       }
     } 
   };

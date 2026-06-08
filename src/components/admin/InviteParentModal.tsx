@@ -232,7 +232,7 @@ export function InviteParentModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Date of Birth</label>
+                <label className="block text-sm font-medium mb-2">Date of Birth (Optional)</label>
                 <Input
                   type="date"
                   value={childDob}
@@ -240,12 +240,9 @@ export function InviteParentModal({
                     setChildDob(e.target.value);
                     if (inviteFormErrors.childDob) setInviteFormErrors(prev => ({ ...prev, childDob: '' }));
                   }}
-                  onBlur={() => { if (!childDob) setInviteFormErrors(prev => ({ ...prev, childDob: 'Child date of birth is required' })); }}
                   className={inviteFormErrors.childDob ? 'border-red-500' : ''}
-                 
                   max={new Date().toISOString().split('T')[0]}
                 />
-                {inviteFormErrors.childDob && <p className="text-sm text-red-600 mt-1">{inviteFormErrors.childDob}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Gender</label>
@@ -284,7 +281,7 @@ export function InviteParentModal({
             disabled={(() => {
               // Primary parent and child fields are always required
               const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
-              const childValid = childFirstName.trim() && childLastName.trim() && childDob && childGender && childClassroom;
+              const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;
               
               if (!primaryParentValid || !childValid) return true;
               

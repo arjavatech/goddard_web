@@ -331,15 +331,15 @@ export function ClassroomDetails() {
       
     } catch (error: any) {
       // Handle specific error cases and show notification
-      let errorMessage = 'Failed to send invitation. Please try again.';
-      
-      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+      let errorMessage = error?.message || 'Failed to send invitation. Please try again.';
+
+      if (error?.response?.status === 409 || error?.code === 'CONFLICT' ||
           (error?.message && error.message.includes('User with this email already exists'))) {
         errorMessage = 'Email already exists';
       }
-      
+
       showToast('error', errorMessage);
-      
+
       throw new Error(errorMessage);
     }
   };
