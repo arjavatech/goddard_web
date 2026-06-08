@@ -131,7 +131,7 @@ export function AdminManagement() {
       } else if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
         setEmailError('Email already exists');
       } else {
-        showToast('error', 'Failed to send invitation');
+        showToast('error', errorText || 'Failed to send invitation');
       }
     } finally {
       setIsInviting(false);

@@ -330,14 +330,14 @@ export function ParentManagement() {
       }
       
       // Handle specific error cases and show notification
-      let errorMessage = 'Failed to send invitation. Please try again.';
-      
+      let errorMessage = error?.message || 'Failed to send invitation. Please try again.';
+
       // Check for conflict error (email already exists)
-      if (error?.response?.status === 409 || error?.code === 'CONFLICT' || 
+      if (error?.response?.status === 409 || error?.code === 'CONFLICT' ||
           (error?.message && error.message.includes('User with this email already exists'))) {
         errorMessage = 'Email already exists';
       }
-      
+
       showToast('error', errorMessage);
       throw new Error(errorMessage);
     }

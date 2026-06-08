@@ -286,7 +286,7 @@ export function AdminDashboard() {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Email already exists');
       } else {
-        showToast('error', 'Failed to send parent invitation. Please try again.');
+        showToast('error', error?.message || 'Failed to send parent invitation. Please try again.');
       }
     } 
   };
