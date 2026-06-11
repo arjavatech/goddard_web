@@ -232,6 +232,7 @@ export function FormsDocuments({
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const isOpeningRef = useRef(false);
+  const processedFormToOpenRef = useRef<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
   const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -348,10 +349,7 @@ export function FormsDocuments({
   const handleView = async (form: any) => {
     if (isOpeningRef.current) return;
     isOpeningRef.current = true;
-    setTimeout(() => {
-      isOpeningRef.current = false;
-    }, 500);
-
+    try {
     setOpenError(null);
     console.log('handleView called with form:', form);
     console.log('Form ID:', form.formId || form._key);
@@ -493,6 +491,9 @@ export function FormsDocuments({
     setPageNumber(1);
     setNumPages(null);
     onViewForm(form);
+    } finally {
+      isOpeningRef.current = false;
+    }
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -510,26 +511,34 @@ export function FormsDocuments({
 
   // Auto-open form when formToOpen is set
   useEffect(() => {
-    if (formToOpen) {
-      console.log('Auto-opening form:', formToOpen);
-      // If it's from Continue button, directly open it
-      if (formToOpen.fromContinueButton) {
-        handleView(formToOpen);
-      } else if (formToOpen.formId) {
-        // Find the matching form in allForms by unique formId
-        const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
-        if (matchingForm) {
-          // Only auto-open if it belongs to the selected child
-          if (!matchingForm.childId || matchingForm.childId === selectedChildId) {
-            handleView(matchingForm);
-          } else {
-            console.warn('Auto-open blocked: Form belongs to different child');
-          }
+    if (!formToOpen) {
+      processedFormToOpenRef.current = null;
+      return;
+    }
+    const key = formToOpen.fromContinueButton
+      ? `continue-${formToOpen.formId ?? 'unknown'}`
+      : (formToOpen.formId ?? null);
+    if (!key || key === processedFormToOpenRef.current) return;
+    processedFormToOpenRef.current = key;
+
+    console.log('Auto-opening form:', formToOpen);
+    // If it's from Continue button, directly open it
+    if (formToOpen.fromContinueButton) {
+      handleView(formToOpen);
+    } else if (formToOpen.formId) {
+      // Find the matching form in allForms by unique formId
+      const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
+      if (matchingForm) {
+        // Only auto-open if it belongs to the selected child
+        if (!matchingForm.childId || matchingForm.childId === selectedChildId) {
+          handleView(matchingForm);
+        } else {
+          console.warn('Auto-open blocked: Form belongs to different child');
         }
       }
-      if (onFormOpened) {
-        onFormOpened();
-      }
+    }
+    if (onFormOpened) {
+      onFormOpened();
     }
   }, [formToOpen, allForms, selectedChildId]);
 
