@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
 import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
@@ -209,6 +209,7 @@ interface FormsDocumentsProps {
   yearFilter?: string; // Year filter value
   onYearFilterChange?: (year: string) => void; // Callback to change year filter
   enrollmentId?: string; // For downloading all forms
+  formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -223,7 +224,8 @@ export function FormsDocuments({
   onFormCompleted,
   yearFilter = 'all',
   onYearFilterChange,
-  enrollmentId
+  enrollmentId,
+  formOpenGuard,
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || childSpecificForms[0]?.childId || 'family');
@@ -491,6 +493,11 @@ export function FormsDocuments({
     setIsFrameLoading(true);
     setPageNumber(1);
     setNumPages(null);
+    // Mark as processed so if formToOpen is set externally with the same form, useEffect skips it
+    const formKey = form.fromContinueButton
+      ? `continue-${form.formId ?? 'unknown'}`
+      : (form.formId ?? null);
+    if (formKey) processedFormToOpenRef.current = formKey;
     onViewForm(form);
     } finally {
       isOpeningRef.current = false;
@@ -516,10 +523,14 @@ export function FormsDocuments({
       processedFormToOpenRef.current = null;
       return;
     }
+    // If another FormsDocuments instance already claimed this formToOpen, skip
+    if (formOpenGuard?.current) return;
     const key = formToOpen.fromContinueButton
       ? `continue-${formToOpen.formId ?? 'unknown'}`
       : (formToOpen.formId ?? null);
     if (!key || key === processedFormToOpenRef.current) return;
+    // Claim this formToOpen before any async work so the sibling instance skips
+    if (formOpenGuard) formOpenGuard.current = true;
     processedFormToOpenRef.current = key;
 
     console.log('Auto-opening form:', formToOpen);
