@@ -432,10 +432,12 @@ export function FormsDocuments({
         return;
       }
 
-      // If no edit link in form data, poll the backend for an in-progress resume link
+      // Poll backend for a resume link for any non-completed form (Draft or In Progress).
+      // The DB status may still be "incomplete"/"Draft" even when Fillout has partial data,
+      // because the webhook that flips it to "in_progress" may not have fired yet.
       let resumeLinkFromApi: string | null = null;
-      const isInProgress = form.status === 'In Progress' || form.status === 'in_progress';
-      if (isInProgress && !recentEditLink && idForPayload.raw) {
+      const isNotCompleted = form.status !== 'Approved' && form.status !== 'Submitted';
+      if (isNotCompleted && !recentEditLink && idForPayload.raw) {
         setLoadingAction({ action: 'view', formId: form.formId ?? '' });
         try {
           const { getFormResumeLink } = await import('../../services/api/admin');
