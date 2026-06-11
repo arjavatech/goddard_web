@@ -432,7 +432,8 @@ export function FormsDocuments({
 
       // If no edit link in form data, poll the backend for an in-progress resume link
       let resumeLinkFromApi: string | null = null;
-      if (!recentEditLink && idForPayload.raw) {
+      const isInProgress = form.status === 'In Progress' || form.status === 'in_progress';
+      if (isInProgress && !recentEditLink && idForPayload.raw) {
         setLoadingAction({ action: 'view', formId: form.formId ?? '' });
         try {
           const { getFormResumeLink } = await import('../../services/api/admin');
