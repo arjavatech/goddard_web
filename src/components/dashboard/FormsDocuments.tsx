@@ -345,7 +345,7 @@ export function FormsDocuments({
     ];
   }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
 
-  const handleView = (form: any) => {
+  const handleView = async (form: any) => {
     if (isOpeningRef.current) return;
     isOpeningRef.current = true;
     setTimeout(() => {
@@ -432,9 +432,25 @@ export function FormsDocuments({
         return;
       }
 
-      // For non-approved forms, prioritize recent_edit_link first
-      if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
-        formUrl = recentEditLink;
+      // If no edit link in form data, poll the backend for an in-progress resume link
+      let resumeLinkFromApi: string | null = null;
+      if (!recentEditLink && idForPayload.raw) {
+        setLoadingAction({ action: 'view', formId: form.formId ?? '' });
+        try {
+          const { getFormResumeLink } = await import('../../services/api/admin');
+          resumeLinkFromApi = await getFormResumeLink(idForPayload.raw);
+        } catch (err) {
+          console.error('Failed to fetch resume link:', err);
+        } finally {
+          setLoadingAction(null);
+        }
+      }
+
+      const effectiveEditLink = resumeLinkFromApi || recentEditLink;
+
+      // For non-approved forms, prioritize recent_edit_link (or fetched resume link) first
+      if (effectiveEditLink && effectiveEditLink !== '#' && effectiveEditLink.trim() !== '') {
+        formUrl = effectiveEditLink;
       } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
         // Handle fillout form URL construction
         if (filloutFormId.startsWith('http')) {
