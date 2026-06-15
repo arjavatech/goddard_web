@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
@@ -296,10 +296,17 @@ export function Dashboard() {
   // State to hold the form that should be opened
   const [formToOpen, setFormToOpen] = useState<any>(null);
 
-  // Shared handleViewForm function - sets the form to open and scrolls to Forms & Documents
-  const handleViewForm = (form: any) => {
+  // Shared guard ref: prevents both desktop and mobile FormsDocuments from both processing the same formToOpen
+  const formOpenGuardRef = useRef(false);
+
+  // Reset the guard whenever a new formToOpen is set
+  useEffect(() => {
+    formOpenGuardRef.current = false;
+  }, [formToOpen]);
+
+  // For EnrollmentProgress "Continue" button — sets formToOpen so FormsDocuments auto-opens it
+  const handleContinueForm = (form: any) => {
     setFormToOpen(form);
-    // Scroll to Forms & Documents section after a brief delay to allow state to update
     setTimeout(() => {
       const formsSection = document.querySelector('[data-forms-section]');
       if (formsSection) {
@@ -307,6 +314,9 @@ export function Dashboard() {
       }
     }, 100);
   };
+
+  // For FormsDocuments.onViewForm — form is already being opened by handleView; no action needed here
+  const handleFormViewed = (_form: any) => {};
 
   // Handle form completion - refresh data to update form status
   const handleFormCompleted = () => {
@@ -332,7 +342,7 @@ export function Dashboard() {
                     <EnrollmentProgress
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
-                      onContinue={handleViewForm}
+                      onContinue={handleContinueForm}
                       childStatus={selectedChild.childStatus}
                       childId={selectedChild.id}
                       enrollmentId={selectedChild.enrollmentId}
@@ -351,13 +361,14 @@ export function Dashboard() {
                           const child = children.find(c => c.name === childName);
                           if (child) setSelectedChildId(child.id);
                         }}
-                        onViewForm={handleViewForm}
+                        onViewForm={handleFormViewed}
                         formToOpen={formToOpen}
                         onFormOpened={() => setFormToOpen(null)}
                         onFormCompleted={handleFormCompleted}
                         yearFilter={yearFilter}
                         onYearFilterChange={setYearFilter}
                         enrollmentId={selectedChild.enrollmentId}
+                        formOpenGuard={formOpenGuardRef}
                       />
                     </div>
                   )}
@@ -386,13 +397,14 @@ export function Dashboard() {
                           const child = children.find(c => c.name === childName);
                           if (child) setSelectedChildId(child.id);
                         }}
-                        onViewForm={handleViewForm}
+                        onViewForm={handleFormViewed}
                         formToOpen={formToOpen}
                         onFormOpened={() => setFormToOpen(null)}
                         onFormCompleted={handleFormCompleted}
                         yearFilter={yearFilter}
                         onYearFilterChange={setYearFilter}
                         enrollmentId={selectedChild.enrollmentId}
+                        formOpenGuard={formOpenGuardRef}
                       />
                     </div>
                   </div>

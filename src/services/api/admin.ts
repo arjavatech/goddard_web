@@ -1289,3 +1289,16 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
     return [];
   }
 }
+
+export async function getFormResumeLink(assignmentId: string): Promise<string | null> {
+  try {
+    const data = await authedFetch(
+      { method: 'GET', url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/resume-link` },
+      z.object({ edit_link: z.string().nullable() })
+    );
+    return data.edit_link;
+  } catch (error) {
+    console.error('getFormResumeLink error:', error);
+    return null;
+  }
+}

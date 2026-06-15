@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -35,6 +35,8 @@ export function FormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [resolvedResumeLink, setResolvedResumeLink] = useState<string | null>(null);
+  const [isResolvingLink, setIsResolvingLink] = useState(false);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
@@ -57,12 +59,26 @@ export function FormView() {
   const filloutFormId = location.state?.filloutFormId;
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
 
+  // Fetch in-progress resume link from backend when recentEditLink is missing
+  useEffect(() => {
+    if (recentEditLink || !studentFormAssignmentId) return;
+    setIsResolvingLink(true);
+    import('../../services/api/admin')
+      .then(({ getFormResumeLink }) => getFormResumeLink(studentFormAssignmentId))
+      .then(link => { if (link) setResolvedResumeLink(link); })
+      .catch(err => console.error('Failed to get resume link for admin view:', err))
+      .finally(() => setIsResolvingLink(false));
+  }, [studentFormAssignmentId, recentEditLink]);
+
   // Determine which URL to use based on form status
   const getFormUrl = () => {
     let url: string | undefined;
 
-    // Priority 1: Use recent_edit_link if form is filled (has existing submission)
-    if (recentEditLink && !isInvalidFormId(recentEditLink)) {
+    // Priority 0: In-progress resume link fetched from backend (cross-browser resume)
+    if (resolvedResumeLink && !isInvalidFormId(resolvedResumeLink)) {
+      url = resolvedResumeLink;
+    } else if (recentEditLink && !isInvalidFormId(recentEditLink)) {
+      // Priority 1: Use recent_edit_link if form is filled (has existing submission)
       url = recentEditLink;
     } else if (filloutFormId && !isInvalidFormId(filloutFormId)) {
       // Priority 2: Use fillout_form_id if form is empty (no existing submission)
@@ -280,6 +296,14 @@ export function FormView() {
             {/* Form container with dynamic height */}
             <div className="mt-6 rounded-md">
               {(() => {
+                if (isResolvingLink) {
+                  return (
+                    <div className="flex items-center justify-center min-h-[400px]">
+                      <Loading message="Loading form..." size="md" />
+                    </div>
+                  );
+                }
+
                 if (selectedUrl && selectedUrl !== '#') {
                   return (
                     <div className="relative">
