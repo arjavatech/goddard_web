@@ -405,10 +405,10 @@ export function FormsDocuments({
       rawData
     });
 
-    const isApproved = form.status === 'Approved';
+    const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
 
-    if (isApproved) {
-      // For approved forms, use direct PDF link for react-pdf viewer
+    if (isReadOnly) {
+      // For approved/submitted forms, use direct PDF link for react-pdf viewer
       if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
         formUrl = recentPdfLink;
       } else {
@@ -684,7 +684,7 @@ export function FormsDocuments({
             <div className="flex-1 min-w-0">
               <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground truncate">
                 {selectedForm.title}
-                {selectedForm.status === 'Approved' && (
+                {(selectedForm.status === 'Approved' || selectedForm.status === 'Submitted') && (
                   <span className="ml-1 sm:ml-2 text-xs sm:text-sm font-normal text-green-600">(Read-only)</span>
                 )}
               </h2>
@@ -706,7 +706,7 @@ export function FormsDocuments({
                 </div>
               )}
               {selectedForm.viewUrl && selectedForm.viewUrl !== '#' ? (
-                selectedForm.status === 'Approved' ? (
+                selectedForm.status === 'Approved' || selectedForm.status === 'Submitted' ? (
                   <div className="flex flex-col">
                     {/* PDF Navigation */}
                     <div className="flex items-center justify-between mb-2 sm:mb-4 p-2 bg-gray-50 rounded-lg">

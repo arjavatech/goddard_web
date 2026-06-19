@@ -3,13 +3,20 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
-import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle } from 'lucide-react';
+import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment } from '../../services/api/admin';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
+).toString();
 
 const isInvalidFormId = (id: string | null | undefined): boolean => {
   if (!id) return true;
@@ -35,6 +42,8 @@ export function FormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
@@ -49,6 +58,7 @@ export function FormView() {
                        formData?.status === 'in_progress' ||
                        formData?.status === 'in progress' ||
                        formData?.status === 'submitted';
+  const isApproved = formData?.status === 'Approved' || formData?.status === 'approved';
   const childName = location.state?.childName;
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
@@ -56,6 +66,7 @@ export function FormView() {
   const recentEditLink = location.state?.recentEditLink;
   const filloutFormId = location.state?.filloutFormId;
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
+  const recentPdfLink = location.state?.recentPdfLink || formData?.recentPdfLink || null;
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
@@ -229,57 +240,102 @@ export function FormView() {
           <CardContent className="p-6">
             <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
               <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <Textarea
-                  placeholder="Add notes..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[60px] w-full sm:w-64 text-sm"
-                  rows={2}
-                />
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button
-                    onClick={handleApprove}
-                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    size="sm"
-                    disabled={!isReviewable || isApproving || isRejecting}
-                  >
-                    {isApproving ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleReject}
-                    variant="destructive"
-                    size="sm"
-                    disabled={!isReviewable || isApproving || isRejecting}
-                  >
-                    {isRejecting ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </>
-                    )}
-                  </Button>
+              {isApproved ? (
+                <div className="flex items-center gap-2 text-green-600">
+                  {/* <CheckCircle className="h-4 w-4 flex-shrink-0" />
+                  <span>This form has been approved and is read-only.</span> */}
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  <Textarea
+                    placeholder="Add notes..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="min-h-[60px] w-full sm:w-64 text-sm"
+                    rows={2}
+                  />
+                  <div className="flex gap-2 w-full sm:w-auto">
+                    <Button
+                      onClick={handleApprove}
+                      className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      size="sm"
+                      disabled={!isReviewable || isApproving || isRejecting}
+                    >
+                      {isApproving ? (
+                        <span className="flex items-center">
+                          <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                          Processing...
+                        </span>
+                      ) : (
+                        <>
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Approve
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleReject}
+                      variant="destructive"
+                      size="sm"
+                      disabled={!isReviewable || isApproving || isRejecting}
+                    >
+                      {isRejecting ? (
+                        <span className="flex items-center">
+                          <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                          Processing...
+                        </span>
+                      ) : (
+                        <>
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
             {/* Form container with dynamic height */}
             <div className="mt-6 rounded-md">
-              {(() => {
+              {isApproved ? (
+                recentPdfLink ? (
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between mb-4 p-2 bg-gray-50 rounded-lg">
+                      <Button variant="outline" size="sm" onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="flex items-center gap-2 text-xs sm:text-sm">
+                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Previous</span>
+                        <span className="sm:hidden">Prev</span>
+                      </Button>
+                      <span className="text-xs sm:text-sm font-medium">{pageNumber} / {numPages || '...'}</span>
+                      <Button variant="outline" size="sm" onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))} disabled={pageNumber >= (numPages || 1)} className="flex items-center gap-2 text-xs sm:text-sm">
+                        <span className="hidden sm:inline">Next</span>
+                        <span className="sm:hidden">Next</span>
+                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                      </Button>
+                    </div>
+                    <div className="flex justify-center overflow-x-auto">
+                      <Document
+                        file={recentPdfLink}
+                        onLoadSuccess={({ numPages: n }) => { setNumPages(n); setIsFrameLoading(false); }}
+                        loading={<Loading message="Loading PDF..." size="md" />}
+                        error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
+                      >
+                        <Page
+                          pageNumber={pageNumber}
+                          width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
+                          renderTextLayer={true}
+                          renderAnnotationLayer={false}
+                          className="shadow-lg"
+                        />
+                      </Document>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center min-h-[400px] text-gray-500">
+                    No PDF available for this approved form.
+                  </div>
+                )
+              ) : (() => {
                 if (selectedUrl && selectedUrl !== '#') {
                   return (
                     <div className="relative">
@@ -306,8 +362,6 @@ export function FormView() {
                     </div>
                   );
                 }
-
-                // No valid form URL
                 return (
                   <div className="flex items-center justify-center min-h-[400px] text-gray-500">
                     Unable to load form. Please check the form configuration.

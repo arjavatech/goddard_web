@@ -808,7 +808,8 @@ export function ParentDetails() {
                         filloutFormUrl: form.link,
                         recentEditLink: form.recentEditLink,
                         filloutFormId: form.filloutFormId,
-                        studentFormAssignmentId: form.studentFormAssignmentId
+                        studentFormAssignmentId: form.studentFormAssignmentId,
+                        recentPdfLink: form.recentPdfLink
                       }}>
                         <Button variant="outline" size="sm" className="text-xs sm:text-sm">
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />

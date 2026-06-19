@@ -550,7 +550,7 @@ export function StudentManagement() {
   return <AdminLayout>
       <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div>
+          <div className='px-3'>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
               Student Management
             </h1>
@@ -592,31 +592,27 @@ export function StudentManagement() {
               </div>
               
               {/* Search Bar */}
-              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+              <div className="flex flex-col gap-2 mb-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input 
-                    placeholder="Search students by name, parent, or classroom..." 
-                    className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
+                    placeholder="Search students..." 
+                    className="pl-10 h-9 sm:h-10 bg-background text-sm" 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                   />
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
                   <Button
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-10 sm:h-11 relative"
+                    className="h-9 sm:h-10 relative flex-shrink-0"
                   >
                     {showFilters ? (
-                      <>
-                        <X className="h-4 w-4 mr-2" /> Hide Filters
-                      </>
+                      <><X className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden xs:inline">Hide </span>Filters</>
                     ) : (
-                      <>
-                        <Filter className="h-4 w-4 mr-2" /> Filters
-                      </>
+                      <><Filter className="h-4 w-4 mr-1 sm:mr-2" />Filters</>
                     )}
                     {!showFilters && activeFilterCount > 0 && (
                       <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
@@ -636,9 +632,10 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
-                          <Download className="h-4 w-4 mr-2" />
-                          Export Selected ({selectedStudentsForBulkAction.length})
+                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Export Selected ({selectedStudentsForBulkAction.length})</span>
+                          <span className="sm:hidden">({selectedStudentsForBulkAction.length})</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
@@ -688,35 +685,32 @@ export function StudentManagement() {
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-10 sm:h-11"
+                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-9 sm:h-10 flex-shrink-0"
                     >
-                      <GraduationCap className="h-4 w-4 mr-2" />
-                      Transfer Selected ({selectedStudentsForBulkAction.length})
+                      <GraduationCap className="h-4 w-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Transfer Selected ({selectedStudentsForBulkAction.length})</span>
+                      <span className="sm:hidden">Transfer ({selectedStudentsForBulkAction.length})</span>
                     </Button>
                   )}
 
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
-                          <Download className="h-4 w-4 mr-2" />
-                          Export All
+                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Export All</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={exportToCSV}>
-                          Export as CSV
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={exportToPDF}>
-                          Export as PDF
-                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" className="h-10 sm:h-11" disabled>
-                        <Download className="h-4 w-4 mr-2" />
-                        Export All
+                      <Button size="sm" className="h-9 sm:h-10 flex-shrink-0" disabled>
+                        <Download className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Export All</span>
                       </Button>
                     </div>
                   )}
