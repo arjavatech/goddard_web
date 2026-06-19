@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
 import { App } from './App';
 import SelectSchool from './SelectSchool';
@@ -31,7 +30,6 @@ import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagemen
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
-import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 
 import Notifications from './Notifications';

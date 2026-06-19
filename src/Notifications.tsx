@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  Bell, Home, Users, User,
+  Bell,
   CheckCircle, XCircle, FileText, UserPlus, UserX, Filter, CheckCheck, Trash2
 } from "lucide-react";
 
