@@ -5,6 +5,7 @@ import SelectSchool from './SelectSchool';
 
 import { UserProvider } from './contexts/UserContext';
 import { ToastProvider } from './contexts/ToastContext';
+import { NotificationsProvider } from './contexts/NotificationsContext';
 import { AuthErrorBoundary } from './components/AuthErrorBoundary';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -37,6 +38,7 @@ import ProtectedRoute from './routes/security/ProtectedRoute';
 export function AppRouter() {
   return <AuthErrorBoundary>
       <UserProvider>
+        <NotificationsProvider>
         <ToastProvider>
           <BrowserRouter>
             <Routes>
@@ -83,6 +85,7 @@ export function AppRouter() {
           </Routes>
         </BrowserRouter>
         </ToastProvider>
+        </NotificationsProvider>
       </UserProvider>
     </AuthErrorBoundary>;
 }
