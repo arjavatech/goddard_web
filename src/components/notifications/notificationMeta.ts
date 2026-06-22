@@ -35,6 +35,7 @@ export const NOTIFICATION_META: Record<string, NotificationMeta> = {
   parent_invited:       { icon: Users,        accentClass: 'bg-green-100 text-green-600' },
   parent_deactivated:   { icon: UserMinus,    accentClass: 'bg-red-100 text-red-600' },
   admin_added:          { icon: UserPlus,     accentClass: 'bg-violet-100 text-violet-600' },
+  admin_deactivated:    { icon: UserMinus,    accentClass: 'bg-red-100 text-red-600' },
   classroom_added:      { icon: Building2,    accentClass: 'bg-purple-100 text-purple-600' },
   classroom_deleted:    { icon: Trash2,       accentClass: 'bg-slate-100 text-slate-600' },
   form_template_added:  { icon: FileText,     accentClass: 'bg-blue-100 text-blue-600' },

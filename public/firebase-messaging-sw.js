@@ -38,10 +38,13 @@ firebase.initializeApp(firebaseConfig);
 
 const messaging = firebase.messaging();
 
+// Backend sends data-only payloads (title + body live inside `payload.data`)
+// so the browser does not auto-display in background — this SW is the sole
+// renderer and the user only sees one notification per event.
 messaging.onBackgroundMessage((payload) => {
-  const title = (payload && payload.notification && payload.notification.title) || 'Goddard';
-  const body = (payload && payload.notification && payload.notification.body) || '';
   const data = (payload && payload.data) || {};
+  const title = data.title || 'Goddard';
+  const body = data.body || '';
   self.registration.showNotification(title, {
     body,
     tag: data.notification_id || undefined,
