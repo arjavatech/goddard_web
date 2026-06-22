@@ -3,14 +3,10 @@ import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
-  registerDeviceToken,
   type Notification,
   type NotificationFilter,
 } from '../services/api/notifications';
-import { onForegroundMessage, requestFcmToken } from '../services/firebase';
 import { useUserContext } from './UserContext';
-
-const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
 
 const POLL_INTERVAL_MS = 30_000;
 const PAGE_SIZE = 100;
@@ -58,10 +54,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const isFirstFetchRef = useRef(true);
   const intervalRef = useRef<number | null>(null);
-  // When true, the FCM service worker is handling background OS notifications,
-  // so we suppress the polling-driven `new Notification()` fallback to avoid
-  // double-firing. Stays false on Safari / permission-denied / FCM failure.
-  const fcmActiveRef = useRef(false);
+  const isFetchingRef = useRef(false);
+  const refetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const fireDesktopNotification = useCallback((notification: Notification) => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -81,6 +75,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const refetch = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -89,12 +85,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setTotal(res.total);
       setUnreadCount(res.unread_count);
 
-      // Desktop notification dispatch (fallback path only): any unread we
-      // haven't seen before fires a notification. Skip on the very first
-      // fetch to avoid spamming for already-existing unread items. When FCM
-      // is active, the SW already handles OS notifications — suppress here to
-      // avoid duplicates.
-      if (!isFirstFetchRef.current && !fcmActiveRef.current) {
+      // Desktop notification dispatch: any unread we haven't seen before fires
+      // a notification. Skip on the very first fetch to avoid spamming for
+      // already-existing unread items.
+      if (!isFirstFetchRef.current) {
         const newlyArrived = res.items.filter(
           item => !item.is_read && !seenUnreadIdsRef.current.has(item.id)
         );
@@ -109,10 +103,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
       setInitialLoading(false);
     }
   }, [fireDesktopNotification]);
+
+  // Keep a ref to the latest refetch so the polling effect doesn't re-run
+  // every time refetch's identity changes.
+  useEffect(() => {
+    refetchRef.current = refetch;
+  });
 
   // Browser Notification API permission request — fires once when user logs in.
   useEffect(() => {
@@ -129,46 +130,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
   }, [enabled]);
 
-  // FCM token registration + foreground message subscription.
-  // Runs after login (and again if permission changes mid-session) to:
-  //   1. Get an FCM registration token for this browser instance.
-  //   2. Send it to the backend so push fan-outs can target this device.
-  //   3. Subscribe to foreground messages (drawer refresh when push arrives).
-  // The SW (public/firebase-messaging-sw.js) handles background OS notifications.
-  useEffect(() => {
-    if (!enabled) {
-      fcmActiveRef.current = false;
-      return;
-    }
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-
-    let unsubscribe: (() => void) | null = null;
-    let cancelled = false;
-
-    (async () => {
-      try {
-        const token = await requestFcmToken();
-        if (cancelled || !token) return;
-        await registerDeviceToken(token);
-        localStorage.setItem(FCM_TOKEN_STORAGE_KEY, token);
-        fcmActiveRef.current = true;
-        unsubscribe = await onForegroundMessage(() => {
-          // Push arrived while the tab is open — refetch immediately so the
-          // bell + drawer are current without waiting for the 30s poll.
-          void refetch();
-        });
-      } catch (err) {
-        console.warn('[notifications] FCM setup failed', err);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      if (unsubscribe) unsubscribe();
-    };
-  }, [enabled, refetch]);
-
   // Polling + visibility-aware refetch.
   useEffect(() => {
     if (!enabled) {
@@ -182,11 +143,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
 
     // Kick off the first fetch immediately on login (parallel with other app data).
-    void refetch();
+    void refetchRef.current();
 
     const startInterval = () => {
       if (intervalRef.current != null) return;
-      intervalRef.current = window.setInterval(refetch, POLL_INTERVAL_MS);
+      intervalRef.current = window.setInterval(() => void refetchRef.current(), POLL_INTERVAL_MS);
     };
     const stopInterval = () => {
       if (intervalRef.current != null) {
@@ -197,7 +158,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        void refetch();
+        void refetchRef.current();
         startInterval();
       } else {
         stopInterval();
@@ -211,7 +172,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       stopInterval();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [enabled, refetch]);
+  }, [enabled]);
 
   const items = useMemo(() => {
     if (filter === 'all') return allItems;

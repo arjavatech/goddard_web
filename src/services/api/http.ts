@@ -1,7 +1,6 @@
 import { apiBaseUrl, isDev } from '../../config/env';
-import { SESSION_CONFIG, isSessionError, isRetryableStatus } from '../../config/session';
+import { SESSION_CONFIG, isRetryableStatus } from '../../config/session';
 import type { HttpRequest, HttpResponse } from './types';
-import { clearSession } from '../auth/session';
 import { fetchWithTokenRefresh } from '../auth/apiInterceptor';
 
 type FetchOptions = {
@@ -53,8 +52,6 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
   if (!res.ok) {
     let message = `Request failed: ${res.status}`;
     let errorCode: string | undefined;
-    let shouldRedirectToLogin = false;
-    let isSessionErrorFlag = false;
 
     if (typeof data === 'string') {
       message = data;
@@ -63,20 +60,6 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
       errorCode = errorData.code as string | undefined;
       const errorString = (errorData.error || errorData.message || errorData.detail) as string;
       message = errorString || message;
-
-      // Check for session errors using centralized config
-      if (isSessionError(message)) {
-        isSessionErrorFlag = true;
-        // Only redirect on 401/403 status codes, not on other errors
-        if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status)) {
-          shouldRedirectToLogin = true;
-        }
-      }
-
-      // Check for auth errors
-      if (SESSION_CONFIG.AUTH_ERROR_STATUSES.includes(res.status)) {
-        shouldRedirectToLogin = true;
-      }
     }
 
     // Don't retry on email bounce errors (502 with EXTERNAL_SERVICE_ERROR code)
@@ -88,10 +71,7 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
       return httpFetch(req, { ...opts, retryCount: retryCount + 1 });
     }
 
-    // Handle session errors - clear session and redirect only on 401/403
-    if (shouldRedirectToLogin) {
-      await clearSession();
-    }
+    // Auto-logout disabled: session errors are surfaced as thrown errors only.
 
     const error = new Error(message);
     (error as any).status = res.status;
