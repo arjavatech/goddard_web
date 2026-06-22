@@ -11,6 +11,7 @@ import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
 import { fetchSchools, getSelectedSchool, setSelectedSchool, School } from '../services/api/schools';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+import { requestNotificationPermission } from '../utils/notification';
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -91,6 +92,13 @@ export function Login() {
         setSchoolMismatchError('Your account is registered to a different school. Please go back and select the correct school.');
         setIsLoading(false);
         return;
+      }
+
+      // Request notification permission after successful login
+      try {
+        await requestNotificationPermission();
+      } catch (error) {
+        console.error('Failed to setup notifications:', error);
       }
 
       let redirectTo = location.state?.from?.pathname;

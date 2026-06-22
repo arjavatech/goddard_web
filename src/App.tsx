@@ -4,11 +4,29 @@ import { Dashboard } from './pages/Dashboard';
 import { useUserContext } from './contexts/UserContext';
 import { useSessionValidation } from './hooks/useSessionValidation';
 import { startBackgroundTokenRefresh, stopBackgroundTokenRefresh } from './services/auth/tokenRefreshService';
+import { setupForegroundMessageListener } from './utils/notification';
 // import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 export function App() {
   const { userData, loading } = useUserContext();
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
+  
+  // Register service worker and setup FCM
+  useEffect(() => {
+    // Register Firebase messaging service worker
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered successfully:', registration);
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+
+    // Setup foreground message listener
+    setupForegroundMessageListener();
+  }, []);
   
   // Start background token refresh on app load
   useEffect(() => {
