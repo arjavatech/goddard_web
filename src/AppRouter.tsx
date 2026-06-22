@@ -33,9 +33,6 @@ import { AdminManagement } from './pages/superadmin/AdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 
-import Notifications from './Notifications';
-import Notifications2 from './Notifications2';
-
 export function AppRouter() {
   return <AuthErrorBoundary>
       <UserProvider>
@@ -44,8 +41,6 @@ export function AppRouter() {
           <BrowserRouter>
             <Routes>
             <Route path="/" element={<SelectSchool />} />
-            <Route path="/notifications" element={<Notifications />} />
-            <Route path="/notifications2" element={<Notifications2 />} />
             <Route path="/dashboard" element={<ProtectedRoute>
                   <App />
                 </ProtectedRoute>} />
