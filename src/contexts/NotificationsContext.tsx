@@ -54,6 +54,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const isFirstFetchRef = useRef(true);
   const intervalRef = useRef<number | null>(null);
+  const isFetchingRef = useRef(false);
+  const refetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
   const fireDesktopNotification = useCallback((notification: Notification) => {
     if (typeof window === 'undefined' || !('Notification' in window)) return;
@@ -73,6 +75,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   }, []);
 
   const refetch = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -99,10 +103,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
     } finally {
+      isFetchingRef.current = false;
       setLoading(false);
       setInitialLoading(false);
     }
   }, [fireDesktopNotification]);
+
+  // Keep a ref to the latest refetch so the polling effect doesn't re-run
+  // every time refetch's identity changes.
+  useEffect(() => {
+    refetchRef.current = refetch;
+  });
 
   // Browser Notification API permission request — fires once when user logs in.
   useEffect(() => {
@@ -132,11 +143,11 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     }
 
     // Kick off the first fetch immediately on login (parallel with other app data).
-    void refetch();
+    void refetchRef.current();
 
     const startInterval = () => {
       if (intervalRef.current != null) return;
-      intervalRef.current = window.setInterval(refetch, POLL_INTERVAL_MS);
+      intervalRef.current = window.setInterval(() => void refetchRef.current(), POLL_INTERVAL_MS);
     };
     const stopInterval = () => {
       if (intervalRef.current != null) {
@@ -147,7 +158,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        void refetch();
+        void refetchRef.current();
         startInterval();
       } else {
         stopInterval();
@@ -161,7 +172,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       stopInterval();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [enabled, refetch]);
+  }, [enabled]);
 
   const items = useMemo(() => {
     if (filter === 'all') return allItems;

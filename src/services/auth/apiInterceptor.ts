@@ -1,4 +1,4 @@
-import { forceTokenRefresh, isTokenRefreshing } from './tokenRefreshService';
+import { forceTokenRefresh } from './tokenRefreshService';
 import { getAuthToken } from './session';
 import { isAuthBypassed } from '../../config/env';
 
@@ -67,10 +67,9 @@ async function handle401Error(
     const refreshed = await forceTokenRefresh();
 
     if (!refreshed) {
-      // Refresh failed - redirect to login
+      // Refresh failed - surface as error without redirecting
       isRefreshingToken = false;
       clearPendingRequests();
-      redirectToLogin();
       throw new Error('Token refresh failed');
     }
 
@@ -127,8 +126,4 @@ function clearPendingRequests(): void {
   pendingRequests = [];
 }
 
-function redirectToLogin(): void {
-  localStorage.removeItem('schoolId');
-  localStorage.removeItem('selectedSchool');
-  window.location.href = '/';
-}
+
