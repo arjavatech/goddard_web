@@ -73,3 +73,22 @@ export async function markAllNotificationsRead(): Promise<number> {
   );
   return res.updated;
 }
+
+// ---- FCM device token registration (push notifications) ----
+
+export async function registerDeviceToken(
+  token: string,
+  platform: 'web' | 'ios' | 'android' = 'web'
+): Promise<void> {
+  await authedFetch(
+    { method: 'POST', url: '/device-tokens', body: { token, platform } },
+    z.unknown()
+  );
+}
+
+export async function unregisterDeviceToken(token: string): Promise<void> {
+  await authedFetch(
+    { method: 'DELETE', url: `/device-tokens/${encodeURIComponent(token)}` },
+    z.unknown()
+  );
+}

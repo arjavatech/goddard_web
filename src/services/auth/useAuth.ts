@@ -2,6 +2,23 @@ import { useEffect, useState, useCallback } from 'react';
 import { type AuthError, type Provider, type User, type Session } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
+import { unregisterDeviceToken } from '../api/notifications';
+import { deleteFcmToken } from '../firebase';
+
+const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
+
+// Best-effort: tell the backend to forget this device's FCM token, then nuke
+// the local Firebase registration. Called before signOut so the auth header is
+// still valid for the DELETE. Errors are swallowed — a stale row is fine since
+// FCM will mark it UNREGISTERED on the next send and the backend prunes it.
+async function cleanupFcmRegistration(): Promise<void> {
+  const token = typeof window !== 'undefined' ? localStorage.getItem(FCM_TOKEN_STORAGE_KEY) : null;
+  if (token) {
+    try { await unregisterDeviceToken(token); } catch { /* noop */ }
+    try { localStorage.removeItem(FCM_TOKEN_STORAGE_KEY); } catch { /* noop */ }
+  }
+  try { await deleteFcmToken(); } catch { /* noop */ }
+}
 type UseAuth = {
   user: User | null;
   isAuthenticated: boolean;
@@ -148,6 +165,7 @@ export function useAuth(): UseAuth {
   const signOut = useCallback(async () => {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
+    await cleanupFcmRegistration();
     const {
       error
     } = await supabase.auth.signOut();
