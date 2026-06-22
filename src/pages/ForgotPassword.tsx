@@ -47,26 +47,26 @@ export function ForgotPassword() {
 
   if (isEmailSent) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-sm space-y-4">
-          <div className="text-center space-y-4">
+          <div className="text-center space-y-3">
             <div className="flex justify-center">
-              <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
+              <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
             </div>
           </div>
           <Card className="glass-card">
-            <CardHeader className="pb-4">
+            <CardHeader className="pb-3 pt-5 px-5">
               <CardTitle className="text-center text-lg">Check Your Email</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 text-center space-y-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="w-8 h-8 text-green-600" />
+            <CardContent className="px-5 pb-5 text-center space-y-4">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
+                <Mail className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-foreground">
                   We've sent a password reset link to:
                 </p>
-                <p className="text-sm font-medium text-amazon-teal">{email}</p>
+                <p className="text-sm font-medium text-amazon-teal break-all">{email}</p>
                 <p className="text-xs text-muted-foreground">
                   Please check your email and follow the instructions to reset your password.
                 </p>
@@ -85,11 +85,11 @@ export function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-sm space-y-4">
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <div className="flex justify-center">
-            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-16 w-auto" />
+            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
           </div>
           <div className="space-y-1">
             <h1 className="text-xl font-semibold text-foreground">
@@ -101,17 +101,17 @@ export function ForgotPassword() {
           </div>
         </div>
         <Card className="glass-card">
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-3 pt-5 px-5">
             <CardTitle className="text-center text-lg">Reset Password</CardTitle>
           </CardHeader>
-          <CardContent className="p-4">
+          <CardContent className="px-5 pb-5">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <label htmlFor="email" className="block text-sm font-medium text-foreground">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <input
                     id="email"
                     type="email"
@@ -120,6 +120,7 @@ export function ForgotPassword() {
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm"
                     placeholder="Enter your email"
+                    autoComplete="email"
                   />
                 </div>
               </div>
@@ -138,7 +139,7 @@ export function ForgotPassword() {
                 )}
               </Button>
               <div className="text-center">
-                <Link to="/login" className="text-sm text-amazon-teal hover:text-amazon-teal/80 transition-colors flex items-center justify-center gap-1">
+                <Link to="/login" className="text-sm text-amazon-teal hover:text-amazon-teal/80 transition-colors inline-flex items-center justify-center gap-1">
                   <ArrowLeft className="w-3 h-3" />
                   Back to Login
                 </Link>
@@ -146,7 +147,7 @@ export function ForgotPassword() {
             </form>
           </CardContent>
         </Card>
-        <div className="text-center text-sm text-muted-foreground">
+        <div className="text-center text-xs sm:text-sm text-muted-foreground pb-2">
           <p>© 2024 Goddard School. All rights reserved.</p>
         </div>
       </div>
