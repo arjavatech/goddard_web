@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '../../components/ui/dropdown-menu';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 import { Loading } from '../../components/ui/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { HelpCenterContent } from '../../components/HelpCenterContent';
@@ -191,6 +192,8 @@ export function AdminLayout({
                 <p className="text-xs text-gray-500">Role: {userData?.role}</p>
               </div>
             </div>
+            <div className="flex items-center gap-2">
+            <NotificationBell enabled={!!userData} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
@@ -229,6 +232,7 @@ export function AdminLayout({
                 </div>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
           </header>
         )}
         {/* Page content */}

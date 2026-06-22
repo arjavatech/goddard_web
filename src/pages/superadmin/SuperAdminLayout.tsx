@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { NotificationBell } from '../../components/notifications/NotificationBell';
 
 interface SuperAdminLayoutProps {
   children: ReactNode;
@@ -122,6 +123,8 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
             </h1>
           </div>
           
+          <div className="flex items-center gap-2">
+          <NotificationBell enabled={!!userData} />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
@@ -159,8 +162,9 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               </div>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         </header>
-        
+
         {/* Page content */}
         <main className="flex-1 p-6 pt-20 flex flex-col bg-gray-50">{children}</main>
       </div>

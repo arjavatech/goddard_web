@@ -347,7 +347,7 @@ export function SetPassword() {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setError(''); }}
                   placeholder="Enter your password"
                   className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all"
                   required
@@ -371,7 +371,7 @@ export function SetPassword() {
                 <input
                   type={showConfirmPassword ? 'text' : 'password'}
                   value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
                   placeholder="Confirm your password"
                   className="w-full pl-10 pr-12 py-2 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all"
                   required
@@ -411,7 +411,7 @@ export function SetPassword() {
             <Button
               type="submit"
               className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={!allRequirementsMet || loading || !sessionReady || !!error}
+              disabled={!allRequirementsMet || loading || !sessionReady}
             >
               {loading ? (
                 <div className="flex items-center justify-center gap-2">

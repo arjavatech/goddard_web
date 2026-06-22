@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
 import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
@@ -209,6 +209,7 @@ interface FormsDocumentsProps {
   yearFilter?: string; // Year filter value
   onYearFilterChange?: (year: string) => void; // Callback to change year filter
   enrollmentId?: string; // For downloading all forms
+  formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -223,7 +224,8 @@ export function FormsDocuments({
   onFormCompleted,
   yearFilter = 'all',
   onYearFilterChange,
-  enrollmentId
+  enrollmentId,
+  formOpenGuard,
 }: FormsDocumentsProps) {
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || childSpecificForms[0]?.childId || 'family');
@@ -232,6 +234,7 @@ export function FormsDocuments({
   const [isFrameLoading, setIsFrameLoading] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   const isOpeningRef = useRef(false);
+  const processedFormToOpenRef = useRef<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
   const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -345,13 +348,10 @@ export function FormsDocuments({
     ];
   }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
 
-  const handleView = (form: any) => {
+  const handleView = async (form: any) => {
     if (isOpeningRef.current) return;
     isOpeningRef.current = true;
-    setTimeout(() => {
-      isOpeningRef.current = false;
-    }, 500);
-
+    try {
     setOpenError(null);
     console.log('handleView called with form:', form);
     console.log('Form ID:', form.formId || form._key);
@@ -432,9 +432,28 @@ export function FormsDocuments({
         return;
       }
 
-      // For non-approved forms, prioritize recent_edit_link first
-      if (recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '') {
-        formUrl = recentEditLink;
+      // Poll backend for a resume link for any non-completed form (Draft or In Progress).
+      // The DB status may still be "incomplete"/"Draft" even when Fillout has partial data,
+      // because the webhook that flips it to "in_progress" may not have fired yet.
+      let resumeLinkFromApi: string | null = null;
+      const isNotCompleted = form.status !== 'Approved' && form.status !== 'Submitted';
+      if (isNotCompleted && !recentEditLink && idForPayload.raw) {
+        setLoadingAction({ action: 'view', formId: form.formId ?? '' });
+        try {
+          const { getFormResumeLink } = await import('../../services/api/admin');
+          resumeLinkFromApi = await getFormResumeLink(idForPayload.raw);
+        } catch (err) {
+          console.error('Failed to fetch resume link:', err);
+        } finally {
+          setLoadingAction(null);
+        }
+      }
+
+      const effectiveEditLink = resumeLinkFromApi || recentEditLink;
+
+      // For non-approved forms, prioritize recent_edit_link (or fetched resume link) first
+      if (effectiveEditLink && effectiveEditLink !== '#' && effectiveEditLink.trim() !== '') {
+        formUrl = effectiveEditLink;
       } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
         // Handle fillout form URL construction
         if (filloutFormId.startsWith('http')) {
@@ -476,7 +495,15 @@ export function FormsDocuments({
     setIsFrameLoading(true);
     setPageNumber(1);
     setNumPages(null);
+    // Mark as processed so if formToOpen is set externally with the same form, useEffect skips it
+    const formKey = form.fromContinueButton
+      ? `continue-${form.formId ?? 'unknown'}`
+      : (form.formId ?? null);
+    if (formKey) processedFormToOpenRef.current = formKey;
     onViewForm(form);
+    } finally {
+      isOpeningRef.current = false;
+    }
   };
 
   const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
@@ -494,26 +521,38 @@ export function FormsDocuments({
 
   // Auto-open form when formToOpen is set
   useEffect(() => {
-    if (formToOpen) {
-      console.log('Auto-opening form:', formToOpen);
-      // If it's from Continue button, directly open it
-      if (formToOpen.fromContinueButton) {
-        handleView(formToOpen);
-      } else if (formToOpen.formId) {
-        // Find the matching form in allForms by unique formId
-        const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
-        if (matchingForm) {
-          // Only auto-open if it belongs to the selected child
-          if (!matchingForm.childId || matchingForm.childId === selectedChildId) {
-            handleView(matchingForm);
-          } else {
-            console.warn('Auto-open blocked: Form belongs to different child');
-          }
+    if (!formToOpen) {
+      processedFormToOpenRef.current = null;
+      return;
+    }
+    // If another FormsDocuments instance already claimed this formToOpen, skip
+    if (formOpenGuard?.current) return;
+    const key = formToOpen.fromContinueButton
+      ? `continue-${formToOpen.formId ?? 'unknown'}`
+      : (formToOpen.formId ?? null);
+    if (!key || key === processedFormToOpenRef.current) return;
+    // Claim this formToOpen before any async work so the sibling instance skips
+    if (formOpenGuard) formOpenGuard.current = true;
+    processedFormToOpenRef.current = key;
+
+    console.log('Auto-opening form:', formToOpen);
+    // If it's from Continue button, directly open it
+    if (formToOpen.fromContinueButton) {
+      handleView(formToOpen);
+    } else if (formToOpen.formId) {
+      // Find the matching form in allForms by unique formId
+      const matchingForm = allForms.find(f => f.formId === formToOpen.formId);
+      if (matchingForm) {
+        // Only auto-open if it belongs to the selected child
+        if (!matchingForm.childId || matchingForm.childId === selectedChildId) {
+          handleView(matchingForm);
+        } else {
+          console.warn('Auto-open blocked: Form belongs to different child');
         }
       }
-      if (onFormOpened) {
-        onFormOpened();
-      }
+    }
+    if (onFormOpened) {
+      onFormOpened();
     }
   }, [formToOpen, allForms, selectedChildId]);
 

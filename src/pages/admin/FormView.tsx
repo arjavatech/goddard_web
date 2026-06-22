@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -7,7 +7,7 @@ import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle, ChevronRight
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
-import { reviewStudentFormAssignment } from '../../services/api/admin';
+import { reviewStudentFormAssignment, getFormResumeLink } from '../../services/api/admin';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -42,11 +42,16 @@ export function FormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
+  const [resolvedResumeLink, setResolvedResumeLink] = useState<string | null>(null);
+  const [numPages, setNumPages] = useState<number | null>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
+    setNumPages(numPages);
+    setIsFrameLoading(false);
+  }, []);
 
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
@@ -66,14 +71,23 @@ export function FormView() {
   const recentEditLink = location.state?.recentEditLink;
   const filloutFormId = location.state?.filloutFormId;
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
-  const recentPdfLink = location.state?.recentPdfLink || formData?.recentPdfLink || null;
+  const recentPdfLink = location.state?.recentPdfLink;
+
+  useEffect(() => {
+    if (studentFormAssignmentId) {
+      getFormResumeLink(studentFormAssignmentId).then(setResolvedResumeLink);
+    }
+  }, [studentFormAssignmentId]);
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
     let url: string | undefined;
 
-    // Priority 1: Use recent_edit_link if form is filled (has existing submission)
-    if (recentEditLink && !isInvalidFormId(recentEditLink)) {
+    // Priority 0: In-progress resume link fetched from backend (cross-browser resume)
+    if (resolvedResumeLink && !isInvalidFormId(resolvedResumeLink)) {
+      url = resolvedResumeLink;
+    } else if (recentEditLink && !isInvalidFormId(recentEditLink)) {
+      // Priority 1: Use recent_edit_link if form is filled (has existing submission)
       url = recentEditLink;
     } else if (filloutFormId && !isInvalidFormId(filloutFormId)) {
       // Priority 2: Use fillout_form_id if form is empty (no existing submission)
@@ -297,44 +311,55 @@ export function FormView() {
             </div>
             {/* Form container with dynamic height */}
             <div className="mt-6 rounded-md">
-              {isApproved ? (
-                recentPdfLink ? (
-                  <div className="flex flex-col">
-                    <div className="flex items-center justify-between mb-4 p-2 bg-gray-50 rounded-lg">
-                      <Button variant="outline" size="sm" onClick={() => setPageNumber(p => Math.max(1, p - 1))} disabled={pageNumber <= 1} className="flex items-center gap-2 text-xs sm:text-sm">
-                        <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="hidden sm:inline">Previous</span>
-                        <span className="sm:hidden">Prev</span>
-                      </Button>
-                      <span className="text-xs sm:text-sm font-medium">{pageNumber} / {numPages || '...'}</span>
-                      <Button variant="outline" size="sm" onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))} disabled={pageNumber >= (numPages || 1)} className="flex items-center gap-2 text-xs sm:text-sm">
-                        <span className="hidden sm:inline">Next</span>
-                        <span className="sm:hidden">Next</span>
-                        <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                      </Button>
-                    </div>
-                    <div className="flex justify-center overflow-x-auto">
-                      <Document
-                        file={recentPdfLink}
-                        onLoadSuccess={({ numPages: n }) => { setNumPages(n); setIsFrameLoading(false); }}
-                        loading={<Loading message="Loading PDF..." size="md" />}
-                        error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
-                      >
-                        <Page
-                          pageNumber={pageNumber}
-                          width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
-                          renderTextLayer={true}
-                          renderAnnotationLayer={false}
-                          className="shadow-lg"
-                        />
-                      </Document>
-                    </div>
+              {isApproved && recentPdfLink ? (
+                <div>
+                  <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-lg">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                      disabled={pageNumber <= 1}
+                      className="flex items-center gap-1 text-xs px-2"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                      Prev
+                    </Button>
+                    <span className="text-xs sm:text-sm font-medium px-2">
+                      {pageNumber} / {numPages || '...'}
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
+                      disabled={pageNumber >= (numPages || 1)}
+                      className="flex items-center gap-1 text-xs px-2"
+                    >
+                      Next
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
                   </div>
-                ) : (
-                  <div className="flex items-center justify-center min-h-[400px] text-gray-500">
-                    No PDF available for this approved form.
+                  <div className="relative flex justify-center overflow-x-auto">
+                    {isFrameLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
+                        <Loading message="Loading PDF..." size="md" />
+                      </div>
+                    )}
+                    <Document
+                      file={recentPdfLink}
+                      onLoadSuccess={onDocumentLoadSuccess}
+                      loading={<Loading message="Loading PDF..." size="md" />}
+                      error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
+                    >
+                      <Page
+                        pageNumber={pageNumber}
+                        width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 80) : 800}
+                        renderTextLayer={true}
+                        renderAnnotationLayer={false}
+                        className="shadow-lg"
+                      />
+                    </Document>
                   </div>
-                )
+                </div>
               ) : (() => {
                 if (selectedUrl && selectedUrl !== '#') {
                   return (
