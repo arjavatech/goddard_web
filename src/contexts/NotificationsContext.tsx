@@ -3,9 +3,11 @@ import {
   fetchNotifications,
   markAllNotificationsRead,
   markNotificationRead,
+  registerDeviceToken,
   type Notification,
   type NotificationFilter,
 } from '../services/api/notifications';
+import { requestFcmToken, onForegroundMessage } from '../services/firebase';
 import { useUserContext } from './UserContext';
 
 const POLL_INTERVAL_MS = 30_000;
@@ -39,7 +41,8 @@ const NotificationsContext = createContext<NotificationsContextValue | undefined
  */
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { userData, isReady } = useUserContext();
-  const enabled = !!userData && isReady;
+  const loggedIn = !!userData;       // stable once authenticated — drives polling
+  const enabled = loggedIn && isReady; // also gates permission prompt
 
   const [allItems, setAllItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
@@ -61,8 +64,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     if (typeof window === 'undefined' || !('Notification' in window)) return;
     if (Notification.permission !== 'granted') return;
     try {
-      const n = new Notification(notification.title, {
-        body: notification.body,
+      const safeTitle = String(notification.title ?? '').slice(0, 200);
+      const safeBody = String(notification.body ?? '').slice(0, 500);
+      const n = new Notification(safeTitle, {
+        body: safeBody,
         tag: notification.id,
         icon: '/images/gs_logo_lynnwood.png',
       });
@@ -113,32 +118,66 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   // every time refetch's identity changes.
   useEffect(() => {
     refetchRef.current = refetch;
-  });
+  }, [refetch]);
 
-  // Browser Notification API permission request — fires once when user logs in.
+  // Register SW, obtain FCM token, wire foreground listener — fires once on login.
   useEffect(() => {
     if (!enabled) return;
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission === 'default') {
-      // Defer slightly so the prompt doesn't pop on the same tick as login.
-      const t = setTimeout(() => {
-        Notification.requestPermission().catch(() => {
-          // User denied; we silently fall back to the in-app bell only.
-        });
-      }, 800);
-      return () => clearTimeout(t);
-    }
+
+    let unsubscribeForeground: (() => void) | null = null;
+
+    const setup = async () => {
+      // 1. Request OS notification permission if not yet decided.
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission().catch(() => {});
+        }
+      }
+
+      // 2. Register the FCM service worker and obtain the push token.
+      //    requestFcmToken() handles SW registration internally and is idempotent.
+      const token = await requestFcmToken();
+      if (token) {
+        console.log('[FCM] push token ready:', token);
+        try {
+          localStorage.setItem('goddard.fcm-token', token);
+        } catch (err) {
+          console.warn('[FCM] failed to store token in localStorage:', err);
+        }
+        await registerDeviceToken(token, 'web').catch((err) =>
+          console.warn('[FCM] registerDeviceToken failed:', err)
+        );
+      }
+
+      // 3. Handle messages that arrive while the tab is open (foreground).
+      //    Background messages are handled entirely by firebase-messaging-sw.js.
+      unsubscribeForeground = await onForegroundMessage((payload) => {
+        console.log('[FCM] foreground message:', payload);
+        // Refetch so the bell count and drawer update immediately.
+        void refetchRef.current();
+      });
+    };
+
+    void setup();
+
+    return () => {
+      unsubscribeForeground?.();
+    };
   }, [enabled]);
 
   // Polling + visibility-aware refetch.
   useEffect(() => {
-    if (!enabled) {
+    if (!loggedIn) {
       setAllItems([]);
       setUnreadCount(0);
       setTotal(0);
       setInitialLoading(true);
       isFirstFetchRef.current = true;
       seenUnreadIdsRef.current = new Set();
+      if (intervalRef.current != null) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       return;
     }
 
@@ -172,7 +211,8 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       stopInterval();
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [enabled]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loggedIn]);
 
   const items = useMemo(() => {
     if (filter === 'all') return allItems;
