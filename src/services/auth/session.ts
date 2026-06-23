@@ -1,6 +1,10 @@
 import { type User } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
+import { unregisterDeviceToken } from '../api/notifications';
+import { deleteFcmToken } from '../firebase';
+
+const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
@@ -69,7 +73,17 @@ export async function clearSession(): Promise<void> {
   // Prevent multiple simultaneous clears
   if (isClearing) return;
   isClearing = true;
-  
+
+  // Best-effort: tell the backend to drop this device's FCM token while the
+  // auth header is still valid. Failures are non-fatal — a stale row will be
+  // pruned on the next FCM send anyway.
+  const fcmToken = typeof window !== 'undefined' ? localStorage.getItem(FCM_TOKEN_STORAGE_KEY) : null;
+  if (fcmToken) {
+    try { await unregisterDeviceToken(fcmToken); } catch { /* noop */ }
+    try { localStorage.removeItem(FCM_TOKEN_STORAGE_KEY); } catch { /* noop */ }
+  }
+  try { await deleteFcmToken(); } catch { /* noop */ }
+
   if (!supabase) return;
   try {
     await supabase.auth.signOut();

@@ -6,6 +6,7 @@ import { useAuth } from '../../services/auth/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { NotificationBell } from '../notifications/NotificationBell';
 export function Header() {
   const { userData } = useUserContext();
   const navigate = useNavigate();
@@ -28,6 +29,8 @@ export function Header() {
       <div className="flex items-center space-x-2">
         <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
       </div>
+      <div className="flex items-center gap-2">
+        <NotificationBell enabled={!!userData} />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
@@ -65,7 +68,8 @@ export function Header() {
           </div>
         </DropdownMenuContent>
       </DropdownMenu>
-      
+      </div>
+
       {/* Logout Confirmation Modal */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
         <DialogContent preventClose>

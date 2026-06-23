@@ -1,5 +1,4 @@
 import React, { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -22,15 +21,15 @@ export class AuthErrorBoundary extends React.Component<ErrorBoundaryProps, Error
 
   componentDidCatch(error: Error) {
     console.error('Auth error caught:', error);
-    // Redirect to login immediately on any error
-    window.location.href = '/login';
   }
 
   render() {
     if (this.state.hasError) {
-      // Redirect to login immediately
-      window.location.href = '/login';
-      return null;
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-red-500">Something went wrong. Please refresh the page.</p>
+        </div>
+      );
     }
 
     return this.props.children;

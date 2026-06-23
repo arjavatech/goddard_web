@@ -9,8 +9,8 @@ const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes of inactivity
  */
 export function useSessionTimeout() {
   const { isAuthenticated, signOut } = useAuth();
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warningTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const resetTimeout = () => {
     // Clear existing timeouts
