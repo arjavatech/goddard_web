@@ -489,8 +489,12 @@ export function FormsDocuments({
       // initials saved on earlier forms can be re-used in this one. Provisioning
       // failures degrade gracefully — the form still opens without re-use.
       if (formUrl && formUrl !== '#') {
-        const parentEmail = user?.email || '';
-        const externalUserId = userData?.parentId || user?.id || parentEmail;
+        const parentEmail = (user?.email || '').trim().toLowerCase();
+        // Stable identity only: Goddard parentId or the email itself. The auth
+        // user id must not be used — before userData loads it would provision a
+        // second Fillout user for the same parent (and the dev bypass id is
+        // shared by everyone).
+        const externalUserId = userData?.parentId || parentEmail;
         if (externalUserId) {
           const parentName =
             [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || parentEmail || 'Goddard Parent';
