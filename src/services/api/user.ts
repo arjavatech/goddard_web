@@ -18,6 +18,7 @@ export type UserContext = {
   role: string;
   schoolId: string | null;
   parentId: string | null;
+  email?: string;
   firstName?: string;
   lastName?: string;
   schoolData?: SchoolData | null;
@@ -67,6 +68,7 @@ export async function fetchUserContext(): Promise<UserContext> {
     role: data.role,
     schoolId: data.school_id || data.schoolId || null,
     parentId: data.parent_id || data.parentId || data.user_id || data.userId || null,
+    email: data.email,
     firstName: data.first_name || data.firstName,
     lastName: data.last_name || data.lastName,
     schoolData: data.school_data || null,

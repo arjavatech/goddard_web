@@ -8,6 +8,9 @@ import { Loading } from '../ui/loading';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/TextLayer.css';
+import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
+import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -227,6 +230,8 @@ export function FormsDocuments({
   enrollmentId,
   formOpenGuard,
 }: FormsDocumentsProps) {
+  const { userData } = useUserContext();
+  const { user } = useAuth();
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
   const [activeTab, setActiveTab] = useState<string>(selectedChildId || childSpecificForms[0]?.childId || 'family');
   const previousChildIdRef = useRef<string | undefined>(selectedChildId);
@@ -478,6 +483,31 @@ export function FormsDocuments({
         }
         console.log('Default form ID used:', defaultFormId)
         formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${idForPayload.raw}`;
+      }
+
+      // Attach the Fillout user context (user_id + user_token) so signatures and
+      // initials saved on earlier forms can be re-used in this one. Provisioning
+      // failures degrade gracefully — the form still opens without re-use.
+      if (formUrl && formUrl !== '#') {
+        const parentEmail = (userData?.email || user?.email || '').trim().toLowerCase();
+        // Stable identity only: Goddard parentId or the email itself. The auth
+        // user id must not be used — before userData loads it would provision a
+        // second Fillout user for the same parent (and the dev bypass id is
+        // shared by everyone).
+        const externalUserId = userData?.parentId || parentEmail;
+        if (!externalUserId) {
+          console.warn('[Fillout] Skipping user provisioning — parent identity not loaded yet (no parentId/email)');
+        }
+        if (externalUserId) {
+          const parentName =
+            [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || parentEmail || 'Goddard Parent';
+          const filloutCtx = await getFilloutUserContext({
+            externalUserId,
+            email: parentEmail || `${externalUserId}@goddard.parent`,
+            name: parentName,
+          });
+          formUrl = appendFilloutUserParams(formUrl, filloutCtx);
+        }
       }
     }
     console.log('Final form URL:', formUrl);

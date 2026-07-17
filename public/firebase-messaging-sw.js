@@ -10,6 +10,17 @@
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.13.0/firebase-messaging-compat.js');
 
+// Activate this SW immediately on install + take over any open tabs on activate.
+// Without these, the previous SW keeps handling pushes for every tab that was
+// open at deploy time — so a payload format change (e.g. switching to data-only)
+// silently breaks notifications for those users until they close every tab.
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim());
+});
+
 // Hostnames where the production Firebase project should be used. Everything
 // else (localhost, *.pages.dev preview deploys, dev.goddard-web.pages.dev)
 // falls back to the dev project so accidentally hitting the wrong tokens is
