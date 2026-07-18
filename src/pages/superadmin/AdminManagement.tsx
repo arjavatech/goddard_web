@@ -227,12 +227,17 @@ export function AdminManagement() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-            Admin Management
-          </h1>
-          <Button className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm" onClick={() => {
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Admin Management
+            </h1>
+            <p className="text-sm text-slate-500">
+              Manage system administrator accounts and access
+            </p>
+          </div>
+          <Button className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200 font-semibold" size="sm" onClick={() => {
             setEmailError(''); // Clear any existing email errors
             setIsAddDialogOpen(true);
           }}>
@@ -244,22 +249,22 @@ export function AdminManagement() {
         {/* Search */}
         <div className="flex items-center">
           <div className="relative w-full sm:max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             <Input
               placeholder="Search admins or emails..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10 sm:h-11 text-sm sm:text-base"
+              className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
             />
           </div>
         </div>
 
         {/* Admins List */}
-        <Card className="glass-card">
-          <CardHeader className="pb-3 sm:pb-4">
-            <CardTitle className="text-lg sm:text-xl">System Admins ({filteredAdmins.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+          <div className="p-4 sm:p-5 border-b border-slate-100 bg-slate-50/50">
+            <h2 className="text-sm font-bold text-slate-900">System Admins ({filteredAdmins.length})</h2>
+          </div>
+          <div className="p-4 sm:p-5">
             {isLoading ? (
               <div className="flex items-center justify-center h-64">
                 <div className="text-center">
@@ -275,9 +280,9 @@ export function AdminManagement() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-3">
                 {filteredAdmins.map((admin) => (
-                  <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors gap-2">
+                  <div key={admin.id} className="flex flex-col p-3 sm:p-4 border border-slate-100 rounded-xl hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out gap-2 bg-white">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-3 flex-1 min-w-0">
                         <AvatarInitials initials={`${admin.first_name[0]}${admin.last_name[0]}`} size="md" />
@@ -291,7 +296,7 @@ export function AdminManagement() {
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl">
                             <MoreVertical className="w-4 h-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -344,8 +349,8 @@ export function AdminManagement() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Invite Admin Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
@@ -354,47 +359,49 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
             <DialogHeader>
-              <DialogTitle>Invite New Admin</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Invite New Admin</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <label className="block text-sm font-medium mb-2">First Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">First Name</label>
                 <Input
                   value={adminFirstName}
                   onChange={(e) => setAdminFirstName(e.target.value)}
                   placeholder="Enter first name"
                   required
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Last Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Last Name</label>
                 <Input
                   value={adminLastName}
                   onChange={(e) => setAdminLastName(e.target.value)}
                   placeholder="Enter last name"
                   required
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email</label>
                 <Input
                   type="email"
                   value={adminEmail}
                   onChange={handleEmailChange}
                   placeholder="Enter admin email"
                   required
-                  className={emailError ? 'border-red-500' : ''}
+                  className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${emailError ? 'border-red-500' : ''}`}
                 />
                 {emailError && (
-                  <p className="text-red-500 text-sm mt-1">{emailError}</p>
+                  <p className="text-red-500 text-xs mt-1">{emailError}</p>
                 )}
               </div>
             </div>
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="bg-amazon-teal hover:bg-amazon-teal/90 disabled:opacity-50 w-full sm:w-auto">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold disabled:opacity-50">
                 {isInviting ? 'Sending...' : 'Send Invite'}
               </Button>
             </DialogFooter>
@@ -409,50 +416,53 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
             <DialogHeader>
-              <DialogTitle>Edit Admin</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Edit Admin</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <label className="block text-sm font-medium mb-2">First Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">First Name</label>
                 <Input
                   value={adminFirstName}
                   onChange={(e) => setAdminFirstName(e.target.value)}
                   placeholder="Enter first name"
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Last Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Last Name</label>
                 <Input
                   value={adminLastName}
                   onChange={(e) => setAdminLastName(e.target.value)}
                   placeholder="Enter last name"
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Email</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Email</label>
                 <Input
                   type="email"
                   value={adminEmail}
                   disabled
-                  className="bg-gray-100 cursor-not-allowed"
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-100 text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
                   placeholder="Email cannot be edited"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Phone Number</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Phone Number</label>
                 <Input
                   type="tel"
                   value={adminPhone}
                   onChange={(e) => setAdminPhone(e.target.value)}
                   placeholder="Enter phone number (optional)"
+                  className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 />
               </div>
             </div>
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button onClick={handleUpdateAdmin} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button onClick={handleUpdateAdmin} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
                 Update Admin
               </Button>
             </DialogFooter>
@@ -466,35 +476,35 @@ export function AdminManagement() {
             setSelectedAdmin(null);
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
             <DialogHeader>
-              <DialogTitle>Admin Details</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Admin Details</DialogTitle>
             </DialogHeader>
             {selectedAdmin && (
               <div className="space-y-4 py-4">
                 <div className="flex items-center space-x-4">
                   <AvatarInitials initials={`${selectedAdmin.first_name[0]}${selectedAdmin.last_name[0]}`} size="lg" />
                   <div>
-                    <h3 className="text-lg font-semibold">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedAdmin.email}</p>
+                    <h3 className="text-lg font-semibold text-slate-855">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
+                    <p className="text-sm text-slate-500">{selectedAdmin.email}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground">Status</label>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Status</label>
                     <Badge variant={selectedAdmin.is_verified ? 'success' : 'secondary'}>
                       {selectedAdmin.is_verified ? 'approved' : 'pending'}
                     </Badge>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-muted-foreground">Role</label>
-                    <p className="text-sm">{selectedAdmin.role}</p>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Role</label>
+                    <p className="text-sm font-semibold text-slate-700">{selectedAdmin.role}</p>
                   </div>
                 </div>
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto">Close</Button>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -506,18 +516,18 @@ export function AdminManagement() {
             setAdminToDelete(null);
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md">
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
             <DialogHeader>
-              <DialogTitle>Delete Admin</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Delete Admin</DialogTitle>
             </DialogHeader>
             <div className="py-4">
-              <p className="text-sm text-muted-foreground">
-                Are you sure you want to delete <strong>{adminToDelete?.first_name} {adminToDelete?.last_name}</strong>? This action cannot be undone.
+              <p className="text-sm text-slate-500 leading-relaxed">
+                Are you sure you want to delete <strong className="text-slate-800">{adminToDelete?.first_name} {adminToDelete?.last_name}</strong>? This action cannot be undone.
               </p>
             </div>
-            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0">
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto">Cancel</Button>
-              <Button variant="destructive" onClick={confirmDeleteAdmin} className="w-full sm:w-auto">
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button variant="destructive" onClick={confirmDeleteAdmin} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl">
                 Delete Admin
               </Button>
             </DialogFooter>

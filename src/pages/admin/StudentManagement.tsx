@@ -187,7 +187,7 @@ export function StudentManagement() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-background px-3 py-2 text-sm text-slate-700 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
         >
           <span className="truncate">
             {value.length === 0 ? placeholder : `${value.length} selected`}
@@ -195,12 +195,12 @@ export function StudentManagement() {
           <ChevronDown className="h-4 w-4 opacity-50" />
         </button>
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-            <div className="p-1 max-h-60 overflow-y-auto">
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-popover text-popover-foreground shadow-lg">
+            <div className="p-1.5 max-h-60 overflow-y-auto space-y-0.5">
               {options.map((option) => (
                 <div
                   key={option}
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  className="relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-slate-50 hover:text-slate-900"
                   onClick={() => handleMultiSelectChange(option, value, onValueChange)}
                 >
                   <div className="flex items-center space-x-2">
@@ -214,7 +214,7 @@ export function StudentManagement() {
                 </div>
               ))}
               {options.length === 0 && (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
                   No options available
                 </div>
               )}
@@ -549,38 +549,54 @@ export function StudentManagement() {
   }
   return <AdminLayout>
       <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
           <div className='px-3'>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Student Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage student enrollments and track progress
             </p>
           </div>
 
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard label="Total Students" value={students.length} icon={GraduationCap} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" />
-          <StatCard
-            label="Completion Rate"
-            value={<>{completionRate}%<div className="w-16 sm:w-20 lg:w-24 mt-2"><Progress value={completionRate} className="h-2" /></div></>}
-            icon={Users}
-            iconBgClass="bg-green-100"
-            iconColorClass="text-green-600"
-          />
-          <StatCard
-            label="Forms Pending"
-            value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
-            icon={AlertCircle}
-            iconBgClass="bg-amber-100"
-            iconColorClass="text-amber-600"
-            className="sm:col-span-2 lg:col-span-1"
-          />
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
+            <StatCard label="Total Students" value={students.length} icon={GraduationCap} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
+            <StatCard
+              label="Completion Rate"
+              value={
+                <div className="flex flex-col items-start gap-2">
+                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
+                    {completionRate}%
+                  </span>
+                  <div className="w-16 sm:w-20 lg:w-24">
+                    <Progress value={completionRate} className="h-2" />
+                  </div>
+                </div>
+              }
+              icon={Users}
+              iconBgClass="bg-green-100"
+              iconColorClass="text-green-600"
+              className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm"
+            />
+          </div>
+          <div className="animate-fade-in-up h-full sm:col-span-2 lg:col-span-1" style={{ animationDelay: '80ms' }}>
+            <StatCard
+              label="Forms Pending"
+              value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
+              icon={AlertCircle}
+              iconBgClass="bg-amber-100"
+              iconColorClass="text-amber-600"
+              className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm"
+            />
+          </div>
         </div>
-        <Card className="glass-card">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '80ms' }}>
           <CardContent className="p-0">
-            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-slate-50/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
@@ -597,7 +613,7 @@ export function StudentManagement() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input 
                     placeholder="Search students..." 
-                    className="pl-10 h-9 sm:h-10 bg-background text-sm" 
+                    className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500" 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                   />
@@ -607,7 +623,7 @@ export function StudentManagement() {
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-9 sm:h-10 relative flex-shrink-0"
+                    className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 relative flex-shrink-0"
                   >
                     {showFilters ? (
                       <><X className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden xs:inline">Hide </span>Filters</>
@@ -615,7 +631,7 @@ export function StudentManagement() {
                       <><Filter className="h-4 w-4 mr-1 sm:mr-2" />Filters</>
                     )}
                     {!showFilters && activeFilterCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white animate-pulse">
                         {activeFilterCount}
                       </span>
                     )}
@@ -632,7 +648,7 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
+                        <Button size="sm" className="h-10 sm:h-11 rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 flex-shrink-0">
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Export Selected ({selectedStudentsForBulkAction.length})</span>
                           <span className="sm:hidden">({selectedStudentsForBulkAction.length})</span>
@@ -685,7 +701,7 @@ export function StudentManagement() {
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-9 sm:h-10 flex-shrink-0"
+                      className="bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200 flex-shrink-0"
                     >
                       <GraduationCap className="h-4 w-4 sm:mr-2" />
                       <span className="hidden sm:inline">Transfer Selected ({selectedStudentsForBulkAction.length})</span>
@@ -696,7 +712,7 @@ export function StudentManagement() {
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
+                        <Button size="sm" className="h-10 sm:h-11 bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl transition-all duration-200 flex-shrink-0">
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Export All</span>
                         </Button>
@@ -708,7 +724,7 @@ export function StudentManagement() {
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" className="h-9 sm:h-10 flex-shrink-0" disabled>
+                      <Button size="sm" className="h-10 sm:h-11 rounded-xl flex-shrink-0" disabled>
                         <Download className="h-4 w-4 sm:mr-2" />
                         <span className="hidden sm:inline">Export All</span>
                       </Button>
@@ -719,13 +735,13 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="p-3 sm:p-4 bg-background rounded-lg border space-y-3">
+                <div className="p-3 sm:p-4 bg-background rounded-xl border border-slate-100 space-y-3">
                   {activeFilterCount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                      <span className="text-xs sm:text-sm text-slate-500 font-medium">
                         {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                       </span>
-                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11">
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
                         <X className="h-4 w-4 mr-2" />
                         Clear All
                       </Button>
@@ -818,7 +834,7 @@ export function StudentManagement() {
                 { header: 'Progress', className: 'text-right w-[12%]' },
               ]}
               rows={paginatedStudents.map((student, index) => (
-                <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
+                <tr key={student.id || `row-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
                   <td className="py-3 px-2 text-center">
                     <Checkbox
                       checked={selectedStudentsForBulkAction.includes(student.id)}
@@ -846,7 +862,7 @@ export function StudentManagement() {
                     </div>
                   </td>
                   <td className="py-3 px-2">
-                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
+                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-cyan-600 hover:text-cyan-700 transition-colors group">
                       <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
                       <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
                     </Link>
@@ -857,7 +873,7 @@ export function StudentManagement() {
                         <Link
                           to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
-                          className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
+                          className="text-cyan-600 hover:text-cyan-700 font-medium hover:underline transition-colors block truncate"
                         >
                           {student.parent.name}
                         </Link>
@@ -868,7 +884,7 @@ export function StudentManagement() {
                           <Link
                             to={`/admin/parents/${student.secondaryParent.id}`}
                             state={{ fromStudents: true }}
-                            className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
+                            className="text-cyan-600 hover:text-cyan-700 font-medium hover:underline transition-colors block truncate text-sm"
                           >
                             {student.secondaryParent.name}
                           </Link>
@@ -1101,11 +1117,11 @@ export function StudentManagement() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t space-y-2">
+                    <div className="pt-2 border-t border-slate-100 space-y-2">
                       <Button
                         variant="outline" size="sm"
                         onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}
-                        className="w-full h-7 text-xs"
+                        className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                       >
                         <Settings className="h-3 w-3 mr-1" />
                         Manage Forms
@@ -1113,7 +1129,7 @@ export function StudentManagement() {
                       <Button
                         variant="outline" size="sm"
                         onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}
-                        className="w-full h-7 text-xs"
+                        className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                       >
                         <School className="h-3 w-3 mr-1" />
                         Transfer Class
@@ -1123,10 +1139,10 @@ export function StudentManagement() {
                           variant="outline" size="sm"
                           disabled={downloadingEnrollmentId === student.enrollmentId}
                           onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                          className="w-full h-7 text-xs text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
+                          className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                         >
                           {downloadingEnrollmentId === student.enrollmentId
-                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-[#1a2740] border-t-transparent inline-block" />
                             : <Download className="h-3 w-3 mr-1" />}
                           Download All Forms
                         </Button>
@@ -1137,54 +1153,61 @@ export function StudentManagement() {
               ]}
             />
           </CardContent>
-        </Card>
+        </div>
       </div>
 
-      {/* Child Status Change Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Change Child Status</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Change Child Status</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-4 text-sm text-slate-500">
               Change status for <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong> to:
             </p>
             <Select value={newStatus} onValueChange={(v) => setNewStatus(v as 'active' | 'archive')}>
-              <SelectTrigger className="h-10 sm:h-11">
+              <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="archive">Archive</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsStatusDialogOpen(false)}
+              disabled={isUpdatingStatus}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+            >
               Cancel
             </Button>
-            <Button onClick={handleStatusChange} disabled={isUpdatingStatus} className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <Button
+              onClick={handleStatusChange}
+              disabled={isUpdatingStatus}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+            >
               {isUpdatingStatus ? 'Updating...' : 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Assign Form Dialog */}
       <Dialog open={isAssignFormDialogOpen} onOpenChange={setIsAssignFormDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-lg">
           <DialogHeader>
-            <DialogTitle>Assign Form to Students</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to Students</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Select Form</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Form</label>
               <Select value={selectedFormToAssign} onValueChange={setSelectedFormToAssign}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Choose a form to assign" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                   {availableForms.map(form => (
                     <SelectItem key={form.id} value={form.id}>
                       {form.name}
@@ -1195,24 +1218,24 @@ export function StudentManagement() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Search Students</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Search Students</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search by student name..."
                     value={assignDialogSearchTerm}
                     onChange={(e) => setAssignDialogSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Filter by Classroom</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter by Classroom</label>
                 <Select value={assignDialogClassroomFilter} onValueChange={setAssignDialogClassroomFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                     <SelectValue placeholder="All Classrooms" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     <SelectItem value="all">All Classrooms</SelectItem>
                     {allClassrooms.map(classroom => (
                       <SelectItem key={classroom} value={classroom}>
@@ -1224,25 +1247,25 @@ export function StudentManagement() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Select Students ({selectedStudentsForForm.length} selected)
               </label>
-              <div className="border rounded-lg max-h-60 overflow-y-auto">
+              <div className="border border-slate-100 rounded-xl max-h-60 overflow-y-auto">
                 {filteredAndSortedStudents.filter(student => {
                   const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
                   const matchesSearch = assignDialogSearchTerm === '' || 
                     `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
                   return matchesClassroom && matchesSearch;
                 }).map((student) => (
-                  <div key={student.id} className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-gray-50">
+                  <div key={student.id} className="flex items-center space-x-3 p-3 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50">
                     <Checkbox
                       checked={selectedStudentsForForm.includes(student.id)}
                       onCheckedChange={() => handleStudentSelectForForm(student.id)}
                     />
                     <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                     <div className="flex-1">
-                      <div className="font-medium">{student.firstName} {student.lastName}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium text-sm text-slate-900">{student.firstName} {student.lastName}</div>
+                      <div className="text-xs text-slate-400">
                         {student.classroom.name} • {student.parent.name}
                       </div>
                     </div>
@@ -1261,13 +1284,13 @@ export function StudentManagement() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
               onClick={handleAssignFormToStudents} 
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
               disabled={!selectedFormToAssign || selectedStudentsForForm.length === 0}
             >
               Assign Form ({selectedStudentsForForm.length} students)
@@ -1276,22 +1299,21 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Individual Student Form Assignment Dialog */}
       <Dialog open={isStudentFormDialogOpen} onOpenChange={(open) => {
         if (!open) {
           setIsStudentFormDialogOpen(false);
           setSelectedFormsToAdd([]);
         }
       }}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-lg">
+          <DialogHeader className="pb-4 border-b border-slate-100">
             <div className="flex items-center space-x-3">
               <AvatarInitials initials={`${selectedStudentForForms?.firstName[0] ?? ''}${selectedStudentForForms?.lastName[0] ?? ''}`} size="lg" />
               <div>
-                <DialogTitle className="text-xl font-semibold">
+                <DialogTitle className="text-xl font-bold text-slate-900">
                   {selectedStudentForForms?.firstName} {selectedStudentForForms?.lastName}
                 </DialogTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-500">
                   {selectedStudentForForms?.classroom.name} • {selectedStudentForForms?.parent.name}
                 </p>
               </div>
@@ -1302,7 +1324,7 @@ export function StudentManagement() {
             {/* Currently Assigned Forms */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Assigned Forms</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Forms</h3>
                 <Badge variant="secondary" className="text-xs">
                   {selectedStudentForForms?.assignedForms?.length || 0} forms
                 </Badge>
@@ -1365,7 +1387,7 @@ export function StudentManagement() {
             {/* Add New Forms */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Available Forms</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Forms</h3>
                 <Badge variant="outline" className="text-xs">
                   {selectedFormsToAdd.length} selected
                 </Badge>
@@ -1431,9 +1453,9 @@ export function StudentManagement() {
             </div>
           </div>
           
-          <DialogFooter className="pt-4 border-t">
+          <DialogFooter className="pt-4 border-t border-slate-100">
             <div className="flex items-center justify-between w-full">
-              <div className="text-sm text-muted-foreground">
+              <div className="text-sm text-slate-500">
                 {selectedFormsToAdd.length > 0 && (
                   <span>{selectedFormsToAdd.length} form{selectedFormsToAdd.length !== 1 ? 's' : ''} selected</span>
                 )}
@@ -1445,6 +1467,7 @@ export function StudentManagement() {
                     setIsStudentFormDialogOpen(false);
                     setSelectedFormsToAdd([]);
                   }}
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                 >
                   Cancel
                 </Button>
@@ -1475,7 +1498,7 @@ export function StudentManagement() {
                     }
 
                   }}
-                  className="bg-amazon-teal hover:bg-amazon-teal/90"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
                   disabled={selectedFormsToAdd.length === 0}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
@@ -1487,22 +1510,21 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Class Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md" preventClose>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Transfer Student to New Class</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Transfer Student to New Class</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="p-3 bg-gray-50 rounded-lg">
               <div className="font-medium">{selectedStudentForTransfer?.firstName} {selectedStudentForTransfer?.lastName}</div>
-              <div className="text-sm text-muted-foreground">Current: {selectedStudentForTransfer?.classroom.name}</div>
+              <div className="text-sm text-slate-500">Current: {selectedStudentForTransfer?.classroom.name}</div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">New Classroom</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">New Classroom</label>
               <Select value={newClassroomId} onValueChange={setNewClassroomId}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Select new classroom" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1519,8 +1541,8 @@ export function StudentManagement() {
             
 
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
@@ -1550,7 +1572,7 @@ export function StudentManagement() {
                   setIsTransferring(false);
                 }
               }}
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
               disabled={!newClassroomId || isTransferring}
             >
               {isTransferring ? 'Transferring...' : 'Transfer Student'}
@@ -1559,21 +1581,20 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Transfer Dialog */}
       <Dialog open={isBulkTransferDialogOpen} onOpenChange={setIsBulkTransferDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Bulk Grade Transfer</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Bulk Grade Transfer</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">From Grade/Class</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">From Grade/Class</label>
                 <Select value={bulkTransferFromGrade} onValueChange={setBulkTransferFromGrade} disabled={selectedStudentsForTransfer.length > 0}>
-                  <SelectTrigger className={selectedStudentsForTransfer.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}>
+                  <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${selectedStudentsForTransfer.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <SelectValue placeholder="Select current grade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     {availableClassrooms.map(classroom => (
                       <SelectItem key={classroom.id} value={classroom.id}>
                         {classroom.name}
@@ -1583,12 +1604,12 @@ export function StudentManagement() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">To Grade/Class</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">To Grade/Class</label>
                 <Select value={bulkTransferToGrade} onValueChange={setBulkTransferToGrade}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                     <SelectValue placeholder="Select target grade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     {availableClassrooms
                       .filter(classroom => classroom.id !== bulkTransferFromGrade)
                       .map(classroom => (
@@ -1603,10 +1624,10 @@ export function StudentManagement() {
             
             {bulkTransferFromGrade && (
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                   Select Students to Transfer ({selectedStudentsForTransfer.length} selected)
                 </label>
-                <div className="border rounded-lg max-h-80 overflow-y-auto">
+                <div className="border border-slate-100 rounded-xl max-h-80 overflow-y-auto">
                   {(selectedStudentsForTransfer.length > 0 
                     ? students.filter(student => selectedStudentsForTransfer.includes(student.id))
                     : students.filter(student => student.classroom.id === bulkTransferFromGrade)
@@ -1627,7 +1648,7 @@ export function StudentManagement() {
                       <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                       <div className="flex-1">
                         <div className="font-medium">{student.firstName} {student.lastName}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-slate-500">
                           {student.parent.name} • Progress: {student.enrollmentProgress}%
                         </div>
                       </div>
@@ -1646,8 +1667,8 @@ export function StudentManagement() {
                   )}
                 </div>
                 
-                {selectedStudentsForTransfer.length === 0 && students.filter(student => student.classroom.id === bulkTransferFromGrade).length > 0 && (
-                  <div className="flex justify-between items-center mt-2">
+                 {selectedStudentsForTransfer.length === 0 && students.filter(student => student.classroom.id === bulkTransferFromGrade).length > 0 && (
+                  <div className="flex justify-between items-center mt-3">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1657,6 +1678,7 @@ export function StudentManagement() {
                           .map(student => student.id);
                         setSelectedStudentsForTransfer(allStudentIds);
                       }}
+                      className="rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                     >
                       Select All
                     </Button>
@@ -1664,6 +1686,7 @@ export function StudentManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedStudentsForTransfer([])}
+                      className="rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                     >
                       Clear All
                     </Button>
@@ -1672,14 +1695,14 @@ export function StudentManagement() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => {
               setIsBulkTransferDialogOpen(false);
               setSelectedStudentsForTransfer([]);
               setBulkTransferFromGrade('');
               setBulkTransferToGrade('');
               setSelectedStudentsForBulkAction([]);
-            }}>
+            }} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
@@ -1716,7 +1739,7 @@ export function StudentManagement() {
                   showToast('error', 'Error transferring students. Please try again.');
                 }
               }}
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
               disabled={!bulkTransferToGrade || selectedStudentsForTransfer.length === 0}
             >
               Transfer {selectedStudentsForTransfer.length} Students

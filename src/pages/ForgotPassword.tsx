@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { Button } from '../components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { useToast } from '../contexts/ToastContext';
 import { httpFetch } from '../services/api/http';
 
@@ -15,27 +14,15 @@ export function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim()) {
-      showToast('error', 'Please enter your email address');
-      return;
-    }
+    if (!email.trim()) { showToast('error', 'Please enter your email address'); return; }
 
     const selectedSchool = localStorage.getItem('selectedSchool');
     const schoolId = selectedSchool ? JSON.parse(selectedSchool).id : null;
-
-    if (!schoolId) {
-      showToast('error', 'Please select a school first.', 'School Required');
-      navigate('/select-school');
-      return;
-    }
+    if (!schoolId) { showToast('error', 'Please select a school first.', 'School Required'); navigate('/'); return; }
 
     setIsLoading(true);
     try {
-      await httpFetch({
-        method: 'POST',
-        url: '/auth/forgot-password',
-        body: { email: email.trim(), school_id: schoolId },
-      });
+      await httpFetch({ method: 'POST', url: '/auth/forgot-password', body: { email: email.trim(), school_id: schoolId } });
       setIsEmailSent(true);
       showToast('success', 'Password reset email sent successfully');
     } catch (err) {
@@ -45,111 +32,102 @@ export function ForgotPassword() {
     }
   };
 
-  if (isEmailSent) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-sm space-y-4">
-          <div className="text-center space-y-3">
-            <div className="flex justify-center">
-              <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
-            </div>
-          </div>
-          <Card className="glass-card">
-            <CardHeader className="pb-3 pt-5 px-5">
-              <CardTitle className="text-center text-lg">Check Your Email</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 text-center space-y-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto">
-                <Mail className="w-7 h-7 sm:w-8 sm:h-8 text-green-600" />
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50/60 px-4 py-10">
+      <div className="w-full max-w-md space-y-6">
+        {/* Logo */}
+        <div className="text-center">
+          <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-12 w-auto mx-auto" />
+        </div>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-7 sm:p-9">
+          {isEmailSent ? (
+            /* ── Success state ── */
+            <div className="text-center space-y-5">
+              <div className="flex justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                </div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm text-foreground">
-                  We've sent a password reset link to:
+                <h2 className="text-xl font-bold text-slate-900">Check your email</h2>
+                <p className="text-sm text-slate-500">
+                  We sent a password reset link to
                 </p>
-                <p className="text-sm font-medium text-amazon-teal break-all">{email}</p>
-                <p className="text-xs text-muted-foreground">
-                  Please check your email and follow the instructions to reset your password.
+                <p className="text-sm font-semibold text-cyan-700 break-all">{email}</p>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Check your inbox and follow the instructions to reset your password. The link expires in 24 hours.
                 </p>
               </div>
               <Link to="/login">
-                <Button className="w-full bg-amazon-teal hover:bg-amazon-teal/90">
+                <Button className="w-full h-11 rounded-xl bg-[#0891b2] hover:bg-[#0e7490] text-white text-sm font-semibold">
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Back to Login
+                  Back to Sign In
                 </Button>
               </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+            </div>
+          ) : (
+            /* ── Form state ── */
+            <>
+              <div className="mb-6 space-y-1">
+                <h2 className="text-xl font-bold text-slate-900">Forgot your password?</h2>
+                <p className="text-sm text-slate-500">
+                  Enter your email and we'll send you a reset link.
+                </p>
+              </div>
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-amazon-teal/5 via-background to-amazon-orange/5 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm space-y-4">
-        <div className="text-center space-y-3">
-          <div className="flex justify-center">
-            <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
-          </div>
-          <div className="space-y-1">
-            <h1 className="text-xl font-semibold text-foreground">
-              Forgot Password?
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Enter your email to receive a reset link
-            </p>
-          </div>
-        </div>
-        <Card className="glass-card">
-          <CardHeader className="pb-3 pt-5 px-5">
-            <CardTitle className="text-center text-lg">Reset Password</CardTitle>
-          </CardHeader>
-          <CardContent className="px-5 pb-5">
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-foreground">
-                  Email Address
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <input
-                    id="email"
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-input rounded-md bg-background/50 backdrop-blur-xs focus:outline-none focus:ring-2 focus:ring-amazon-teal focus:border-transparent transition-all text-sm"
-                    placeholder="Enter your email"
-                    autoComplete="email"
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-amazon-teal hover:bg-amazon-teal/90 text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed py-3"
-              >
-                {isLoading ? (
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                    Sending...
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label htmlFor="email" className="block text-xs font-semibold text-slate-500 uppercase tracking-widest">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                    <input
+                      id="email"
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                    />
                   </div>
-                ) : (
-                  'Send Reset Link'
-                )}
-              </Button>
-              <div className="text-center">
-                <Link to="/login" className="text-sm text-amazon-teal hover:text-amazon-teal/80 transition-colors inline-flex items-center justify-center gap-1">
-                  <ArrowLeft className="w-3 h-3" />
-                  Back to Login
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-        <div className="text-center text-xs sm:text-sm text-muted-foreground pb-2">
-          <p>© 2024 Goddard School. All rights reserved.</p>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-11 rounded-xl bg-[#0891b2] hover:bg-[#0e7490] text-white text-sm font-semibold"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      Sending…
+                    </span>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </Button>
+
+                <div className="text-center">
+                  <Link
+                    to="/login"
+                    className="inline-flex items-center gap-1.5 text-sm text-cyan-600 hover:text-cyan-700 font-medium transition-colors"
+                  >
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back to Sign In
+                  </Link>
+                </div>
+              </form>
+            </>
+          )}
         </div>
+
+        <p className="text-center text-xs text-slate-400">
+          © {new Date().getFullYear()} Goddard School. All rights reserved.
+        </p>
       </div>
     </div>
   );

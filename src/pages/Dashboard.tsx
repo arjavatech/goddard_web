@@ -322,7 +322,7 @@ export function Dashboard() {
   const handleFormCompleted = () => {
     setRefreshTrigger(prev => prev + 1);
   };
-  return <div className="min-h-screen bg-background flex flex-col">
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
       <main className="flex-1 container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
         {error && <div className="mb-3 sm:mb-4 rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-sm text-red-700">

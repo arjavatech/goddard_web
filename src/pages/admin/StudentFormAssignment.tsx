@@ -83,18 +83,18 @@ export function StudentFormAssignment() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Student Form Assignment
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Assign forms to specific students
             </p>
           </div>
           <Button 
-            className="bg-amazon-teal hover:bg-amazon-teal/90"
+            className="bg-[#0891b2] hover:bg-[#0e7490]"
             onClick={() => setIsAssignDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -108,7 +108,7 @@ export function StudentFormAssignment() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Students</p>
+                  <p className="text-sm text-slate-500">Total Students</p>
                   <p className="text-2xl font-bold">{students.length}</p>
                 </div>
                 <User className="w-8 h-8 text-amazon-teal" />
@@ -119,7 +119,7 @@ export function StudentFormAssignment() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Available Forms</p>
+                  <p className="text-sm text-slate-500">Available Forms</p>
                   <p className="text-2xl font-bold">{forms.length}</p>
                 </div>
                 <FileText className="w-8 h-8 text-amazon-teal" />
@@ -130,7 +130,7 @@ export function StudentFormAssignment() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground">Active Assignments</p>
+                  <p className="text-sm text-slate-500">Active Assignments</p>
                   <p className="text-2xl font-bold">{assignments.length}</p>
                 </div>
                 <Calendar className="w-8 h-8 text-amazon-teal" />
@@ -155,13 +155,13 @@ export function StudentFormAssignment() {
                       </div>
                       <div>
                         <h3 className="font-medium">{assignment.studentName}</h3>
-                        <p className="text-sm text-muted-foreground">{assignment.formName}</p>
+                        <p className="text-sm text-slate-500">{assignment.formName}</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3">
                     <div className="text-right">
-                      <p className="text-sm text-muted-foreground">Assigned: {assignment.assignedDate}</p>
+                      <p className="text-sm text-slate-500">Assigned: {assignment.assignedDate}</p>
                       <Badge variant={assignment.status === 'completed' ? 'success' : 'secondary'}>
                         {assignment.status}
                       </Badge>
@@ -258,7 +258,7 @@ export function StudentFormAssignment() {
                       </div>
                       <div className="flex-1">
                         <div className="font-medium">{student.name}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-slate-500">
                           {student.classroom} • {student.parent}
                         </div>
                       </div>
@@ -278,7 +278,7 @@ export function StudentFormAssignment() {
               </Button>
               <Button 
                 onClick={handleAssignForm} 
-                className="bg-amazon-teal hover:bg-amazon-teal/90"
+                className="bg-[#0891b2] hover:bg-[#0e7490]"
                 disabled={!selectedForm || selectedStudents.length === 0}
               >
                 Assign Form ({selectedStudents.length} students)

@@ -321,20 +321,20 @@ export function FormsManagement() {
   }
 
   return <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto lg:space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Forms Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage form templates and assignments
             </p>
           </div>
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
+        }} className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
@@ -342,7 +342,7 @@ export function FormsManagement() {
         {loading ? (
           <div className="flex items-center justify-center min-h-[400px] bg-white rounded-lg border border-gray-100 shadow-sm">
             <div className="text-center">
-              <div className="animate-spin rounded-full border-b-2 border-amazon-teal mx-auto mb-4 h-8 w-8"></div>
+              <div className="animate-spin rounded-full border-b-2 border-[#1a2740] mx-auto mb-4 h-8 w-8"></div>
               <p className="text-muted-foreground text-sm font-medium">Loading forms management...</p>
             </div>
           </div>
@@ -350,79 +350,87 @@ export function FormsManagement() {
           <>
         
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Forms
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{forms.length}</p>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
+            <Card className="h-full rounded-2xl border border-slate-100 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm">
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 truncate">
+                      Total Forms
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">{forms.length}</p>
+                  </div>
+                  <div className="p-2 sm:p-2.5 bg-cyan-50 rounded-xl flex-shrink-0 ml-2">
+                    <FileText className="h-5 w-5 text-cyan-600" />
+                  </div>
                 </div>
-                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
+            <Card className="h-full rounded-2xl border border-slate-100 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm">
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 truncate">
+                      Active Forms
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                      {forms.filter(f => f.status === 'active').length}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-2.5 bg-green-50 rounded-xl flex-shrink-0 ml-2">
+                    <FileText className="h-5 w-5 text-green-600" />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Active Forms
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'active').length}
-                  </p>
+              </CardContent>
+            </Card>
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
+            <Card className="h-full rounded-2xl border border-slate-100 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm">
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 truncate">
+                      Default Forms
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                      {forms.filter(f => f.status === 'school_default').length}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-2.5 bg-amber-50 rounded-xl flex-shrink-0 ml-2">
+                    <FileText className="h-5 w-5 text-amber-600" />
+                  </div>
                 </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+              </CardContent>
+            </Card>
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '120ms' }}>
+            <Card className="h-full rounded-2xl border border-slate-100 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm">
+              <CardContent className="p-4 sm:p-5 lg:p-6">
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-1 truncate">
+                      Inactive Forms
+                    </p>
+                    <p className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+                      {forms.filter(f => f.status === 'inactive').length}
+                    </p>
+                  </div>
+                  <div className="p-2 sm:p-2.5 bg-gray-50 rounded-xl flex-shrink-0 ml-2">
+                    <FileText className="h-5 w-5 text-gray-500" />
+                  </div>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Default Forms
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'school_default').length}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Inactive Forms
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">
-                    {forms.filter(f => f.status === 'inactive').length}
-                  </p>
-                </div>
-                <div className="p-2 sm:p-3 bg-gray-100 rounded-full flex-shrink-0 ml-2">
-                  <FileText className="h-5 w-5 sm:h-6 sm:w-6 text-gray-400" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
         
-        <Card className="glass-card">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '160ms' }}>
           <CardContent className="p-0">
-            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-slate-50/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-semibold">Form Directory</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900">Form Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
                   {sortedForms.length} of {forms.length} forms
                 </div>
@@ -440,11 +448,11 @@ export function FormsManagement() {
                 </TabsList>
               </Tabs>
               
-              <div className="relative mb-3 sm:mb-4">
+               <div className="relative mb-3 sm:mb-4">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search forms..." 
-                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
+                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
@@ -452,9 +460,9 @@ export function FormsManagement() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status Filter</label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full h-10 sm:h-11">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Status Filter</label>
+                   <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -466,10 +474,10 @@ export function FormsManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label>
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between">
+                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
                         {sortOrder === 'asc'
                           ? <ArrowUp className="h-4 w-4 mr-2" />
                           : <ArrowDown className="h-4 w-4 mr-2" />}
@@ -505,7 +513,7 @@ export function FormsManagement() {
                 { header: 'Actions', className: 'w-1/8 text-center' },
               ]}
               rows={paginatedForms.map(form => (
-                <tr key={form.id} className="border-b border-gray-100">
+                <tr key={form.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
                   <td className="py-3 px-3">
                     <div className="flex items-center">
                       <div className="min-w-0">
@@ -518,8 +526,8 @@ export function FormsManagement() {
                       {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
                     </div>
                   </td>
-                  <td className="py-3 px-2 pr-10">
-                    <div className="flex items-center text-amazon-teal min-w-0">
+                   <td className="py-3 px-2 pr-10">
+                    <div className="flex items-center text-[#1a2740] min-w-0">
                       <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
                       {form.link ? (
                         <>
@@ -585,7 +593,7 @@ export function FormsManagement() {
             />
 
             {/* Mobile Card View */}
-            <MobileCardList
+             <MobileCardList
               className="lg:hidden p-3 sm:p-4"
               loading={loading}
               loadingMessage="Loading forms..."
@@ -595,7 +603,7 @@ export function FormsManagement() {
               onPageChange={setCurrentPage}
               gridClassName="space-y-2 sm:space-y-3"
               cards={paginatedForms.map(form => (
-                <Card key={form.id} className="p-3 sm:p-4">
+                <Card key={form.id} className="p-3 sm:p-4 rounded-2xl border border-slate-100 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200 shadow-sm bg-white">
                   <div className="flex justify-between items-start mb-3 gap-2">
                     <h3 className="font-semibold text-foreground text-sm sm:text-base truncate flex-1">{form.name}</h3>
                     <DropdownMenu>
@@ -639,7 +647,7 @@ export function FormsManagement() {
                       </div>
                     </div>
                     
-                    <div className="flex items-start space-x-2 text-amazon-teal min-w-0">
+                     <div className="flex items-start space-x-2 text-[#1a2740] min-w-0">
                       <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
                       {form.link ? (
                         <>
@@ -668,7 +676,7 @@ export function FormsManagement() {
               ))}
             />
           </CardContent>
-        </Card>
+        </div>
         </>
       )}
       </div>
@@ -693,13 +701,13 @@ export function FormsManagement() {
       />
       {/* Edit Form Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Edit Form</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Edit Form</DialogTitle>
           </DialogHeader>
           <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Form Name
               </label>
               <Input 
@@ -711,7 +719,7 @@ export function FormsManagement() {
                   }
                 }} 
                 placeholder="Enter form name" 
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${formErrors.formName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
               {formErrors.formName && (
@@ -719,7 +727,7 @@ export function FormsManagement() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Form Link
               </label>
               <Input 
@@ -731,19 +739,19 @@ export function FormsManagement() {
                   }
                 }} 
                 placeholder="https://example.com/form" 
-                className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${formErrors.formLink ? 'border-red-500' : ''}`} 
               />
               {formErrors.formLink && (
                 <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Status</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Status</label>
               <Select value={formStatus} onValueChange={value => setFormStatus(value as FormStatus)}>
-                <SelectTrigger className="h-10 sm:h-11">
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                   <SelectItem value="active">Active</SelectItem>
                   <SelectItem value="school_default">Default</SelectItem>
                   <SelectItem value="inactive">Inactive</SelectItem>
@@ -751,25 +759,24 @@ export function FormsManagement() {
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Due Date (Optional)</label>
               <Input
                 type="date"
                 value={formDueDate}
                 onChange={e => setFormDueDate(e.target.value)}
-                className="w-full h-10 sm:h-11"
+                className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 min={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-muted-foreground mt-1">
                 
               </p>
             </div>
-
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleEditForm} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!formName.trim() || !formLink.trim()}>
+            <AsyncButton onClick={handleEditForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold" disabled={!formName.trim() || !formLink.trim()}>
               Save Changes
             </AsyncButton>
           </DialogFooter>
@@ -779,23 +786,23 @@ export function FormsManagement() {
 
       {/* Assign to All Students Dialog */}
       <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md">
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg">
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Assign Form to All Students</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All Students</DialogTitle>
           </DialogHeader>
           <div className="py-3 sm:py-4">
-            <p className="text-sm sm:text-base text-gray-600">
+            <p className="text-sm sm:text-base text-slate-500">
               Are you sure you want to assign{' '}
-              <span className="font-medium">{selectedFormForAssign?.name}</span>{' '}
+              <span className="font-semibold text-slate-800">{selectedFormForAssign?.name}</span>{' '}
               to all students in the school? This will add the form to every student's enrollment.
             </p>
             <div className="mt-4">
-              <label className="block text-sm font-medium mb-2">Due Date (Optional)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Due Date (Optional)</label>
               <Input
                 type="date"
                 value={formDueDate}
                 onChange={e => setFormDueDate(e.target.value)}
-                className="w-full h-10 sm:h-11"
+                className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 min={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-muted-foreground mt-1">
@@ -804,10 +811,10 @@ export function FormsManagement() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAssignToAllStudents} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <AsyncButton onClick={handleAssignToAllStudents} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
               Assign to All Students
             </AsyncButton>
           </DialogFooter>

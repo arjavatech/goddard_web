@@ -71,13 +71,13 @@ export function ClientManagement() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Client Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage all school clients and their details
             </p>
           </div>
@@ -85,7 +85,7 @@ export function ClientManagement() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -100,7 +100,7 @@ export function ClientManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function ClientManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+          <Card className="glass-card hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -230,7 +230,7 @@ export function ClientManagement() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{selectedClient.name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
+                    <p className="text-sm text-slate-500">{selectedClient.email}</p>
                     <Badge variant={selectedClient.status === 'Active' ? 'success' : 'warning'} className="mt-1">
                       {selectedClient.status}
                     </Badge>
@@ -245,14 +245,14 @@ export function ClientManagement() {
                         <Mail className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Phone className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Phone</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.phone}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.phone}</p>
                         </div>
                       </div>
                     </div>
@@ -265,23 +265,23 @@ export function ClientManagement() {
                         <Building className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">School Name</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolName}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolName}</p>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Subdomain</p>
-                        <p className="text-sm text-muted-foreground">{selectedClient.schoolSubdomain}</p>
+                        <p className="text-sm text-slate-500">{selectedClient.schoolSubdomain}</p>
                       </div>
                       {selectedClient.schoolSettings?.timezone && (
                         <div>
                           <p className="text-sm font-medium">Timezone</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolSettings.timezone}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolSettings.timezone}</p>
                         </div>
                       )}
                       {selectedClient.schoolSettings?.enrollment_capacity && (
                         <div>
                           <p className="text-sm font-medium">Enrollment Capacity</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolSettings.enrollment_capacity}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolSettings.enrollment_capacity}</p>
                         </div>
                       )}
                     </div>

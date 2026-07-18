@@ -63,7 +63,7 @@ export function ParentGuideContent() {
     <div className="space-y-5">
       <div className="flex items-center gap-3 p-3 rounded-lg bg-amazon-teal/5 border border-amazon-teal/20">
         <BookOpen className="h-5 w-5 text-amazon-teal shrink-0" />
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-slate-500">
           This guide walks you through everything you need to complete your child's enrollment at The Goddard School.
         </p>
       </div>

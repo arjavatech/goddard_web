@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '../ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { NotificationBell } from '../notifications/NotificationBell';
+
 export function Header() {
   const { userData } = useUserContext();
   const navigate = useNavigate();
@@ -14,87 +15,111 @@ export function Header() {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  const initials = userData?.firstName && userData?.lastName
+    ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
+    : 'P';
+
+  const displayName = userData?.firstName && userData?.lastName
+    ? `${userData.firstName} ${userData.lastName}`
+    : 'Parent User';
+
   const handleLogout = () => {
-    // Clear all stored data to reset tokens, auth state, and user data completely
     localStorage.clear();
     sessionStorage.clear();
-    
-    // Sign out in background (don't await)
-    signOut().catch(err => console.error('Logout error during Header sign out:', err));
-    
-    // Immediately redirect - don't wait for signOut
+    signOut().catch(err => console.error('Logout error:', err));
     window.location.href = '/';
   };
-  return <header className="bg-white shadow-sm border-b border-gray-100 py-3 sm:py-4 px-4 sm:px-6 flex items-center justify-between">
-      <div className="flex items-center space-x-2">
-        <img src="./images/gs_logo_lynnwood.png" alt="App Logo" className="h-12 sm:h-16 w-auto" />
-      </div>
-      <div className="flex items-center gap-2">
-        <NotificationBell enabled={!!userData} />
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
-              {userData?.firstName && userData?.lastName
-                ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-                : 'P'}
-            </div>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
-          <div className="p-4 border-b border-gray-100">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                <User className="w-5 h-5 text-gray-600" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-semibold text-gray-900">
-                  {userData?.firstName && userData?.lastName
-                    ? `${userData.firstName} ${userData.lastName}`
-                    : 'Parent User'}
-                </p>
-                <p className="text-xs text-gray-500">Parent</p>
-              </div>
-            </div>
-          </div>
-          <div className="p-3">
-            <button 
-              onClick={() => setShowLogoutModal(true)}
-              className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Logout
-            </button>
-          </div>
-        </DropdownMenuContent>
-      </DropdownMenu>
-      </div>
 
-      {/* Logout Confirmation Modal */}
+  return (
+    <>
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <div className="flex items-center gap-3 shrink-0">
+            <img
+              src="./images/gs_logo_lynnwood.png"
+              alt="The Goddard School"
+              className="h-10 sm:h-11 w-auto object-contain"
+            />
+          </div>
+
+          {/* Right side */}
+          <div className="flex items-center gap-2">
+            <NotificationBell enabled={!!userData} />
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                  {/* Avatar */}
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                    {initials}
+                  </div>
+                  <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-[120px] truncate">
+                    {displayName}
+                  </span>
+                  <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-slate-400" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                {/* Profile header */}
+                <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
+                      {initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+                      <p className="text-xs text-slate-400">Parent</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Logout button */}
+                <div className="p-2">
+                  <button
+                    onClick={() => setShowLogoutModal(true)}
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+      </header>
+
+      {/* Logout confirmation */}
       <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-        <DialogContent preventClose>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl" preventClose>
           <DialogHeader>
-            <DialogTitle>Confirm Logout</DialogTitle>
+            <DialogTitle>Sign out?</DialogTitle>
             <DialogDescription>
-              Are you sure you want to logout? You will need to sign in again to access your dashboard.
+              You'll need to sign in again to access your parent dashboard.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2">
-            <Button variant="outline" onClick={() => setShowLogoutModal(false)} className="w-full sm:w-auto">
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-1">
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)} className="w-full sm:w-auto rounded-xl">
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleLogout} disabled={isLoggingOut} className="w-full sm:w-auto">
+            <Button
+              variant="destructive"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="w-full sm:w-auto rounded-xl"
+            >
               {isLoggingOut ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Logging...
-                </>
+                <span className="flex items-center gap-2">
+                  <span className="h-3.5 w-3.5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  Signing out…
+                </span>
               ) : (
-                'Logout'
+                'Sign out'
               )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </header>;
+    </>
+  );
 }

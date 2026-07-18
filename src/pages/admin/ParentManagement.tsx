@@ -605,63 +605,42 @@ export function ParentManagement() {
   }
 
   return <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0 overflow-y-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
-              Parent Management
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Manage parent accounts and family information
-            </p>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Management</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Manage parent accounts and family information</p>
           </div>
-          <Button onClick={() => {
-          resetInviteForm();
-          setInviteFormErrors({});
-          loadClassroomsIfNeeded();
-          setIsInviteDialogOpen(true);
-        }} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
+          <Button onClick={() => { resetInviteForm(); setInviteFormErrors({}); loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
+            className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
           </Button>
         </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard 
-            label="Total Parents" 
-            value={parents.length} 
-            icon={Users} 
-            iconBgClass="bg-amazon-teal/10" 
-            iconColorClass="text-amazon-teal" 
-          />
-          <StatCard 
-            label="Signed Up" 
-            value={parents.filter(p => p.signupStatus === 'Signed').length} 
-            icon={CheckCircle} 
-            iconBgClass="bg-green-100" 
-            iconColorClass="text-green-600" 
-          />
-          <StatCard 
-            label="Pending Signup" 
-            value={parents.filter(p => p.signupStatus === 'Not Signed').length} 
-            icon={Clock} 
-            iconBgClass="bg-amber-100" 
-            iconColorClass="text-amber-600" 
-            className="sm:col-span-2 lg:col-span-1" 
-          />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
+            <StatCard label="Total Parents" value={parents.length} icon={Users} iconBgClass="bg-cyan-50" iconColorClass="text-cyan-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
+            <StatCard label="Signed Up" value={parents.filter(p=>p.signupStatus==='Signed').length} icon={CheckCircle} iconBgClass="bg-emerald-50" iconColorClass="text-emerald-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
+            <StatCard label="Pending Signup" value={parents.filter(p=>p.signupStatus==='Not Signed').length} icon={Clock} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
         </div>
-        <Card className="glass-card h-fit">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up h-fit" style={{ animationDelay: '120ms' }}>
           <CardContent className="p-0 overflow-hidden">
-            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
+            <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-semibold">Parent Directory</h2>
+                <h2 className="text-lg sm:text-xl font-bold text-slate-900">Parent Directory</h2>
                 <div className="flex items-center gap-3">
-                  <div className="text-xs sm:text-sm text-muted-foreground">
+                  <div className="text-xs sm:text-sm text-slate-500">
                     {sortedParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
                   </div>
                   {sortedParents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                        <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-9 sm:h-10 transition-all duration-200">
                           <Download className="h-4 w-4 mr-2" />
                           Export
                         </Button>
@@ -677,9 +656,8 @@ export function ParentManagement() {
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" disabled>
+                      <Button size="sm" className="bg-white text-[#1a2740]/40 border-2 border-[#1a2740]/20 rounded-xl h-9 sm:h-10 cursor-not-allowed" disabled>
                         <Download className="h-4 w-4 mr-2" />
-                        Export
                       </Button>
                     </div>
                   )}
@@ -699,7 +677,7 @@ export function ParentManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search parents by name or email..." 
-                  className="pl-10 h-10 sm:h-11 bg-background text-sm sm:text-base" 
+                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
@@ -708,9 +686,9 @@ export function ParentManagement() {
               {/* Filters */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Signup Status</label>
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Signup Status</label>
                   <Select value={signupFilter} onValueChange={setSignupFilter}>
-                    <SelectTrigger className="h-10 sm:h-11">
+                    <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                       <SelectValue placeholder="Signup status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -721,7 +699,7 @@ export function ParentManagement() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-muted-foreground">Sort By</label><br />
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label><br />
                   <SortDropdown
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
@@ -751,7 +729,7 @@ export function ParentManagement() {
                 { header: 'Actions', className: 'w-1/6 text-center' },
               ]}
               rows={paginatedParents.map((parent, index) => (
-                <tr key={parent.id || `parent-${index}`} className="border-b border-gray-100 hover:bg-muted/50">
+                <tr key={parent.id || `parent-${index}`} className="border-b border-gray-100 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
                   <td className="py-3 px-3 max-w-0">
                     <div className="flex items-center gap-2">
                       <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
@@ -823,7 +801,7 @@ export function ParentManagement() {
                   <td className="py-3 px-2 text-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -909,7 +887,7 @@ export function ParentManagement() {
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0">
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 rounded-xl">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
@@ -1029,7 +1007,7 @@ export function ParentManagement() {
               ))}
             />
           </CardContent>
-        </Card>
+        </div>
       </div>
       {/* Invite Parent Dialog */}
       <InviteParentModal
@@ -1074,16 +1052,16 @@ export function ParentManagement() {
       />
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4 rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">
+            <DialogTitle className="text-lg font-bold text-slate-900">
               Add Child to {selectedParent?.firstName}{' '}
               {selectedParent?.lastName}
             </DialogTitle>
           </DialogHeader>
           <div className="py-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 First Name
               </label>
               <Input 
@@ -1096,15 +1074,15 @@ export function ParentManagement() {
                   }
                 }} 
                 placeholder="Enter first name" 
-                className={`w-full ${addChildFormErrors.newChildFirstName ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildFirstName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
               {addChildFormErrors.newChildFirstName && (
-                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildFirstName}</p>
+                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildFirstName}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Last Name
               </label>
               <Input 
@@ -1117,14 +1095,14 @@ export function ParentManagement() {
                   }
                 }} 
                 placeholder="Enter last name" 
-                className={`w-full ${addChildFormErrors.newChildLastName ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildLastName ? 'border-red-500' : ''}`} 
               />
               {addChildFormErrors.newChildLastName && (
-                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildLastName}</p>
+                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildLastName}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Date of Birth (Optional)
               </label>
               <Input 
@@ -1136,16 +1114,16 @@ export function ParentManagement() {
                     setAddChildFormErrors(prev => ({...prev, newChildDob: ''}));
                   }
                 }} 
-                className={`w-full ${addChildFormErrors.newChildDob ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildDob ? 'border-red-500' : ''}`} 
                 min="2000-01-01" 
                 max="2020-12-31" 
               />
               {addChildFormErrors.newChildDob && (
-                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildDob}</p>
+                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildDob}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Gender
               </label>
               <Select value={newChildGender} onValueChange={(value) => {
@@ -1154,21 +1132,21 @@ export function ParentManagement() {
                   setAddChildFormErrors(prev => ({...prev, newChildGender: ''}));
                 }
               }}>
-                <SelectTrigger className={addChildFormErrors.newChildGender ? 'border-red-500' : ''}>
+                <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildGender ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                   <SelectItem value="male">Male</SelectItem>
                   <SelectItem value="female">Female</SelectItem>
                   <SelectItem value="others">Others</SelectItem>
                 </SelectContent>
               </Select>
               {addChildFormErrors.newChildGender && (
-                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildGender}</p>
+                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildGender}</p>
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Classroom
               </label>
               <Select value={newChildClassroom} onValueChange={(value) => {
@@ -1177,25 +1155,25 @@ export function ParentManagement() {
                   setAddChildFormErrors(prev => ({...prev, newChildClassroom: ''}));
                 }
               }}>
-                <SelectTrigger className={addChildFormErrors.newChildClassroom ? 'border-red-500' : ''}>
+                <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildClassroom ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select a classroom" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                   {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
                       {classroom.name}
                     </SelectItem>)}
                 </SelectContent>
               </Select>
               {addChildFormErrors.newChildClassroom && (
-                <p className="text-sm text-red-600 mt-1">{addChildFormErrors.newChildClassroom}</p>
+                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildClassroom}</p>
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddChild} className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <AsyncButton onClick={handleAddChild} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
               Add Child
             </AsyncButton>
           </DialogFooter>
@@ -1204,27 +1182,27 @@ export function ParentManagement() {
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4 rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Deactivate Parent</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Deactivate Parent</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Are you sure you want to deactivate{' '}
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-slate-800">
                 {parentToDeactivate?.firstName} {parentToDeactivate?.lastName}
               </span>
               ? This action will remove their access.
             </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setParentToDeactivate(null)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setParentToDeactivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeactivateParent}
-              className="bg-red-600 hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto h-9 sm:h-10 rounded-xl"
               disabled={deactivatingParentId === parentToDeactivate?.id}
             >
               {deactivatingParentId === parentToDeactivate?.id ? (
@@ -1245,36 +1223,36 @@ export function ParentManagement() {
 
       {/* Activate Confirmation Dialog */}
       <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4 rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Activate Parent</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Activate Parent</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Are you sure you want to activate{' '}
-              <span className="font-semibold text-foreground">
+              <span className="font-semibold text-slate-800">
                 {parentToActivate?.firstName} {parentToActivate?.lastName}
               </span>
               ? This will restore their access.
             </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setParentToActivate(null)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setParentToActivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button
               onClick={handleActivateParent}
-              className="bg-green-600 hover:bg-green-700"
+              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto h-9 sm:h-10 rounded-xl text-white font-medium flex items-center justify-center gap-1.5"
               disabled={activatingParentId === parentToActivate?.id}
             >
               {activatingParentId === parentToActivate?.id ? (
                 <>
-                  <UserCheck className="h-4 w-4 mr-2 animate-spin" />
+                  <UserCheck className="h-4 w-4 animate-spin" />
                   Activating...
                 </>
               ) : (
                 <>
-                  <UserCheck className="h-4 w-4 mr-2" />
+                  <UserCheck className="h-4 w-4" />
                   Activate
                 </>
               )}

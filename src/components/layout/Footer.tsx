@@ -11,95 +11,71 @@ export function Footer() {
   const { schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
 
   return (
-    <footer className="relative bg-amazon-teal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-5 sm:gap-6 pb-4 sm:pb-5 border-b border-white/20">
-
-          {/* Brand */}
-          <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
-            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
-            <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
-              Nurturing children through play-based learning and quality early childhood education.
-            </p>
-            <div className="flex items-center gap-2">
-              {schoolPhone && (
-                <a href={`tel:${schoolPhone}`} aria-label="Call us"
-                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                  <Phone className="h-3.5 w-3.5" />
-                </a>
-              )}
-              {schoolEmail && (
-                <a href={`mailto:${schoolEmail}`} aria-label="Email us"
-                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                  <Mail className="h-3.5 w-3.5" />
-                </a>
-              )}
-              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Globe className="h-3.5 w-3.5" />
+    <footer className="w-full bg-[#F8FAFC] border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
+      {/* Main content grid */}
+      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10 flex flex-col md:flex-row justify-start items-start gap-16 lg:gap-32">
+        {/* Brand */}
+        <div className="space-y-4 max-w-md">
+          <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain" />
+          <p className="text-sm text-slate-500 leading-relaxed">
+            Quality early childhood education through play-based learning — nurturing curious, confident, and creative kids since 1988.
+          </p>
+          <div className="flex items-center gap-2.5 pt-1">
+            {schoolPhone && (
+              <a href={`tel:${schoolPhone}`} title={schoolPhone}
+                className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#1a2740] shadow-sm">
+                <Phone className="h-4 w-4" />
               </a>
-            </div>
+            )}
+            {schoolEmail && (
+              <a href={`mailto:${schoolEmail}`} title={schoolEmail}
+                className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+                <Mail className="h-4 w-4" />
+              </a>
+            )}
+            <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+              className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+              <Globe className="h-4 w-4" />
+            </a>
           </div>
-
-          {/* Contact */}
-          <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
-            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
-            <ul className="flex flex-col gap-1.5 sm:gap-2">
-              {schoolPhone && (
-                <li>
-                  <a href={`tel:${schoolPhone}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                    <Phone className="h-3 w-3 text-white/60 shrink-0" />
-                    {schoolPhone}
-                  </a>
-                </li>
-              )}
-              {schoolEmail && (
-                <li>
-                  <a href={`mailto:${schoolEmail}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                    <Mail className="h-3 w-3 text-white/60 shrink-0" />
-                    <span className="truncate">{schoolEmail}</span>
-                  </a>
-                </li>
-              )}
-              {schoolAddress && (
-                <li className="flex items-start gap-2 text-xs text-white/80">
-                  <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
-                  <span>{schoolAddress}</span>
-                </li>
-              )}
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div className="sm:col-span-1 lg:col-span-3 flex flex-col gap-2.5">
-            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Resources</p>
-            <ul className="flex flex-col gap-1.5 sm:gap-2">
-              <li>
-                <button onClick={() => setShowHelpModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
-                  Help Center
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setShowGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
-                  Parent Guide
-                </button>
-              </li>
-              <li>
-                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/80 hover:text-white transition-colors">
-                  Goddard School
-                </a>
-              </li>
-            </ul>
-          </div>
-
         </div>
 
-        {/* Bottom bar */}
-        <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} {schoolName}. All rights reserved.</p>
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
-            <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">Parent Portal</span>
+        {/* Resources */}
+        <div className="space-y-4 min-w-[200px]">
+          <h4 className="text-xs font-bold uppercase tracking-widest text-[#1a2740]">Resources</h4>
+          <ul className="space-y-3">
+            <li>
+              <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
+                <HelpCircle className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                <span>Help Center</span>
+              </button>
+            </li>
+            <li>
+              <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
+                <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                <span>Parent Guide</span>
+              </button>
+            </li>
+            <li>
+              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group">
+                <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                <span>Goddard School</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Bottom bar */}
+      <div className="border-t border-slate-200/60 bg-slate-100/50">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-slate-400 text-center sm:text-left">
+            © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
+          </p>
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white">
+            <span className="w-2 h-2 rounded-full bg-teal-500" />
+            <span className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">Parent Portal</span>
           </div>
         </div>
       </div>
@@ -109,7 +85,7 @@ export function Footer() {
         <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-amazon-teal" />
+              <BookOpen className="h-5 w-5 text-[#1a2740]" />
               Parent Guide
             </DialogTitle>
             <DialogDescription>Everything you need to complete your child's enrollment</DialogDescription>
@@ -123,7 +99,7 @@ export function Footer() {
         <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-amazon-teal" />
+              <HelpCircle className="h-5 w-5 text-[#1a2740]" />
               Help Center
             </DialogTitle>
             <DialogDescription>Find answers to common questions about your enrollment</DialogDescription>

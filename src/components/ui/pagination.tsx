@@ -28,7 +28,7 @@ export function Pagination({
   return (
     <div className={`flex items-center justify-between px-4 py-3 border-t ${className}`}>
       {showItemCount && (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-slate-500">
           Showing {startItem} to {endItem} of {totalItems} items
         </div>
       )}
@@ -74,7 +74,7 @@ export function MobilePagination({
 
   return (
     <div className={`flex items-center justify-between mt-4 pt-4 border-t ${className}`}>
-      <div className="text-sm text-muted-foreground">
+      <div className="text-sm text-slate-500">
         Page {currentPage} of {totalPages}
       </div>
       <div className="flex items-center space-x-2">

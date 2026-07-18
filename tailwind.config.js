@@ -54,6 +54,18 @@ module.exports = {content: [
           orange: "#FF9900",
           teal: "#00A8E1",
         },
+        admin: {
+          bg: "#F8FAFC",
+          card: "#FFFFFF",
+          primary: "#0F6CBD",
+          secondary: "#14B8A6",
+          success: "#22C55E",
+          warning: "#F59E0B",
+          danger: "#EF4444",
+          border: "#E5E7EB",
+          "text-primary": "#111827",
+          "text-secondary": "#6B7280",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

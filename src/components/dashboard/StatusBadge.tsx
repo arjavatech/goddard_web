@@ -1,49 +1,30 @@
 import React from 'react';
-import { badgeVariants, Badge } from '../ui/badge';
-import { CheckCircle, Clock, AlertCircle, FileEdit, FileText } from 'lucide-react';
+import { badgeVariants } from '../ui/badge';
+import { CheckCircle2, Clock, AlertCircle, FileEdit, FileText } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
+import { cn } from '../../lib/utils';
+
 type Status = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
+
 interface StatusBadgeProps {
   status: Status;
+  className?: string;
 }
-export function StatusBadge({
-  status
-}: StatusBadgeProps) {
-  type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>['variant']>;
-  const getVariant = (): BadgeVariant => {
-    switch (status) {
-      case 'Approved':
-        return 'success';
-      case 'Submitted':
-        return 'info';
-      case 'In Progress':
-        return 'secondary';
-      case 'Needs Revision':
-        return 'warning';
-      case 'Draft':
-        return 'outline';
-      default:
-        return 'default';
-    }
-  };
-  const getIcon = () => {
-    switch (status) {
-      case 'Approved':
-        return <CheckCircle className="h-3 w-3 mr-1" />;
-      case 'Submitted':
-        return <Clock className="h-3 w-3 mr-1" />;
-      case 'In Progress':
-        return <FileEdit className="h-3 w-3 mr-1" />;
-      case 'Needs Revision':
-        return <AlertCircle className="h-3 w-3 mr-1" />;
-      case 'Draft':
-        return <FileText className="h-3 w-3 mr-1" />;
-      default:
-        return null;
-    }
-  };
-  return <Badge variant={getVariant()} className="mt-1 self-start flex items-center text-xs">
-      {getIcon()}
-      {status === 'In Progress' ? 'Completed-Pending Approval' : status === 'Approved' ? 'Completed-Admin Approved' : status}
-    </Badge>;
+
+const CONFIG: Record<Status, { variant: NonNullable<VariantProps<typeof badgeVariants>['variant']>; icon: React.ReactNode; label: string }> = {
+  Approved:        { variant: 'success',  icon: <CheckCircle2 className="w-3 h-3" />, label: 'Approved' },
+  Submitted:       { variant: 'info',     icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  'In Progress':   { variant: 'info',     icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  'Needs Revision':{ variant: 'warning',  icon: <AlertCircle className="w-3 h-3" />,  label: 'Needs Revision' },
+  Draft:           { variant: 'secondary',icon: <FileText className="w-3 h-3" />,     label: 'Draft' },
+};
+
+export function StatusBadge({ status, className }: StatusBadgeProps) {
+  const cfg = CONFIG[status] ?? { variant: 'secondary' as const, icon: null, label: status };
+  return (
+    <span className={cn(badgeVariants({ variant: cfg.variant }), 'inline-flex items-center gap-1 mt-1 self-start', className)}>
+      {cfg.icon}
+      {cfg.label}
+    </span>
+  );
 }

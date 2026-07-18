@@ -1,6 +1,6 @@
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { User, Crown, Mail } from 'lucide-react';
+import { User, Mail, UserPlus } from 'lucide-react';
 
 interface ParentInfoProps {
   parentData: {
@@ -20,68 +20,73 @@ interface ParentInfoProps {
   } | null;
 }
 
+function ParentRow({
+  name, email, isPrimary,
+}: { name: string; email: string; isPrimary?: boolean }) {
+  const initials = name
+    .split(' ')
+    .map(w => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
+        isPrimary
+          ? 'bg-cyan-100 text-cyan-700'
+          : 'bg-slate-100 text-slate-600'
+      }`}>
+        {initials || <User className="w-4 h-4" />}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-slate-800 truncate">{name}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
+          <a
+            href={`mailto:${email}`}
+            className="text-xs text-slate-500 hover:text-cyan-600 truncate transition-colors"
+          >
+            {email}
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function ParentInfo({ parentData }: ParentInfoProps) {
   if (!parentData) return null;
 
-  const currentParentName = `${parentData.firstName || ''} ${parentData.lastName || ''}`.trim() || 'Parent';
-  const additionalParentName = parentData.additional_first_name 
-    ? `${parentData.additional_first_name || ''} ${parentData.additional_last_name || ''}`.trim() || 'Parent'
+  const primaryName = `${parentData.firstName || ''} ${parentData.lastName || ''}`.trim() || 'Parent';
+  const additionalName = parentData.additional_first_name
+    ? `${parentData.additional_first_name || ''} ${parentData.additional_last_name || ''}`.trim()
     : null;
 
-  console.log('ParentInfo - Parent details:', parentData);
-
   return (
-    <>
-      <Card className="glass-card">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <User className="w-5 h-5 text-amazon-teal" />
-            Parent Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-start gap-2 mb-2">
-            <div className="w-8 h-8 rounded-full bg-amazon-teal/10 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-amazon-teal" />
-            </div>
-            <div className="min-w-0">
-              <span className="font-medium text-gray-900 block truncate">{currentParentName}</span>
-              <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-0.5">
-                <Mail className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">{parentData.email}</span>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <User className="w-4 h-4 text-cyan-600" />
+          Account Information
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0 space-y-3">
+        <ParentRow name={primaryName} email={parentData.email} isPrimary />
 
-      {/* Additional Parent Card */}
-      {parentData.additional_first_name && (
-        <Card className="glass-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="w-5 h-5 text-amazon-teal" />
-              Additional Parent Info
-            </CardTitle>
-          </CardHeader>
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-start gap-2">
-            <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-gray-600" />
+        {additionalName && parentData.additional_email && (
+          <>
+            <div className="border-t border-slate-100" />
+            <div className="flex items-center gap-1.5 mb-1">
+              <UserPlus className="w-3.5 h-3.5 text-slate-400" />
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">
+                Additional Parent
+              </span>
             </div>
-            <div className="min-w-0">
-              <span className="font-medium text-gray-900 block truncate">{additionalParentName}</span>
-              {parentData.additional_email && (
-                <div className="flex items-center gap-1.5 text-sm text-gray-600 mt-0.5">
-                  <Mail className="w-3 h-3 flex-shrink-0" />
-                  <span className="truncate">{parentData.additional_email}</span>
-                </div>
-              )}
-            </div>
-          </div>
-          </CardContent>
-        </Card>
-      )}
-    </>
+            <ParentRow name={additionalName} email={parentData.additional_email} />
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

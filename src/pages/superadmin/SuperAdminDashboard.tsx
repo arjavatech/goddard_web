@@ -54,18 +54,18 @@ export function SuperAdminDashboard() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8">
+      <div className="space-y-6 max-w-7xl mx-auto lg:space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               SuperAdmin Dashboard
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage all Goddard Schools and system administration
             </p>
           </div>
           <Link to="/superadmin-arjava/schools">
-            <Button className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" size="sm">
+            <Button className="bg-[#0891b2] hover:bg-[#0e7490] w-full sm:w-auto" size="sm">
               <Plus className="w-4 h-4 mr-2" />
               Add School
             </Button>
@@ -74,7 +74,7 @@ export function SuperAdminDashboard() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -90,7 +90,7 @@ export function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -106,7 +106,7 @@ export function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -122,7 +122,7 @@ export function SuperAdminDashboard() {
             </CardContent>
           </Card>
 
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -217,15 +217,15 @@ export function SuperAdminDashboard() {
             <CardContent>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">System Status</span>
+                  <span className="text-sm text-slate-500">System Status</span>
                   <Badge variant="success">Online</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Database</span>
+                  <span className="text-sm text-slate-500">Database</span>
                   <Badge variant="success">Connected</Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">API Status</span>
+                  <span className="text-sm text-slate-500">API Status</span>
                   <Badge variant="success">Active</Badge>
                 </div>
               </div>

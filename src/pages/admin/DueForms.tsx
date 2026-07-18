@@ -63,7 +63,7 @@ export function DueForms() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-background px-3 py-2 text-sm text-slate-700 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
         >
           <span className="truncate">
             {value.length === 0 ? placeholder : `${value.length} selected`}
@@ -71,12 +71,12 @@ export function DueForms() {
           <ChevronDown className="h-4 w-4 opacity-50" />
         </button>
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-            <div className="p-1 max-h-60 overflow-y-auto">
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-popover text-popover-foreground shadow-lg">
+            <div className="p-1.5 max-h-60 overflow-y-auto space-y-0.5">
               {options.map((option) => (
                 <div
                   key={option}
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+                  className="relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-slate-50 hover:text-slate-900"
                   onClick={() => handleMultiSelectChange(option, value, onValueChange)}
                 >
                   <div className="flex items-center space-x-2">
@@ -90,7 +90,7 @@ export function DueForms() {
                 </div>
               ))}
               {options.length === 0 && (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                <div className="px-2 py-1.5 text-xs text-muted-foreground">
                   No options available
                 </div>
               )}
@@ -449,33 +449,43 @@ export function DueForms() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
-            Due Forms Tracking
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground">
-            Monitor form completion status and send reminders to parents
-          </p>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+              Due Forms Tracking
+            </h1>
+            <p className="text-sm text-slate-500">
+              Monitor form completion status and send reminders to parents
+            </p>
+          </div>
         </div>
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="Total Forms" value={stats.total} icon={Calendar} iconBgClass="bg-blue-100" iconColorClass="text-blue-600" />
-          <StatCard label="Pending" value={stats.pending} icon={Clock} iconBgClass="bg-yellow-100" iconColorClass="text-yellow-600" />
-          <StatCard label="In Progress" value={stats.in_progress} icon={Clock} iconBgClass="bg-blue-100" iconColorClass="text-blue-600" />
-          <StatCard label="Overdue" value={stats.overdue} icon={AlertTriangle} iconBgClass="bg-red-100" iconColorClass="text-red-600" />
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
+            <StatCard label="Total Forms" value={stats.total} icon={Calendar} iconBgClass="bg-blue-50" iconColorClass="text-blue-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
+            <StatCard label="Pending" value={stats.pending} icon={Clock} iconBgClass="bg-yellow-50" iconColorClass="text-yellow-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
+            <StatCard label="In Progress" value={stats.in_progress} icon={Clock} iconBgClass="bg-blue-50" iconColorClass="text-blue-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
+          <div className="animate-fade-in-up h-full" style={{ animationDelay: '120ms' }}>
+            <StatCard label="Overdue" value={stats.overdue} icon={AlertTriangle} iconBgClass="bg-red-50" iconColorClass="text-red-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          </div>
         </div>
 
         {/* Filters */}
-        <Card className="glass-card">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '160ms' }}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search forms, students, or parents..."
-                  className="pl-10 h-10 sm:h-11 text-sm sm:text-base"
+                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -485,7 +495,7 @@ export function DueForms() {
                   variant="outline"
                   onClick={() => setShowFilters(prev => !prev)}
                   size="sm"
-                  className="h-10 sm:h-11 relative"
+                  className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 relative"
                 >
                   {showFilters ? (
                     <><X className="h-4 w-4 mr-2" /> Hide Filters</>
@@ -493,14 +503,14 @@ export function DueForms() {
                     <><Filter className="h-4 w-4 mr-2" /> Filters</>
                   )}
                   {!showFilters && activeFilterCount > 0 && (
-                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white animate-pulse">
                       {activeFilterCount}
                     </span>
                   )}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 sm:h-11">
+                    <Button variant="outline" size="sm" className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
                       {sortOrder === 'asc'
                         ? <ArrowUp className="h-4 w-4 mr-2" />
                         : <ArrowDown className="h-4 w-4 mr-2" />}
@@ -524,13 +534,13 @@ export function DueForms() {
             </div>
 
             {showFilters && (
-              <div className="p-3 sm:p-4 bg-background rounded-lg border space-y-3">
+              <div className="p-3 sm:p-4 bg-background rounded-xl border border-slate-100 space-y-3">
                 {activeFilterCount > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                    <span className="text-xs sm:text-sm text-slate-500 font-medium">
                       {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                     </span>
-                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11">
+                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
                       <X className="h-4 w-4 mr-2" />
                       Clear All
                     </Button>
@@ -571,17 +581,17 @@ export function DueForms() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </div>
 
         {/* Forms Table */}
-        <Card className="glass-card">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3">
-            <CardTitle className="text-base sm:text-lg">Due Forms ({filteredForms.length})</CardTitle>
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 bg-slate-50/50">
+            <CardTitle className="text-sm font-bold text-slate-900">Due Forms ({filteredForms.length})</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               {selectedForms.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="h-8 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                    <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
                       <Download className="h-4 w-4 mr-1.5" />
                       Export Selected ({selectedForms.length})
                     </Button>
@@ -625,7 +635,7 @@ export function DueForms() {
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="h-8 bg-amazon-teal hover:bg-amazon-teal/90 text-white">
+                    <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
                       <Download className="h-4 w-4 mr-1.5" />
                       Export All
                     </Button>
@@ -636,17 +646,17 @@ export function DueForms() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button size="sm" className="h-8" disabled>
+                <Button size="sm" className="bg-white text-[#1a2740]/40 border-2 border-[#1a2740]/20 rounded-xl h-10 sm:h-11 flex-shrink-0 cursor-not-allowed" disabled>
                   <Download className="h-4 w-4 mr-1.5" />
                   Export All
                 </Button>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="h-8 bg-amazon-teal hover:bg-amazon-teal/90" size="sm" disabled={bulkRemindLoading}>
+                  <Button className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200" size="sm" disabled={bulkRemindLoading}>
                     {bulkRemindLoading ? (
                       <>
-                        <div className="h-4 w-4 mr-1.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="h-4 w-4 mr-1.5 border-2 border-[#1a2740] border-t-transparent rounded-full animate-spin" />
                         Sending...
                       </>
                     ) : (
@@ -741,13 +751,13 @@ export function DueForms() {
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t">
+                        <div className="pt-2 border-t border-slate-100">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleSendReminder([form.id])}
                             disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                            className="w-full h-7 text-xs"
+                            className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
                           >
                             {remindingFormIds.has(form.id) ? (
                               <>
@@ -776,7 +786,7 @@ export function DueForms() {
                 <div className="hidden md:block overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-gray-200 bg-muted/30">
+                      <tr className="border-b border-slate-100 bg-slate-50/50">
                         <th className="text-center py-3 px-2 font-medium text-gray-600 w-10">
                           <Checkbox
                             checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
@@ -794,7 +804,7 @@ export function DueForms() {
                     </thead>
                     <tbody>
                       {paginatedForms.map(form => (
-                        <tr key={form.id} className="border-b border-gray-100 hover:bg-muted/50">
+                        <tr key={form.id} className="border-b border-gray-100 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
                           <td className="py-3 px-2 text-center">
                             <Checkbox
                               checked={selectedForms.includes(form.id)}
@@ -839,7 +849,7 @@ export function DueForms() {
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap"
+                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 font-medium"
                             >
                               {remindingFormIds.has(form.id) ? (
                                 <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
@@ -875,7 +885,7 @@ export function DueForms() {
               </div>
             )}
           </CardContent>
-        </Card>
+        </div>
       </div>
     </AdminLayout>
   );

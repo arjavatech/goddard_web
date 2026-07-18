@@ -39,9 +39,12 @@ export function DataTable({
       <div className="overflow-x-auto">
         <table className="w-full table-fixed border-collapse">
           <thead>
-            <tr className="border-b border-gray-200 bg-muted/30">
+            <tr className="border-b border-slate-100 bg-slate-50/60">
               {columns.map((col, i) => (
-                <th key={i} className={`text-left py-3 px-3 font-medium text-gray-600 ${col.className ?? ''}`}>
+                <th
+                  key={i}
+                  className={`text-left py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 ${col.className ?? ''}`}
+                >
                   {col.header}
                 </th>
               ))}
@@ -58,7 +61,7 @@ export function DataTable({
               rows
             ) : (
               <tr>
-                <td colSpan={columns.length} className="py-8 text-center text-gray-500">
+                <td colSpan={columns.length} className="py-12 text-center text-sm text-slate-400">
                   {emptyMessage}
                 </td>
               </tr>

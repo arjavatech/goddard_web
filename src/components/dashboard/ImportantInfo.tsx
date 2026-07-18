@@ -45,7 +45,7 @@ export function ImportantInfo({
                 <Calendar className="h-4 w-4 mr-2 text-amazon-orange" />
                 Upcoming Deadline
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-slate-500">
                 Complete enrollment by: {enrollmentDeadline}
               </p>
             </div>}
@@ -65,14 +65,14 @@ export function ImportantInfo({
                 <Phone className="h-4 w-4 mr-2 text-amazon-orange" />
                 School Contact
               </h3>
-              {contact.phone && <p className="text-sm text-muted-foreground">
+              {contact.phone && <p className="text-sm text-slate-500">
                   Phone: {contact.phone}
                 </p>}
-              {contact.email && <p className="text-sm text-muted-foreground">
+              {contact.email && <p className="text-sm text-slate-500">
                   Email: {contact.email}
                 </p>}
             </div>}
-          {!enrollmentDeadline && (!requiredDocuments || requiredDocuments.length === 0) && (!contact || !contact.phone && !contact.email) && <p className="text-sm text-muted-foreground">
+          {!enrollmentDeadline && (!requiredDocuments || requiredDocuments.length === 0) && (!contact || !contact.phone && !contact.email) && <p className="text-sm text-slate-500">
               No announcements yet.
             </p>}
         </div>

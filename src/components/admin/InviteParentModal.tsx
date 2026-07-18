@@ -80,14 +80,14 @@ export function InviteParentModal({
 }: InviteParentModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg" preventClose>
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl font-semibold">Invite New Parent</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">Invite New Parent</DialogTitle>
         </DialogHeader>
         <div className="space-y-5 py-3">
           {/* Primary Parent */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Primary Parent Information</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Primary Parent Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
@@ -129,7 +129,7 @@ export function InviteParentModal({
 
           {/* Secondary Parent */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Secondary Parent <span className="font-normal text-muted-foreground">(Optional)</span></h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Secondary Parent <span className="font-normal text-slate-400">(Optional)</span></h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
@@ -198,7 +198,7 @@ export function InviteParentModal({
 
           {/* Child Information */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Child Information</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Child Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
@@ -273,19 +273,25 @@ export function InviteParentModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+          >
+            Cancel
+          </Button>
           <AsyncButton
             onClick={onInvite}
-            className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto"
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200"
             disabled={(() => {
               const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
               const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;
               if (!primaryParentValid || !childValid) return true;
-              const hasSecondaryParentData = 
-                secondaryParentFirstName.trim() || 
-                secondaryParentLastName.trim() || 
-                secondaryParentEmail.trim() || 
+              const hasSecondaryParentData =
+                secondaryParentFirstName.trim() ||
+                secondaryParentLastName.trim() ||
+                secondaryParentEmail.trim() ||
                 secondaryParentPhoneNumber.trim();
               if (hasSecondaryParentData) {
                 return !(secondaryParentFirstName.trim() && secondaryParentLastName.trim() && secondaryParentEmail.trim());

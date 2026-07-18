@@ -524,7 +524,7 @@ export function ParentDetails() {
     </AdminLayout>;
   }
   return <AdminLayout>
-    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center">
           <Button
@@ -591,7 +591,7 @@ export function ParentDetails() {
                       <div className="font-semibold">
                         {child.firstName} {child.lastName}
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-sm text-slate-500">
                         Classroom: {child.classroom.name}
                       </div>
                       <div className="text-xs text-muted-foreground">

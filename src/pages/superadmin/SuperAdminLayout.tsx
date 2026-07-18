@@ -136,7 +136,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
-              <div className="p-4 border-b border-gray-100">
+              <div className="p-4 border-b border-slate-50 hover:bg-slate-50/60 transition-colors">
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
                     <User className="w-5 h-5 text-gray-600" />
@@ -154,7 +154,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               <div className="p-3">
                 <button 
                   onClick={() => setShowLogoutModal(true)}
-                  className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                  className="w-full flex items-center justify-center px-4 py-2.5 bg-[#0891b2] hover:bg-[#0e7490] text-white text-sm font-medium rounded-lg transition-colors duration-200"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Logout

@@ -411,7 +411,7 @@ export function ClassroomDetails() {
               </Button>
             </Link>
             <Button 
-              className="bg-amazon-teal hover:bg-amazon-teal/90 flex-1 sm:flex-none"
+              className="bg-[#0891b2] hover:bg-[#0e7490] flex-1 sm:flex-none"
               onClick={() => {
                 setChildClassroom(classroomId || '');
                 loadClassroomsIfNeeded();

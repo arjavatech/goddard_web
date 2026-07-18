@@ -48,13 +48,13 @@ export function AddFormModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg" preventClose>
+      <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg rounded-2xl shadow-lg" preventClose>
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">{title}</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">{title}</DialogTitle>
         </DialogHeader>
-        <div className="py-3 sm:py-4 space-y-3 sm:space-y-4">
+        <div className="py-3 sm:py-4 space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-2">Form Name</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Form Name</label>
             <Input
               value={formName}
               onChange={e => {
@@ -64,37 +64,37 @@ export function AddFormModal({
                 }
               }}
               placeholder="Enter form name"
-              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formName ? 'border-red-500' : ''}`}
+              className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${formErrors.formName ? 'border-red-500' : ''}`}
               autoFocus
             />
             {formErrors.formName && (
-              <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formName}</p>
+              <p className="text-xs text-red-600 mt-1">{formErrors.formName}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Form Link (Fillout Form ID or URL)</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Form Link (Fillout Form ID or URL)</label>
             <Input
-              value={formLink} 
+              value={formLink}
               onChange={e => {
                 setFormLink(e.target.value);
                 if (formErrors.formLink) {
                   setFormErrors(prev => ({...prev, formLink: ''}));
                 }
-              }} 
+              }}
               placeholder="parent_handbook or https://goddard.fillout.com/parent_handbook"
-              className={`w-full h-10 sm:h-11 text-sm sm:text-base ${formErrors.formLink ? 'border-red-500' : ''}`} 
+              className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${formErrors.formLink ? 'border-red-500' : ''}`}
             />
             {formErrors.formLink && (
-              <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formLink}</p>
+              <p className="text-xs text-red-600 mt-1">{formErrors.formLink}</p>
             )}
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Form Status</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Form Status</label>
             <Select value={formStatus} onValueChange={(value) => setFormStatus?.(value as 'active' | 'inactive' | 'school_default')}>
-              <SelectTrigger className="w-full h-10 sm:h-11 text-sm sm:text-base">
+              <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="school_default">Default</SelectItem>
                 <SelectItem value="inactive">Inactive</SelectItem>
@@ -102,7 +102,7 @@ export function AddFormModal({
             </Select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-2">Due Date</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Due Date</label>
             <Input
               type="date"
               value={formDueDate}
@@ -112,21 +112,25 @@ export function AddFormModal({
                   setFormErrors(prev => ({...prev, formDueDate: ''}));
                 }
               }}
-              className={`w-full h-10 sm:h-11 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
+              className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${formErrors.formDueDate ? 'border-red-500' : ''}`}
               min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
             />
             {formErrors.formDueDate && (
-              <p className="text-xs sm:text-sm text-red-600 mt-1">{formErrors.formDueDate}</p>
+              <p className="text-xs text-red-600 mt-1">{formErrors.formDueDate}</p>
             )}
           </div>
         </div>
         <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+          >
             Cancel
           </Button>
-          <AsyncButton 
-            onClick={onSubmit} 
-            className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" 
+          <AsyncButton
+            onClick={onSubmit}
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200"
             disabled={!formName.trim() || !formLink.trim() || !formDueDate || (formStatus === undefined ? false : !formStatus) || isSubmitting || !!formErrors.formName || !!formErrors.formLink || !!formErrors.formDueDate}
           >
             {isSubmitting ? `${submitButtonText.includes('Add') ? 'Adding' : 'Updating'} Form...` : submitButtonText}

@@ -1,11 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { School, FileText, Users, UserCheck, Plus, Mail } from 'lucide-react';
-import { Progress } from '../../components/ui/progress';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { StatCard } from '../../components/ui/stat-card';
 import { AsyncButton } from '../../components/ui/async-button';
 import { PageLoader } from '../../components/ui/page-loader';
 
@@ -39,13 +36,14 @@ type ProgressItem = {
 export function AdminDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
+  const [isAnimated, setIsAnimated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formDueDate, setFormDueDate] = useState('');
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -64,7 +62,7 @@ export function AdminDashboard() {
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   const [classroomsLoaded, setClassroomsLoaded] = useState(false);
-  const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
+  const [inviteFormErrors, setInviteFormErrors] = useState<{ [key: string]: string }>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
@@ -107,6 +105,15 @@ export function AdminDashboard() {
     loadDashboardData(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => setIsAnimated(true), 80);
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimated(false);
+    }
+  }, [loading]);
 
   const validateForm = () => {
     const errors = validateAddFormFields({ formName, formLink, formDueDate });
@@ -162,7 +169,6 @@ export function AdminDashboard() {
 
     setIsAddingForm(true);
     try {
-    
       if (!schoolId) return;
 
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate);
@@ -197,11 +203,11 @@ export function AdminDashboard() {
   };
 
   const validateInviteForm = () => {
-    const errors: {[key: string]: string} = {};
+    const errors: { [key: string]: string } = {};
 
     const parentEmailError = validateEmail(parentEmail);
     if (parentEmailError) errors.parentEmail = parentEmailError;
-    
+
     if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
     if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
     if (!childGender) errors.childGender = 'Child gender is required';
@@ -210,7 +216,7 @@ export function AdminDashboard() {
     if (secondaryParentEmail.trim()) {
       const secondaryEmailError = validateEmail(secondaryParentEmail);
       if (secondaryEmailError) errors.secondaryParentEmail = secondaryEmailError;
-      
+
       if (!secondaryParentFirstName.trim()) {
         errors.secondaryParentFirstName = 'First name is required when email is provided';
       }
@@ -229,18 +235,16 @@ export function AdminDashboard() {
     try {
       if (!schoolId) return;
 
-      // Check if primary parent email already exists
       const existingParents = await fetchParentDetails(schoolId);
       const allParents = [...existingParents.activeParents, ...existingParents.inactiveParents];
-      
+
       const primaryEmailExists = allParents.some(p => p.email.toLowerCase() === parentEmail.toLowerCase());
       if (primaryEmailExists) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Primary parent email already exists');
         return;
       }
-      
-      // Check if secondary parent email already exists (if provided)
+
       if (secondaryParentEmail.trim()) {
         const secondaryEmailExists = allParents.some(p => p.email.toLowerCase() === secondaryParentEmail.toLowerCase());
         if (secondaryEmailExists) {
@@ -272,13 +276,11 @@ export function AdminDashboard() {
       await loadDashboardData(true);
     } catch (error: any) {
       console.error('Error inviting parent:', error);
-      
-      // Check for email bounce error
+
       if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: error.message }));
         showToast('error', error.message);
       }
-      // Check for conflict error (email already exists)
       else if (error?.code === 'CONFLICT' || error?.message?.includes('Email already exists')) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Email already exists');
@@ -288,21 +290,21 @@ export function AdminDashboard() {
       } else {
         showToast('error', error?.message || 'Failed to send parent invitation. Please try again.');
       }
-    } 
+    }
   };
+
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
-    
+
     try {
-    
       if (!schoolId) throw new Error('School context not found');
-      
+
       await createClassroom(schoolId, newClassroomName.trim());
-      
+
       setIsAddClassroomDialogOpen(false);
       setNewClassroomName('');
       showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
-      
+
       setClassroomsLoaded(false);
       await loadDashboardData(true);
     } catch (error) {
@@ -314,16 +316,84 @@ export function AdminDashboard() {
       if (
         typeof errorText === 'string' &&
         (errorText.includes('duplicate key value violates unique constraint') ||
-         errorText.toLowerCase().includes('already exists') ||
-         errorText.toLowerCase().includes('unique'))
+          errorText.toLowerCase().includes('already exists') ||
+          errorText.toLowerCase().includes('unique'))
       ) {
         showToast('error', 'Classroom name already exists');
       } else {
         showToast('error', 'Failed to create classroom. Please try again.');
       }
       throw error;
-    } 
+    }
   };
+
+  const statItems = [
+    {
+      label: "Classrooms",
+      value: metrics?.totalClassrooms || 0,
+      icon: School,
+      gradientBg: "bg-cyan-50",
+      iconColor: "text-cyan-600",
+      path: "/admin/classrooms"
+    },
+    {
+      label: "Active Students",
+      value: metrics?.totalActiveChildren || 0,
+      icon: UserCheck,
+      gradientBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      path: "/admin/students"
+    },
+    {
+      label: "Active Forms",
+      value: metrics?.totalForms || 0,
+      icon: FileText,
+      gradientBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      path: "/admin/forms"
+    },
+    {
+      label: "Active Parents",
+      value: metrics?.totalActiveParents || 0,
+      icon: Users,
+      gradientBg: "bg-emerald-50",
+      iconColor: "text-emerald-600",
+      path: "/admin/parents"
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: "Invite Parent",
+      description: "Send portal access invitation to a parent and student.",
+      icon: Mail,
+      iconBg: "bg-cyan-50",
+      iconColor: "text-cyan-600",
+      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      btnText: "Send Invite",
+      onClick: () => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }
+    },
+    {
+      title: "Add Classroom",
+      description: "Create a new classroom group in the school.",
+      icon: School,
+      iconBg: "bg-violet-50",
+      iconColor: "text-violet-600",
+      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      btnText: "Add Classroom",
+      onClick: () => setIsAddClassroomDialogOpen(true)
+    },
+    {
+      title: "Add Form",
+      description: "Create and assign new form templates.",
+      icon: Plus,
+      iconBg: "bg-blue-50",
+      iconColor: "text-blue-600",
+      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      btnText: "Add Form",
+      onClick: () => setIsAddDialogOpen(true)
+    }
+  ];
 
   if (loading) {
     return <PageLoader message="Loading dashboard data..." Layout={AdminLayout} />;
@@ -331,127 +401,128 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-          Dashboard Overview
-        </h1>
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700">
-            {error}
+      <div className="space-y-6 max-w-7xl mx-auto">
+
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+            <p className="text-sm text-slate-500 mt-0.5">Monitor your school's enrollment at a glance</p>
           </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard
-            label="Total Classrooms"
-            value={metrics?.totalClassrooms || 0}
-            icon={School}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/classrooms')}
-          />
-          <StatCard
-            label="Active Children"
-            value={metrics?.totalActiveChildren || 0}
-            icon={UserCheck}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/students')}
-          />
-          <StatCard
-            label="Active Forms"
-            value={metrics?.totalForms || 0}
-            icon={FileText}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/forms')}
-          />
-          <StatCard
-            label="Active Parents"
-            value={metrics?.totalActiveParents || 0}
-            icon={Users}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/parents')}
-          />
-        </div>
 
-        {/* Quick Actions & Enrollment Progress Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          <Card className="glass-card lg:col-span-3 order-2 lg:order-1">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-lg sm:text-xl">Enrollment Progress by Classroom</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3 sm:space-y-4">
-                {enrollmentProgress.length === 0 ? (
-                  <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
-                    No enrollment data available yet.
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {statItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                onClick={() => navigate(item.path)}
+                className="group bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm animate-fade-in-up"
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 min-w-0">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 truncate">{item.label}</p>
+                    <p className="text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
-                ) : (
-                  enrollmentProgress.map((classroom, index) => (
-                    <div key={`${classroom.classroom}-${index}`}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-xs sm:text-sm truncate flex-1 mr-2">
-                          {classroom.classroom}
-                        </span>
-                        <span className="text-xs sm:text-sm text-amazon-teal font-medium flex-shrink-0">
-                          {classroom.total > 0 ? Math.round(classroom.completed / classroom.total * 100) : 0}%
-                        </span>
-                      </div>
-                      <Progress value={classroom.total > 0 ? classroom.completed / classroom.total * 100 : 0} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {classroom.completed} of {classroom.total} students marked complete
-                      </p>
-                    </div>
-                  ))
-                )}
+                  <div className={`p-2.5 rounded-xl ${item.gradientBg} group-hover:scale-110 transition-transform flex-shrink-0`}>
+                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  </div>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Admin Actions */}
-          <Card className="glass-card lg:col-span-1 order-1 lg:order-2">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => setIsAddDialogOpen(true)}
-                >
-                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Add Form</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
-                >
-                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Invite Parent</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => setIsAddClassroomDialogOpen(true)}
-                >
-                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Add Classrooms</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+            );
+          })}
         </div>
 
-        {/* Add Form Modal */}
+        {/* Enrollment + Quick Actions */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Enrollment table */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden lg:col-span-3 order-2 lg:order-1 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '160ms' }}>
+            <div className="px-5 py-4 border-b border-slate-100">
+              <h2 className="text-sm font-bold text-slate-900">Enrollment Progress by Classroom</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Form completion rate across all classrooms</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50/70">
+                  <tr>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Classroom</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Completed</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 hidden sm:table-cell">Progress</th>
+                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-right">Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {enrollmentProgress.length === 0 ? (
+                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-slate-400">No enrollment data available yet.</td></tr>
+                  ) : (
+                    enrollmentProgress.map((cls, i) => {
+                      const pct = cls.total > 0 ? Math.round(cls.completed / cls.total * 100) : 0;
+                      const color = pct === 100 ? 'bg-emerald-500' : pct >= 60 ? 'bg-cyan-500' : 'bg-amber-400';
+                      return (
+                        <tr key={`${cls.classroom}-${i}`} className="hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out cursor-default">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
+                                <School className="w-4 h-4 text-cyan-600" />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-800">{cls.classroom}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">{cls.completed} / {cls.total}</td>
+                          <td className="px-5 py-3.5 hidden sm:table-cell">
+                            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-500 ease-out ${color}`} style={{ width: `${isAnimated ? pct : 0}%` }} />
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <span className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${pct === 100 ? 'bg-emerald-100 text-emerald-700' : pct >= 60 ? 'bg-cyan-100 text-cyan-700' : 'bg-amber-100 text-amber-700'
+                              }`}>{pct}%</span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="space-y-3 lg:col-span-1 order-1 lg:order-2">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-0.5">Quick Actions</h3>
+            {quickActions.map((action, idx) => {
+              const Icon = action.icon;
+              return (
+                <div key={idx} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: `${(idx + 5) * 40}ms` }}>
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className={`p-2 rounded-xl ${action.iconBg} flex-shrink-0`}>
+                      <Icon className={`w-4 h-4 ${action.iconColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 leading-snug">{action.title}</p>
+                      <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">{action.description}</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={action.onClick}
+                    className={`w-full h-9 rounded-xl text-xs font-semibold ${action.btnClass}`}
+                  >
+                    {action.btnText}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Existing Modals and Dialogs */}
         <AddFormModal
           isOpen={isAddDialogOpen}
           onClose={() => {
@@ -470,7 +541,6 @@ export function AdminDashboard() {
           isSubmitting={isAddingForm}
         />
 
-        {/* Invite Parent Dialog */}
         <InviteParentModal
           isOpen={isInviteDialogOpen}
           onClose={() => {
@@ -512,36 +582,44 @@ export function AdminDashboard() {
           isDialogClosing={isDialogClosing}
         />
 
-        {/* Add Classroom Dialog */}
         <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
-            setIsAddClassroomDialogOpen(open);
+          setIsAddClassroomDialogOpen(open);
         }}>
-          <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+          <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
+              <DialogTitle className="text-lg font-bold text-slate-900">Add New Classroom</DialogTitle>
             </DialogHeader>
             <div className="py-2 sm:py-3 md:py-4">
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Classroom Name
               </label>
               <Input
                 value={newClassroomName}
                 onChange={e => setNewClassroomName(e.target.value)}
-                placeholder="Enter classroom name"
-                className="w-full h-10 sm:h-11 text-sm sm:text-base"
+                placeholder="e.g. Toddlers A"
+                className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 autoFocus
               />
             </div>
             <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+              <Button
+                variant="outline"
+                onClick={() => setIsAddClassroomDialogOpen(false)}
+                className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+              >
                 Cancel
               </Button>
-              <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
+              <AsyncButton
+                onClick={handleAddClassroom}
+                className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+                disabled={!newClassroomName.trim()}
+              >
                 Add Classroom
               </AsyncButton>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
     </AdminLayout>
   );

@@ -45,19 +45,19 @@ export function SuperAdminManagement() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Admin Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage school administrators across all Goddard locations
             </p>
           </div>
           <Button 
             onClick={() => setIsAddDialogOpen(true)}
-            className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" 
+            className="bg-[#0891b2] hover:bg-[#0e7490] w-full sm:w-auto" 
             size="sm"
           >
             <Plus className="w-4 h-4 mr-2" />
@@ -252,7 +252,7 @@ export function SuperAdminManagement() {
                 setIsAddDialogOpen(false);
                 setNewAdmin({ name: '', email: '', school: '' });
               }}
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="bg-[#0891b2] hover:bg-[#0e7490]"
               disabled={!newAdmin.name || !newAdmin.email || !newAdmin.school}
             >
               Add Admin

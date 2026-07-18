@@ -25,7 +25,7 @@ export function ApiLoader({
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <p className="text-red-500 mb-2">{errorMessage}</p>
-          <p className="text-sm text-muted-foreground">{error}</p>
+          <p className="text-sm text-slate-500">{error}</p>
         </div>
       </div>
     );
