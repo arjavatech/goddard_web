@@ -111,7 +111,7 @@ export function EnrollmentProgress({
   return (
     <div className="rounded-2xl border border-slate-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
       {/* Header gradient strip */}
-      <div className="bg-gradient-to-r from-[#1a2740] to-[#2c3d5e] px-5 sm:px-6 pt-5 pb-6">
+      <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-5 sm:px-6 pt-5 pb-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -203,8 +203,8 @@ export function EnrollmentProgress({
         <div className="px-5 sm:px-6 pb-5">
           <Button
             className={cn(
-              'w-full sm:w-auto h-11 px-6 rounded-xl text-sm font-semibold bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center',
-              !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-white text-[#1a2740]/40 border-2 border-[#1a2740]/20'
+              'w-full sm:w-auto h-11 px-6 rounded-xl text-sm font-semibold bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center',
+              !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20'
             )}
             disabled={!continueAssignmentId}
             onClick={() => {

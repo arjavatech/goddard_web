@@ -92,9 +92,9 @@ export function Login() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       {/* ── Left brand panel ── */}
-      <div className="relative hidden lg:flex lg:w-[42%] flex-col justify-between bg-gradient-to-br from-[#0B1F3A] via-[#0F2D52] to-[#0E3A68] p-10 xl:p-14 overflow-hidden">
+      <div className="relative hidden lg:flex lg:w-[42%] flex-col justify-between bg-gradient-to-br from-[#0B1F3A] via-[#0F2D52] to-[#0E3A68] p-10 xl:p-14 overflow-hidden auth-panel-left">
         <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute bottom-10 -left-16 w-72 h-72 rounded-full bg-cyan-500/10" />
+        <div className="pointer-events-none absolute bottom-10 -left-16 w-72 h-72 rounded-full bg-white/5" />
 
         <div className="relative z-10">
           <img
@@ -106,8 +106,8 @@ export function Login() {
 
         <div className="relative z-10 space-y-5">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-cyan-300" />
+            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+              <GraduationCap className="w-4 h-4 text-blue-200" />
             </div>
           </div>
           <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight">
@@ -124,7 +124,7 @@ export function Login() {
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50/60">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50/60 auth-panel-right">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
           <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-12 w-auto mx-auto" />
@@ -147,9 +147,9 @@ export function Login() {
 
           {/* Selected school chip */}
           {selectedSchool && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-cyan-50 border border-cyan-100 mb-6">
-              <Building2 className="h-4 w-4 text-cyan-600 flex-shrink-0" />
-              <p className="text-sm font-semibold text-cyan-900 truncate">{selectedSchool.name}</p>
+            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#EFF5FB] border border-blue-200/50 mb-6">
+              <Building2 className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
+              <p className="text-sm font-semibold text-[#0F2D52] truncate">{selectedSchool.name}</p>
             </div>
           )}
 
@@ -170,7 +170,7 @@ export function Login() {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all ${emailError ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : 'border-slate-200'}`}
+                    className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all ${emailError ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : 'border-slate-200'}`}
                     placeholder="you@example.com"
                   />
                 </div>
@@ -183,7 +183,7 @@ export function Login() {
                   <label htmlFor="password" className="block text-xs font-semibold text-slate-600 uppercase tracking-widest">
                     Password
                   </label>
-                  <Link to="/forgot-password" className="text-xs text-cyan-600 hover:text-cyan-700 font-medium transition-colors">
+                  <Link to="/forgot-password" className="text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-medium transition-colors">
                     Forgot password?
                   </Link>
                 </div>
@@ -196,7 +196,7 @@ export function Login() {
                     required
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+                   className="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
                     placeholder="••••••••"
                   />
                   <button
@@ -217,7 +217,7 @@ export function Login() {
                   name="rememberMe"
                   checked={formData.rememberMe}
                   onChange={handleInputChange}
-                  className="w-4 h-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                  className="w-4 h-4 rounded border-slate-300 text-[#0F2D52] focus:ring-[#0F2D52]/20 accent-[#0F2D52]"
                 />
                 <span className="text-sm text-slate-600">Remember me</span>
               </label>
@@ -240,7 +240,7 @@ export function Login() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full h-12 text-sm font-semibold rounded-xl bg-[#0891b2] hover:bg-[#0e7490] text-white shadow-sm"
+                className="w-full h-12 text-sm font-semibold rounded-xl"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
@@ -267,7 +267,7 @@ export function Login() {
         <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-cyan-600" />
+              <Building2 className="h-5 w-5 text-[#0F2D52]" />
               Select School
             </DialogTitle>
             <DialogDescription>Choose the Goddard School location you want to access</DialogDescription>
@@ -275,7 +275,7 @@ export function Login() {
           <div className="py-3 space-y-2">
             {isLoadingSchools ? (
               <div className="flex justify-center py-8">
-                <span className="h-8 w-8 rounded-full border-2 border-cyan-600 border-t-transparent animate-spin" />
+                <span className="h-8 w-8 rounded-full border-2 border-[#0F2D52] border-t-transparent animate-spin" />
               </div>
             ) : (
               schools.map((school) => (
@@ -284,7 +284,7 @@ export function Login() {
                   onClick={() => handleSchoolChange(school)}
                   className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${
                     selectedSchool?.id === school.id
-                      ? 'border-cyan-500 bg-cyan-50 text-cyan-800'
+                      ? 'border-[#0F2D52]/30 bg-[#EFF5FB] text-[#0F2D52]'
                       : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
                   }`}
                 >
@@ -295,8 +295,8 @@ export function Login() {
             )}
           </div>
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => setShowSchoolSelector(false)} className="rounded-xl">Cancel</Button>
-            <Button onClick={() => setShowSchoolSelector(false)} className="rounded-xl bg-[#0891b2] text-white">Continue</Button>
+            <Button variant="outline" onClick={() => setShowSchoolSelector(false)}>Cancel</Button>
+            <Button onClick={() => setShowSchoolSelector(false)}>Continue</Button>
           </div>
         </DialogContent>
       </Dialog>

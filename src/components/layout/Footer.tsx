@@ -11,7 +11,7 @@ export function Footer() {
   const { schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
 
   return (
-    <footer className="w-full bg-[#F8FAFC] border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
+    <footer className="w-full bg-white border-t border-slate-200">
       {/* Main content grid */}
       <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10 flex flex-col md:flex-row justify-start items-start gap-16 lg:gap-32">
         {/* Brand */}
@@ -23,18 +23,18 @@ export function Footer() {
           <div className="flex items-center gap-2.5 pt-1">
             {schoolPhone && (
               <a href={`tel:${schoolPhone}`} title={schoolPhone}
-                className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#1a2740] shadow-sm">
+                className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
                 <Phone className="h-4 w-4" />
               </a>
             )}
             {schoolEmail && (
               <a href={`mailto:${schoolEmail}`} title={schoolEmail}
-                className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+                className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
                 <Mail className="h-4 w-4" />
               </a>
             )}
             <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-              className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+              className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
               <Globe className="h-4 w-4" />
             </a>
           </div>
@@ -42,24 +42,24 @@ export function Footer() {
 
         {/* Resources */}
         <div className="space-y-4 min-w-[200px]">
-          <h4 className="text-xs font-bold uppercase tracking-widest text-[#1a2740]">Resources</h4>
+          <h4 className="text-xs font-bold uppercase tracking-widest text-[#0F2D52]">Resources</h4>
           <ul className="space-y-3">
             <li>
-              <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
-                <HelpCircle className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+              <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
+                <HelpCircle className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                 <span>Help Center</span>
               </button>
             </li>
             <li>
-              <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
-                <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+              <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
+                <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                 <span>Parent Guide</span>
               </button>
             </li>
             <li>
               <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group">
-                <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group">
+                <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                 <span>Goddard School</span>
               </a>
             </li>
@@ -68,13 +68,13 @@ export function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-slate-200/60 bg-slate-100/50">
+      <div className="border-t border-slate-100 bg-[#F7F9FC]">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-400 text-center sm:text-left">
             © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
           </p>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white">
-            <span className="w-2 h-2 rounded-full bg-teal-500" />
+            <span className="w-2 h-2 rounded-full bg-emerald-500" />
             <span className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">Parent Portal</span>
           </div>
         </div>
@@ -85,7 +85,7 @@ export function Footer() {
         <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-[#1a2740]" />
+              <BookOpen className="h-5 w-5 text-[#0F2D52]" />
               Parent Guide
             </DialogTitle>
             <DialogDescription>Everything you need to complete your child's enrollment</DialogDescription>
@@ -99,7 +99,7 @@ export function Footer() {
         <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-[#1a2740]" />
+              <HelpCircle className="h-5 w-5 text-[#0F2D52]" />
               Help Center
             </DialogTitle>
             <DialogDescription>Find answers to common questions about your enrollment</DialogDescription>

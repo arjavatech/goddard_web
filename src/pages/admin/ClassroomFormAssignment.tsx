@@ -261,7 +261,7 @@ export function ClassroomFormAssignment() {
           <Button
             variant="outline"
             onClick={() => navigate('/admin/classrooms')}
-            className="flex items-center self-start w-fit text-sm bg-white text-[#1a2740] border border-slate-200 hover:border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl transition-all duration-200"
+            className="flex items-center self-start w-fit text-sm bg-white text-[#0F2D52] border border-slate-200 hover:border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl transition-all duration-200"
             size="sm"
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
@@ -272,7 +272,7 @@ export function ClassroomFormAssignment() {
           {/* Controls Section */}
           <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
             <Select value={selectedClassroomId} onValueChange={setSelectedClassroomId}>
-              <SelectTrigger className="w-full lg:w-[200px] rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]">
+              <SelectTrigger className="w-full lg:w-[200px] rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52]">
                 <SelectValue placeholder="Select classroom" />
               </SelectTrigger>
               <SelectContent>
@@ -285,12 +285,12 @@ export function ClassroomFormAssignment() {
             </Select>
 
             <div className="relative flex-1">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#1a2740]' : 'text-gray-400'
+              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#0F2D52]' : 'text-gray-400'
                 }`} />
               <Input
                 placeholder="Search forms..."
-                className={`pl-9 transition-all rounded-xl focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740] ${formSearchQuery
-                    ? 'bg-[#1a2740]/5 border-[#1a2740]/30 ring-1 ring-[#1a2740]/20'
+                className={`pl-9 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52] ${formSearchQuery
+                    ? 'bg-[#0F2D52]/5 border-[#0F2D52]/30 ring-1 ring-[#0F2D52]/20'
                     : 'bg-white border-slate-200'
                   }`}
                 value={formSearchQuery}
@@ -328,7 +328,7 @@ export function ClassroomFormAssignment() {
                     <div
                        key={classroom.id}
                        className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-all duration-200 ${classroom.id === selectedClassroomId
-                          ? 'bg-[#1a2740] text-white shadow-md'
+                          ? 'bg-[#0F2D52] text-white shadow-md'
                           : 'hover:bg-gray-50 hover:shadow-sm border border-gray-100'
                         }`}
                       onClick={() => setSelectedClassroomId(classroom.id)}
@@ -370,7 +370,7 @@ export function ClassroomFormAssignment() {
                       setSelectedFormIds([]);
                       setIsAssignDialogOpen(true);
                     }}
-                    className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full lg:w-auto lg:min-w-[140px] transition-all duration-200"
+                    className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full lg:w-auto lg:min-w-[140px] transition-all duration-200"
                     disabled={!selectedClassroom}
                     size="sm"
                   >
@@ -392,8 +392,8 @@ export function ClassroomFormAssignment() {
                           className={cn(
                             "whitespace-nowrap flex-shrink-0 text-xs px-2 sm:px-4 py-1.5 sm:py-2 transition-all duration-200 h-8 sm:h-9 border rounded-xl font-medium",
                             activeTab === tab.id
-                              ? "bg-[#1a2740] text-white border-[#1a2740] hover:bg-[#1a2740]/90"
-                              : "bg-white text-slate-600 border-slate-200 hover:bg-[#1a2740] hover:text-white hover:border-[#1a2740]"
+                              ? "bg-[#0F2D52] text-white border-[#0F2D52] hover:bg-[#0F2D52]/90"
+                              : "bg-white text-slate-600 border-slate-200 hover:bg-[#0F2D52] hover:text-white hover:border-[#0F2D52]"
                           )}
                           size="sm"
                         >
@@ -435,7 +435,7 @@ export function ClassroomFormAssignment() {
                         setSelectedFormIds([]);
                         setIsAssignDialogOpen(true);
                       }}
-                      className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl transition-all duration-200 font-semibold"
+                      className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl transition-all duration-200 font-semibold"
                       size="sm"
                     >
                       <Plus className="h-4 w-4 mr-2" />
@@ -456,8 +456,8 @@ export function ClassroomFormAssignment() {
                         className="flex items-center justify-between p-3 lg:p-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 min-h-[60px] lg:min-h-[70px]"
                       >
                         <div className="flex items-center min-w-0 flex-1 gap-3 lg:gap-4">
-                          <div className="flex-shrink-0 w-8 h-8 lg:w-10 lg:h-10 bg-[#1a2740]/10 rounded-lg flex items-center justify-center">
-                            <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-[#1a2740]" />
+                          <div className="flex-shrink-0 w-8 h-8 lg:w-10 lg:h-10 bg-[#0F2D52]/10 rounded-lg flex items-center justify-center">
+                            <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-[#0F2D52]" />
                           </div>
                           <div className="min-w-0 flex-1 lg:flex lg:items-center lg:justify-between lg:gap-4">
                             <div className="min-w-0 flex-1">
@@ -538,17 +538,17 @@ export function ClassroomFormAssignment() {
     <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
       <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[70vw] xl:w-[60vw] max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col p-0 gap-0" preventClose>
         {/* Header */}
-        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b bg-gradient-to-r from-[#1a2740]/5 to-[#1a2740]/10">
+        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b bg-gradient-to-r from-[#0F2D52]/5 to-[#0F2D52]/10">
           <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#1a2740]/15 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#1a2740]" />
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#0F2D52]/15 rounded-lg flex items-center justify-center flex-shrink-0">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#0F2D52]" />
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
                 Add Forms to Classroom
               </DialogTitle>
               <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 truncate">
-                Select forms to assign to <span className="font-medium text-[#1a2740]">{selectedClassroom?.name}</span>
+                Select forms to assign to <span className="font-medium text-[#0F2D52]">{selectedClassroom?.name}</span>
               </p>
             </div>
           </div>
@@ -560,12 +560,12 @@ export function ClassroomFormAssignment() {
           <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gray-50/50 border-b">
             <div className="flex flex-col gap-3 sm:gap-4">
               <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#1a2740]' : 'text-gray-400'
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#0F2D52]' : 'text-gray-400'
                   }`} />
                 <Input
                   placeholder="Search available forms..."
-                  className={`pl-9 h-9 sm:h-10 text-sm transition-all border-gray-200 focus:border-[#1a2740] focus:ring-[#1a2740]/20 ${formSearchQuery
-                      ? 'border-[#1a2740]/40 ring-2 ring-[#1a2740]/10 bg-[#1a2740]/5'
+                  className={`pl-9 h-9 sm:h-10 text-sm transition-all border-gray-200 focus:border-[#0F2D52] focus:ring-[#0F2D52]/20 ${formSearchQuery
+                      ? 'border-[#0F2D52]/40 ring-2 ring-[#0F2D52]/10 bg-[#0F2D52]/5'
                       : 'bg-white'
                     }`}
                   value={formSearchQuery}
@@ -586,7 +586,7 @@ export function ClassroomFormAssignment() {
                 <div>
                   <label className="block text-sm font-medium mb-2 text-slate-700">Form Status</label>
                   <Select value={selectedFormStatus} onValueChange={(value) => setSelectedFormStatus(value as 'active' | 'inactive' | 'school_default')}>
-                    <SelectTrigger className="rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]">
+                    <SelectTrigger className="rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -634,8 +634,8 @@ export function ClassroomFormAssignment() {
                     <div
                       key={form.id}
                       className={`group relative flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${isInactive ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isSelected
-                          ? 'border-[#1a2740] bg-[#1a2740]/5 shadow-sm'
-                          : isInactive ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 hover:border-[#1a2740]/40 hover:bg-gray-50/50'
+                          ? 'border-[#0F2D52] bg-[#0F2D52]/5 shadow-sm'
+                          : isInactive ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 hover:border-[#0F2D52]/40 hover:bg-gray-50/50'
                         }`}
                       onClick={() => {
                         if (isInactive) return;
@@ -648,8 +648,8 @@ export function ClassroomFormAssignment() {
                     >
                       {/* Selection Indicator */}
                       <div className={`absolute top-2 sm:top-3 right-2 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 transition-all ${isSelected
-                          ? 'bg-[#1a2740] border-[#1a2740]'
-                          : isInactive ? 'border-gray-300' : 'border-gray-300 group-hover:border-[#1a2740]/60'
+                          ? 'bg-[#0F2D52] border-[#0F2D52]'
+                          : isInactive ? 'border-gray-300' : 'border-gray-300 group-hover:border-[#0F2D52]/60'
                         }`}>
                         {isSelected && (
                           <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white absolute top-0.5 left-0.5" />
@@ -664,9 +664,9 @@ export function ClassroomFormAssignment() {
                       />
 
                       <div className="flex items-center flex-1 min-w-0 gap-3 sm:gap-4">
-                        <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-[#1a2740]/20' : 'bg-[#1a2740]/10'
+                        <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-[#0F2D52]/20' : 'bg-[#0F2D52]/10'
                           }`}>
-                          <FileText className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${isSelected ? 'text-[#1a2740]' : 'text-[#1a2740]/70'
+                          <FileText className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${isSelected ? 'text-[#0F2D52]' : 'text-[#0F2D52]/70'
                             }`} />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -699,7 +699,7 @@ export function ClassroomFormAssignment() {
           <div className="flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center justify-center sm:justify-start">
               {selectedFormIds.length > 0 && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-[#1a2740]">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-[#0F2D52]">
                   <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span>{selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected</span>
                 </div>
@@ -723,7 +723,7 @@ export function ClassroomFormAssignment() {
               </Button>
               <AsyncButton
                 onClick={handleAssignToAllStudents}
-                className="flex-1 sm:flex-none bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white px-4 sm:px-6 h-9 sm:h-10 rounded-xl transition-all duration-200 text-sm"
+                className="flex-1 sm:flex-none bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white px-4 sm:px-6 h-9 sm:h-10 rounded-xl transition-all duration-200 text-sm"
                 disabled={selectedFormIds.length === 0}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
@@ -731,7 +731,7 @@ export function ClassroomFormAssignment() {
               </AsyncButton>
               <AsyncButton
                 onClick={handleAssignToClass}
-                className="flex-1 sm:flex-none bg-[#1a2740] hover:bg-[#0f1d30] text-white px-4 sm:px-6 h-9 sm:h-10 rounded-xl transition-all duration-200 text-sm"
+                className="flex-1 sm:flex-none bg-[#0F2D52] hover:bg-[#163e6b] text-white px-4 sm:px-6 h-9 sm:h-10 rounded-xl transition-all duration-200 text-sm"
                 disabled={selectedFormIds.length === 0}
               >
                 <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />

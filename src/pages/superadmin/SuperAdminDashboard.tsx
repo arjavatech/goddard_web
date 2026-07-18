@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { SuperAdminLayout } from './SuperAdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { School, Users, Crown, Building, Plus, ArrowRight } from 'lucide-react';
+import { School, Users, Crown, Building, Plus, ArrowRight, CheckCircle2, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '../../components/ui/badge';
 import { apiBaseUrl } from '../../config/env';
@@ -15,7 +15,6 @@ export function SuperAdminDashboard() {
   useEffect(() => {
     const fetchSchools = async () => {
       try {
-        console.log('Fetching schools...');
         const response = await fetch(`${apiBaseUrl}/schools/with-owners`, {
           method: 'GET',
           headers: {
@@ -23,150 +22,118 @@ export function SuperAdminDashboard() {
             'Content-Type': 'application/json'
           }
         });
-        
-        console.log('Response status:', response.status);
-        
         if (response.ok) {
           const data = await response.json();
-          console.log('Schools data:', data);
           setSchools(data || []);
         } else {
-          console.error('API response not ok:', response.status, response.statusText);
           setSchools([]);
         }
       } catch (error) {
-        console.error('Error fetching schools:', error);
         setSchools([]);
       } finally {
         setLoading(false);
       }
     };
-
     fetchSchools();
   }, []);
 
   const stats = {
-    totalSchools: schools.length,
-    activeSchools: schools.filter(item => item.owner?.is_verified).length,
-    totalClients: schools.length,
+    totalSchools:       schools.length,
+    activeSchools:      schools.filter(item => item.owner?.is_verified).length,
+    totalClients:       schools.length,
     totalSubscriptions: schools.length > 0 ? 1 : 0
   };
 
+  const statItems = [
+    { label: 'Total Schools',   value: stats.totalSchools,       icon: School,   iconBg: 'bg-[#EFF5FB]',  iconColor: 'text-[#0F2D52]' },
+    { label: 'Active Schools',  value: stats.activeSchools,      icon: Building, iconBg: 'bg-emerald-50', iconColor: 'text-emerald-600' },
+    { label: 'Total Clients',   value: stats.totalClients,       icon: Users,    iconBg: 'bg-amber-50',   iconColor: 'text-amber-600' },
+    { label: 'Subscriptions',   value: stats.totalSubscriptions, icon: Crown,    iconBg: 'bg-violet-50',  iconColor: 'text-violet-600' },
+  ];
+
   return (
     <SuperAdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto lg:space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto">
+
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               SuperAdmin Dashboard
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-500 mt-0.5">
               Manage all Goddard Schools and system administration
             </p>
           </div>
           <Link to="/superadmin-arjava/schools">
-            <Button className="bg-[#0891b2] hover:bg-[#0e7490] w-full sm:w-auto" size="sm">
+            <Button size="sm" className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Add School
             </Button>
           </Link>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Schools
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.totalSchools}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amazon-teal/10 rounded-full flex-shrink-0 ml-2">
-                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Active Schools
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.activeSchools}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-green-100 rounded-full flex-shrink-0 ml-2">
-                  <Building className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+        {/* Stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {statItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={idx}
+                className="group glass-card p-5 animate-fade-in-up"
+                style={{ animationDelay: `${idx * 40}ms` }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1.5 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
+                    <p className="text-[2rem] font-extrabold text-slate-900 tabular-nums tracking-tight leading-none">{item.value}</p>
+                  </div>
+                  <div className={`p-2.5 rounded-xl ${item.iconBg} group-hover:scale-105 transition-transform duration-200 flex-shrink-0`}>
+                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Total Clients
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.totalClients}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-amber-100 rounded-full flex-shrink-0 ml-2">
-                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="glass-card hover:shadow-md transition-shadow">
-            <CardContent className="p-4 sm:p-5 lg:p-6">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs sm:text-sm font-medium text-muted-foreground mb-1 truncate">
-                    Subscriptions
-                  </p>
-                  <p className="text-2xl sm:text-3xl font-bold text-foreground">{stats.totalSubscriptions}</p>
-                </div>
-                <div className="p-2 sm:p-3 bg-purple-100 rounded-full flex-shrink-0 ml-2">
-                  <Crown className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            );
+          })}
         </div>
 
         {/* Schools Overview Table */}
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Schools Overview</CardTitle>
+        <Card className="glass-card animate-fade-in-up" style={{ animationDelay: '180ms' } as React.CSSProperties}>
+          <CardHeader className="border-b border-slate-100 pb-4">
+            <CardTitle>Schools Overview</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pt-0 px-0 pb-0">
             {loading ? (
-              <PageLoader message="Loading schools..." Layout={() => <div />} />
+              <div className="flex items-center justify-center py-16">
+                <span className="h-7 w-7 rounded-full border-2 border-[#0F2D52] border-t-transparent animate-spin" />
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">School Name</th>
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">Subdomain</th>
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">Admin</th>
-                      <th className="text-left py-3 px-2 font-medium text-muted-foreground">Status</th>
+                    <tr>
+                      <th className="px-5 py-3.5 text-left">School Name</th>
+                      <th className="px-5 py-3.5 text-left">Subdomain</th>
+                      <th className="px-5 py-3.5 text-left">Admin</th>
+                      <th className="px-5 py-3.5 text-left">Status</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-slate-50">
                     {schools.length > 0 ? schools.map((item, index) => (
-                      <tr key={item.school?.id || index} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-2 font-medium">{item.school?.name || 'N/A'}</td>
-                        <td className="py-3 px-2 text-muted-foreground">{item.school?.subdomain || 'N/A'}</td>
-                        <td className="py-3 px-2 text-muted-foreground">
+                      <tr key={item.school?.id || index} className="transition-colors duration-150">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
+                              <School className="w-4 h-4 text-[#0F2D52]" />
+                            </div>
+                            <span className="text-sm font-semibold text-slate-800">{item.school?.name || 'N/A'}</span>
+                          </div>
+                        </td>
+                        <td className="px-5 py-3.5 text-sm text-slate-500">{item.school?.subdomain || 'N/A'}</td>
+                        <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">
                           {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
                         </td>
-                        <td className="py-3 px-2">
+                        <td className="px-5 py-3.5">
                           <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'}>
                             {item.owner?.is_verified ? 'Active' : 'Inactive'}
                           </Badge>
@@ -174,7 +141,7 @@ export function SuperAdminDashboard() {
                       </tr>
                     )) : (
                       <tr>
-                        <td colSpan={4} className="py-8 text-center text-muted-foreground">
+                        <td colSpan={4} className="px-5 py-12 text-center text-sm text-slate-400">
                           No schools found
                         </td>
                       </tr>
@@ -186,52 +153,56 @@ export function SuperAdminDashboard() {
           </CardContent>
         </Card>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        {/* Quick Actions + System Status */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 animate-fade-in-up" style={{ animationDelay: '220ms' } as React.CSSProperties}>
           <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">Quick Actions</CardTitle>
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-2 pt-4">
               <Link to="/superadmin-arjava/schools" className="block">
-                <Button variant="outline" className="w-full justify-start" size="sm">
-                  <School className="w-4 h-4 mr-2" />
-                  Manage Schools
-                  <ArrowRight className="w-4 h-4 ml-auto" />
-                </Button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all duration-150 text-sm text-slate-700 group">
+                  <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-150">
+                    <School className="w-4 h-4 text-[#0F2D52]" />
+                  </div>
+                  <span className="flex-1 font-medium text-left">Manage Schools</span>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform duration-150" />
+                </button>
               </Link>
               <Link to="/superadmin-arjava/clients" className="block">
-                <Button variant="outline" className="w-full justify-start" size="sm">
-                  <Users className="w-4 h-4 mr-2" />
-                  View Clients
-                  <ArrowRight className="w-4 h-4 ml-auto" />
-                </Button>
+                <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all duration-150 text-sm text-slate-700 group">
+                  <div className="w-8 h-8 rounded-lg bg-violet-50 flex items-center justify-center flex-shrink-0 group-hover:scale-105 transition-transform duration-150">
+                    <Users className="w-4 h-4 text-violet-600" />
+                  </div>
+                  <span className="flex-1 font-medium text-left">View Clients</span>
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:translate-x-0.5 transition-transform duration-150" />
+                </button>
               </Link>
             </CardContent>
           </Card>
-          
+
           <Card className="glass-card">
-            <CardHeader>
-              <CardTitle className="text-lg font-semibold">System Status</CardTitle>
+            <CardHeader className="border-b border-slate-100 pb-4">
+              <CardTitle>System Status</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">System Status</span>
-                  <Badge variant="success">Online</Badge>
+            <CardContent className="space-y-3 pt-4">
+              {[
+                { label: 'System Status', icon: Wifi,          status: 'Online',     ok: true },
+                { label: 'Database',      icon: Database,       status: 'Connected',  ok: true },
+                { label: 'API Status',    icon: CheckCircle2,   status: 'Active',     ok: true },
+              ].map(({ label, icon: Icon, status, ok }) => (
+                <div key={label} className="flex items-center justify-between py-2">
+                  <div className="flex items-center gap-3">
+                    <Icon className="w-4 h-4 text-slate-400" />
+                    <span className="text-sm text-slate-600">{label}</span>
+                  </div>
+                  <Badge variant={ok ? 'success' : 'destructive'}>{status}</Badge>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">Database</span>
-                  <Badge variant="success">Connected</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-500">API Status</span>
-                  <Badge variant="success">Active</Badge>
-                </div>
-              </div>
+              ))}
             </CardContent>
           </Card>
         </div>
+
       </div>
     </SuperAdminLayout>
   );

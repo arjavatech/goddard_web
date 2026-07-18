@@ -277,13 +277,13 @@ export function InviteParentModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
           >
             Cancel
           </Button>
           <AsyncButton
             onClick={onInvite}
-            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200"
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200"
             disabled={(() => {
               const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
               const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;

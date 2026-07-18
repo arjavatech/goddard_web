@@ -37,7 +37,7 @@ export function DataTable({
   return (
     <div className={className}>
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse">
+        <table className="w-full table-fixed border-collapse stagger-rows">
           <thead>
             <tr className="border-b border-slate-100 bg-slate-50/60">
               {columns.map((col, i) => (

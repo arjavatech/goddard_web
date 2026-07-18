@@ -562,7 +562,7 @@ export function ParentDetails() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0">
+              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0">
                 {parent.firstName.charAt(0)}
                 {parent.lastName.charAt(0)}
               </div>

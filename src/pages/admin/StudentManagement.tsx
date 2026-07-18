@@ -623,7 +623,7 @@ export function StudentManagement() {
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 relative flex-shrink-0"
+                    className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 relative flex-shrink-0"
                   >
                     {showFilters ? (
                       <><X className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden xs:inline">Hide </span>Filters</>
@@ -648,7 +648,7 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 flex-shrink-0">
+                        <Button size="sm" className="h-10 sm:h-11 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 flex-shrink-0">
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Export Selected ({selectedStudentsForBulkAction.length})</span>
                           <span className="sm:hidden">({selectedStudentsForBulkAction.length})</span>
@@ -701,7 +701,7 @@ export function StudentManagement() {
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200 flex-shrink-0"
+                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200 flex-shrink-0"
                     >
                       <GraduationCap className="h-4 w-4 sm:mr-2" />
                       <span className="hidden sm:inline">Transfer Selected ({selectedStudentsForBulkAction.length})</span>
@@ -712,7 +712,7 @@ export function StudentManagement() {
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl transition-all duration-200 flex-shrink-0">
+                        <Button size="sm" className="h-10 sm:h-11 bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl transition-all duration-200 flex-shrink-0">
                           <Download className="h-4 w-4 sm:mr-2" />
                           <span className="hidden sm:inline">Export All</span>
                         </Button>
@@ -741,7 +741,7 @@ export function StudentManagement() {
                       <span className="text-xs sm:text-sm text-slate-500 font-medium">
                         {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                       </span>
-                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
                         <X className="h-4 w-4 mr-2" />
                         Clear All
                       </Button>
@@ -1121,7 +1121,7 @@ export function StudentManagement() {
                       <Button
                         variant="outline" size="sm"
                         onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}
-                        className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                        className="w-full h-8 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                       >
                         <Settings className="h-3 w-3 mr-1" />
                         Manage Forms
@@ -1129,7 +1129,7 @@ export function StudentManagement() {
                       <Button
                         variant="outline" size="sm"
                         onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}
-                        className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                        className="w-full h-8 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                       >
                         <School className="h-3 w-3 mr-1" />
                         Transfer Class
@@ -1139,10 +1139,10 @@ export function StudentManagement() {
                           variant="outline" size="sm"
                           disabled={downloadingEnrollmentId === student.enrollmentId}
                           onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                          className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                          className="w-full h-8 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                         >
                           {downloadingEnrollmentId === student.enrollmentId
-                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-[#1a2740] border-t-transparent inline-block" />
+                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent inline-block" />
                             : <Download className="h-3 w-3 mr-1" />}
                           Download All Forms
                         </Button>
@@ -1180,14 +1180,14 @@ export function StudentManagement() {
               variant="outline"
               onClick={() => setIsStatusDialogOpen(false)}
               disabled={isUpdatingStatus}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
             >
               Cancel
             </Button>
             <Button
               onClick={handleStatusChange}
               disabled={isUpdatingStatus}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
             >
               {isUpdatingStatus ? 'Updating...' : 'Confirm'}
             </Button>
@@ -1285,12 +1285,12 @@ export function StudentManagement() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
               onClick={handleAssignFormToStudents} 
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!selectedFormToAssign || selectedStudentsForForm.length === 0}
             >
               Assign Form ({selectedStudentsForForm.length} students)
@@ -1467,7 +1467,7 @@ export function StudentManagement() {
                     setIsStudentFormDialogOpen(false);
                     setSelectedFormsToAdd([]);
                   }}
-                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                 >
                   Cancel
                 </Button>
@@ -1498,7 +1498,7 @@ export function StudentManagement() {
                     }
 
                   }}
-                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
                   disabled={selectedFormsToAdd.length === 0}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
@@ -1542,7 +1542,7 @@ export function StudentManagement() {
 
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
@@ -1572,7 +1572,7 @@ export function StudentManagement() {
                   setIsTransferring(false);
                 }
               }}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!newClassroomId || isTransferring}
             >
               {isTransferring ? 'Transferring...' : 'Transfer Student'}
@@ -1678,7 +1678,7 @@ export function StudentManagement() {
                           .map(student => student.id);
                         setSelectedStudentsForTransfer(allStudentIds);
                       }}
-                      className="rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                      className="rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                     >
                       Select All
                     </Button>
@@ -1686,7 +1686,7 @@ export function StudentManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedStudentsForTransfer([])}
-                      className="rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                      className="rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                     >
                       Clear All
                     </Button>
@@ -1702,7 +1702,7 @@ export function StudentManagement() {
               setBulkTransferFromGrade('');
               setBulkTransferToGrade('');
               setSelectedStudentsForBulkAction([]);
-            }} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            }} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
@@ -1739,7 +1739,7 @@ export function StudentManagement() {
                   showToast('error', 'Error transferring students. Please try again.');
                 }
               }}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!bulkTransferToGrade || selectedStudentsForTransfer.length === 0}
             >
               Transfer {selectedStudentsForTransfer.length} Students

@@ -558,7 +558,7 @@ export function ClassroomDetails() {
                           {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                  <div className="w-8 h-8 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold text-sm mr-3">
                                     {student.firstName.charAt(0)}
                                     {student.lastName.charAt(0)}
                                   </div>
@@ -628,7 +628,7 @@ export function ClassroomDetails() {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                <div className="w-10 h-10 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold text-sm mr-3">
                                   {student.firstName.charAt(0)}
                                   {student.lastName.charAt(0)}
                                 </div>
@@ -773,7 +773,7 @@ export function ClassroomDetails() {
                           {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                  <div className="w-8 h-8 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold text-sm mr-3">
                                     {student.firstName.charAt(0)}
                                     {student.lastName.charAt(0)}
                                   </div>
@@ -843,7 +843,7 @@ export function ClassroomDetails() {
                           <CardContent className="p-4">
                             <div className="flex items-start justify-between mb-3">
                               <div className="flex items-center">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm mr-3">
+                                <div className="w-10 h-10 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold text-sm mr-3">
                                   {student.firstName.charAt(0)}
                                   {student.lastName.charAt(0)}
                                 </div>

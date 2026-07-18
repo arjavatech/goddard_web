@@ -73,10 +73,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+    <div className="min-h-screen bg-[#F7F9FC] flex flex-col font-sans">
       {/* Mobile overlay */}
       {isSidebarOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       <div className="flex flex-1 min-h-screen">
@@ -84,11 +84,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Mobile drawer (fixed overlay) */}
         <aside className={cn(
           'fixed top-0 left-0 h-full w-60 flex flex-col z-50 transition-transform duration-300 lg:hidden',
-          'bg-[#1a2740] border-r border-[#223050]',
+          'bg-[#0F2D52] border-r border-[#1a3a60]',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}>
           {/* Logo area */}
-          <div className="h-20 px-5 flex items-center justify-between border-b border-[#223050] flex-shrink-0">
+          <div className="h-20 px-5 flex items-center justify-between border-b border-[#1a3a60] flex-shrink-0">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
@@ -111,8 +111,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
                   )}
                 >
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-cyan-400 rounded-r-full" />}
-                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-cyan-300' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
                   <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
                 </Link>
               );
@@ -121,9 +121,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </aside>
 
         {/* Desktop sidebar — sticky, stays in document flow */}
-        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 sticky top-0 self-start h-screen bg-[#1a2740] border-r border-[#223050] z-30">
+        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 sticky top-0 self-start h-screen bg-[#0F2D52] border-r border-[#1a3a60] z-30">
           {/* Logo area */}
-          <div className="h-20 px-5 flex items-center border-b border-[#223050] flex-shrink-0 lg:fixed lg:top-0 lg:left-0 lg:w-60 bg-[#1a2740] z-40 border-r border-r-[#223050]">
+          <div className="h-20 px-5 flex items-center border-b border-[#1a3a60] flex-shrink-0 lg:fixed lg:top-0 lg:left-0 lg:w-60 bg-[#0F2D52] z-40 border-r border-r-[#1a3a60]">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
@@ -131,7 +131,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             />
           </div>
           <div className="px-5 pt-5 pb-2 flex-shrink-0 lg:mt-20">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Navigation</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/80">Navigation</p>
           </div>
           <nav className="flex-1 px-3 pb-4 overflow-y-auto space-y-0.5 scrollbar-thin">
             {navItems.map((item, i) => {
@@ -143,8 +143,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
                   )}
                 >
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-cyan-400 rounded-r-full" />}
-                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-cyan-300' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
                   <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
                 </Link>
               );
@@ -163,7 +163,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </button>
                 <div>
                   <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none">
-                    {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                    {isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal'}
                   </h1>
                   <p className="text-[11px] text-slate-400 mt-0.5">
                     {schoolName || 'The Goddard School'}
@@ -177,7 +177,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
                         {initials}
                       </div>
                     </button>
@@ -185,7 +185,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   <DropdownMenuContent align="end" className="w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
                           <p className="text-xs text-slate-400 truncate">{userData?.email}</p>
@@ -221,7 +221,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Page content */}
           <main className={cn(
-            'flex-1 bg-slate-50',
+            'flex-1 bg-[#F7F9FC]',
             userData?.role ? 'pt-16' : 'pt-0',
             isParentDetailsPage ? 'p-3 sm:p-5' : 'p-4 sm:p-6'
           )}>
@@ -230,10 +230,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
         {/* END main content column */}
       </div>
-      {/* END sidebar + main row — footer is OUTSIDE this row, spans full width */}
-
-      {/* ── Footer — full-width, outside the sidebar+content flex row ── */}
-      <footer className="w-full bg-[#F8FAFC] border-t border-[#E5E7EB] shadow-[0_-2px_8px_rgba(15,23,42,0.04)]">
+      {/* END sidebar + main row — footer is OUTSIDE this row      {/* ── Footer — full-width, outside the sidebar+content flex row ── */}
+      <footer className="w-full bg-white border-t border-slate-200">
 
         {/* Main content grid */}
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10 flex flex-col md:flex-row justify-start items-start gap-16 lg:gap-32">
@@ -246,18 +244,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <div className="flex items-center gap-2.5 pt-1">
               {schoolPhone && (
                 <a href={`tel:${schoolPhone}`} title={schoolPhone}
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#1a2740] shadow-sm">
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
                   <Phone className="h-4 w-4" />
                 </a>
               )}
               {schoolEmail && (
                 <a href={`mailto:${schoolEmail}`} title={schoolEmail}
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
                   <Mail className="h-4 w-4" />
                 </a>
               )}
               <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-white hover:bg-[#1a2740] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-[#E2E8F0] hover:border-[#1a2740] shadow-sm">
+                className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
                 <Globe className="h-4 w-4" />
               </a>
             </div>
@@ -265,36 +263,36 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Resources */}
           <div className="space-y-4 min-w-[200px]">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-[#1a2740]">Resources</h4>
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[#0F2D52]">Resources</h4>
             <ul className="space-y-3">
               {!isSuperAdmin && (
                 <li>
-                  <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
-                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                  <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
+                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                     <span>Help Center</span>
                   </button>
                 </li>
               )}
               {!isSuperAdmin && (
                 <li>
-                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
-                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
+                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                     <span>Admin Guide</span>
                   </button>
                 </li>
               )}
               {isSuperAdmin && (
                 <li>
-                  <button onClick={() => setShowSuperGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group w-full text-left">
-                    <ShieldCheck className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                  <button onClick={() => setShowSuperGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
+                    <ShieldCheck className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                     <span>SuperAdmin Guide</span>
                   </button>
                 </li>
               )}
               <li>
                 <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#1a2740] transition-colors group">
-                  <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#1a2740] transition-colors" />
+                  className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group">
+                  <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
                   <span>Goddard School</span>
                 </a>
               </li>
@@ -303,13 +301,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-slate-200/60 bg-slate-100/50">
+        <div className="border-t border-slate-100 bg-[#F7F9FC]">
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-slate-400 text-center sm:text-left">
               © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
             </p>
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white">
-              <span className="w-2 h-2 rounded-full bg-teal-500" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">
                 {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
               </span>

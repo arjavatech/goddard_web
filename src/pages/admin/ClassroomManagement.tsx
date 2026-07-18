@@ -197,7 +197,7 @@ export function ClassroomManagement() {
             <p className="text-sm text-slate-500 mt-0.5">Manage classrooms and student assignments</p>
           </div>
           <Button onClick={() => { setNewClassroomName(''); setClassroomErrors({}); setIsAddDialogOpen(true); }}
-            className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
+            className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Classroom
           </Button>
         </div>
@@ -205,10 +205,10 @@ export function ClassroomManagement() {
         {/* Stat cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-            <StatCard label="Total Classrooms" value={classrooms.length} icon={Users} iconBgClass="bg-cyan-50" iconColorClass="text-cyan-600" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+            <StatCard label="Total Classrooms" value={classrooms.length} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#1a6fc4]" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
           </div>
           <div className="animate-fade-in-up" style={{ animationDelay: '40ms' }}>
-            <StatCard label="Total Students" value={classrooms.reduce((s,c)=>s+c.studentsCount,0)} icon={Users} iconBgClass="bg-violet-50" iconColorClass="text-violet-600" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+            <StatCard label="Total Students" value={classrooms.reduce((s,c)=>s+c.studentsCount,0)} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
           </div>
           <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
             <StatCard label="Assigned Forms" value={classrooms.reduce((s,c)=>s+c.formsCount,0)} icon={FileText} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
@@ -398,13 +398,13 @@ export function ClassroomManagement() {
             <Button
               variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleAddClassroom}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!newClassroomName.trim()}
             >
               Add Classroom
@@ -440,13 +440,13 @@ export function ClassroomManagement() {
             <Button
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleEditClassroom}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!newClassroomName.trim()}
             >
               Save Changes
@@ -481,7 +481,7 @@ export function ClassroomManagement() {
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
             >
               Cancel
             </Button>

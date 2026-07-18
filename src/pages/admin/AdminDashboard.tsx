@@ -332,32 +332,32 @@ export function AdminDashboard() {
       label: "Classrooms",
       value: metrics?.totalClassrooms || 0,
       icon: School,
-      gradientBg: "bg-cyan-50",
-      iconColor: "text-cyan-600",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
       path: "/admin/classrooms"
     },
     {
       label: "Active Students",
       value: metrics?.totalActiveChildren || 0,
       icon: UserCheck,
-      gradientBg: "bg-violet-50",
-      iconColor: "text-violet-600",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
       path: "/admin/students"
     },
     {
       label: "Active Forms",
       value: metrics?.totalForms || 0,
       icon: FileText,
-      gradientBg: "bg-blue-50",
-      iconColor: "text-blue-600",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#1a6fc4]",
       path: "/admin/forms"
     },
     {
       label: "Active Parents",
       value: metrics?.totalActiveParents || 0,
       icon: Users,
-      gradientBg: "bg-emerald-50",
-      iconColor: "text-emerald-600",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
       path: "/admin/parents"
     }
   ];
@@ -367,9 +367,8 @@ export function AdminDashboard() {
       title: "Invite Parent",
       description: "Send portal access invitation to a parent and student.",
       icon: Mail,
-      iconBg: "bg-cyan-50",
-      iconColor: "text-cyan-600",
-      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
       btnText: "Send Invite",
       onClick: () => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }
     },
@@ -377,9 +376,8 @@ export function AdminDashboard() {
       title: "Add Classroom",
       description: "Create a new classroom group in the school.",
       icon: School,
-      iconBg: "bg-violet-50",
-      iconColor: "text-violet-600",
-      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
       btnText: "Add Classroom",
       onClick: () => setIsAddClassroomDialogOpen(true)
     },
@@ -387,9 +385,8 @@ export function AdminDashboard() {
       title: "Add Form",
       description: "Create and assign new form templates.",
       icon: Plus,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-600",
-      btnClass: "bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200",
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#1a6fc4]",
       btnText: "Add Form",
       onClick: () => setIsAddDialogOpen(true)
     }
@@ -404,7 +401,7 @@ export function AdminDashboard() {
       <div className="space-y-6 max-w-7xl mx-auto">
 
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
             <p className="text-sm text-slate-500 mt-0.5">Monitor your school's enrollment at a glance</p>
@@ -416,22 +413,21 @@ export function AdminDashboard() {
         )}
 
         {/* Stat cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 stagger-children">
           {statItems.map((item, idx) => {
             const Icon = item.icon;
             return (
               <div
                 key={idx}
                 onClick={() => navigate(item.path)}
-                className="group bg-white rounded-2xl border border-slate-100 p-5 cursor-pointer hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm animate-fade-in-up"
-                style={{ animationDelay: `${idx * 40}ms` }}
+                className="group glass-card p-5 cursor-pointer hover:-translate-y-[3px]"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1 min-w-0">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 truncate">{item.label}</p>
-                    <p className="text-3xl font-extrabold text-slate-900 tabular-nums tracking-tight leading-none">{item.value}</p>
+                  <div className="space-y-1.5 min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
+                    <p className="text-[2rem] font-extrabold text-slate-900 tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
-                  <div className={`p-2.5 rounded-xl ${item.gradientBg} group-hover:scale-110 transition-transform flex-shrink-0`}>
+                  <div className={`p-2.5 rounded-xl ${item.iconBg} group-hover:scale-105 transition-transform duration-200 flex-shrink-0`}>
                     <Icon className={`h-5 w-5 ${item.iconColor}`} />
                   </div>
                 </div>
@@ -443,19 +439,19 @@ export function AdminDashboard() {
         {/* Enrollment + Quick Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Enrollment table */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden lg:col-span-3 order-2 lg:order-1 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '160ms' }}>
+          <div className="glass-card overflow-hidden lg:col-span-3 order-2 lg:order-1 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
             <div className="px-5 py-4 border-b border-slate-100">
               <h2 className="text-sm font-bold text-slate-900">Enrollment Progress by Classroom</h2>
               <p className="text-xs text-slate-400 mt-0.5">Form completion rate across all classrooms</p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50/70">
+              <table className="w-full text-left stagger-rows">
+                <thead>
                   <tr>
-                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Classroom</th>
-                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Completed</th>
-                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 hidden sm:table-cell">Progress</th>
-                    <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-right">Rate</th>
+                    <th className="px-5 py-3.5">Classroom</th>
+                    <th className="px-5 py-3.5">Completed</th>
+                    <th className="px-5 py-3.5 hidden sm:table-cell">Progress</th>
+                    <th className="px-5 py-3.5 text-right">Rate</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -464,26 +460,30 @@ export function AdminDashboard() {
                   ) : (
                     enrollmentProgress.map((cls, i) => {
                       const pct = cls.total > 0 ? Math.round(cls.completed / cls.total * 100) : 0;
-                      const color = pct === 100 ? 'bg-emerald-500' : pct >= 60 ? 'bg-cyan-500' : 'bg-amber-400';
+                      const barColor = pct === 100 ? 'bg-emerald-500' : pct >= 60 ? 'bg-[#1a6fc4]' : 'bg-amber-400';
+                      const badgeClass = pct === 100
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
+                        : pct >= 60
+                        ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/60'
+                        : 'bg-amber-50 text-amber-700 border border-amber-200/60';
                       return (
-                        <tr key={`${cls.classroom}-${i}`} className="hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out cursor-default">
+                        <tr key={`${cls.classroom}-${i}`} className="transition-colors duration-150 cursor-default">
                           <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center flex-shrink-0">
-                                <School className="w-4 h-4 text-cyan-600" />
+                              <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
+                                <School className="w-4 h-4 text-[#0F2D52]" />
                               </div>
                               <span className="text-sm font-semibold text-slate-800">{cls.classroom}</span>
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">{cls.completed} / {cls.total}</td>
                           <td className="px-5 py-3.5 hidden sm:table-cell">
-                            <div className="w-32 h-2 bg-slate-200 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all duration-500 ease-out ${color}`} style={{ width: `${isAnimated ? pct : 0}%` }} />
+                            <div className="w-32 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                              <div className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`} style={{ width: `${isAnimated ? pct : 0}%` }} />
                             </div>
                           </td>
                           <td className="px-5 py-3.5 text-right">
-                            <span className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${pct === 100 ? 'bg-emerald-100 text-emerald-700' : pct >= 60 ? 'bg-cyan-100 text-cyan-700' : 'bg-amber-100 text-amber-700'
-                              }`}>{pct}%</span>
+                            <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>{pct}%</span>
                           </td>
                         </tr>
                       );
@@ -495,14 +495,14 @@ export function AdminDashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="space-y-3 lg:col-span-1 order-1 lg:order-2">
-            <h3 className="text-xs font-bold uppercase tracking-widest text-slate-500 px-0.5">Quick Actions</h3>
+          <div className="space-y-3 lg:col-span-1 order-1 lg:order-2 stagger-children">
+            <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
-                <div key={idx} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: `${(idx + 5) * 40}ms` }}>
+                <div key={idx} className="glass-card p-4 hover:shadow-md">
                   <div className="flex items-start gap-3 mb-3">
-                    <div className={`p-2 rounded-xl ${action.iconBg} flex-shrink-0`}>
+                    <div className={`p-2 rounded-xl ${action.iconBg} flex-shrink-0 transition-transform duration-200 group-hover:scale-105`}>
                       <Icon className={`w-4 h-4 ${action.iconColor}`} />
                     </div>
                     <div className="min-w-0">
@@ -512,7 +512,8 @@ export function AdminDashboard() {
                   </div>
                   <Button
                     onClick={action.onClick}
-                    className={`w-full h-9 rounded-xl text-xs font-semibold ${action.btnClass}`}
+                    variant="default"
+                    className="w-full h-9 text-xs"
                   >
                     {action.btnText}
                   </Button>
@@ -585,37 +586,34 @@ export function AdminDashboard() {
         <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
           setIsAddClassroomDialogOpen(open);
         }}>
-          <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
+          <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
             <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-slate-900">Add New Classroom</DialogTitle>
+              <DialogTitle>Add New Classroom</DialogTitle>
             </DialogHeader>
-            <div className="py-2 sm:py-3 md:py-4">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            <div className="py-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                 Classroom Name
               </label>
               <Input
                 value={newClassroomName}
                 onChange={e => setNewClassroomName(e.target.value)}
                 placeholder="e.g. Toddlers A"
-                className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                 autoFocus
               />
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <DialogFooter>
               <Button
                 variant="outline"
                 onClick={() => setIsAddClassroomDialogOpen(false)}
-                className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
               >
                 Cancel
               </Button>
-              <AsyncButton
+              <Button
                 onClick={handleAddClassroom}
-                className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold"
                 disabled={!newClassroomName.trim()}
               >
                 Add Classroom
-              </AsyncButton>
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

@@ -103,7 +103,7 @@ function FormCard({
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 text-[#1a2740] border-[#1a2740]/40 hover:bg-[#1a2740] hover:border-[#1a2740] hover:text-white transition-all duration-200"
+                className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (disabled) return;
@@ -118,7 +118,7 @@ function FormCard({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-[#1a2740] border-[#1a2740]/40 hover:bg-[#1a2740] hover:border-[#1a2740] hover:text-white transition-all duration-200"
+                    className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (disabled) return;
@@ -128,7 +128,7 @@ function FormCard({
                     title="Download PDF"
                   >
                     {isLoadingThis && isLoading?.action === 'download' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-[#1a2740] border-t-transparent rounded-full" />
+                      <span className="animate-spin h-4 w-4 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
                     ) : (
                       <Download className="h-4 w-4" />
                     )}
@@ -136,7 +136,7 @@ function FormCard({
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-[#1a2740] border-[#1a2740]/40 hover:bg-[#1a2740] hover:border-[#1a2740] hover:text-white transition-all duration-200"
+                    className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
                     onClick={(e) => {
                       e.stopPropagation();
                       if (disabled) return;
@@ -146,7 +146,7 @@ function FormCard({
                     title="Print PDF"
                   >
                     {isLoadingThis && isLoading?.action === 'print' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-[#1a2740] border-t-transparent rounded-full" />
+                      <span className="animate-spin h-4 w-4 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
                     ) : (
                       <Printer className="h-4 w-4" />
                     )}
@@ -159,7 +159,7 @@ function FormCard({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 text-[#1a2740] border-[#1a2740]/40 hover:bg-[#1a2740] hover:border-[#1a2740] hover:text-white transition-all duration-200"
+              className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
               onClick={(e) => {
                 e.stopPropagation();
                 if (disabled) return;
@@ -951,11 +951,11 @@ export function FormsDocuments({
                 onClick={handleDownloadAll}
                 disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
                 title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available to download' : 'Download all approved forms as ZIP'}
-                className="group flex items-center gap-1.5 rounded-lg border border-dashed border-[#1a2740]/40 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#1a2740] shadow-sm transition-all duration-200 hover:border-[#1a2740] hover:bg-[#1a2740]/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex items-center gap-1.5 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#0F2D52] shadow-sm transition-all duration-200 hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#1a2740]/10 transition-colors group-hover:bg-[#1a2740]/20">
+                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#0F2D52]/10 transition-colors group-hover:bg-[#0F2D52]/20">
                   {isDownloadingAll
-                    ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#1a2740] border-t-transparent" />
+                    ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
                     : <Download className="h-2.5 w-2.5" />}
                 </span>
                 <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>

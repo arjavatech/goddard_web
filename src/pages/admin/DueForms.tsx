@@ -495,7 +495,7 @@ export function DueForms() {
                   variant="outline"
                   onClick={() => setShowFilters(prev => !prev)}
                   size="sm"
-                  className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 relative"
+                  className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 relative"
                 >
                   {showFilters ? (
                     <><X className="h-4 w-4 mr-2" /> Hide Filters</>
@@ -510,7 +510,7 @@ export function DueForms() {
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+                    <Button variant="outline" size="sm" className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
                       {sortOrder === 'asc'
                         ? <ArrowUp className="h-4 w-4 mr-2" />
                         : <ArrowDown className="h-4 w-4 mr-2" />}
@@ -540,7 +540,7 @@ export function DueForms() {
                     <span className="text-xs sm:text-sm text-slate-500 font-medium">
                       {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                     </span>
-                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
                       <X className="h-4 w-4 mr-2" />
                       Clear All
                     </Button>
@@ -591,7 +591,7 @@ export function DueForms() {
               {selectedForms.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
+                    <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
                       <Download className="h-4 w-4 mr-1.5" />
                       Export Selected ({selectedForms.length})
                     </Button>
@@ -635,7 +635,7 @@ export function DueForms() {
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
+                    <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
                       <Download className="h-4 w-4 mr-1.5" />
                       Export All
                     </Button>
@@ -646,17 +646,17 @@ export function DueForms() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button size="sm" className="bg-white text-[#1a2740]/40 border-2 border-[#1a2740]/20 rounded-xl h-10 sm:h-11 flex-shrink-0 cursor-not-allowed" disabled>
+                <Button size="sm" className="bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20 rounded-xl h-10 sm:h-11 flex-shrink-0 cursor-not-allowed" disabled>
                   <Download className="h-4 w-4 mr-1.5" />
                   Export All
                 </Button>
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200" size="sm" disabled={bulkRemindLoading}>
+                  <Button className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200" size="sm" disabled={bulkRemindLoading}>
                     {bulkRemindLoading ? (
                       <>
-                        <div className="h-4 w-4 mr-1.5 border-2 border-[#1a2740] border-t-transparent rounded-full animate-spin" />
+                        <div className="h-4 w-4 mr-1.5 border-2 border-[#0F2D52] border-t-transparent rounded-full animate-spin" />
                         Sending...
                       </>
                     ) : (
@@ -757,7 +757,7 @@ export function DueForms() {
                             variant="outline"
                             onClick={() => handleSendReminder([form.id])}
                             disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                            className="w-full h-8 text-xs rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200"
+                            className="w-full h-8 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                           >
                             {remindingFormIds.has(form.id) ? (
                               <>
@@ -849,7 +849,7 @@ export function DueForms() {
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200 font-medium"
+                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 font-medium"
                             >
                               {remindingFormIds.has(form.id) ? (
                                 <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />

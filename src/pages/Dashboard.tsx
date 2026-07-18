@@ -338,7 +338,7 @@ export function Dashboard() {
             {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
                 {/* order-1 mobile: EnrollmentProgress */}
                 <div className="order-1 lg:order-1 lg:col-span-2 xl:col-span-7 lg:row-span-2 space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="section-fade-in" style={{ animationDelay: '0.1s' }}>
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
@@ -349,7 +349,7 @@ export function Dashboard() {
                     />
                   </div>
                   {selectedChild.childStatus !== 'archive' && (
-                    <div className="section-fade-in hidden lg:block" style={{ animationDelay: '0.3s' }} data-forms-section>
+                    <div className="animate-fade-in-up hidden lg:block" style={{ animationDelay: '0.22s' }} data-forms-section>
                       <FormsDocuments
                         childSpecificForms={childSpecificForms}
                         familyForms={familyForms}
@@ -375,17 +375,17 @@ export function Dashboard() {
                 </div>
                 {/* order-2 mobile: ParentInfo + ChildrenOverview */}
                 <div className="order-2 lg:order-2 lg:col-span-1 xl:col-span-3 space-y-3 sm:space-y-4">
-                  <div className="section-fade-in" style={{ animationDelay: '0.2s' }}>
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                   </div>
-                  <div className="section-fade-in" style={{ animationDelay: '0.25s' }}>
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.18s' }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
                 {/* order-3 mobile: Forms & Documents (hidden on lg+, shown in main col above) */}
                 {selectedChild.childStatus !== 'archive' && (
                   <div className="order-3 lg:hidden" data-forms-section>
-                    <div className="section-fade-in" style={{ animationDelay: '0.3s' }}>
+                    <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }}>
                       <FormsDocuments
                         childSpecificForms={childSpecificForms}
                         familyForms={familyForms}

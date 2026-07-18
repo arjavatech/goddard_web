@@ -47,7 +47,7 @@ const SelectSchool = () => {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-white">
       {/* ── Left panel (brand) ── */}
-      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-[#0B1F3A] via-[#0F2D52] to-[#0E3A68] p-10 xl:p-14 overflow-hidden">
+      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-[#0B1F3A] via-[#0F2D52] to-[#0E3A68] p-10 xl:p-14 overflow-hidden auth-panel-left">
         {/* Decorative circles */}
         <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
         <div className="pointer-events-none absolute bottom-10 -left-16 w-72 h-72 rounded-full bg-cyan-500/10" />
@@ -100,7 +100,7 @@ const SelectSchool = () => {
       </div>
 
       {/* ── Right panel (form) ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50/60">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50/60 auth-panel-right">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
           <img
@@ -111,12 +111,15 @@ const SelectSchool = () => {
         </div>
 
         <div className="w-full max-w-md space-y-6">
-          <div>
+          <div className="auth-heading-enter">
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Select your school</h2>
             <p className="text-sm text-slate-500 mt-1">
               Choose your location to access the parent portal.
             </p>
           </div>
+
+          {/* Form fields with stagger */}
+          <div className="auth-fields space-y-5">
 
           {/* State dropdown */}
           <div className="space-y-2">
@@ -238,6 +241,7 @@ const SelectSchool = () => {
           {!loading && schools.length === 0 && (
             <p className="text-center text-sm text-slate-400">No schools available at the moment.</p>
           )}
+          </div>{/* end auth-fields */}
         </div>
       </div>
     </div>

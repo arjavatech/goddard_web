@@ -237,7 +237,7 @@ export function AdminManagement() {
               Manage system administrator accounts and access
             </p>
           </div>
-          <Button className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200 font-semibold" size="sm" onClick={() => {
+          <Button className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200 font-semibold" size="sm" onClick={() => {
             setEmailError(''); // Clear any existing email errors
             setIsAddDialogOpen(true);
           }}>
@@ -400,8 +400,8 @@ export function AdminManagement() {
               </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
-              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold disabled:opacity-50">
+              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button onClick={handleInviteAdmin} disabled={isInviting || !isFormValid} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold disabled:opacity-50">
                 {isInviting ? 'Sending...' : 'Send Invite'}
               </Button>
             </DialogFooter>
@@ -461,8 +461,8 @@ export function AdminManagement() {
               </div>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
-              <Button onClick={handleUpdateAdmin} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button onClick={handleUpdateAdmin} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold">
                 Update Admin
               </Button>
             </DialogFooter>
@@ -504,7 +504,7 @@ export function AdminManagement() {
               </div>
             )}
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Close</Button>
+              <Button variant="outline" onClick={() => setIsViewDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">Close</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -526,7 +526,7 @@ export function AdminManagement() {
               </p>
             </div>
             <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">Cancel</Button>
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">Cancel</Button>
               <Button variant="destructive" onClick={confirmDeleteAdmin} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl">
                 Delete Admin
               </Button>

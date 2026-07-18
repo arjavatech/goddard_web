@@ -334,7 +334,7 @@ export function FormsManagement() {
           <Button onClick={() => {
           resetFormFields();
           setIsAddDialogOpen(true);
-        }} className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
+        }} className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Add Form
           </Button>
         </div>
@@ -342,7 +342,7 @@ export function FormsManagement() {
         {loading ? (
           <div className="flex items-center justify-center min-h-[400px] bg-white rounded-lg border border-gray-100 shadow-sm">
             <div className="text-center">
-              <div className="animate-spin rounded-full border-b-2 border-[#1a2740] mx-auto mb-4 h-8 w-8"></div>
+              <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-8 w-8"></div>
               <p className="text-muted-foreground text-sm font-medium">Loading forms management...</p>
             </div>
           </div>
@@ -452,7 +452,7 @@ export function FormsManagement() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input 
                   placeholder="Search forms..." 
-                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]" 
+                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52]" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
@@ -462,7 +462,7 @@ export function FormsManagement() {
                 <div className="space-y-2">
                   <label className="text-xs sm:text-sm font-medium text-slate-500">Status Filter</label>
                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#1a2740]/20 focus:border-[#1a2740]">
+                    <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52]">
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -477,7 +477,7 @@ export function FormsManagement() {
                   <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+                      <Button variant="outline" className="w-full h-10 sm:h-11 justify-between rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
                         {sortOrder === 'asc'
                           ? <ArrowUp className="h-4 w-4 mr-2" />
                           : <ArrowDown className="h-4 w-4 mr-2" />}
@@ -527,7 +527,7 @@ export function FormsManagement() {
                     </div>
                   </td>
                    <td className="py-3 px-2 pr-10">
-                    <div className="flex items-center text-[#1a2740] min-w-0">
+                    <div className="flex items-center text-[#0F2D52] min-w-0">
                       <LinkIcon className="h-4 w-4 mr-1 flex-shrink-0" />
                       {form.link ? (
                         <>
@@ -647,7 +647,7 @@ export function FormsManagement() {
                       </div>
                     </div>
                     
-                     <div className="flex items-start space-x-2 text-[#1a2740] min-w-0">
+                     <div className="flex items-start space-x-2 text-[#0F2D52] min-w-0">
                       <LinkIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 mt-0.5" />
                       {form.link ? (
                         <>
@@ -773,10 +773,10 @@ export function FormsManagement() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleEditForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold" disabled={!formName.trim() || !formLink.trim()}>
+            <AsyncButton onClick={handleEditForm} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold" disabled={!formName.trim() || !formLink.trim()}>
               Save Changes
             </AsyncButton>
           </DialogFooter>
@@ -811,10 +811,10 @@ export function FormsManagement() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAssignToAllStudents} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
+            <AsyncButton onClick={handleAssignToAllStudents} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold">
               Assign to All Students
             </AsyncButton>
           </DialogFooter>

@@ -612,7 +612,7 @@ export function ParentManagement() {
             <p className="text-sm text-slate-500 mt-0.5">Manage parent accounts and family information</p>
           </div>
           <Button onClick={() => { resetInviteForm(); setInviteFormErrors({}); loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
-            className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
+            className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
             <Plus className="h-4 w-4 mr-2" /> Invite Parent
           </Button>
         </div>
@@ -622,7 +622,7 @@ export function ParentManagement() {
             <StatCard label="Total Parents" value={parents.length} icon={Users} iconBgClass="bg-cyan-50" iconColorClass="text-cyan-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
           </div>
           <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
-            <StatCard label="Signed Up" value={parents.filter(p=>p.signupStatus==='Signed').length} icon={CheckCircle} iconBgClass="bg-emerald-50" iconColorClass="text-emerald-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+            <StatCard label="Signed Up" value={parents.filter(p=>p.signupStatus==='Signed').length} icon={CheckCircle} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
           </div>
           <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
             <StatCard label="Pending Signup" value={parents.filter(p=>p.signupStatus==='Not Signed').length} icon={Clock} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
@@ -640,7 +640,7 @@ export function ParentManagement() {
                   {sortedParents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="bg-white text-[#1a2740] border-2 border-[#1a2740] hover:bg-[#1a2740] hover:text-white rounded-xl h-9 sm:h-10 transition-all duration-200">
+                        <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-9 sm:h-10 transition-all duration-200">
                           <Download className="h-4 w-4 mr-2" />
                           Export
                         </Button>
@@ -656,7 +656,7 @@ export function ParentManagement() {
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" className="bg-white text-[#1a2740]/40 border-2 border-[#1a2740]/20 rounded-xl h-9 sm:h-10 cursor-not-allowed" disabled>
+                      <Button size="sm" className="bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20 rounded-xl h-9 sm:h-10 cursor-not-allowed" disabled>
                         <Download className="h-4 w-4 mr-2" />
                       </Button>
                     </div>
@@ -1170,10 +1170,10 @@ export function ParentManagement() {
             </div>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddChild} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#1a2740] hover:bg-[#0f1d30] text-white transition-all duration-200 font-semibold">
+            <AsyncButton onClick={handleAddChild} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold">
               Add Child
             </AsyncButton>
           </DialogFooter>
@@ -1196,7 +1196,7 @@ export function ParentManagement() {
             </p>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setParentToDeactivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setParentToDeactivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button
@@ -1237,7 +1237,7 @@ export function ParentManagement() {
             </p>
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setParentToActivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#1a2740] border border-[#1a2740] hover:bg-[#1a2740] hover:text-white transition-all duration-200">
+            <Button variant="outline" onClick={() => setParentToActivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button

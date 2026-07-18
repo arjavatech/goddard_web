@@ -6,10 +6,13 @@ const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
     <div
       ref={ref}
       className={cn(
-        'rounded-xl border border-slate-100/80 bg-white text-card-foreground transition-shadow duration-200',
-        'shadow-[0_1px_3px_0_rgb(0_0_0/0.06),0_1px_2px_-1px_rgb(0_0_0/0.05)]',
+        'rounded-2xl border border-slate-100 bg-white text-card-foreground transition-all duration-300 ease-out',
         className
       )}
+      style={{
+        boxShadow: '0 1px 3px 0 rgb(15 23 42/0.05),0 4px 16px -2px rgb(15 23 42/0.05)',
+        ...((props as any).style),
+      }}
       {...props}
     />
   )
@@ -18,7 +21,11 @@ Card.displayName = 'Card';
 
 const CardHeader = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex flex-col space-y-1 p-5 sm:p-6', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('flex flex-col space-y-1 p-5 sm:p-6 pb-4', className)}
+      {...props}
+    />
   )
 );
 CardHeader.displayName = 'CardHeader';
@@ -27,7 +34,7 @@ const CardTitle = forwardRef<HTMLHeadingElement, React.HTMLAttributes<HTMLHeadin
   ({ className, ...props }, ref) => (
     <h3
       ref={ref}
-      className={cn('text-base font-semibold leading-snug tracking-tight text-slate-900', className)}
+      className={cn('text-[15px] font-semibold leading-snug tracking-tight text-slate-900', className)}
       {...props}
     />
   )
@@ -50,7 +57,11 @@ CardContent.displayName = 'CardContent';
 
 const CardFooter = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex items-center px-5 pb-5 sm:px-6 sm:pb-6 pt-0', className)} {...props} />
+    <div
+      ref={ref}
+      className={cn('flex items-center px-5 pb-5 sm:px-6 sm:pb-6 pt-0', className)}
+      {...props}
+    />
   )
 );
 CardFooter.displayName = 'CardFooter';
