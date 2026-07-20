@@ -13,7 +13,7 @@ const sizeClasses = {
 export function AvatarInitials({ initials, size = 'sm', className }: AvatarInitialsProps) {
   return (
     <div
-      className={`rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold flex-shrink-0 ${sizeClasses[size]} ${className ?? ''}`}
+      className={`rounded-full bg-[#074da1] text-white flex items-center justify-center font-bold flex-shrink-0 ${sizeClasses[size]} ${className ?? ''}`}
     >
       {initials.slice(0, 2).toUpperCase()}
     </div>

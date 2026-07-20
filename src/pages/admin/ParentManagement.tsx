@@ -1052,7 +1052,7 @@ export function ParentManagement() {
       />
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4 rounded-2xl shadow-lg" preventClose>
+        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4 rounded-2xl no-scrollbar shadow-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               Add Child to {selectedParent?.firstName}{' '}
