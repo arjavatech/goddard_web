@@ -553,7 +553,7 @@ export function FormsManagement() {
                     </div>
                   </td>
                   <td className="py-3 px-2 pl-4">
-                    <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1">
+                    <Badge variant={getStatusBadgeVariant(form.status)} className="text-xs px-2 py-1 bg-[#004ba6]">
                       {getStatusDisplayName(form.status)}
                     </Badge>
                   </td>
@@ -699,9 +699,8 @@ export function FormsManagement() {
         setFormErrors={setFormErrors}
         isSubmitting={isAddingForm}
       />
-      {/* Edit Form Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg rounded-2xl shadow-lg" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Edit Form</DialogTitle>
           </DialogHeader>
@@ -748,7 +747,7 @@ export function FormsManagement() {
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Status</label>
               <Select value={formStatus} onValueChange={value => setFormStatus(value as FormStatus)}>
-                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ">
                   <SelectValue placeholder="Select status" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border-slate-100 shadow-lg">

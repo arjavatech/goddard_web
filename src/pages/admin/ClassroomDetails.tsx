@@ -390,7 +390,7 @@ export function ClassroomDetails() {
     }
   };
   return <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 mt-16">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center">
             <Link to="/admin/classrooms" className="mr-4">
@@ -411,7 +411,7 @@ export function ClassroomDetails() {
               </Button>
             </Link>
             <Button 
-              className="bg-[#0891b2] hover:bg-[#0e7490] flex-1 sm:flex-none"
+              className="bg-[#0891b2] hover:bg-[#0e7490] text-white flex-1 sm:flex-none"
               onClick={() => {
                 setChildClassroom(classroomId || '');
                 loadClassroomsIfNeeded();
@@ -558,7 +558,7 @@ export function ClassroomDetails() {
                           {paginatedStudents.map(student => <tr key={student.id} className="border-b border-gray-100 hover:bg-gray-50">
                               <td className="py-3 px-4">
                                 <div className="flex items-center">
-                                  <div className="w-8 h-8 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-bold text-sm mr-3">
+                                  <div className="w-8 h-8 rounded-full bg-[#004fb0] text-white flex items-center justify-center font-bold text-sm mr-3">
                                     {student.firstName.charAt(0)}
                                     {student.lastName.charAt(0)}
                                   </div>

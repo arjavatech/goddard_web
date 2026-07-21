@@ -557,8 +557,8 @@ export function ClassroomFormAssignment() {
         {/* Content */}
         <div className="flex-1 flex flex-col min-h-0">
           {/* Search and Stats Bar */}
-          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gray-50/50 border-b">
-            <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-2.5 sm:py-4 bg-gray-50/50 border-b">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 items-end">
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#0F2D52]' : 'text-gray-400'
                   }`} />
@@ -582,26 +582,24 @@ export function ClassroomFormAssignment() {
                   </Button>
                 )}
               </div>
-              <div className="flex flex-col gap-3 sm:gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-slate-700">Form Status</label>
-                  <Select value={selectedFormStatus} onValueChange={(value) => setSelectedFormStatus(value as 'active' | 'inactive' | 'school_default')}>
-                    <SelectTrigger className="rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52]">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="school_default">Default</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Form Status</label>
+                <Select value={selectedFormStatus} onValueChange={(value) => setSelectedFormStatus(value as 'active' | 'inactive' | 'school_default')}>
+                  <SelectTrigger className="rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/20 focus:border-[#0F2D52] h-9 sm:h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="school_default">Default</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>
 
           {/* Forms List */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 md:px-6 py-2.5 sm:py-4">
             {availableForms.length === 0 ? (
               <div className="flex items-center justify-center h-full min-h-[250px] sm:min-h-[300px]">
                 <div className="text-center max-w-sm px-4">
@@ -695,7 +693,7 @@ export function ClassroomFormAssignment() {
         </div>
 
         {/* Footer */}
-        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t bg-white">
+        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-2.5 sm:py-4 border-t bg-white">
           <div className="flex flex-col gap-3 sm:gap-4">
             <div className="flex items-center justify-center sm:justify-start">
               {selectedFormIds.length > 0 && (
@@ -710,7 +708,7 @@ export function ClassroomFormAssignment() {
                 </div>
               )}
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-3">
               <Button
                 variant="outline"
                 onClick={() => {

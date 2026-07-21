@@ -1305,7 +1305,7 @@ export function StudentManagement() {
           setSelectedFormsToAdd([]);
         }
       }}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl shadow-lg">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] md:overflow-hidden overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
           <DialogHeader className="pb-4 border-b border-slate-100">
             <div className="flex items-center space-x-3">
               <AvatarInitials initials={`${selectedStudentForForms?.firstName[0] ?? ''}${selectedStudentForForms?.lastName[0] ?? ''}`} size="lg" />
@@ -1320,7 +1320,7 @@ export function StudentManagement() {
             </div>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6 overflow-y-auto max-h-[60vh]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6 md:overflow-y-auto md:max-h-[60vh]">
             {/* Currently Assigned Forms */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
@@ -1330,7 +1330,7 @@ export function StudentManagement() {
                 </Badge>
               </div>
               
-              <div className="border rounded-lg max-h-80 overflow-y-auto">
+              <div className="border rounded-lg max-h-48 sm:max-h-80 overflow-y-auto">
                 {selectedStudentForForms?.assignedForms && selectedStudentForForms.assignedForms.length > 0 ? (
                   selectedStudentForForms.assignedForms.map((form, index) => {
                     const normalizedStatus = normalizeFormStatus(form.status);
@@ -1393,7 +1393,7 @@ export function StudentManagement() {
                 </Badge>
               </div>
               
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <div className="space-y-3 max-h-48 sm:max-h-80 overflow-y-auto">
                 {availableForms.filter(form => 
                   !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
                 ).length > 0 ? (
@@ -1454,20 +1454,20 @@ export function StudentManagement() {
           </div>
           
           <DialogFooter className="pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between w-full">
-              <div className="text-sm text-slate-500">
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+              <div className="text-sm text-slate-500 text-center sm:text-left">
                 {selectedFormsToAdd.length > 0 && (
                   <span>{selectedFormsToAdd.length} form{selectedFormsToAdd.length !== 1 ? 's' : ''} selected</span>
                 )}
               </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 w-full sm:w-auto justify-center sm:justify-end">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsStudentFormDialogOpen(false);
                     setSelectedFormsToAdd([]);
                   }}
-                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 flex-1 sm:flex-none"
                 >
                   Cancel
                 </Button>
@@ -1498,7 +1498,7 @@ export function StudentManagement() {
                     }
 
                   }}
-                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold flex-1 sm:flex-none"
                   disabled={selectedFormsToAdd.length === 0}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />

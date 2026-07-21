@@ -524,7 +524,7 @@ export function ParentDetails() {
     </AdminLayout>;
   }
   return <AdminLayout>
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-6 max-w-7xl mx-auto mt-16 sm:mt-16">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center">
           <Button

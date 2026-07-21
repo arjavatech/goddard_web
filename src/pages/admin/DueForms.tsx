@@ -717,7 +717,7 @@ export function DueForms() {
                               onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
                               className="flex-shrink-0"
                             />
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-[#0052b7] text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
                               {form.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                             </div>
                             <div className="min-w-0 flex-1">

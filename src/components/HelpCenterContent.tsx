@@ -112,7 +112,7 @@ export function HelpCenterContent({ role }: HelpCenterContentProps) {
                 <label className="text-xs font-medium text-muted-foreground">Message</label>
                 <Textarea placeholder="Describe your issue or question..." rows={3} value={msgBody} onChange={e => setMsgBody(e.target.value)} required />
               </div>
-              <Button type="submit" size="sm" className="bg-amazon-teal hover:bg-amazon-teal/90 gap-2 w-full sm:w-auto">
+              <Button type="submit" size="sm" className="bg-amazon-teal hover:bg-amazon-teal/90 text-white gap-2 w-full sm:w-auto">
                 <Send className="h-3.5 w-3.5" />
                 Send Message
               </Button>

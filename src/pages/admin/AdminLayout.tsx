@@ -328,7 +328,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </Dialog>
 
       <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="w-[95vw] max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-blue-600" /> Help Center</DialogTitle>
             <DialogDescription>Find answers to common admin questions</DialogDescription>

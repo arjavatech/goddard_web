@@ -48,7 +48,7 @@ export function AddFormModal({
         if (!open) onClose();
       }}
     >
-      <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg rounded-2xl shadow-lg" preventClose>
+      <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg" preventClose>
         <DialogHeader>
           <DialogTitle className="text-lg font-bold text-slate-900">{title}</DialogTitle>
         </DialogHeader>

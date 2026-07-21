@@ -737,7 +737,7 @@ export function FormsDocuments({
   // If a form is selected for viewing, show iframe in this section
   if (selectedForm) {
     return (
-      <div className="px-2 sm:px-0">
+      <div className="px-2 sm:px-0 mt-10">
         <div className="mb-3 sm:mb-4 space-y-3 sm:space-y-0">
           <div className="flex items-center gap-2">
             <Button

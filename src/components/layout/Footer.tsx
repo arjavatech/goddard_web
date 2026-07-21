@@ -96,7 +96,7 @@ export function Footer() {
 
       {/* Help Center Modal */}
       <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto no-scrollbar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <HelpCircle className="h-5 w-5 text-[#0F2D52]" />

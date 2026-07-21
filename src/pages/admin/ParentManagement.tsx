@@ -1052,7 +1052,7 @@ export function ParentManagement() {
       />
       {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-lg max-h-[85vh] overflow-y-auto mx-4 rounded-2xl no-scrollbar shadow-lg" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl no-scrollbar shadow-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">
               Add Child to {selectedParent?.firstName}{' '}
@@ -1182,7 +1182,7 @@ export function ParentManagement() {
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4 rounded-2xl shadow-lg" preventClose>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Deactivate Parent</DialogTitle>
           </DialogHeader>
@@ -1223,7 +1223,7 @@ export function ParentManagement() {
 
       {/* Activate Confirmation Dialog */}
       <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
-        <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4 rounded-2xl shadow-lg" preventClose>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Activate Parent</DialogTitle>
           </DialogHeader>
