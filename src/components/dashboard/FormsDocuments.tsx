@@ -245,39 +245,12 @@ export function FormsDocuments({
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
-  // Single-shot ref to prevent scheduling multiple refreshes for the same submission
-  const refreshScheduledRef = useRef<boolean>(false);
   const [countdown, setCountdown] = useState(4);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
-
-  // Shared scheduler to refresh dashboard data 3s after a detected submission success.
-  // Declared at component scope so both iframe onLoad and message listeners can call it.
-  const scheduleRefreshAfterThankYou = () => {
-    if (refreshScheduledRef.current) return;
-    refreshScheduledRef.current = true;
-
-    setShowThankYou(true);
-
-    if (thankYouTimeoutRef.current) {
-      clearTimeout(thankYouTimeoutRef.current);
-      thankYouTimeoutRef.current = null;
-    }
-
-    thankYouTimeoutRef.current = setTimeout(() => {
-      setSelectedForm(null);
-      setShowThankYou(false);
-      setIsFrameLoading(false);
-      try {
-        if (onFormCompleted) onFormCompleted();
-      } finally {
-        refreshScheduledRef.current = false;
-      }
-    }, 3000);
-  };
 
   const handleDownloadAll = async () => {
     if (!enrollmentId) return;
@@ -682,14 +655,42 @@ export function FormsDocuments({
     if (selectedForm && !isFrameLoading) {
       let urlCheckInterval: ReturnType<typeof setInterval>;
       
-      // Using scheduleRefreshAfterThankYou declared in component scope above.
+      // Function to start thank you countdown
+      const startThankYouCountdown = () => {
+        setShowThankYou(true);
+        setCountdown(4);
+        
+        // Start countdown
+        countdownRef.current = setInterval(() => {
+          setCountdown(prev => {
+            if (prev <= 1) {
+              // Auto redirect to home
+              setSelectedForm(null);
+              setShowThankYou(false);
+              setIsFrameLoading(false);
+              if (countdownRef.current) clearInterval(countdownRef.current);
+              // Trigger refresh when auto-redirecting
+              if (onFormCompleted) onFormCompleted();
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+        
+        // Fallback timeout in case countdown doesn't work
+        thankYouTimeoutRef.current = setTimeout(() => {
+          setSelectedForm(null);
+          setShowThankYou(false);
+          setIsFrameLoading(false);
+        }, 15000);
+      };
       
       // Listen for messages from iframe to detect form completion
       const handleMessage = (event: MessageEvent) => {
         // Check if message indicates form completion (thank you page)
         if (event.data && typeof event.data === 'string' && 
             (event.data.includes('thank') || event.data.includes('complete') || event.data.includes('submitted'))) {
-          scheduleRefreshAfterThankYou();
+          startThankYouCountdown();
         }
       };
       
@@ -701,7 +702,7 @@ export function FormsDocuments({
             const currentUrl = iframe.contentWindow.location.href;
             // Check if URL contains thank you indicators
             if (currentUrl.includes('thank') || currentUrl.includes('success') || currentUrl.includes('complete')) {
-              scheduleRefreshAfterThankYou();
+              startThankYouCountdown();
               if (urlCheckInterval) clearInterval(urlCheckInterval);
             }
           }
@@ -852,8 +853,22 @@ export function FormsDocuments({
                             if (iframe && iframe.contentDocument) {
                               const content = iframe.contentDocument.body.innerText.toLowerCase();
                               if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
-                                // Use the shared scheduler which waits 3s and triggers a single refresh
-                                scheduleRefreshAfterThankYou();
+                                setShowThankYou(true);
+                                setCountdown(5);
+                                
+                                countdownRef.current = setInterval(() => {
+                                  setCountdown(prev => {
+                                    if (prev <= 1) {
+                                      setSelectedForm(null);
+                                      setShowThankYou(false);
+                                      setIsFrameLoading(false);
+                                      if (countdownRef.current) clearInterval(countdownRef.current);
+                                      if (onFormCompleted) onFormCompleted();
+                                      return 0;
+                                    }
+                                    return prev - 1;
+                                  });
+                                }, 1000);
                               }
                             }
                           } catch (error) {
