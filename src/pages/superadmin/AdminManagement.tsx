@@ -16,6 +16,16 @@ import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X } from 'lucide-react';
 
+interface NetworkError {
+  code?: string;
+  status?: number;
+  message?: string;
+  response?: {
+    message?: string;
+    error?: string;
+  };
+}
+
 export function AdminManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -139,16 +149,17 @@ export function AdminManagement() {
       
       const adminUsers = await fetchAdminUsers(userData.schoolId);
       setAdmins(adminUsers);
-    } catch (err: any) {
-      if (err?.code === 'EMAIL_BOUNCE' || err?.status === 502) {
-        showToast('error', err.message);
+    } catch (err) {
+      const errorResponse = err as NetworkError;
+      if (errorResponse?.code === 'EMAIL_BOUNCE' || errorResponse?.status === 502) {
+        showToast('error', errorResponse.message);
         return;
       }
 
       const errorText =
-        err?.response?.message ||
-        err?.response?.error ||
-        err?.message ||
+        errorResponse?.response?.message ||
+        errorResponse?.response?.error ||
+        errorResponse?.message ||
         '';
 
       if (
@@ -157,7 +168,7 @@ export function AdminManagement() {
         errorText.includes('different role')
       ) {
         showToast('error', 'Already registered with different role');
-      } else if (err.message?.includes('already exists') || err.message?.includes('duplicate')) {
+      } else if (errorResponse.message?.includes('already exists') || errorResponse.message?.includes('duplicate')) {
         setEmailError('Email already exists');
       } else {
         showToast('error', errorText || 'Failed to send invitation');
@@ -172,9 +183,10 @@ export function AdminManagement() {
     try {
       await resendAdminInvite(admin.id);
       showToast('success', 'Invitation resent successfully to ' + admin.email);
-    } catch (error: any) {
-      if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
-        showToast('error', error.message);
+    } catch (error) {
+      const err = error as NetworkError;
+      if (err?.code === 'EMAIL_BOUNCE' || err?.status === 502) {
+        showToast('error', err.message);
       } else {
         console.error('Error resending invitation:', error);
         showToast('error', 'Failed to resend invitation');

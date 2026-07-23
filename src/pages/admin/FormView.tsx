@@ -229,7 +229,7 @@ export function FormView() {
 
   const selectedUrl = getFormUrl();
   return <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto mt-14">
+      <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center space-x-3 sm:space-x-4">
             <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
@@ -381,13 +381,14 @@ export function FormView() {
                         src={selectedUrl}
                         style={{
                           width: '100%',
-                          height: '500px',
                           border: 'none',
                           borderRadius: '8px',
                           opacity: isFrameLoading ? 0 : 1,
-                          transition: 'opacity 0.3s ease-in-out'
+                          transition: 'opacity 0.3s ease-in-out',
+                          overflow: 'auto'
                         }}
-                        className="sm:h-[600px]"
+                        className="w-full h-[75vh] min-h-[600px] sm:min-h-[750px] md:min-h-[900px]"
+                        scrolling="auto"
                         title={formData.title}
                         allow="fullscreen"
                         onLoad={() => setIsFrameLoading(false)}
