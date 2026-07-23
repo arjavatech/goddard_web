@@ -1,5 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -63,7 +64,7 @@ export function DueForms() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-background px-3 py-2 text-sm text-slate-700 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+          className="flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
         >
           <span className="truncate">
             {value.length === 0 ? placeholder : `${value.length} selected`}
@@ -82,7 +83,9 @@ export function DueForms() {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       checked={value.includes(option)}
-                      onChange={() => {}}
+                      onChange={() => {
+                        /* noop */
+                      }}
                       className="pointer-events-none"
                     />
                     <span>{option}</span>
@@ -318,7 +321,7 @@ export function DueForms() {
     }
   };
 
-  const handleSendReminder = async (formIds: string[], isBulk: boolean = false) => {
+  const handleSendReminder = async (formIds: string[], isBulk = false) => {
     try {
       if (isBulk) {
         setBulkRemindLoading(true);
@@ -449,43 +452,99 @@ export function DueForms() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Due Forms Tracking
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">              Due Forms Tracking
             </h1>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
               Monitor form completion status and send reminders to parents
             </p>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
-            <StatCard label="Total Forms" value={stats.total} icon={Calendar} iconBgClass="bg-blue-50" iconColorClass="text-blue-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
-            <StatCard label="Pending" value={stats.pending} icon={Clock} iconBgClass="bg-yellow-50" iconColorClass="text-yellow-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
-            <StatCard label="In Progress" value={stats.in_progress} icon={Clock} iconBgClass="bg-blue-50" iconColorClass="text-blue-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '120ms' }}>
-            <StatCard label="Overdue" value={stats.overdue} icon={AlertTriangle} iconBgClass="bg-red-50" iconColorClass="text-red-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Total Forms
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.total}</p>
+                </div>
+                <div className="p-2.5 bg-[#EFF5FB] rounded-xl flex-shrink-0 ml-2">
+                  <Calendar className="h-4 w-4 text-[#0F2D52]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Pending
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.pending}</p>
+                </div>
+                <div className="p-2.5 bg-amber-50 rounded-xl flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    In Progress
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.in_progress}</p>
+                </div>
+                <div className="p-2.5 bg-blue-50 rounded-xl flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Overdue
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.overdue}</p>
+                </div>
+                <div className="p-2.5 bg-red-50 rounded-xl flex-shrink-0 ml-2">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '160ms' }}>
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden hover:shadow-md transition-all duration-300">
+          <CardContent className="p-5">
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <Input
                   placeholder="Search forms, students, or parents..."
-                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
+                  className="pl-9 h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
@@ -495,60 +554,58 @@ export function DueForms() {
                   variant="outline"
                   onClick={() => setShowFilters(prev => !prev)}
                   size="sm"
-                  className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 relative"
+                  className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all relative"
                 >
                   {showFilters ? (
-                    <><X className="h-4 w-4 mr-2" /> Hide Filters</>
+                    <><X className="h-4 w-4 mr-1.5" /> Hide Filters</>
                   ) : (
-                    <><Filter className="h-4 w-4 mr-2" /> Filters</>
+                    <><Filter className="h-4 w-4 mr-1.5 text-slate-400" /> Filters</>
                   )}
                   {!showFilters && activeFilterCount > 0 && (
-                    <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white animate-pulse">
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-extrabold text-white animate-pulse">
                       {activeFilterCount}
                     </span>
                   )}
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
-                      {sortOrder === 'asc'
-                        ? <ArrowUp className="h-4 w-4 mr-2" />
-                        : <ArrowDown className="h-4 w-4 mr-2" />}
-                      {getSortLabel()}
+                    <Button variant="outline" size="sm" className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all">
+                      {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 mr-1.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />}
+                      <span>{getSortLabel()}</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => { setSortBy('formName'); setSortOrder('asc'); }}>Form A-Z</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('formName'); setSortOrder('desc'); }}>Form Z-A</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('studentName'); setSortOrder('asc'); }}>Student A-Z</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('studentName'); setSortOrder('desc'); }}>Student Z-A</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('classroomName'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('classroomName'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('parentName'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('parentName'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                  <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('formName'); setSortOrder('asc'); }}>Form A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('formName'); setSortOrder('desc'); }}>Form Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('studentName'); setSortOrder('asc'); }}>Student A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('studentName'); setSortOrder('desc'); }}>Student Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('classroomName'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('classroomName'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('parentName'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('parentName'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
 
             {showFilters && (
-              <div className="p-3 sm:p-4 bg-background rounded-xl border border-slate-100 space-y-3">
+              <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3 mt-3">
                 {activeFilterCount > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-slate-500 font-medium">
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span className="text-xs text-slate-500 font-bold">
                       {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                     </span>
-                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
-                      <X className="h-4 w-4 mr-2" />
+                    <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white border-slate-200 text-slate-600 hover:bg-slate-50 text-[10px] font-extrabold transition-all">
+                      <X className="h-3.5 w-3.5 mr-1" />
                       Clear All
                     </Button>
                   </div>
                 )}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Classroom</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Classroom</label>
                     <MultiSelectDropdown
                       value={classroomFilter}
                       onValueChange={setClassroomFilter}
@@ -557,8 +614,8 @@ export function DueForms() {
                       label="Classroom"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Form</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Form</label>
                     <MultiSelectDropdown
                       value={formFilter}
                       onValueChange={setFormFilter}
@@ -567,8 +624,8 @@ export function DueForms() {
                       label="Form"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Status</label>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</label>
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
@@ -584,20 +641,20 @@ export function DueForms() {
         </div>
 
         {/* Forms Table */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100 bg-slate-50/50">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-50 bg-slate-50/50 px-5">
             <CardTitle className="text-sm font-bold text-slate-900">Due Forms ({filteredForms.length})</CardTitle>
             <div className="flex flex-wrap items-center gap-2">
               {selectedForms.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
-                      <Download className="h-4 w-4 mr-1.5" />
+                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
+                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
                       Export Selected ({selectedForms.length})
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {
+                  <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => {
                       const selectedFormObjects = dueForms.filter(f => selectedForms.includes(f.id));
                       const headers = dueFormsExportHeaders;
                       const rows = selectedFormObjects.map(form => [
@@ -615,7 +672,7 @@ export function DueForms() {
                         rows
                       );
                     }}>Export as CSV</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => {
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => {
                       const selectedFormObjects = dueForms.filter(f => selectedForms.includes(f.id));
                       const headers = dueFormsExportHeaders;
                       const rows = selectedFormObjects.map(form => [
@@ -635,8 +692,8 @@ export function DueForms() {
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200">
-                      <Download className="h-4 w-4 mr-1.5" />
+                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
+                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
                       Export All
                     </Button>
                   </DropdownMenuTrigger>
@@ -699,80 +756,80 @@ export function DueForms() {
             {filteredForms.length > 0 ? (
               <>
                 {/* Card View — mobile only */}
-                <div className="md:hidden p-3 space-y-3">
-                  <div className="flex items-center gap-2 pb-2 border-b">
+                <div className="md:hidden p-4 space-y-4">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-slate-50">
                     <Checkbox
                       checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
-                    <span className="text-sm font-medium">Select All</span>
+                    <span className="text-xs font-bold text-slate-700">Select All</span>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-3">
                     {paginatedForms.map(form => (
-                      <div key={form.id} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
+                      <Card key={form.id} className="p-4 rounded-xl border border-slate-100 shadow-xs bg-white space-y-3">
                         <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <Checkbox
                               checked={selectedForms.includes(form.id)}
                               onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
                               className="flex-shrink-0"
                             />
-                            <div className="w-8 h-8 rounded-full bg-[#0052b7] text-white flex items-center justify-center font-semibold text-xs flex-shrink-0">
+                            <div className="w-8 h-8 rounded-xl bg-[#0e58a1] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 border border-slate-100">
                               {form.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-medium text-sm truncate">{form.formName}</p>
-                              <p className="text-xs text-muted-foreground truncate">{form.studentName} &bull; {form.classroomName}</p>
+                              <p className="font-bold text-slate-900 text-xs sm:text-sm truncate">{form.formName}</p>
+                              <p className="text-[10px] font-semibold text-slate-400 truncate mt-0.5">{form.studentName} &bull; {form.classroomName}</p>
                             </div>
                           </div>
                         </div>
 
-                        <div className="space-y-1.5 text-xs">
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Parent:</span>
-                            <span className="font-medium truncate max-w-[60%] text-right">{form.parentName.split(' & ')[0]}</span>
+                        <div className="space-y-1.5 text-xs pt-2 border-t border-slate-50">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-400 font-semibold">Parent:</span>
+                            <span className="font-bold text-slate-700 truncate max-w-[60%] text-right">{form.parentName.split(' & ')[0]}</span>
                           </div>
                           {form.parentName.includes(' & ') && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-muted-foreground">Secondary:</span>
-                              <span className="font-medium truncate max-w-[60%] text-right">{form.parentName.split(' & ')[1]}</span>
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="text-slate-400 font-semibold">Secondary:</span>
+                              <span className="font-bold text-slate-700 truncate max-w-[60%] text-right">{form.parentName.split(' & ')[1]}</span>
                             </div>
                           )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Due:</span>
-                            <span className={`font-medium ${
-                              isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600' : form.dueDate ? '' : 'text-muted-foreground'
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-slate-400 font-semibold">Due:</span>
+                            <span className={`font-bold ${
+                              isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600' : form.dueDate ? 'text-slate-700' : 'text-slate-400'
                             }`}>{formatDate(form.dueDate)}</span>
                           </div>
 
-                          <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Status:</span>
-                            <span className="font-medium truncate max-w-[60%] text-right">{getStatusBadge(form.status)}</span>
+                          <div className="flex items-center justify-between gap-2 pt-1">
+                            <span className="text-slate-400 font-semibold">Status:</span>
+                            <span className="font-semibold truncate max-w-[60%] text-right">{getStatusBadge(form.status)}</span>
                           </div>
                         </div>
 
-                        <div className="pt-2 border-t border-slate-100">
+                        <div className="pt-2">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleSendReminder([form.id])}
                             disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                            className="w-full h-8 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+                            className="w-full h-8 text-[10px] font-bold rounded-lg bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                           >
                             {remindingFormIds.has(form.id) ? (
                               <>
-                                <div className="h-3 w-3 mr-1 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                <div className="h-3 w-3 mr-1.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                                 Sending...
                               </>
                             ) : (
                               <>
-                                <Mail className="h-3 w-3 mr-1" />
+                                <Mail className="h-3.5 w-3.5 mr-1" />
                                 Send Reminder
                               </>
                             )}
                           </Button>
                         </div>
-                      </div>
+                      </Card>
                     ))}
                   </div>
                   <MobilePagination
@@ -783,80 +840,82 @@ export function DueForms() {
                 </div>
 
                 {/* Table — tablet & desktop */}
-                <div className="hidden md:block overflow-x-auto">
+                <div className="hidden md:block overflow-x-auto relative z-0">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50/50">
-                        <th className="text-center py-3 px-2 font-medium text-gray-600 w-10">
+                      <tr className="border-b border-slate-50 bg-slate-50/50">
+                        <th className="text-center py-3.5 px-3 w-12">
                           <Checkbox
                             checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
                             onCheckedChange={handleSelectAll}
                           />
                         </th>
-                        <th className="text-left py-3 px-3 font-medium text-gray-600">Form</th>
-                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden sm:table-cell">Student</th>
-                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden md:table-cell">Classroom</th>
-                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden md:table-cell">Parent</th>
-                        <th className="text-left py-3 px-2 font-medium text-gray-600 hidden lg:table-cell">Due Date</th>
-                        <th className="text-center py-3 px-2 font-medium text-gray-600">Status</th>
-                        <th className="text-center py-3 px-2 font-medium text-gray-600">Actions</th>
+                        <th className="text-left py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Form</th>
+                        <th className="text-left py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400 hidden sm:table-cell">Student</th>
+                        <th className="text-left py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400 hidden md:table-cell">Classroom</th>
+                        <th className="text-left py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400 hidden md:table-cell">Parent</th>
+                        <th className="text-left py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400 hidden lg:table-cell">Due Date</th>
+                        <th className="text-center py-3.5 px-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Status</th>
+                        <th className="text-right py-3.5 px-6 text-xs font-extrabold uppercase tracking-wider text-slate-400">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
                       {paginatedForms.map(form => (
-                        <tr key={form.id} className="border-b border-gray-100 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                          <td className="py-3 px-2 text-center">
+                        <tr key={form.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                          <td className="py-4 px-3 text-center">
                             <Checkbox
                               checked={selectedForms.includes(form.id)}
                               onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
                             />
                           </td>
-                          <td className="py-3 px-3 font-medium text-sm max-w-0">
-                            <div className="truncate">{form.formName}</div>
-                            <div className="text-xs text-muted-foreground truncate sm:hidden">{form.studentName}</div>
-                            <div className="text-xs text-muted-foreground truncate md:hidden">
+                          <td className="py-4 px-3 max-w-xs">
+                            <div className="font-bold text-slate-900 text-sm truncate">{form.formName}</div>
+                            <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.studentName}</div>
+                            <div className="text-xs font-semibold text-slate-400 truncate md:hidden">
                               {form.parentName.split(' & ')[0]}
                             </div>
-                            <div className="text-xs text-muted-foreground truncate lg:hidden sm:hidden">
+                            <div className="text-xs font-semibold text-slate-400 truncate lg:hidden sm:hidden">
                               {formatDate(form.dueDate)}
                             </div>
                           </td>
-                          <td className="py-3 px-2 text-sm max-w-0 hidden sm:table-cell">
+                          <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden sm:table-cell max-w-0">
                             <div className="truncate">{form.studentName}</div>
                           </td>
-                          <td className="py-3 px-2 text-sm max-w-0 hidden md:table-cell">
+                          <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden md:table-cell max-w-0">
                             <div className="truncate">{form.classroomName}</div>
                           </td>
-                          <td className="py-3 px-2 text-sm max-w-0 hidden md:table-cell">
-                            <div className="font-medium truncate">{form.parentName.split(' & ')[0]}</div>
-                            <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[0]}</div>
+                          <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
+                            <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[0]}</div>
+                            <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[0]}</div>
                             {form.parentName.includes(' & ') && (
-                              <div className="mt-1">
-                                <div className="font-medium truncate">{form.parentName.split(' & ')[1]}</div>
-                                <div className="text-xs text-muted-foreground truncate">{form.parentEmail.split(', ')[1] || ''}</div>
+                              <div className="mt-1.5 pt-1.5 border-t border-slate-50">
+                                <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[1]}</div>
+                                <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[1] || ''}</div>
                               </div>
                             )}
                           </td>
-                          <td className="py-3 px-2 text-sm whitespace-nowrap hidden lg:table-cell">
-                            <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-medium' : form.dueDate ? '' : 'text-muted-foreground'}>
+                          <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
+                            <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>
                               {formatDate(form.dueDate)}
                             </span>
                           </td>
-                          <td className="py-3 px-2 text-center">{getStatusBadge(form.status)}</td>
-                          <td className="py-3 px-2 text-center">
+                          <td className="py-4 px-3 text-center">
+                            {getStatusBadge(form.status)}
+                          </td>
+                          <td className="py-4 px-6 text-right">
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                              className="h-8 px-2 sm:px-3 text-xs gap-1 whitespace-nowrap rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 font-medium"
+                              className="h-8 px-3 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 font-bold"
                             >
                               {remindingFormIds.has(form.id) ? (
                                 <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
                               ) : (
-                                <Mail className="h-3 w-3" />
+                                <Mail className="h-3.5 w-3.5 mr-1" />
                               )}
-                              <span className="hidden sm:inline">{remindingFormIds.has(form.id) ? 'Sending...' : 'Remind'}</span>
+                              <span>{remindingFormIds.has(form.id) ? 'Sending...' : 'Remind'}</span>
                             </Button>
                           </td>
                         </tr>
@@ -865,28 +924,26 @@ export function DueForms() {
                   </table>
                 </div>
 
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={filteredForms.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  className="hidden md:flex"
-                />
-
-               
-
-            
+                <div className="px-5 py-4 border-t border-slate-50">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredForms.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    className="hidden md:flex"
+                  />
+                </div>
               </>
             ) : (
-              <div className="p-8 text-center">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No forms match your current filters</p>
+              <div className="p-8 text-center bg-white rounded-2xl">
+                <Calendar className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-400 text-xs font-bold">No forms match your current filters</p>
               </div>
             )}
           </CardContent>
         </div>
-      </div>
+      </motion.div>
     </AdminLayout>
   );
 }

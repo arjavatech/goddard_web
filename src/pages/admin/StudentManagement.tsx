@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download, Edit } from 'lucide-react';
@@ -547,24 +548,39 @@ export function StudentManagement() {
   if (loading) {
     return <PageLoader message="Loading student data..." Layout={AdminLayout} />;
   }
-  return <AdminLayout>
-      <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-14 animate-fade-in duration-200">
-          <div className='px-3'>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">
               Student Management
             </h1>
-            <p className="text-sm text-slate-500">
-              Manage student enrollments and track progress
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
+              Manage student enrollments and track registration progress
             </p>
           </div>
-
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
-            <StatCard label="Total Students" value={students.length} icon={GraduationCap} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="h-full">
+            <StatCard 
+              label="Total Students" 
+              value={students.length} 
+              icon={GraduationCap} 
+              iconBgClass="bg-[#EFF5FB]" 
+              iconColorClass="text-[#0F2D52]" 
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            />
           </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
+          <div className="h-full">
             <StatCard
               label="Completion Rate"
               value={
@@ -572,31 +588,32 @@ export function StudentManagement() {
                   <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
                     {completionRate}%
                   </span>
-                  <div className="w-16 sm:w-20 lg:w-24">
-                    <Progress value={completionRate} className="h-2" />
+                  <div className="w-24 mt-1 bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
                   </div>
                 </div>
               }
               icon={Users}
-              iconBgClass="bg-green-100"
-              iconColorClass="text-green-600"
-              className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm"
+              iconBgClass="bg-emerald-50"
+              iconColorClass="text-emerald-600"
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
             />
           </div>
-          <div className="animate-fade-in-up h-full sm:col-span-2 lg:col-span-1" style={{ animationDelay: '80ms' }}>
+          <div className="h-full">
             <StatCard
               label="Forms Pending"
               value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
               icon={AlertCircle}
-              iconBgClass="bg-amber-100"
+              iconBgClass="bg-amber-50"
               iconColorClass="text-amber-600"
-              className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm"
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
             />
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '80ms' }}>
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
           <CardContent className="p-0">
-            <div className="p-4 sm:p-5 lg:p-6 border-b border-slate-100 bg-slate-50/50">
+            <div className="p-4 sm:p-6 border-b border-slate-50 bg-slate-50/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
                 <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
                 <div className="text-xs sm:text-sm text-muted-foreground">
@@ -608,30 +625,40 @@ export function StudentManagement() {
               </div>
               
               {/* Search Bar */}
-              <div className="flex flex-col gap-2 mb-4">
+              <div className="flex flex-col md:flex-row gap-3 mb-4">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                   <Input 
                     placeholder="Search students..." 
-                    className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500" 
+                    className="pl-10 pr-4 h-10 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400" 
                     value={searchQuery} 
                     onChange={e => setSearchQuery(e.target.value)} 
                   />
+                  {searchQuery && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md"
+                      onClick={() => setSearchQuery('')}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
-                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                <div className="flex gap-2 flex-wrap items-center">
                   <Button
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 relative flex-shrink-0"
+                    className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-4"
                   >
                     {showFilters ? (
-                      <><X className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden xs:inline">Hide </span>Filters</>
+                      <><X className="h-4 w-4 mr-1.5" />Hide Filters</>
                     ) : (
-                      <><Filter className="h-4 w-4 mr-1 sm:mr-2" />Filters</>
+                      <><Filter className="h-4 w-4 mr-1.5" />Filters</>
                     )}
                     {!showFilters && activeFilterCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white animate-pulse">
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
                         {activeFilterCount}
                       </span>
                     )}
@@ -648,14 +675,13 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 flex-shrink-0">
-                          <Download className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Export Selected ({selectedStudentsForBulkAction.length})</span>
-                          <span className="sm:hidden">({selectedStudentsForBulkAction.length})</span>
+                        <Button size="sm" className="h-10 rounded-xl bg-[#EFF5FB] text-[#0F2D52] border border-blue-50 hover:bg-blue-50 font-bold text-xs px-4">
+                          <Download className="h-4 w-4 mr-1.5 text-[#0F2D52]" />
+                          <span>Export ({selectedStudentsForBulkAction.length})</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
                           const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
@@ -672,7 +698,7 @@ export function StudentManagement() {
                         }}>
                           Export as CSV
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
                           const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
@@ -701,32 +727,31 @@ export function StudentManagement() {
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200 flex-shrink-0"
+                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl h-10 transition-all duration-200 font-bold text-xs px-4"
                     >
-                      <GraduationCap className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Transfer Selected ({selectedStudentsForBulkAction.length})</span>
-                      <span className="sm:hidden">Transfer ({selectedStudentsForBulkAction.length})</span>
+                      <GraduationCap className="h-4 w-4 mr-1.5" />
+                      <span>Transfer Selected</span>
                     </Button>
                   )}
 
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 sm:h-11 bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl transition-all duration-200 flex-shrink-0">
-                          <Download className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Export All</span>
+                        <Button size="sm" className="h-10 bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl transition-all duration-200 font-bold text-xs px-4">
+                          <Download className="h-4 w-4 mr-1.5" />
+                          <span>Export All</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
-                        <DropdownMenuItem onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer" onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" className="h-10 sm:h-11 rounded-xl flex-shrink-0" disabled>
-                        <Download className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Export All</span>
+                      <Button size="sm" className="h-10 rounded-xl font-bold text-xs" disabled>
+                        <Download className="h-4 w-4 mr-1.5" />
+                        <span>Export All</span>
                       </Button>
                     </div>
                   )}
@@ -735,14 +760,14 @@ export function StudentManagement() {
 
               {/* Filters */}
               {showFilters && (
-                <div className="p-3 sm:p-4 bg-background rounded-xl border border-slate-100 space-y-3">
+                <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 space-y-4">
                   {activeFilterCount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm text-slate-500 font-medium">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                         {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                       </span>
-                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
-                        <X className="h-4 w-4 mr-2" />
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                        <X className="h-3.5 w-3.5 mr-1" />
                         Clear All
                       </Button>
                     </div>
@@ -847,81 +872,81 @@ export function StudentManagement() {
                       }}
                     />
                   </td>
-                  <td className="py-3 px-3">
+                  <td className="py-4 px-3">
                     <div className="flex items-center">
-                      <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-2" />
+                      <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-3 bg-[#074da1] text-slate-700 font-bold" />
                       <div className="min-w-0">
                         <Link 
                           to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
                           state={{ fromStudents: true }}
-                          className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
+                          className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm"
                         >
                           {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                         </Link>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-2">
-                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-cyan-600 hover:text-cyan-700 transition-colors group">
-                      <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
-                      <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
+                  <td className="py-4 px-2">
+                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors group text-sm">
+                      <School className="h-4 w-4 mr-1.5 text-slate-400 group-hover:text-[#0F2D52] transition-colors flex-shrink-0" />
+                      <span className="group-hover:underline truncate">{student.classroom.name}</span>
                     </Link>
                   </td>
-                  <td className="py-3 px-2">
-                    <div className="min-w-0 space-y-2">
+                  <td className="py-4 px-2">
+                    <div className="min-w-0 space-y-1.5">
                       <div>
                         <Link
                           to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
-                          className="text-cyan-600 hover:text-cyan-700 font-medium hover:underline transition-colors block truncate"
+                          className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-sm"
                         >
                           {student.parent.name}
                         </Link>
-                        <div className="text-xs text-gray-500 truncate">{student.parent.email}</div>
+                        <div className="text-xs text-slate-400 font-medium truncate mt-0.5">{student.parent.email}</div>
                       </div>
                       {student.secondaryParent && (
-                        <div className="border-t pt-2">
+                        <div className="border-t border-slate-100 pt-1.5">
                           <Link
                             to={`/admin/parents/${student.secondaryParent.id}`}
                             state={{ fromStudents: true }}
-                            className="text-cyan-600 hover:text-cyan-700 font-medium hover:underline transition-colors block truncate text-sm"
+                            className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-xs"
                           >
                             {student.secondaryParent.name}
                           </Link>
-                          <div className="text-xs text-gray-500 truncate">{student.secondaryParent.email}</div>
+                          <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{student.secondaryParent.email}</div>
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-4 px-2 text-center">
                     {(() => {
                       const apiFormStatus = student.formStatus || 'incomplete';
                       const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
                       const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
-                      const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />;
+                      const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <Clock className="h-3.5 w-3.5 mr-1" />;
                       return (
-                        <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
+                        <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-[10px] rounded-full px-2.5 py-0.5 font-bold">
                           {statusIcon}
                           <span className="truncate">{displayStatus}</span>
                         </Badge>
                       );
                     })()}
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-4 px-2 text-center">
                     <button
                       onClick={() => {
                         setSelectedStudent(student);
                         setNewStatus(student.childStatus);
                         setIsStatusDialogOpen(true);
                       }}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold transition-all border whitespace-nowrap ${
                         student.childStatus === 'active'
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
                       }`}
                     >
                       <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                      <Edit className="h-3 w-3 opacity-70" />
+                      <Edit className="h-3 w-3 opacity-80" />
                     </button>
                   </td>
                   <td className="py-3 px-2 text-center">
@@ -962,25 +987,25 @@ export function StudentManagement() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
-                  <td className="py-3 px-3">
+                  <td className="py-4 px-3">
                     <div className="text-right">
-                      <div className="text-xs text-gray-600 mb-1">{student.formsCompleted}/{student.totalForms}</div>
-                      <div className="flex items-center justify-end space-x-1">
-                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
+                      <div className="text-xs text-slate-400 font-bold mb-1">{student.formsCompleted} / {student.totalForms}</div>
+                      <div className="flex items-center justify-end space-x-1.5">
+                        <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
                           {student.totalForms > 0 && student.formsApproved > 0 && (
                             <div
-                              className="h-full bg-green-500 transition-all"
+                              className="h-full bg-emerald-500 transition-all duration-300"
                               style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
                             />
                           )}
                           {student.totalForms > 0 && student.formsInProgress > 0 && (
                             <div
-                              className="h-full bg-amber-400 transition-all"
+                              className="h-full bg-amber-400 transition-all duration-300"
                               style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
                             />
                           )}
                         </div>
-                        <span className="text-xs font-semibold text-foreground min-w-[28px]">{student.enrollmentProgress}%</span>
+                        <span className="text-xs font-bold text-slate-700 min-w-[28px]">{student.enrollmentProgress}%</span>
                       </div>
                     </div>
                   </td>
@@ -1013,7 +1038,7 @@ export function StudentManagement() {
                   <span className="text-sm font-medium">Select All</span>
                 </div>,
                 ...paginatedStudents.map((student, index) => (
-                  <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
+                  <div key={student.id || `card-${index}`} className="border border-slate-100 rounded-2xl p-4 bg-white shadow-xs space-y-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <Checkbox
@@ -1027,16 +1052,16 @@ export function StudentManagement() {
                           }}
                           className="flex-shrink-0"
                         />
-                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
+                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="bg-slate-100 text-slate-700 font-bold" />
                         <div className="min-w-0 flex-1">
                           <Link
                             to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
                             state={{ fromStudents: true }}
-                            className="font-medium text-sm text-amazon-teal hover:underline block truncate"
+                            className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] block truncate"
                           >
                             {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                           </Link>
-                          <p className="text-xs text-muted-foreground truncate">{student.classroom.name}</p>
+                          <p className="text-xs text-slate-400 font-semibold mt-0.5">{student.classroom.name}</p>
                         </div>
                       </div>
                       <button
@@ -1045,35 +1070,35 @@ export function StudentManagement() {
                           setNewStatus(student.childStatus);
                           setIsStatusDialogOpen(true);
                         }}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold flex-shrink-0 transition-all border ${
                           student.childStatus === 'active'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
                         }`}
                       >
                         <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                        <Edit className="h-3 w-3 opacity-70" />
+                        <Edit className="h-3 w-3 opacity-80" />
                       </button>
                     </div>
 
                     <div className="space-y-1.5 text-xs">
                       <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Parent:</span>
+                        <span className="text-slate-400 font-semibold">Parent:</span>
                         <Link
                           to={`/admin/parents/${student.parent.id}`}
                           state={{ fromStudents: true }}
-                          className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
+                          className="font-bold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate max-w-[60%] text-right"
                         >
                           {student.parent.name}
                         </Link>
                       </div>
                       {student.secondaryParent && (
                         <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Secondary:</span>
+                          <span className="text-slate-400 font-semibold">Secondary:</span>
                           <Link
                             to={`/admin/parents/${student.secondaryParent.id}`}
                             state={{ fromStudents: true }}
-                            className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
+                            className="font-bold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate max-w-[60%] text-right"
                           >
                             {student.secondaryParent.name}
                           </Link>
@@ -1154,7 +1179,7 @@ export function StudentManagement() {
             />
           </CardContent>
         </div>
-      </div>
+      </motion.div>
 
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
         <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
@@ -1748,4 +1773,5 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
     </AdminLayout>
+  );
 }

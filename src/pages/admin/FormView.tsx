@@ -73,11 +73,19 @@ export function FormView() {
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
   const recentPdfLink = location.state?.recentPdfLink;
 
+  const isFillout = (() => {
+    const link = recentEditLink || filloutFormId || filloutFormUrl;
+    if (!link) return false;
+    if (link.includes('fillout.com')) return true;
+    if (!link.startsWith('http')) return true;
+    return false;
+  })();
+
   useEffect(() => {
-    if (studentFormAssignmentId) {
+    if (studentFormAssignmentId && isFillout) {
       getFormResumeLink(studentFormAssignmentId).then(setResolvedResumeLink);
     }
-  }, [studentFormAssignmentId]);
+  }, [studentFormAssignmentId, isFillout]);
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {

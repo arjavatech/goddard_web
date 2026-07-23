@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft, GraduationCap } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft, GraduationCap, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
 import { fetchUserContext } from '../services/api/user';
@@ -90,41 +91,102 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white">
-      {/* ── Left brand panel ── */}
-      <div className="relative hidden lg:flex lg:w-[42%] flex-col justify-between bg-gradient-to-br from-[#0B1F3A] via-[#0F2D52] to-[#0E3A68] p-10 xl:p-14 overflow-hidden auth-panel-left">
-        <div className="pointer-events-none absolute -top-24 -right-24 w-96 h-96 rounded-full bg-white/5" />
-        <div className="pointer-events-none absolute bottom-10 -left-16 w-72 h-72 rounded-full bg-white/5" />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
+      {/* ── Left brand panel (matches select school and signup layouts) ── */}
+      <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-[#091629] via-[#0F2D52] to-[#1E4B83] p-12 xl:p-16 overflow-hidden">
+        {/* Subtle grid pattern background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]" />
+        
+        {/* Decorative dynamic glows */}
+        <div className="pointer-events-none absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[100px]" />
+        <div className="pointer-events-none absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-blue-500/10 blur-[80px]" />
 
-        <div className="relative z-10">
+        {/* Logo */}
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="relative z-10"
+        >
           <img
             src="./images/gs_logo_lynnwood.png"
             alt="The Goddard School"
-            className="h-10 w-auto object-contain brightness-0 invert opacity-90"
+            className="h-10 w-auto object-contain brightness-0 invert opacity-95"
           />
-        </div>
+        </motion.div>
 
-        <div className="relative z-10 space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
-              <GraduationCap className="w-4 h-4 text-blue-200" />
+        {/* Centre copy */}
+        <div className="relative z-10 space-y-8 my-auto mt-8">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.1, duration: 0.4 }}
+            className="flex items-center gap-3"
+          >
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[10px] font-bold tracking-wider uppercase">
+              <GraduationCap className="w-3.5 h-3.5" /> Goddard School Portal
             </div>
+          </motion.div>
+
+          <div className="space-y-4">
+            <motion.h1 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.5 }}
+              className="text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight"
+            >
+              Welcome Back to <br />
+              <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">The Goddard Portal</span>
+            </motion.h1>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3, duration: 0.5 }}
+              className="text-sm text-slate-300/90 leading-relaxed max-w-sm"
+            >
+              Sign in to manage enrollment forms, upload physical documentation, track milestones, and stay integrated with our school administrators.
+            </motion.p>
           </div>
-          <h1 className="text-3xl xl:text-4xl font-bold text-white leading-tight">
-            Welcome back,<br />let's get started
-          </h1>
-          <p className="text-sm xl:text-base text-slate-300/80 leading-relaxed max-w-sm">
-            Sign in to manage enrollment forms, track your child's progress, and stay connected with your school.
-          </p>
+
+          {/* Feature highlights */}
+          <motion.div
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.5 }}
+            className="space-y-3.5 max-w-sm pt-2"
+          >
+            {[
+              { text: 'Verify, sign, and submit documents securely', icon: ShieldCheck, color: 'text-cyan-400' },
+              { text: 'Monitor assignment statuses and school updates', icon: Sparkles, color: 'text-amber-400' },
+              { text: 'Automated milestone and learning progress logs', icon: CheckCircle2, color: 'text-emerald-400' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-sm text-slate-200/90 font-medium">
+                <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
+                  <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
+                </span>
+                {item.text}
+              </div>
+            ))}
+          </motion.div>
         </div>
 
-        <p className="relative z-10 text-[11px] text-slate-500">
-          © {new Date().getFullYear()} The Goddard School. All rights reserved.
-        </p>
+        {/* Bottom tagline */}
+        <div className="relative z-10 border-t border-white/10 pt-6 mt-8 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+          <p className="text-[11px] text-slate-400/60 font-medium">
+            © {new Date().getFullYear()} The Goddard School. All rights reserved.
+          </p>
+          <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full w-fit">
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+            <span className="text-[10px] text-slate-300 font-bold tracking-wider uppercase">
+              Registered Education Partner
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-10 bg-slate-50/60 auth-panel-right">
+      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 md:p-16 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] auth-panel-right">
         {/* Mobile logo */}
         <div className="lg:hidden mb-8 text-center">
           <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-12 w-auto mx-auto" />
@@ -134,35 +196,52 @@ export function Login() {
           {/* Back link */}
           <button
             onClick={() => navigate('/')}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 mb-6 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#0F2D52] mb-6 transition-colors font-semibold group"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
             Back to school selection
           </button>
 
-          <div className="mb-6">
+          <div className="mb-6 space-y-1">
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
-            <p className="text-sm text-slate-500 mt-1">Enter your credentials to access your account.</p>
+            <p className="text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
           </div>
 
           {/* Selected school chip */}
           {selectedSchool && (
-            <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#EFF5FB] border border-blue-200/50 mb-6">
-              <Building2 className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
-              <p className="text-sm font-semibold text-[#0F2D52] truncate">{selectedSchool.name}</p>
+            <div className="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#EFF5FB] border border-[#EFF5FB]/85 mb-6 shadow-sm shadow-[#0D2644]/5">
+              <div className="w-7 h-7 rounded-md bg-[#0F2D52] flex items-center justify-center flex-shrink-0">
+                <Building2 className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Goddard location</p>
+                <p className="text-xs font-bold text-[#0f2d52] truncate mt-0.5">{selectedSchool.name}</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setShowSchoolSelector(true)}
+                className="text-xs font-bold text-[#1a6fc4] hover:text-[#0f2d52] underline transition-colors pr-1"
+              >
+                Change
+              </button>
             </div>
           )}
 
           {/* Form card */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 sm:p-8 space-y-5">
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-8 sm:p-10 space-y-5"
+          >
             <form onSubmit={handleSubmit} className="space-y-5">
               {/* Email */}
-              <div className="space-y-1.5">
-                <label htmlFor="email" className="block text-xs font-semibold text-slate-600 uppercase tracking-widest">
+              <div className="space-y-2">
+                <label htmlFor="email" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Email Address
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 pointer-events-none group-focus-within:text-[#0F2D52] transition-colors duration-200" />
                   <input
                     id="email"
                     name="email"
@@ -170,7 +249,11 @@ export function Login() {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full pl-11 pr-4 py-3 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all ${emailError ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : 'border-slate-200'}`}
+                    className={`w-full pl-11 pr-4 py-3 h-12 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 ${
+                      emailError 
+                        ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' 
+                        : 'border-slate-200'
+                    }`}
                     placeholder="you@example.com"
                   />
                 </div>
@@ -178,17 +261,17 @@ export function Login() {
               </div>
 
               {/* Password */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-xs font-semibold text-slate-600 uppercase tracking-widest">
+                  <label htmlFor="password" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Password
                   </label>
-                  <Link to="/forgot-password" className="text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-medium transition-colors">
+                  <Link to="/forgot-password" className="text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors">
                     Forgot password?
                   </Link>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none" />
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 pointer-events-none group-focus-within:text-[#0F2D52] transition-colors duration-200" />
                   <input
                     id="password"
                     name="password"
@@ -196,13 +279,13 @@ export function Login() {
                     required
                     value={formData.password}
                     onChange={handleInputChange}
-                   className="w-full pl-11 pr-11 py-3 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
+                    className="w-full pl-11 pr-11 py-3 h-12 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
                     placeholder="••••••••"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                     tabIndex={-1}
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -210,26 +293,41 @@ export function Login() {
                 </div>
               </div>
 
-              {/* Remember me */}
-              <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  name="rememberMe"
-                  checked={formData.rememberMe}
-                  onChange={handleInputChange}
-                  className="w-4 h-4 rounded border-slate-300 text-[#0F2D52] focus:ring-[#0F2D52]/20 accent-[#0F2D52]"
-                />
-                <span className="text-sm text-slate-600">Remember me</span>
-              </label>
+              {/* Custom Remember Me Checkbox */}
+              <div className="pt-1">
+                <label className="flex items-center gap-3 cursor-pointer select-none group">
+                  <div className="relative flex-shrink-0">
+                    <input
+                      type="checkbox"
+                      name="rememberMe"
+                      checked={formData.rememberMe}
+                      onChange={handleInputChange}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 ${
+                      formData.rememberMe 
+                        ? 'bg-[#0F2D52] border-[#0F2D52] shadow-sm shadow-[#0F2D52]/20' 
+                        : 'border-slate-200 bg-white group-hover:border-slate-300'
+                    }`}>
+                      {formData.rememberMe && (
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                  <span className="text-xs text-slate-600 font-semibold leading-none">Remember me</span>
+                </label>
+              </div>
 
               {/* School mismatch */}
               {schoolMismatchError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-                  <p className="text-sm text-red-700">{schoolMismatchError}</p>
+                <div className="rounded-xl border border-red-200 bg-red-50/50 px-4 py-3 space-y-1">
+                  <p className="text-xs text-red-700 leading-normal">{schoolMismatchError}</p>
                   <button
                     type="button"
                     onClick={() => navigate('/')}
-                    className="mt-1 text-xs font-semibold text-red-700 underline hover:text-red-800"
+                    className="text-xs font-bold text-red-700 underline hover:text-red-800"
                   >
                     Go back and select correct school
                   </button>
@@ -237,25 +335,47 @@ export function Login() {
               )}
 
               {/* Submit */}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full h-12 text-sm font-semibold rounded-xl"
+              <motion.div
+                whileHover={!isLoading ? { scale: 1.015 } : {}}
+                whileTap={!isLoading ? { scale: 0.985 } : {}}
+                className="pt-2"
               >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                    Signing in…
-                  </span>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
+                <Button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] active:scale-[0.98] border-none shadow-md shadow-[#0F2D52]/10 transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none"
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                      Signing in…
+                    </span>
+                  ) : (
+                    'Sign In'
+                  )}
+                </Button>
+              </motion.div>
+
+              {/* Divider */}
+              {/* <div className="relative my-2 py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-100" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3.5 text-xs text-slate-400 font-medium">New to Goddard School?</span>
+                </div>
+              </div> */}
+
+              {/* <Link to="/signup" className="block w-full">
+                <Button type="button" variant="outline" className="w-full h-11 rounded-xl text-sm font-semibold border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                  Create Account
+                </Button>
+              </Link> */}
             </form>
-          </div>
+          </motion.div>
 
           <p className="text-center text-xs text-slate-400 mt-6">
-            © {new Date().getFullYear()} Goddard School. All rights reserved.
+            © {new Date().getFullYear()} The Goddard School. All rights reserved.
           </p>
         </div>
       </div>
@@ -264,13 +384,13 @@ export function Login() {
 
       {/* School Selector Modal */}
       <Dialog open={showSchoolSelector} onOpenChange={setShowSchoolSelector}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl p-6">
+          <DialogHeader className="space-y-1.5">
+            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
               <Building2 className="h-5 w-5 text-[#0F2D52]" />
               Select School
             </DialogTitle>
-            <DialogDescription>Choose the Goddard School location you want to access</DialogDescription>
+            <DialogDescription className="text-xs text-slate-500">Choose the Goddard School location you want to access</DialogDescription>
           </DialogHeader>
           <div className="py-3 space-y-2">
             {isLoadingSchools ? (
@@ -281,8 +401,9 @@ export function Login() {
               schools.map((school) => (
                 <button
                   key={school.id}
+                  type="button"
                   onClick={() => handleSchoolChange(school)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-medium ${
+                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-semibold ${
                     selectedSchool?.id === school.id
                       ? 'border-[#0F2D52]/30 bg-[#EFF5FB] text-[#0F2D52]'
                       : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
@@ -294,9 +415,9 @@ export function Login() {
               ))
             )}
           </div>
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => setShowSchoolSelector(false)}>Cancel</Button>
-            <Button onClick={() => setShowSchoolSelector(false)}>Continue</Button>
+          <div className="flex justify-end gap-2 pt-2 border-t border-slate-50">
+            <Button variant="outline" className="h-10 rounded-xl px-4 text-xs font-semibold" onClick={() => setShowSchoolSelector(false)}>Cancel</Button>
+            <Button className="h-10 rounded-xl px-4 text-xs font-semibold bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white hover:from-[#091629] hover:to-[#0F2D52] border-none" onClick={() => setShowSchoolSelector(false)}>Continue</Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
@@ -73,7 +74,9 @@ export function ParentManagement() {
         setClassrooms(classroomData.map(c => ({ id: c.id, name: c.name })));
       }
       setClassroomsLoaded(true);
-    } catch {}
+    } catch (err) {
+      console.warn('Failed to prefetch classrooms:', err);
+    }
   };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -185,6 +188,7 @@ export function ParentManagement() {
           setDeactivatedParents(mappedInactiveParents);
         }
       } catch (error) {
+        console.error('Failed to load parents:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -604,60 +608,118 @@ export function ParentManagement() {
     return <PageLoader message="Loading parent management..." Layout={AdminLayout} />;
   }
 
-  return <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Management</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Manage parent accounts and family information</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-955 tracking-tight">Parent Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage parent accounts and family information</p>
           </div>
-          <Button onClick={() => { resetInviteForm(); setInviteFormErrors({}); loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
-            className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
-            <Plus className="h-4 w-4 mr-2" /> Invite Parent
+          <Button 
+            onClick={() => { resetInviteForm(); setInviteFormErrors({}); loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
+            className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl font-bold shadow-xs border-none h-10 px-4 w-full sm:w-auto text-xs" 
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Invite Parent
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '0ms' }}>
-            <StatCard label="Total Parents" value={parents.length} icon={Users} iconBgClass="bg-cyan-50" iconColorClass="text-cyan-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '40ms' }}>
-            <StatCard label="Signed Up" value={parents.filter(p=>p.signupStatus==='Signed').length} icon={CheckCircle} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
-          <div className="animate-fade-in-up h-full" style={{ animationDelay: '80ms' }}>
-            <StatCard label="Pending Signup" value={parents.filter(p=>p.signupStatus==='Not Signed').length} icon={Clock} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" className="h-full hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
-          </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Total Parents
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{parents.length}</p>
+                </div>
+                <div className="p-2.5 bg-[#EFF5FB] rounded-xl flex-shrink-0 ml-2">
+                  <Users className="h-4 w-4 text-[#0F2D52]" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Signed Up
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {parents.filter(p => p.signupStatus === 'Signed').length}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-emerald-50 rounded-xl flex-shrink-0 ml-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
+            <CardContent className="p-4 sm:p-5">
+              <div className="flex items-center justify-between">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                    Pending Signup
+                  </p>
+                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                    {parents.filter(p => p.signupStatus === 'Not Signed').length}
+                  </p>
+                </div>
+                <div className="p-2.5 bg-amber-50 rounded-xl flex-shrink-0 ml-2">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up h-fit" style={{ animationDelay: '120ms' }}>
+
+        {/* Directory Container */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 h-fit">
           <CardContent className="p-0 overflow-hidden">
             <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-bold text-slate-900">Parent Directory</h2>
-                <div className="flex items-center gap-3">
-                  <div className="text-xs sm:text-sm text-slate-500">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900">Parent Directory</h2>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">
                     {sortedParents.length} of {activeTab === 'active' ? parents.length : deactivatedParents.length} parents
-                  </div>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
                   {sortedParents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-9 sm:h-10 transition-all duration-200">
-                          <Download className="h-4 w-4 mr-2" />
+                        <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
+                          <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
                           Export
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={exportToCSV}>
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer text-xs" onClick={exportToCSV}>
                           Export as CSV
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={exportToPDF}>
+                        <DropdownMenuItem className="cursor-pointer text-xs" onClick={exportToPDF}>
                           Export as PDF
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
                     <div title="No records to export">
-                      <Button size="sm" className="bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20 rounded-xl h-9 sm:h-10 cursor-not-allowed" disabled>
-                        <Download className="h-4 w-4 mr-2" />
+                      <Button size="sm" className="bg-white text-slate-400 border border-slate-200 rounded-xl h-9 cursor-not-allowed" disabled>
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
+                        Export
                       </Button>
                     </div>
                   )}
@@ -665,41 +727,45 @@ export function ParentManagement() {
               </div>
               
               {/* Tabs */}
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4 sm:mb-6">
-                <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
-                  <TabsTrigger value="active" className="text-xs sm:text-sm">Active ({parents.length})</TabsTrigger>
-                  <TabsTrigger value="deactivated" className="text-xs sm:text-sm">Deactivated ({deactivatedParents.length})</TabsTrigger>
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+                <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-slate-100/60 border border-slate-100 rounded-xl gap-1">
+                  <TabsTrigger value="active" className="text-xs font-bold px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0F2D52] data-[state=active]:shadow-sm transition-all">
+                    Active ({parents.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="deactivated" className="text-xs font-bold px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0F2D52] data-[state=active]:shadow-sm transition-all">
+                    Deactivated ({deactivatedParents.length})
+                  </TabsTrigger>
                 </TabsList>
               </Tabs>
               
               {/* Search Bar */}
-              <div className="relative mb-3 sm:mb-4">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <div className="relative mb-3">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <Input 
                   placeholder="Search parents by name or email..." 
-                  className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500" 
+                  className="pl-9 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all" 
                   value={searchQuery} 
                   onChange={e => setSearchQuery(e.target.value)} 
                 />
               </div>
 
               {/* Filters */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-slate-500">Signup Status</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Signup Status</label>
                   <Select value={signupFilter} onValueChange={setSignupFilter}>
-                    <SelectTrigger className="h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
+                    <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-xs font-semibold bg-white focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]">
                       <SelectValue placeholder="Signup status" />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Signup Statuses</SelectItem>
-                      <SelectItem value="Signed">Signed</SelectItem>
-                      <SelectItem value="Not Signed">Not Signed</SelectItem>
+                    <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <SelectItem value="all" className="cursor-pointer text-xs">All Signup Statuses</SelectItem>
+                      <SelectItem value="Signed" className="cursor-pointer text-xs">Signed</SelectItem>
+                      <SelectItem value="Not Signed" className="cursor-pointer text-xs">Not Signed</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label><br />
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sort By</label>
                   <SortDropdown
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
@@ -710,9 +776,10 @@ export function ParentManagement() {
                 </div>
               </div>
             </div>
+
             {/* Desktop Table View */}
             <DataTable
-              className="hidden md:block"
+              className="hidden md:block relative z-0"
               loading={loading}
               loadingMessage="Loading parents..."
               emptyMessage="No parents match the current filters."
@@ -726,53 +793,53 @@ export function ParentManagement() {
                 { header: 'Email', className: 'w-1/4 hidden lg:table-cell' },
                 { header: 'Children', className: 'w-1/3' },
                 { header: 'Signup Status', className: 'w-1/6 text-center' },
-                { header: 'Actions', className: 'w-1/6 text-center' },
+                { header: 'Actions', className: 'w-1/6 text-right pr-6' },
               ]}
-              rows={paginatedParents.map((parent, index) => (
-                <tr key={parent.id || `parent-${index}`} className="border-b border-gray-100 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                  <td className="py-3 px-3 max-w-0">
-                    <div className="flex items-center gap-2">
+              rows={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
+                <tr key={parent.id || `parent-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
                       <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         {parent.signupStatus === 'Signed' ? (
-                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-medium text-amazon-teal hover:underline block truncate">
+                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-[#0F2D52] hover:underline block truncate text-sm">
                             {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                           </Link>
                         ) : (
-                          <span className="font-medium text-gray-400 cursor-not-allowed block truncate">
+                          <span className="font-bold text-slate-400 cursor-not-allowed block truncate text-sm">
                             {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                           </span>
                         )}
-                        <div className="text-xs text-muted-foreground truncate lg:hidden">{parent.email}</div>
+                        <div className="text-xs text-slate-400 font-semibold truncate lg:hidden mt-0.5">{parent.email}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="py-3 px-2 max-w-0 hidden lg:table-cell">
-                    <div className="flex items-center text-gray-700 min-w-0">
-                      <Mail className="h-4 w-4 mr-1 flex-shrink-0" />
-                      <span className="truncate text-sm">{parent.email}</span>
+                  <td className="py-4 px-4 hidden lg:table-cell">
+                    <div className="flex items-center text-xs font-semibold text-slate-600 min-w-0">
+                      <Mail className="h-3.5 w-3.5 mr-1.5 text-slate-400 flex-shrink-0" />
+                      <span className="truncate">{parent.email}</span>
                     </div>
                   </td>
-                  <td className="py-3 px-2 text-sm text-gray-600 max-w-0">
+                  <td className="py-4 px-4">
                     {parent.children.length === 0 ? (
-                      <span className="text-muted-foreground text-xs italic">No children linked yet</span>
+                      <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
                     ) : (
                       <div className="flex flex-wrap gap-2 py-1 max-w-sm">
                         {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
                           <div 
                             key={child.id} 
-                            className="inline-flex items-center gap-1.5 bg-amazon-teal/[0.04] border border-amazon-teal/10 hover:border-amazon-teal/30 hover:bg-amazon-teal/[0.08] rounded-full pl-2 pr-2.5 py-1 text-xs transition-all shadow-sm duration-200 group"
+                            className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
                           >
-                            <GraduationCap className="h-3.5 w-3.5 text-amazon-teal/70 group-hover:text-amazon-teal flex-shrink-0" />
+                            <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
                             <Link
                               to={`/admin/parents/${parent.id}`}
                               state={{ parentData: parent, selectedChildId: child.id }}
-                              className="font-semibold text-amazon-teal/90 group-hover:text-amazon-teal hover:underline truncate max-w-[110px]"
+                              className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
                             >
                               {child.firstName} {child.lastName}
                             </Link>
-                            <span className="h-1.5 w-1.5 rounded-full bg-amazon-teal/20 group-hover:bg-amazon-teal/40 flex-shrink-0" />
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                            <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
+                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
                               {child.classroom.name}
                             </span>
                           </div>
@@ -783,7 +850,7 @@ export function ParentManagement() {
                               e.preventDefault();
                               toggleParentExpanded(parent.id);
                             }}
-                            className="inline-flex items-center justify-center bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full px-3 py-1 text-[11px] font-bold text-gray-600 transition-all duration-200 shadow-sm"
+                            className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
                           >
                             {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
                           </button>
@@ -791,71 +858,73 @@ export function ParentManagement() {
                       </div>
                     )}
                   </td>
-                  <td className="py-3 px-2 text-center">
-                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="flex items-center justify-center w-fit mx-auto text-xs">
+                  <td className="py-4 px-4 text-center">
+                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="inline-flex items-center justify-center text-[10px] font-bold rounded-full px-2.5 py-0.5">
                       {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
                       {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
                       {parent.signupStatus}
                     </Badge>
                   </td>
-                  <td className="py-3 px-2 text-center">
+                  <td className="py-4 px-4 text-right pr-6">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-xl">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
                         <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }}>
-                            <Eye className="h-4 w-4 mr-2" />
+                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
+                            <Eye className="h-4 w-4 mr-2 text-slate-400" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          className="cursor-pointer"
                           disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
                           onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
                         >
-                          <UserCircle className="h-4 w-4 mr-2" />
+                          <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
                           Add Child
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          className="cursor-pointer"
                           disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
                           onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
                         >
                           {resendingParentId === parent.id ? (
-                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />Sending...</>
                           ) : (
-                            <><RefreshCw className="h-4 w-4 mr-2" />Resend</>
+                            <><RefreshCw className="h-4 w-4 mr-2 text-slate-400" />Resend</>
                           )}
                         </DropdownMenuItem>
                         {activeTab === 'active' ? (
                           <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
+                            className="text-red-600 focus:text-red-600 cursor-pointer font-semibold"
                             disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToDeactivate(parent)}
                           >
-                            <XCircle className="h-4 w-4 mr-2" />Deactivate
+                            <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
-                            className="text-green-600 focus:text-green-600"
+                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
                             disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToActivate(parent)}
                           >
-                            <UserCheck className="h-4 w-4 mr-2" />Activate
+                            <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
                 </tr>
-              ))}
+              )) : []}
             />
             
             {/* Mobile Card View */}
             <MobileCardList
-              className="md:hidden p-3 sm:p-4"
+              className="md:hidden p-4"
               loading={loading}
               loadingMessage="Loading parents..."
               emptyMessage="No parents found matching your search criteria."
@@ -863,54 +932,56 @@ export function ParentManagement() {
               totalPages={totalPages}
               onPageChange={setCurrentPage}
               gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
-              cards={paginatedParents.map((parent, index) => (
-                <Card key={parent.id || `parent-card-${index}`} className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex items-center space-x-2 flex-1 min-w-0">
+              cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
+                <Card key={parent.id || `parent-card-${index}`} className="p-4 rounded-xl border border-slate-100 shadow-xs bg-white">
+                  <div className="flex items-start justify-between mb-3 gap-2">
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
                       <div className="min-w-0 flex-1">
                         {parent.signupStatus === 'Signed' ? (
                           <Link to={`/admin/parents/${parent.id}`} state={{
                             parentData: parent
-                          }} className="font-medium text-amazon-teal hover:underline text-sm block truncate">
+                          }} className="font-bold text-[#0F2D52] hover:underline text-sm block truncate">
                             {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                           </Link>
                         ) : (
-                          <span className="font-medium text-gray-400 cursor-not-allowed text-sm block truncate">
+                          <span className="font-bold text-slate-400 cursor-not-allowed text-sm block truncate">
                             {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                           </span>
                         )}
-                        <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                        <div className="text-xs text-slate-400 font-semibold truncate mt-0.5">
                           {parent.email}
                         </div>
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0 flex-shrink-0 rounded-xl">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 flex-shrink-0">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
                         <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
                           <Link to={`/admin/parents/${parent.id}`} state={{
                             parentData: parent
-                          }}>
-                            <Eye className="h-4 w-4 mr-2" />
+                          }} className="cursor-pointer">
+                            <Eye className="h-4 w-4 mr-2 text-slate-400" />
                             View Details
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          className="cursor-pointer"
                           disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
                           onClick={() => {
                             setSelectedParent(parent);
                             loadClassroomsIfNeeded();
                             setIsAddChildDialogOpen(true);
                           }}>
-                          <UserCircle className="h-4 w-4 mr-2" />
+                          <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
                           Add Child
                         </DropdownMenuItem>
                         <DropdownMenuItem
+                          className="cursor-pointer"
                           disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
                           onClick={(e) => {
                             e.preventDefault();
@@ -919,71 +990,72 @@ export function ParentManagement() {
                         >
                           {resendingParentId === parent.id ? (
                             <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />
                               Sending...
                             </>
                           ) : (
                             <>
-                              <RefreshCw className="h-4 w-4 mr-2" />
+                              <RefreshCw className="h-4 w-4 mr-2 text-slate-400" />
                               Resend
                             </>
                           )}
                         </DropdownMenuItem>
                         {activeTab === 'active' ? (
                           <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600"
+                            className="text-red-600 focus:text-red-600 cursor-pointer font-semibold"
                             disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToDeactivate(parent)}
                           >
-                            <XCircle className="h-4 w-4 mr-2" />
+                            <XCircle className="h-4 w-4 mr-2 text-red-500" />
                             Deactivate
                           </DropdownMenuItem>
                         ) : (
                           <DropdownMenuItem
-                            className="text-green-600 focus:text-green-600"
+                            className="text-green-600 focus:text-green-600 cursor-pointer font-semibold"
                             disabled={parent.signupStatus === 'Not Signed'}
                             onClick={() => setParentToActivate(parent)}
                           >
-                            <UserCheck className="h-4 w-4 mr-2" />
+                            <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />
                             Activate
                           </DropdownMenuItem>
                         )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-xs px-1.5 py-0.5">
-                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                  
+                  <div className="flex items-center justify-between mb-3 border-t border-slate-50 pt-2.5">
+                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2 py-0.5">
+                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3.5 w-3.5 mr-1" />}
                       {parent.signupStatus}
                     </Badge>
                   </div>
                   
                   <div className="space-y-1.5">
                     {parent.children.length === 0 ? (
-                      <div className="text-muted-foreground text-xs italic">No children linked yet</div>
+                      <div className="text-slate-400 text-xs italic font-medium">No children linked yet</div>
                     ) : (
-                      <div className="space-y-2 mt-2 border-t pt-2.5">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Children</div>
+                      <div className="space-y-2 mt-2">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Children</div>
                         <div className="flex flex-wrap gap-2">
                           {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
                             <div 
                               key={child.id} 
-                              className="inline-flex items-center gap-1.5 bg-amazon-teal/[0.04] border border-amazon-teal/10 hover:border-amazon-teal/30 hover:bg-amazon-teal/[0.08] rounded-full pl-2 pr-2.5 py-1 text-xs transition-all shadow-sm duration-200 group"
+                              className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all shadow-xs duration-200 group"
                             >
-                              <GraduationCap className="h-3.5 w-3.5 text-amazon-teal/70 group-hover:text-amazon-teal flex-shrink-0" />
+                              <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
                               <Link 
                                 to={`/admin/parents/${parent.id}`} 
                                 state={{
                                   parentData: parent,
                                   selectedChildId: child.id
                                 }} 
-                                className="font-semibold text-amazon-teal/90 group-hover:text-amazon-teal hover:underline truncate max-w-[110px]"
+                                className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
                               >
                                 {child.firstName} {child.lastName}
                               </Link>
-                              <span className="h-1.5 w-1.5 rounded-full bg-amazon-teal/20 group-hover:bg-amazon-teal/40 flex-shrink-0" />
-                              <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
+                              <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
+                              <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
                                 {child.classroom.name}
                               </span>
                             </div>
@@ -991,10 +1063,10 @@ export function ParentManagement() {
                           {parent.children.length > 2 && (
                             <button
                               onClick={(e) => {
-                                e.preventDefault();
-                                toggleParentExpanded(parent.id);
-                              }}
-                              className="inline-flex items-center justify-center bg-gray-50 border border-gray-200 hover:bg-gray-100 rounded-full px-3 py-1 text-[11px] font-bold text-gray-600 transition-all duration-200 shadow-sm"
+                                  e.preventDefault();
+                                  toggleParentExpanded(parent.id);
+                                }}
+                              className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
                             >
                               {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
                             </button>
@@ -1004,11 +1076,11 @@ export function ParentManagement() {
                     )}
                   </div>
                 </Card>
-              ))}
+              )) : []}
             />
           </CardContent>
         </div>
-      </div>
+      </motion.div>
       {/* Invite Parent Dialog */}
       <InviteParentModal
         isOpen={isInviteDialogOpen}
@@ -1050,16 +1122,14 @@ export function ParentManagement() {
         setInviteFormErrors={setInviteFormErrors}
         isDialogClosing={isDialogClosing}
       />
-      {/* Add Child Dialog */}
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl no-scrollbar shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl border border-slate-100 bg-white shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">
-              Add Child to {selectedParent?.firstName}{' '}
-              {selectedParent?.lastName}
+              Add Child to {selectedParent?.firstName} {selectedParent?.lastName}
             </DialogTitle>
-          </DialogHeader>
-          <div className="py-4 space-y-4">
+          </div>
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 First Name
@@ -1074,11 +1144,11 @@ export function ParentManagement() {
                   }
                 }} 
                 placeholder="Enter first name" 
-                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildFirstName ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${addChildFormErrors.newChildFirstName ? 'border-red-500' : ''}`} 
                 autoFocus 
               />
               {addChildFormErrors.newChildFirstName && (
-                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildFirstName}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{addChildFormErrors.newChildFirstName}</p>
               )}
             </div>
             <div>
@@ -1095,10 +1165,10 @@ export function ParentManagement() {
                   }
                 }} 
                 placeholder="Enter last name" 
-                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildLastName ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${addChildFormErrors.newChildLastName ? 'border-red-500' : ''}`} 
               />
               {addChildFormErrors.newChildLastName && (
-                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildLastName}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{addChildFormErrors.newChildLastName}</p>
               )}
             </div>
             <div>
@@ -1114,12 +1184,12 @@ export function ParentManagement() {
                     setAddChildFormErrors(prev => ({...prev, newChildDob: ''}));
                   }
                 }} 
-                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildDob ? 'border-red-500' : ''}`} 
+                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${addChildFormErrors.newChildDob ? 'border-red-500' : ''}`} 
                 min="2000-01-01" 
                 max="2020-12-31" 
               />
               {addChildFormErrors.newChildDob && (
-                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildDob}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{addChildFormErrors.newChildDob}</p>
               )}
             </div>
             <div>
@@ -1132,17 +1202,17 @@ export function ParentManagement() {
                   setAddChildFormErrors(prev => ({...prev, newChildGender: ''}));
                 }
               }}>
-                <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildGender ? 'border-red-500' : ''}`}>
+                <SelectTrigger className={`w-full h-10 rounded-xl border-slate-200 text-sm font-semibold focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${addChildFormErrors.newChildGender ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select gender" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="others">Others</SelectItem>
+                <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                  <SelectItem value="male" className="cursor-pointer text-xs">Male</SelectItem>
+                  <SelectItem value="female" className="cursor-pointer text-xs">Female</SelectItem>
+                  <SelectItem value="others" className="cursor-pointer text-xs">Others</SelectItem>
                 </SelectContent>
               </Select>
               {addChildFormErrors.newChildGender && (
-                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildGender}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{addChildFormErrors.newChildGender}</p>
               )}
             </div>
             <div>
@@ -1155,94 +1225,96 @@ export function ParentManagement() {
                   setAddChildFormErrors(prev => ({...prev, newChildClassroom: ''}));
                 }
               }}>
-                <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${addChildFormErrors.newChildClassroom ? 'border-red-500' : ''}`}>
+                <SelectTrigger className={`w-full h-10 rounded-xl border-slate-200 text-sm font-semibold focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${addChildFormErrors.newChildClassroom ? 'border-red-500' : ''}`}>
                   <SelectValue placeholder="Select a classroom" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
-                  {classrooms.map(classroom => <SelectItem key={classroom.id} value={classroom.id}>
+                <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                  {classrooms.map(classroom => (
+                    <SelectItem key={classroom.id} value={classroom.id} className="cursor-pointer text-xs">
                       {classroom.name}
-                    </SelectItem>)}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {addChildFormErrors.newChildClassroom && (
-                <p className="text-xs text-red-600 mt-1">{addChildFormErrors.newChildClassroom}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{addChildFormErrors.newChildClassroom}</p>
               )}
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddChild} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold">
+            <AsyncButton onClick={handleAddChild} className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all">
               Add Child
             </AsyncButton>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Deactivate Confirmation Dialog */}
       <Dialog open={parentToDeactivate !== null} onOpenChange={() => setParentToDeactivate(null)}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">Deactivate Parent</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-slate-500">
+          </div>
+          <div className="p-6">
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed">
               Are you sure you want to deactivate{' '}
-              <span className="font-semibold text-slate-800">
+              <span className="font-extrabold text-[#0F2D52]">
                 {parentToDeactivate?.firstName} {parentToDeactivate?.lastName}
               </span>
-              ? This action will remove their access.
+              ? This action will temporarily restrict their account access.
             </p>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setParentToDeactivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setParentToDeactivate(null)} className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4">
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleDeactivateParent}
-              className="bg-red-600 hover:bg-red-700 w-full sm:w-auto h-9 sm:h-10 rounded-xl"
+              className="bg-red-600 hover:bg-red-700 h-10 rounded-xl text-xs font-bold px-4 text-white flex items-center gap-1.5"
               disabled={deactivatingParentId === parentToDeactivate?.id}
             >
               {deactivatingParentId === parentToDeactivate?.id ? (
                 <>
-                  <XCircle className="h-4 w-4 mr-2 animate-spin" />
+                  <XCircle className="h-4 w-4 animate-spin" />
                   Deactivating...
                 </>
               ) : (
                 <>
-                  <XCircle className="h-4 w-4 mr-2" />
+                  <XCircle className="h-4 w-4" />
                   Deactivate
                 </>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Activate Confirmation Dialog */}
       <Dialog open={parentToActivate !== null} onOpenChange={() => setParentToActivate(null)}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">Activate Parent</DialogTitle>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-slate-500">
+          </div>
+          <div className="p-6">
+            <p className="text-xs text-slate-600 font-semibold leading-relaxed">
               Are you sure you want to activate{' '}
-              <span className="font-semibold text-slate-800">
+              <span className="font-extrabold text-[#0F2D52]">
                 {parentToActivate?.firstName} {parentToActivate?.lastName}
               </span>
-              ? This will restore their access.
+              ? This will restore their active portal permissions and access.
             </p>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-            <Button variant="outline" onClick={() => setParentToActivate(null)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button variant="outline" onClick={() => setParentToActivate(null)} className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4">
               Cancel
             </Button>
             <Button
               onClick={handleActivateParent}
-              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto h-9 sm:h-10 rounded-xl text-white font-medium flex items-center justify-center gap-1.5"
+              className="bg-emerald-600 hover:bg-emerald-700 h-10 rounded-xl text-xs font-bold px-4 text-white flex items-center gap-1.5"
               disabled={activatingParentId === parentToActivate?.id}
             >
               {activatingParentId === parentToActivate?.id ? (
@@ -1257,9 +1329,9 @@ export function ParentManagement() {
                 </>
               )}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
-
-    </AdminLayout>;
+    </AdminLayout>
+  );
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight } from 'lucide-react';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
@@ -245,9 +245,12 @@ export function FormsDocuments({
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [countdown, setCountdown] = useState(4);
+  const [countdown, setCountdown] = useState(3);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCountingDownRef = useRef(false);
+  const iframeLoadedRef = useRef(false);
+  const selectedFormRef = useRef<any>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
@@ -327,13 +330,13 @@ export function FormsDocuments({
           console.log('Matching form for:', form.title, 'formId:', form.formId);
           console.log('Raw child data:', rawChild);
           console.log('Available raw forms (full):', rawChild?.forms);
-          
+
           const matchingRawForm = rawChild?.forms?.find((rawForm: any) => {
-            return rawForm.formId === form.formId || 
-                   rawForm.formName === form.title ||
-                   rawForm.formName === form.description;
+            return rawForm.formId === form.formId ||
+              rawForm.formName === form.title ||
+              rawForm.formName === form.description;
           });
-          
+
           console.log('Final matching result:', matchingRawForm);
           const rawData = matchingRawForm || null;
           const studentFormAssignmentId =
@@ -361,180 +364,200 @@ export function FormsDocuments({
     if (isOpeningRef.current) return;
     isOpeningRef.current = true;
     try {
-    setOpenError(null);
-    console.log('handleView called with form:', form);
-    console.log('Form ID:', form.formId || form._key);
-    console.log('Child ID form opening:', form.childId);
-    console.log('Selected Child ID:', selectedChildId);
-    console.log('Form data:', form);
-    console.log('Active Tab:', activeTab);
-    
-    // Skip validation for forms from Continue button
-    if (form.fromContinueButton) {
-      console.log('✓ Form from Continue button - bypassing child ID validation');
-    } else {
-      // Ensure we're using the correct child's data
-      if (form.childId && selectedChildId && form.childId !== selectedChildId) {
-        console.warn('Form child ID does not match selected child ID - blocking form open');
-        console.log('Expected child ID:', selectedChildId, 'Got child ID:', form.childId);
-        return;
-      }
-      console.log('✓ Child ID validation passed - opening form for correct child');
-    }
-    
-    let formUrl = '#';
-    
-    // Extract all possible URL sources from rawData and form object
-    const rawData = form.rawData || {};
-    console.log('Raw data for form:', form);
-    const recentEditLink = rawData.recent_edit_link || rawData.recentEditLink || form.recentEditLink;
-    const recentPdfLink = rawData.recent_pdf_link || rawData.recentPdfLink || form.recentPdfLink;
-    const filloutFormId = rawData.fillout_form_id || rawData.filloutFormId || form.filloutFormId;
-    const studentFormAssignmentId =
-      extractStudentFormAssignmentId(form.studentFormAssignmentId) ||
-      extractStudentFormAssignmentId(rawData.student_form_assignment_id) ||
-      extractStudentFormAssignmentId(rawData.studentFormAssignmentId) ||
-      extractStudentFormAssignmentId(form.student_form_assignment_id) ||
-      extractStudentFormAssignmentIdFromUrl(recentEditLink) ||
-      extractStudentFormAssignmentIdFromUrl(filloutFormId) ||
-      extractStudentFormAssignmentIdFromUrl(form.filloutFormId) ||
-      extractStudentFormAssignmentIdFromUrl(form.recentEditLink) ||
-      null;
-    const formId = rawData.formId || form.formId;
-    const idForPayload = coerceStudentFormAssignmentIdForPayload(studentFormAssignmentId);
-    
-    console.log('Form data for URL construction:', {
-      status: form.status,
-      recentEditLink,
-      recentPdfLink,
-      filloutFormId,
-      studentFormAssignmentId,
-      studentFormAssignmentIdNumber: idForPayload.asNumber,
-      formId,
-      rawData
-    });
+      setOpenError(null);
+      console.log('handleView called with form:', form);
+      console.log('Form ID:', form.formId || form._key);
+      console.log('Child ID form opening:', form.childId);
+      console.log('Selected Child ID:', selectedChildId);
+      console.log('Form data:', form);
+      console.log('Active Tab:', activeTab);
 
-    const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
-
-    if (isReadOnly) {
-      // For approved/submitted forms, use direct PDF link for react-pdf viewer
-      if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
-        formUrl = recentPdfLink;
+      // Skip validation for forms from Continue button
+      if (form.fromContinueButton) {
+        console.log('✓ Form from Continue button - bypassing child ID validation');
       } else {
-        // If no PDF link available, don't allow viewing
-        return;
-      }
-    } else {
-      // Backend validation requires this hidden field; do not open Fillout without it.
-      if (!idForPayload.isValid) {
-        const debugPayload = {
-          formId: form.formId || form._key,
-          status: form.status,
-          recentEditLink,
-          filloutFormId,
-          extractedStudentFormAssignmentId: studentFormAssignmentId,
-          coerced: idForPayload,
-          expectedHiddenFieldKey: 'student_form_assignment_id'
-        };
-        console.error('[Fillout] BLOCKED: Missing or invalid student_form_assignment_id', debugPayload);
-        setOpenError('This form is not ready yet (missing assignment ID). Please refresh and try again. If it still fails, contact support.');
-        return;
-      }
-
-      // Poll backend for a resume link for any non-completed form (Draft or In Progress).
-      // The DB status may still be "incomplete"/"Draft" even when Fillout has partial data,
-      // because the webhook that flips it to "in_progress" may not have fired yet.
-      let resumeLinkFromApi: string | null = null;
-      const isNotCompleted = form.status !== 'Approved' && form.status !== 'Submitted';
-      if (isNotCompleted && !recentEditLink && idForPayload.raw) {
-        setLoadingAction({ action: 'view', formId: form.formId ?? '' });
-        try {
-          const { getFormResumeLink } = await import('../../services/api/admin');
-          resumeLinkFromApi = await getFormResumeLink(idForPayload.raw);
-        } catch (err) {
-          console.error('Failed to fetch resume link:', err);
-        } finally {
-          setLoadingAction(null);
+        // Ensure we're using the correct child's data
+        if (form.childId && selectedChildId && form.childId !== selectedChildId) {
+          console.warn('Form child ID does not match selected child ID - blocking form open');
+          console.log('Expected child ID:', selectedChildId, 'Got child ID:', form.childId);
+          return;
         }
+        console.log('✓ Child ID validation passed - opening form for correct child');
       }
 
-      const effectiveEditLink = resumeLinkFromApi || recentEditLink;
+      let formUrl = '#';
 
-      // For non-approved forms, prioritize recent_edit_link (or fetched resume link) first
-      if (effectiveEditLink && effectiveEditLink !== '#' && effectiveEditLink.trim() !== '') {
-        formUrl = effectiveEditLink;
-      } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
-        // Handle fillout form URL construction
-        if (filloutFormId.startsWith('http')) {
-          // Already a full URL
-          formUrl = filloutFormId;
-          // Add student_form_assignment_id if available and not already in URL
-          if (idForPayload.raw && !formUrl.includes('student_form_assignment_id')) {
-            formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
+      // Extract all possible URL sources from rawData and form object
+      const rawData = form.rawData || {};
+      console.log('Raw data for form:', form);
+      const recentEditLink = rawData.recent_edit_link || rawData.recentEditLink || form.recentEditLink;
+      const recentPdfLink = rawData.recent_pdf_link || rawData.recentPdfLink || form.recentPdfLink;
+      const filloutFormId = rawData.fillout_form_id || rawData.filloutFormId || form.filloutFormId;
+      const studentFormAssignmentId =
+        extractStudentFormAssignmentId(form.studentFormAssignmentId) ||
+        extractStudentFormAssignmentId(rawData.student_form_assignment_id) ||
+        extractStudentFormAssignmentId(rawData.studentFormAssignmentId) ||
+        extractStudentFormAssignmentId(form.student_form_assignment_id) ||
+        extractStudentFormAssignmentIdFromUrl(recentEditLink) ||
+        extractStudentFormAssignmentIdFromUrl(filloutFormId) ||
+        extractStudentFormAssignmentIdFromUrl(form.filloutFormId) ||
+        extractStudentFormAssignmentIdFromUrl(form.recentEditLink) ||
+        null;
+      const formId = rawData.formId || form.formId;
+      const idForPayload = coerceStudentFormAssignmentIdForPayload(studentFormAssignmentId);
+
+      console.log('Form data for URL construction:', {
+        status: form.status,
+        recentEditLink,
+        recentPdfLink,
+        filloutFormId,
+        studentFormAssignmentId,
+        studentFormAssignmentIdNumber: idForPayload.asNumber,
+        formId,
+        rawData
+      });
+
+      const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
+
+      if (isReadOnly) {
+        // For approved/submitted forms, use direct PDF link for react-pdf viewer
+        if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
+          formUrl = recentPdfLink;
+        } else {
+          // If no PDF link available, don't allow viewing
+          return;
+        }
+      } else {
+        const isFillout = (() => {
+          const link = recentEditLink || filloutFormId;
+          if (!link) return false;
+          if (link.includes('fillout.com')) return true;
+          if (!link.startsWith('http')) return true; // Legacy slugs/IDs are treated as Fillout
+          return false;
+        })();
+
+        if (isFillout) {
+          // Backend validation requires this hidden field; do not open Fillout without it.
+          if (!idForPayload.isValid) {
+            const debugPayload = {
+              formId: form.formId || form._key,
+              status: form.status,
+              recentEditLink,
+              filloutFormId,
+              extractedStudentFormAssignmentId: studentFormAssignmentId,
+              coerced: idForPayload,
+              expectedHiddenFieldKey: 'student_form_assignment_id'
+            };
+            console.error('[Fillout] BLOCKED: Missing or invalid student_form_assignment_id', debugPayload);
+            setOpenError('This form is not ready yet (missing assignment ID). Please refresh and try again. If it still fails, contact support.');
+            return;
+          }
+
+          // Poll backend for a resume link for any non-completed form (Draft or In Progress).
+          // The DB status may still be "incomplete"/"Draft" even when Fillout has partial data,
+          // because the webhook that flips it to "in_progress" may not have fired yet.
+          let resumeLinkFromApi: string | null = null;
+          const isNotCompleted = form.status !== 'Approved' && form.status !== 'Submitted';
+          if (isNotCompleted && !recentEditLink && idForPayload.raw) {
+            setLoadingAction({ action: 'view', formId: form.formId ?? '' });
+            try {
+              const { getFormResumeLink } = await import('../../services/api/admin');
+              resumeLinkFromApi = await getFormResumeLink(idForPayload.raw);
+            } catch (err) {
+              console.error('Failed to fetch resume link:', err);
+            } finally {
+              setLoadingAction(null);
+            }
+          }
+
+          const effectiveEditLink = resumeLinkFromApi || recentEditLink;
+
+          // For non-approved forms, prioritize recent_edit_link (or fetched resume link) first
+          if (effectiveEditLink && effectiveEditLink !== '#' && effectiveEditLink.trim() !== '') {
+            formUrl = effectiveEditLink;
+          } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
+            // Handle fillout form URL construction
+            if (filloutFormId.startsWith('http')) {
+              // Already a full URL
+              formUrl = filloutFormId;
+              // Add student_form_assignment_id if available and not already in URL
+              if (idForPayload.raw && !formUrl.includes('student_form_assignment_id')) {
+                formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
+              }
+            } else {
+              // Construct fillout URL
+              const baseUrl = `https://goddard.fillout.com/${filloutFormId}`;
+              formUrl = `${baseUrl}?student_form_assignment_id=${idForPayload.raw}`;
+            }
+          } else if (idForPayload.raw) {
+            // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
+            let defaultFormId = rawData.fillout_form_id || 'parent_handbook';
+            // Validate the default form ID - if it's invalid test data, use parent_handbook
+            const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
+            if (invalidFormIds.includes(defaultFormId.toLowerCase())) {
+              defaultFormId = 'parent_handbook';
+            }
+            console.log('Default form ID used:', defaultFormId)
+            formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${idForPayload.raw}`;
+          }
+
+          // Attach the Fillout user context (user_id + user_token) so signatures and
+          // initials saved on earlier forms can be re-used in this one. Provisioning
+          // failures degrade gracefully — the form still opens without re-use.
+          if (formUrl && formUrl !== '#') {
+            const parentEmail = (userData?.email || user?.email || '').trim().toLowerCase();
+            // Stable identity only: Goddard parentId or the email itself. The auth
+            // user id must not be used — before userData loads it would provision a
+            // second Fillout user for the same parent (and the dev bypass id is
+            // shared by everyone).
+            const externalUserId = userData?.parentId || parentEmail;
+            if (!externalUserId) {
+              console.warn('[Fillout] Skipping user provisioning — parent identity not loaded yet (no parentId/email)');
+            }
+            if (externalUserId) {
+              const parentName =
+                [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || parentEmail || 'Goddard Parent';
+              const filloutCtx = await getFilloutUserContext({
+                externalUserId,
+                email: parentEmail || `${externalUserId}@goddard.parent`,
+                name: parentName,
+              });
+              formUrl = appendFilloutUserParams(formUrl, filloutCtx);
+            }
           }
         } else {
-          // Construct fillout URL
-          const baseUrl = `https://goddard.fillout.com/${filloutFormId}`;
-          formUrl = `${baseUrl}?student_form_assignment_id=${idForPayload.raw}`;
-        }
-      } else if (idForPayload.raw) {
-        // Fallback: use the form's fillout_form_id or a default form with student_form_assignment_id
-        let defaultFormId = rawData.fillout_form_id || 'parent_handbook';
-        // Validate the default form ID - if it's invalid test data, use parent_handbook
-        const invalidFormIds = ['wed', 'sdexewsa', 'sdceswd'];
-        if (invalidFormIds.includes(defaultFormId.toLowerCase())) {
-          defaultFormId = 'parent_handbook';
-        }
-        console.log('Default form ID used:', defaultFormId)
-        formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${idForPayload.raw}`;
-      }
+          // Non-Fillout form: Use the direct URLs provided by the alternative form service
+          formUrl = recentEditLink || filloutFormId || '#';
 
-      // Attach the Fillout user context (user_id + user_token) so signatures and
-      // initials saved on earlier forms can be re-used in this one. Provisioning
-      // failures degrade gracefully — the form still opens without re-use.
-      if (formUrl && formUrl !== '#') {
-        const parentEmail = (userData?.email || user?.email || '').trim().toLowerCase();
-        // Stable identity only: Goddard parentId or the email itself. The auth
-        // user id must not be used — before userData loads it would provision a
-        // second Fillout user for the same parent (and the dev bypass id is
-        // shared by everyone).
-        const externalUserId = userData?.parentId || parentEmail;
-        if (!externalUserId) {
-          console.warn('[Fillout] Skipping user provisioning — parent identity not loaded yet (no parentId/email)');
-        }
-        if (externalUserId) {
-          const parentName =
-            [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || parentEmail || 'Goddard Parent';
-          const filloutCtx = await getFilloutUserContext({
-            externalUserId,
-            email: parentEmail || `${externalUserId}@goddard.parent`,
-            name: parentName,
-          });
-          formUrl = appendFilloutUserParams(formUrl, filloutCtx);
+          // Append assignment ID as standard query parameter if needed
+          if (formUrl && formUrl !== '#' && idForPayload.raw && !formUrl.includes('student_form_assignment_id')) {
+            formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
+          }
         }
       }
-    }
-    console.log('Final form URL:', formUrl);
-    console.log('[Fillout] READY payload (frontend):', {
-      student_form_assignment_id: idForPayload.asNumber ?? idForPayload.raw,
-      student_form_assignment_id_raw: idForPayload.raw,
-      student_form_assignment_id_number: idForPayload.asNumber,
-      viewUrl: formUrl
-    });
+      console.log('Final form URL:', formUrl);
+      console.log('[Fillout] READY payload (frontend):', {
+        student_form_assignment_id: idForPayload.asNumber ?? idForPayload.raw,
+        student_form_assignment_id_raw: idForPayload.raw,
+        student_form_assignment_id_number: idForPayload.asNumber,
+        viewUrl: formUrl
+      });
 
-    setSelectedForm({
-      ...form,
-      viewUrl: formUrl
-    });
-    setIsFrameLoading(true);
-    setPageNumber(1);
-    setNumPages(null);
-    // Mark as processed so if formToOpen is set externally with the same form, useEffect skips it
-    const formKey = form.fromContinueButton
-      ? `continue-${form.formId ?? 'unknown'}`
-      : (form.formId ?? null);
-    if (formKey) processedFormToOpenRef.current = formKey;
-    onViewForm(form);
+      setSelectedForm({
+        ...form,
+        viewUrl: formUrl
+      });
+      setIsFrameLoading(true);
+      setPageNumber(1);
+      setNumPages(null);
+      isCountingDownRef.current = false;
+      iframeLoadedRef.current = false;
+      // Mark as processed so if formToOpen is set externally with the same form, useEffect skips it
+      const formKey = form.fromContinueButton
+        ? `continue-${form.formId ?? 'unknown'}`
+        : (form.formId ?? null);
+      if (formKey) processedFormToOpenRef.current = formKey;
+      onViewForm(form);
     } finally {
       isOpeningRef.current = false;
     }
@@ -650,87 +673,243 @@ export function FormsDocuments({
     }
   };
 
-  // Handle form completion detection and auto-redirect
+  // Keep selectedFormRef in sync with the state
   useEffect(() => {
-    if (selectedForm && !isFrameLoading) {
-      let urlCheckInterval: ReturnType<typeof setInterval>;
-      
-      // Function to start thank you countdown
-      const startThankYouCountdown = () => {
-        setShowThankYou(true);
-        setCountdown(4);
-        
-        // Start countdown
-        countdownRef.current = setInterval(() => {
-          setCountdown(prev => {
-            if (prev <= 1) {
-              // Auto redirect to home
-              setSelectedForm(null);
-              setShowThankYou(false);
-              setIsFrameLoading(false);
-              if (countdownRef.current) clearInterval(countdownRef.current);
-              // Trigger refresh when auto-redirecting
-              if (onFormCompleted) onFormCompleted();
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-        
-        // Fallback timeout in case countdown doesn't work
-        thankYouTimeoutRef.current = setTimeout(() => {
+    selectedFormRef.current = selectedForm;
+  }, [selectedForm]);
+
+  // Function to start thank you countdown
+  const startThankYouCountdown = () => {
+    if (!selectedFormRef.current || isCountingDownRef.current) return;
+    isCountingDownRef.current = true;
+    setShowThankYou(true);
+    setCountdown(3);
+    
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+    
+    // Start countdown
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          // Auto redirect to home
           setSelectedForm(null);
           setShowThankYou(false);
           setIsFrameLoading(false);
-        }, 15000);
-      };
-      
-      // Listen for messages from iframe to detect form completion
-      const handleMessage = (event: MessageEvent) => {
-        // Check if message indicates form completion (thank you page)
-        if (event.data && typeof event.data === 'string' && 
-            (event.data.includes('thank') || event.data.includes('complete') || event.data.includes('submitted'))) {
-          startThankYouCountdown();
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          // Trigger refresh when auto-redirecting
+          if (onFormCompleted) onFormCompleted();
+          return 0;
         }
-      };
-      
-      // Monitor iframe URL changes for thank you page detection
-      const monitorIframeUrl = () => {
-        try {
-          const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
-          if (iframe && iframe.contentWindow) {
-            const currentUrl = iframe.contentWindow.location.href;
-            // Check if URL contains thank you indicators
-            if (currentUrl.includes('thank') || currentUrl.includes('success') || currentUrl.includes('complete')) {
-              startThankYouCountdown();
-              if (urlCheckInterval) clearInterval(urlCheckInterval);
-            }
-          }
-        } catch (error) {
-          // Cross-origin restrictions prevent URL access, this is expected
-          // We'll rely on message passing or user interaction
-        }
-      };
-      
-      // Check URL every 2 seconds
-      urlCheckInterval = setInterval(monitorIframeUrl, 2000);
-      
-      window.addEventListener('message', handleMessage);
-      
-      return () => {
-        window.removeEventListener('message', handleMessage);
-        if (urlCheckInterval) clearInterval(urlCheckInterval);
-        if (countdownRef.current) clearInterval(countdownRef.current);
-        if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-      };
-    }
-  }, [selectedForm, isFrameLoading]);
+        return prev - 1;
+      });
+    }, 1000);
+    
+    // Fallback timeout in case countdown doesn't work
+    thankYouTimeoutRef.current = setTimeout(() => {
+      setSelectedForm(null);
+      setShowThankYou(false);
+      setIsFrameLoading(false);
+      if (onFormCompleted) onFormCompleted();
+    }, 15000);
+  };
 
-  // Cleanup timers when component unmounts or form changes
+  // Handle form completion detection and auto-redirect
   useEffect(() => {
+    let urlCheckInterval: ReturnType<typeof setInterval>;
+
+    // Monitor iframe URL changes for thank you page detection
+    const monitorIframeUrl = () => {
+      const activeForm = selectedFormRef.current;
+      if (!activeForm) return;
+      try {
+        const iframe = document.querySelector('iframe[title="' + activeForm.title + '"]') as HTMLIFrameElement;
+        if (iframe && iframe.contentWindow) {
+          const currentUrl = iframe.contentWindow.location.href;
+          // Check if URL contains thank you indicators
+          if (currentUrl.includes('thank') || currentUrl.includes('success') || currentUrl.includes('complete')) {
+            startThankYouCountdown();
+            if (urlCheckInterval) clearInterval(urlCheckInterval);
+          }
+        }
+      } catch (error) {
+        // Cross-origin restrictions prevent URL access, this is expected
+        // We'll rely on message passing or user interaction
+      }
+    };
+    
+    if (selectedForm) {
+      urlCheckInterval = setInterval(monitorIframeUrl, 2000);
+    }
+    
     return () => {
+      if (urlCheckInterval) clearInterval(urlCheckInterval);
       if (countdownRef.current) clearInterval(countdownRef.current);
       if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+    };
+  }, [selectedForm, isFrameLoading]);
+
+  // Helper to retrieve the current status of the active form from state arrays
+  const getActiveFormStatus = (): string | null => {
+    if (!selectedForm) return null;
+    const targetId = selectedForm.formId || selectedForm._key;
+    
+    if (childSpecificForms) {
+      for (const f of childSpecificForms) {
+        if ((f.formId || f._key) === targetId) return f.status;
+      }
+    }
+    if (familyForms) {
+      for (const f of familyForms) {
+        if ((f.formId || f._key) === targetId) return f.status;
+      }
+    }
+    if (allForms) {
+      for (const f of allForms) {
+        if ((f.formId || f._key) === targetId) return f.status;
+      }
+    }
+    return selectedForm.status;
+  };
+
+  // Monitor form status changes from API response triggers to fire the thank-you screen
+  useEffect(() => {
+    if (!selectedForm) return;
+
+    const currentStatus = getActiveFormStatus();
+    if (
+      currentStatus === 'Submitted' || 
+      currentStatus === 'Approved' || 
+      currentStatus === 'submitted' || 
+      currentStatus === 'approved'
+    ) {
+      console.log('[FormsDocuments] Active form submission detected via API status change! Status:', currentStatus);
+      startThankYouCountdown();
+    }
+  }, [childSpecificForms, familyForms, allForms, selectedForm]);
+
+  // Global window message event listener (registered once on mount)
+  useEffect(() => {
+    const handleMessageGlobal = (event: MessageEvent) => {
+      // Log all message events to console for debugging
+      console.log('Received postMessage event (global):', event.origin, event.data);
+
+      const activeForm = selectedFormRef.current;
+      if (!activeForm) {
+        console.log('Ignore message event: no active form in parent dashboard state');
+        return;
+      }
+
+      let isSubmitted = false;
+      let parsedData: any = null;
+
+      // 1. Attempt to parse stringified JSON
+      if (typeof event.data === 'string') {
+        try {
+          parsedData = JSON.parse(event.data);
+        } catch (e) {
+          // Not JSON format
+        }
+      } else if (typeof event.data === 'object' && event.data !== null) {
+        parsedData = event.data;
+      }
+
+      // 2. Validate against success === true and submission_id exists (directly or recursively)
+      if (parsedData && typeof parsedData === 'object') {
+        // Deep search helper to find success: true and submission_id inside the object
+        const findSubmissionInObject = (obj: any, depth = 0): boolean => {
+          if (depth > 4) return false;
+          if (!obj || typeof obj !== 'object') return false;
+          
+          // Check direct keys of current object
+          const success = obj.success === true || obj.success === 'true';
+          const submissionId = obj.submission_id || obj.submissionId;
+          if (success && submissionId) {
+            return true;
+          }
+
+          // Check direct fields of payload or data
+          const nestedPayload = obj.payload || obj.data;
+          if (nestedPayload && typeof nestedPayload === 'object') {
+            if (findSubmissionInObject(nestedPayload, depth + 1)) {
+              return true;
+            }
+          }
+
+          // Scan all keys recursively
+          for (const key in obj) {
+            try {
+              if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                const val = obj[key];
+                if (val && typeof val === 'object') {
+                  if (findSubmissionInObject(val, depth + 1)) {
+                    return true;
+                  }
+                }
+              }
+            } catch (e) {
+              // Ignore
+            }
+          }
+          return false;
+        };
+
+        if (findSubmissionInObject(parsedData)) {
+          isSubmitted = true;
+        } else {
+          // Check other common format types
+          const type = parsedData.type || parsedData.event;
+          if (
+            type === 'fillout-form-submitted' ||
+            type === 'fillout:form-submitted' ||
+            type === 'feathery:form_submitted' ||
+            type === 'feathery:form-submitted' ||
+            type === 'FORM_SUBMITTED' ||
+            type === 'submit' ||
+            (typeof type === 'string' && (
+              type.toLowerCase().includes('submit') || 
+              type.toLowerCase().includes('success') || 
+              type.toLowerCase().includes('complete')
+            ))
+          ) {
+            isSubmitted = true;
+          }
+        }
+      }
+
+      // 3. String-based serialization fallback check
+      if (!isSubmitted) {
+        let serializedString = '';
+        if (typeof event.data === 'string') {
+          serializedString = event.data;
+        } else {
+          try {
+            serializedString = JSON.stringify(event.data);
+          } catch (e) {
+            // Ignore serialization error
+          }
+        }
+
+        if (serializedString) {
+          const lower = serializedString.toLowerCase();
+          if (
+            (lower.includes('submit') || lower.includes('complete') || lower.includes('success') || lower.includes('thank')) &&
+            (lower.includes('submission') || lower.includes('id') || lower.includes('record') || lower.includes('done') || lower.includes('response'))
+          ) {
+            isSubmitted = true;
+          }
+        }
+      }
+
+      if (isSubmitted) {
+        console.log('Form submission detected in global listener! Starting thank you countdown...');
+        startThankYouCountdown();
+      }
+    };
+
+    window.addEventListener('message', handleMessageGlobal);
+    return () => {
+      window.removeEventListener('message', handleMessageGlobal);
     };
   }, []);
 
@@ -750,6 +929,7 @@ export function FormsDocuments({
                 setShowThankYou(false);
                 if (countdownRef.current) clearInterval(countdownRef.current);
                 if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+                if (onFormCompleted) onFormCompleted();
               }}
             >
               <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -770,8 +950,24 @@ export function FormsDocuments({
           </div>
         </div>
 
-        <Card className="glass-card">
+        <Card className="glass-card animate-fade-in">
           <CardContent className="p-2 sm:p-3 md:p-6">
+            {showThankYou && (
+              <div className="mb-4 bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center justify-between shadow-sm animate-fade-in-up">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-green-100 p-1.5">
+                    <CheckCircle className="h-5 w-5 text-green-600 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-green-900">Form submitted successfully!</h4>
+                    <p className="text-xs text-green-700 mt-0.5">We've received your submission.</p>
+                  </div>
+                </div>
+                <div className="bg-green-100/80 px-3 py-1 rounded-md text-xs font-semibold text-green-800 border border-green-200">
+                  Updating dashboard in {countdown}s
+                </div>
+              </div>
+            )}
             <div className="relative">
               {isFrameLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
@@ -809,7 +1005,7 @@ export function FormsDocuments({
                         <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4" />
                       </Button>
                     </div>
-                    
+
                     {/* PDF Viewer */}
                     <div className="flex justify-center overflow-x-auto">
                       <Document
@@ -818,7 +1014,7 @@ export function FormsDocuments({
                         loading={<Loading message="Loading PDF..." size="sm" />}
                         error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
                       >
-                        <Page 
+                        <Page
                           pageNumber={pageNumber}
                           width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
                           renderTextLayer={true}
@@ -846,35 +1042,13 @@ export function FormsDocuments({
                       }}
                       title={selectedForm.title}
                       onLoad={() => {
+                        console.log('iframe onLoad triggered! loadedRef:', iframeLoadedRef.current);
+                        if (iframeLoadedRef.current) {
+                          console.log('iframe onLoad detected redirect! Starting countdown...');
+                          startThankYouCountdown();
+                        }
+                        iframeLoadedRef.current = true;
                         setIsFrameLoading(false);
-                        setTimeout(() => {
-                          try {
-                            const iframe = document.querySelector('iframe[title="' + selectedForm.title + '"]') as HTMLIFrameElement;
-                            if (iframe && iframe.contentDocument) {
-                              const content = iframe.contentDocument.body.innerText.toLowerCase();
-                              if (content.includes('thank you') || content.includes('submitted') || content.includes('complete')) {
-                                setShowThankYou(true);
-                                setCountdown(5);
-                                
-                                countdownRef.current = setInterval(() => {
-                                  setCountdown(prev => {
-                                    if (prev <= 1) {
-                                      setSelectedForm(null);
-                                      setShowThankYou(false);
-                                      setIsFrameLoading(false);
-                                      if (countdownRef.current) clearInterval(countdownRef.current);
-                                      if (onFormCompleted) onFormCompleted();
-                                      return 0;
-                                    }
-                                    return prev - 1;
-                                  });
-                                }, 1000);
-                              }
-                            }
-                          } catch (error) {
-                            // Cross-origin restrictions, ignore
-                          }
-                        }, 1000);
                       }}
                     />
                   </>
@@ -894,142 +1068,142 @@ export function FormsDocuments({
   // Show archived message if child is archived
   if (childStatus === 'archive') {
     return <div className="px-2 sm:px-0">
-        <div className="mb-3 sm:mb-4 md:mb-6">
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-2 sm:mb-3 md:mb-4">
-            Forms & Documents
-          </h2>
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4 md:p-8 text-center">
-            <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 mx-auto text-amber-600 mb-2 sm:mb-3 md:mb-4" />
-            <h3 className="font-semibold text-amber-900 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg">
-              The student is Archived
-            </h3>
-            <p className="text-xs sm:text-sm text-amber-700">
-              Form viewing is disabled for archived students.
-            </p>
-          </div>
+      <div className="mb-3 sm:mb-4 md:mb-6">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground mb-2 sm:mb-3 md:mb-4">
+          Forms & Documents
+        </h2>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4 md:p-8 text-center">
+          <AlertCircle className="h-6 w-6 sm:h-8 sm:w-8 md:h-12 md:w-12 mx-auto text-amber-600 mb-2 sm:mb-3 md:mb-4" />
+          <h3 className="font-semibold text-amber-900 mb-1 sm:mb-2 text-sm sm:text-base md:text-lg">
+            The student is Archived
+          </h3>
+          <p className="text-xs sm:text-sm text-amber-700">
+            Form viewing is disabled for archived students.
+          </p>
         </div>
-      </div>;
+      </div>
+    </div>;
   }
 
   // Forms grid view with tabs
   return <div className="px-2 sm:px-0">
-      <div className="mb-3 sm:mb-4 md:mb-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3 md:mb-4 gap-2 sm:gap-3 md:gap-4">
-          <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
-            Forms & Documents
-          </h2>
-          {openError && (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
-              <span>{openError}</span>
+    <div className="mb-3 sm:mb-4 md:mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3 md:mb-4 gap-2 sm:gap-3 md:gap-4">
+        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
+          Forms & Documents
+        </h2>
+        {openError && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>{openError}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          {onYearFilterChange && (
+            <div className="flex items-center gap-2">
+              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
+              <Select value={yearFilter} onValueChange={onYearFilterChange}>
+                <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
+                  <SelectValue placeholder="Filter by year" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Years</SelectItem>
+                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                    const year = (new Date().getFullYear() - i).toString();
+                    return (
+                      <SelectItem key={year} value={year}>
+                        {year}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            {onYearFilterChange && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                <Select value={yearFilter} onValueChange={onYearFilterChange}>
-                  <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
-                    <SelectValue placeholder="Filter by year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
-                      const year = (new Date().getFullYear() - i).toString();
-                      return (
-                        <SelectItem key={year} value={year}>
-                          {year}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+          {enrollmentId && (
+            <button
+              onClick={handleDownloadAll}
+              disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
+              title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available to download' : 'Download all approved forms as ZIP'}
+              className="group flex items-center gap-1.5 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#0F2D52] shadow-sm transition-all duration-200 hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#0F2D52]/10 transition-colors group-hover:bg-[#0F2D52]/20">
+                {isDownloadingAll
+                  ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
+                  : <Download className="h-2.5 w-2.5" />}
+              </span>
+              <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={(value) => {
+        setActiveTab(value);
+        // If a child tab is clicked, notify parent to update selected child
+        if (value !== 'family' && onChildSelect) {
+          // Find the child by ID and pass their name to onChildSelect
+          const child = childSpecificForms.find(c => c.childId === value);
+          if (child) {
+            onChildSelect(child.childName);
+          }
+        }
+      }}>
+        {(childSpecificForms.length > 1 || familyForms.length > 0) && (
+          <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
+            <TabsList className="w-max h-8 sm:h-10">
+              {familyForms.length > 0 && (
+                <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
+              )}
+              {childSpecificForms.length > 1 && childSpecificForms.map((child) => (
+                <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
+                  <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
+                  <span className="hidden sm:inline">{child.childName}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+        )}
+
+        {childSpecificForms.map((child) => (
+          <TabsContent key={child.childId} value={child.childId}>
+            {getFormsForTab(child.childId).length === 0 ? (
+              <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
+                No forms available for {child.childName} yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+                {getFormsForTab(child.childId).map(form => (
+
+                  <FormCard
+                    key={form._key}
+                    title={form.title}
+                    description={form.description}
+                    lastUpdated={form.lastUpdated}
+                    status={form.status}
+                    childName={form.childName}
+                    formId={form.formId || form._key}
+                    recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
+                    assignedAt={form.assignedAt}
+                    dueDate={form.dueDate}
+                    disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
+                    disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
+                    onView={() => {
+                      console.log('Form ID:', form.formId || form._key);
+                      console.log('Child ID:', form.childId);
+                      console.log('Form data passss:', form);
+                      handleView(form);
+                    }}
+                    onDownload={() => handleDownload(form)}
+                    onPrint={() => handlePrint(form)}
+                    isLoading={loadingAction}
+                  />
+                ))}
               </div>
             )}
-            {enrollmentId && (
-              <button
-                onClick={handleDownloadAll}
-                disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
-                title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available to download' : 'Download all approved forms as ZIP'}
-                className="group flex items-center gap-1.5 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#0F2D52] shadow-sm transition-all duration-200 hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#0F2D52]/10 transition-colors group-hover:bg-[#0F2D52]/20">
-                  {isDownloadingAll
-                    ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
-                    : <Download className="h-2.5 w-2.5" />}
-                </span>
-                <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        <Tabs value={activeTab} onValueChange={(value) => {
-          setActiveTab(value);
-          // If a child tab is clicked, notify parent to update selected child
-          if (value !== 'family' && onChildSelect) {
-            // Find the child by ID and pass their name to onChildSelect
-            const child = childSpecificForms.find(c => c.childId === value);
-            if (child) {
-              onChildSelect(child.childName);
-            }
-          }
-        }}>
-          {(childSpecificForms.length > 1 || familyForms.length > 0) && (
-            <div className="mb-2 sm:mb-3 md:mb-4 overflow-x-auto">
-              <TabsList className="w-max h-8 sm:h-10">
-                {familyForms.length > 0 && (
-                  <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
-                )}
-                {childSpecificForms.length > 1 && childSpecificForms.map((child) => (
-                  <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
-                    <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
-                    <span className="hidden sm:inline">{child.childName}</span>
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </div>
-          )}
-
-          {childSpecificForms.map((child) => (
-            <TabsContent key={child.childId} value={child.childId}>
-              {getFormsForTab(child.childId).length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
-                  No forms available for {child.childName} yet.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
-                  {getFormsForTab(child.childId).map(form => (
-                    
-                    <FormCard
-                      key={form._key}
-                      title={form.title}
-                      description={form.description}
-                      lastUpdated={form.lastUpdated}
-                      status={form.status}
-                      childName={form.childName}
-                      formId={form.formId || form._key}
-                      recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
-                      assignedAt={form.assignedAt}
-                      dueDate={form.dueDate}
-                      disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
-                      disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
-                      onView={() => {
-                        console.log('Form ID:', form.formId || form._key);
-                        console.log('Child ID:', form.childId);
-                        console.log('Form data passss:', form);
-                        handleView(form);
-                      }}
-                      onDownload={() => handleDownload(form)}
-                      onPrint={() => handlePrint(form)}
-                      isLoading={loadingAction}
-                    />
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-    </div>;
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  </div>;
 }

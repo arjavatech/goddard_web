@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
@@ -188,195 +189,223 @@ export function ClassroomManagement() {
   if (loading) {
     return <PageLoader message="Loading classroom data..." Layout={AdminLayout} />;
   }
-  return <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
-        {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Page Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Classroom Management</h1>
-            <p className="text-sm text-slate-500 mt-0.5">Manage classrooms and student assignments</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Classroom Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage classrooms, student assignments, and template overrides</p>
           </div>
-          <Button onClick={() => { setNewClassroomName(''); setClassroomErrors({}); setIsAddDialogOpen(true); }}
-            className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl w-full h-10 sm:w-auto transition-all duration-200" size="sm">
-            <Plus className="h-4 w-4 mr-2" /> Add Classroom
+          <Button 
+            onClick={() => { setNewClassroomName(''); setClassroomErrors({}); setIsAddDialogOpen(true); }}
+            className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl font-bold shadow-xs border-none h-10 px-4 w-full sm:w-auto text-xs" 
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-1.5" /> Add Classroom
           </Button>
         </div>
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="animate-fade-in-up" style={{ animationDelay: '0ms' }}>
-            <StatCard label="Total Classrooms" value={classrooms.length} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#1a6fc4]" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+        {/* Stat Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          <div className="h-full">
+            <StatCard 
+              label="Total Classrooms" 
+              value={classrooms.length} 
+              icon={Users} 
+              iconBgClass="bg-[#EFF5FB]" 
+              iconColorClass="text-[#0F2D52]" 
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            />
           </div>
-          <div className="animate-fade-in-up" style={{ animationDelay: '40ms' }}>
-            <StatCard label="Total Students" value={classrooms.reduce((s,c)=>s+c.studentsCount,0)} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          <div className="h-full">
+            <StatCard 
+              label="Total Students" 
+              value={classrooms.reduce((s, c) => s + c.studentsCount, 0)} 
+              icon={Users} 
+              iconBgClass="bg-emerald-50" 
+              iconColorClass="text-emerald-600" 
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            />
           </div>
-          <div className="animate-fade-in-up" style={{ animationDelay: '80ms' }}>
-            <StatCard label="Assigned Forms" value={classrooms.reduce((s,c)=>s+c.formsCount,0)} icon={FileText} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" className="hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out shadow-sm" />
+          <div className="h-full">
+            <StatCard 
+              label="Assigned Forms" 
+              value={classrooms.reduce((s, c) => s + c.formsCount, 0)} 
+              icon={FileText} 
+              iconBgClass="bg-amber-50" 
+              iconColorClass="text-amber-600" 
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            />
           </div>
         </div>
 
-        {/* Directory card */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out animate-fade-in-up" style={{ animationDelay: '80ms' }}>
-          <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+        {/* Directory Card */}
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
+          <div className="px-5 py-4 border-b border-slate-50 bg-slate-50/50">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-sm font-bold text-slate-900">Classroom Directory</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{sortedClassrooms.length} of {classrooms.length} classrooms</p>
+                <p className="text-xs text-slate-400 mt-0.5 font-semibold">{sortedClassrooms.length} of {classrooms.length} classrooms</p>
               </div>
             </div>
             <div className="flex gap-2">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4 pointer-events-none" />
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <input
                   placeholder="Search classrooms…"
-                  className="w-full pl-9 pr-4 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+                  className="w-full pl-9 pr-4 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
-              <SortDropdown currentSortBy={sortBy} currentSortOrder={sortOrder} options={sortOptions} labels={sortLabels} onSort={(by,order)=>{setSortBy(by);setSortOrder(order);}} />
+              <SortDropdown currentSortBy={sortBy} currentSortOrder={sortOrder} options={sortOptions} labels={sortLabels} onSort={(by, order) => { setSortBy(by); setSortOrder(order); }} />
             </div>
           </div>
-            {/* Mobile Card View */}
-            <MobileCardList
-              className="lg:hidden p-3 sm:p-4"
-              loading={loading}
-              loadingMessage="Loading classrooms..."
-              emptyMessage="No classrooms found matching your search criteria."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              gridClassName="space-y-2 sm:space-y-3"
-              cards={paginatedClassrooms.map((classroom, index) => (
-                <Card key={classroom.id || `classroom-${index}`} className="p-3 sm:p-4">
-                  <CardContent className="p-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-1">
-                        <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} />
-                        <div className="min-w-0 flex-1">
-                          <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm sm:text-base font-medium text-foreground hover:text-amazon-teal block truncate">
-                            {classroom.name}
-                          </Link>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Users className="h-3 w-3 flex-shrink-0" />
-                            <span className="truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9 flex-shrink-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
-                            <FileText className="h-4 w-4 mr-2" />
-                            Manage Forms
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openEditDialog(classroom)}>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Rename
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className="text-red-600 focus:text-red-600" disabled={classroom.studentsCount > 0}>
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {classroom.assignedForms.length > 0 ? (
-                        classroom.assignedForms.slice(0, 2).map(form => (
-                          <Badge key={form.id} variant="secondary" className="text-xs truncate max-w-[120px]">
-                            {form.name}
-                          </Badge>
-                        ))
-                      ) : (
-                        <span className="text-gray-400 text-xs sm:text-sm">No forms assigned</span>
-                      )}
-                      {classroom.assignedForms.length > 2 && (
-                        <Badge variant="outline" className="text-xs">+{classroom.assignedForms.length - 2} more</Badge>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            />
-            {/* Desktop Table View */}
-            <DataTable
-              className="hidden lg:block"
-              loading={loading}
-              loadingMessage="Loading classrooms..."
-              emptyMessage="No classrooms found. Try a different search or add a new classroom."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredClassrooms.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              columns={[
-                { header: 'Classroom', className: 'w-1/4' },
-                { header: 'Students', className: 'w-1/8' },
-                { header: 'Assigned Forms', className: 'w-1/4' },
-                { header: 'Actions', className: 'w-1/8 text-right' },
-              ]}
-              rows={paginatedClassrooms.map((classroom, index) => (
-                <tr key={classroom.id || `classroom-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} className="mr-0" />
-                      <div className="min-w-0">
-                        <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm font-semibold text-cyan-600 hover:text-cyan-700 transition-colors hover:underline block truncate">
+
+          {/* Mobile Card View */}
+          <MobileCardList
+            className="lg:hidden p-4"
+            loading={loading}
+            loadingMessage="Loading classrooms..."
+            emptyMessage="No classrooms found matching your search criteria."
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            gridClassName="space-y-3"
+            cards={paginatedClassrooms.map((classroom, index) => (
+              <Card key={classroom.id || `classroom-${index}`} className="p-4 border border-slate-100 rounded-xl bg-white shadow-xs">
+                <CardContent className="p-0">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3 min-w-0 flex-1">
+                      <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} className="!bg-[#044ba0] text-slate-700 font-bold" />
+                      <div className="min-w-0 flex-1">
+                        <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm font-bold text-slate-800 hover:text-[#0F2D52] hover:underline block truncate">
                           {classroom.name}
                         </Link>
-                        <p className="text-xs text-slate-400 truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</p>
+                        <p className="text-xs text-slate-400 font-semibold flex items-center gap-1 mt-0.5">
+                          <Users className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</span>
+                        </p>
                       </div>
                     </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex items-center gap-1.5 text-slate-600">
-                      <Users className="h-3.5 w-3.5 text-slate-400" />
-                      <span className="text-sm font-medium">{classroom.studentsCount}</span>
-                    </div>
-                  </td>
-                  <td className="py-3 px-4">
-                    <div className="flex flex-wrap gap-1">
-                      {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 2).map(form => (
-                        <Badge key={form.id} variant="secondary" className="text-xs rounded-full">{form.name}</Badge>
-                      )) : <span className="text-xs text-slate-400">No forms assigned</span>}
-                      {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-xs rounded-full">+{classroom.assignedForms.length - 2} more</Badge>}
-                    </div>
-                  </td>
-                  <td className="py-3 px-4 text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg"><MoreHorizontal className="h-4 w-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600"><MoreHorizontal className="h-4 w-4" /></Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-xl border-slate-100 shadow-lg">
-                        <DropdownMenuItem onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)} className="rounded-lg">
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
                           <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditDialog(classroom)} className="rounded-lg">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(classroom)}>
                           <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openDeleteDialog(classroom)} className={`rounded-lg ${classroom.studentsCount > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-red-600 focus:text-red-600'}`} disabled={classroom.studentsCount > 0}>
+                        <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => openDeleteDialog(classroom)} disabled={classroom.studentsCount > 0}>
                           <Trash2 className="h-4 w-4 mr-2" />Delete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            />
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {classroom.assignedForms.length > 0 ? (
+                      classroom.assignedForms.slice(0, 2).map(form => (
+                        <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2 py-0.5 font-bold">
+                          {form.name}
+                        </Badge>
+                      ))
+                    ) : (
+                      <span className="text-slate-400 text-xs font-semibold">No forms assigned</span>
+                    )}
+                    {classroom.assignedForms.length > 2 && (
+                      <Badge variant="outline" className="text-[10px] rounded-full px-2 py-0.5 font-bold">+{classroom.assignedForms.length - 2} more</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          />
+
+          {/* Desktop Table View */}
+          <DataTable
+            className="hidden lg:block relative z-0"
+            loading={loading}
+            loadingMessage="Loading classrooms..."
+            emptyMessage="No classrooms found. Try a different search or add a new classroom."
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredClassrooms.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            columns={[
+              { header: 'Classroom', className: 'w-1/4' },
+              { header: 'Students', className: 'w-1/8' },
+              { header: 'Assigned Forms', className: 'w-1/4' },
+              { header: 'Actions', className: 'w-1/8 text-right' },
+            ]}
+            rows={paginatedClassrooms.map((classroom, index) => (
+              <tr key={classroom.id || `classroom-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                <td className="py-4 px-4">
+                  <div className="flex items-center gap-2.5">
+                    <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} className="bg-[#044ba0] text-slate-700 font-bold" />
+                    <div className="min-w-0">
+                      <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm font-bold text-slate-900 hover:text-[#0F2D52] hover:underline block truncate">
+                        {classroom.name}
+                      </Link>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex items-center gap-1.5 text-slate-600 font-semibold text-sm">
+                    <Users className="h-4 w-4 text-slate-400" />
+                    <span>{classroom.studentsCount}</span>
+                  </div>
+                </td>
+                <td className="py-4 px-4">
+                  <div className="flex flex-wrap gap-1">
+                    {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 2).map(form => (
+                      <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">{form.name}</Badge>
+                    )) : <span className="text-xs text-slate-400 font-semibold">No forms assigned</span>}
+                    {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">+{classroom.assignedForms.length - 2} more</Badge>}
+                  </div>
+                </td>
+                <td className="py-4 px-4 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600"><MoreHorizontal className="h-4 w-4" /></Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+                        <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(classroom)}>
+                        <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className={`cursor-pointer ${classroom.studentsCount > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-red-600 focus:text-red-600 focus:bg-red-50'}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </td>
+              </tr>
+            ))}
+          />
         </div>
-      </div>
+      </motion.div>
+
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">Add New Classroom</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4 space-y-4">
+          </div>
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Classroom Name</label>
               <Input
@@ -386,39 +415,40 @@ export function ClassroomManagement() {
                   if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
                 }}
                 placeholder="Enter classroom name"
-                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
                 autoFocus
               />
               {classroomErrors.newClassroomName && (
-                <p className="text-xs text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
               )}
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
             <Button
               variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleAddClassroom}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
+              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all"
               disabled={!newClassroomName.trim()}
             >
               Add Classroom
             </AsyncButton>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
       {/* Edit Classroom Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">Rename Classroom</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4 space-y-4">
+          </div>
+          <div className="p-6 space-y-4">
             <div>
               <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Classroom Name</label>
               <Input
@@ -428,60 +458,61 @@ export function ClassroomManagement() {
                   if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
                 }}
                 placeholder="Enter new classroom name"
-                className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
                 autoFocus
               />
               {classroomErrors.newClassroomName && (
-                <p className="text-xs text-red-600 mt-1">{classroomErrors.newClassroomName}</p>
+                <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
               )}
             </div>
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
             <Button
               variant="outline"
               onClick={() => setIsEditDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleEditClassroom}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
+              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all"
               disabled={!newClassroomName.trim()}
             >
               Save Changes
             </AsyncButton>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
+
       {/* Delete Classroom Dialog */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
-          <DialogHeader>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
             <DialogTitle className="text-lg font-bold text-slate-900">Delete Classroom</DialogTitle>
-          </DialogHeader>
-          <div className="py-3 sm:py-4">
+          </div>
+          <div className="p-6">
             {selectedClassroom?.studentsCount && selectedClassroom.studentsCount > 0 ? (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+              <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-red-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-red-800">
+                <p className="text-xs text-red-800 font-semibold leading-relaxed">
                   Cannot delete this classroom. It has {selectedClassroom?.studentsCount}{' '}
                   student{selectedClassroom?.studentsCount !== 1 ? 's' : ''} enrolled.
                 </p>
               </div>
             ) : (
-              <p className="text-sm text-slate-600">
+              <p className="text-xs text-slate-600 font-semibold leading-relaxed">
                 Are you sure you want to delete{' '}
-                <span className="font-semibold text-slate-900">{selectedClassroom?.name}</span>?
+                <span className="font-extrabold text-[#0F2D52]">{selectedClassroom?.name}</span>?
                 This action cannot be undone.
               </p>
             )}
           </div>
-          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
             <Button
               variant="outline"
               onClick={() => setIsDeleteDialogOpen(false)}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
             >
               Cancel
             </Button>
@@ -489,13 +520,13 @@ export function ClassroomManagement() {
               variant="destructive"
               onClick={handleDeleteClassroom}
               disabled={(selectedClassroom?.studentsCount ?? 0) > 0}
-              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl transition-all duration-200 font-semibold"
+              className="h-10 rounded-xl text-xs font-bold px-4 text-white transition-all"
             >
               Delete Classroom
             </AsyncButton>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
-
-    </AdminLayout>;
+    </AdminLayout>
+  );
 }

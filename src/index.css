@@ -32,10 +32,19 @@
     --ring:              213 63% 19%;
     --radius:            0.75rem;       /* 12px */
 
-    /* ── Brand CSS vars (kept for utility classes) ── */
-    --brand-navy:   #0F2D52;
-    --brand-blue:   #1a6fc4;
-    --brand-light:  #EFF5FB;
+    /* ── Brand CSS vars (expanded palette) ── */
+    --brand-navy:   #0F2D52; /* primary logo color */
+    --brand-600:    #163e6b; /* hover/darker */
+    --brand-500:    #1a6fc4; /* accent / link */
+    --brand-400:    #4aa3ff; /* subtle highlights */
+    --brand-light:  #EFF5FB; /* surface tint */
+
+    --brand-gradient-from: linear-gradient(90deg, #0F2D52 0%, #1a6fc4 100%);
+    --brand-glow: rgba(26, 111, 196, 0.12);
+
+    /* Legacy aliases (do not remove — used by layout classes) */
+    --amazon-teal:   var(--brand-navy);
+    --amazon-orange: var(--brand-500);
 
     /* Legacy aliases (do not remove — used by layout classes) */
     --amazon-teal:   #0F2D52;
@@ -180,14 +189,98 @@
 
   /* ── Premium Card ─────────────────────────────── */
   .glass-card {
+    /* Slight surface gradient, refined radius and elevation for a premium feel */
     @apply bg-white rounded-2xl border border-slate-100 transition-all duration-300 ease-out;
+    background-image: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(246,249,253,0.98));
     box-shadow: var(--shadow-card);
+    will-change: transform, box-shadow;
   }
   .glass-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-4px) scale(1.002);
     box-shadow: var(--shadow-card-hover);
-    border-color: #e2e8f0;
+    border-color: #e6eef9;
   }
+
+  /* ── Buttons (primary/outline/ghost) ───────────────── */
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-semibold transition-all text-sm;
+    padding: 0.6rem 1rem; /* 9.6px 16px */
+    gap: 0.5rem;
+    line-height: 1;
+    cursor: pointer;
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+  }
+
+  .btn:active { transform: translateY(1px) scale(0.998); }
+
+  .btn-primary {
+    background: var(--brand-gradient-from);
+    color: var(--primary-foreground);
+    border-color: rgba(255,255,255,0.06);
+    box-shadow: 0 8px 20px -6px var(--brand-glow);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(90deg, var(--brand-navy), var(--brand-500));
+    box-shadow: 0 14px 36px -10px rgba(15,23,42,0.12);
+  }
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: 0 6px 24px -6px rgba(15,23,42,0.08), 0 0 0 4px color-mix(in srgb, var(--brand-navy) 12%, transparent);
+  }
+
+  .btn-outline {
+    @apply bg-white text-[#0F2D52];
+    border-color: rgba(15,45,82,0.08);
+  }
+  .btn-outline:hover {
+    background: color-mix(in srgb, var(--brand-navy) 6%, transparent);
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-[#0F2D52];
+  }
+
+  .btn-icon {
+    @apply inline-flex items-center justify-center rounded-md p-2;
+    background: color-mix(in srgb, var(--brand-navy) 6%, transparent);
+    border: none;
+  }
+
+  /* ── Headings & Typographic scale ───────────────── */
+  .heading-1 { font-size: 1.875rem; /* 30px */ line-height: 1.05; letter-spacing: -0.01em; }
+  .heading-2 { font-size: 1.375rem; /* 22px */ line-height: 1.08; }
+  .heading-3 { font-size: 1.125rem; /* 18px */ }
+
+  .page-title    { @apply text-2xl sm:text-3xl font-extrabold tracking-tight; }
+  .page-subtitle { @apply text-sm text-slate-500 mt-1 leading-relaxed; }
+
+  /* Ensure page titles and portal headers have high contrast brand color */
+  main h1,
+  header h1,
+  h1.page-title,
+  .page-title { color: var(--brand-navy) !important; }
+
+  /* ── Icon & Avatar polish ─────────────────────── */
+  .two-tone-icon { 
+    color: var(--brand-navy);
+    filter: none;
+    mix-blend-mode: normal;
+    transition: transform 180ms ease, opacity 180ms ease;
+  }
+  .two-tone-icon .primary { color: var(--brand-navy); }
+  .two-tone-icon .secondary { color: var(--brand-500); opacity: 0.95; }
+
+  .icon-bg-navy { background-color: var(--brand-light); color: var(--brand-navy); border-radius: 0.75rem; padding: 0.5rem; }
+
+  /* Micro spacing helpers for cleaner layouts */
+  .space-sm { gap: 0.375rem; }
+  .space-md { gap: 0.75rem; }
+  .space-lg { gap: 1.25rem; }
+
+  /* Slightly stronger focus ring but subtle */
+  :focus-visible { box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand-navy) 10%, transparent); }
+
 
   /* ── Page structure ───────────────────────────── */
   .page-title    { @apply text-xl sm:text-2xl font-bold text-[#0F2D52] tracking-tight; }

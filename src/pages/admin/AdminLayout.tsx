@@ -99,7 +99,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </button>
           </div>
           <div className="px-5 pt-5 pb-2 flex-shrink-0">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Navigation</p>
+            {/* <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Navigation</p> */}
           </div>
           <nav className="flex-1 px-3 pb-4 overflow-y-auto space-y-0.5 scrollbar-thin">
             {navItems.map((item, i) => {
