@@ -8,6 +8,8 @@ interface MobileCardListProps {
   emptyMessage?: string;
   currentPage: number;
   totalPages: number;
+  totalItems?: number;
+  itemsPerPage?: number;
   onPageChange: (page: number) => void;
   className?: string;
   gridClassName?: string;
@@ -20,6 +22,8 @@ export function MobileCardList({
   emptyMessage = 'No results found.',
   currentPage,
   totalPages,
+  totalItems,
+  itemsPerPage,
   onPageChange,
   className,
   gridClassName = 'grid grid-cols-1 sm:grid-cols-2 gap-3',
@@ -40,6 +44,8 @@ export function MobileCardList({
       <MobilePagination
         currentPage={currentPage}
         totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
         onPageChange={onPageChange}
       />
     </div>

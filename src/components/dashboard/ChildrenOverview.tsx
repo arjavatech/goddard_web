@@ -77,12 +77,12 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-1 mb-0.5">
-                    <p className="text-sm font-semibold text-slate-800 truncate">{child.name}</p>
-                    <span className={cn('text-xs font-bold flex-shrink-0', progressColor)}>
+                    <p className="text-xs font-semibold text-slate-800 truncate">{child.name}</p>
+                    <span className={cn('text-[11px] font-bold flex-shrink-0', progressColor)}>
                       {child.enrollmentProgress}%
                     </span>
                   </div>
-                  <p className="text-xs text-slate-400 truncate mb-1.5">
+                  <p className="text-[11px] text-slate-400 truncate mb-1.5">
                     Age {child.age} · {child.classroom}
                   </p>
                   <Progress value={child.enrollmentProgress} className="h-1.5" />

@@ -324,20 +324,19 @@ export function Dashboard() {
   };
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
-        {error && <div className="mb-3 sm:mb-4 rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-sm text-red-700">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-5 md:py-7">
+        {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
-        {loading ? <div className="py-8 sm:py-12 text-center text-muted-foreground">
+        {loading ? <div className="py-16 text-center text-muted-foreground text-sm">
             Loading parent dashboard...
           </div> : <>
-            <div className="mb-3 sm:mb-4 md:mb-6 space-y-3 sm:space-y-4">
+            <div className="mb-4 sm:mb-5">
               <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
-              
             </div>
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
-                {/* order-1 mobile: EnrollmentProgress */}
-                <div className="order-1 lg:order-1 lg:col-span-2 xl:col-span-7 lg:row-span-2 space-y-3 sm:space-y-4 md:space-y-6">
+            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-5">
+                {/* Left main column */}
+                <div className="order-1 lg:col-span-2 xl:col-span-7 space-y-3 sm:space-y-4">
                   <div className="animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
@@ -348,8 +347,13 @@ export function Dashboard() {
                       enrollmentId={selectedChild.enrollmentId}
                     />
                   </div>
+                  {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                    <ParentInfo parentData={parentData} />
+                    <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
+                  </div>
                   {selectedChild.childStatus !== 'archive' && (
-                    <div className="animate-fade-in-up hidden lg:block" style={{ animationDelay: '0.22s' }} data-forms-section>
+                    <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }} data-forms-section>
                       <FormsDocuments
                         childSpecificForms={childSpecificForms}
                         familyForms={familyForms}
@@ -373,8 +377,8 @@ export function Dashboard() {
                     </div>
                   )}
                 </div>
-                {/* order-2 mobile: ParentInfo + ChildrenOverview */}
-                <div className="order-2 lg:order-2 lg:col-span-1 xl:col-span-3 space-y-3 sm:space-y-4">
+                {/* Right sidebar — desktop only */}
+                <div className="order-2 hidden lg:block lg:col-span-1 xl:col-span-3 space-y-4">
                   <div className="animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                   </div>
@@ -382,39 +386,12 @@ export function Dashboard() {
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
-                {/* order-3 mobile: Forms & Documents (hidden on lg+, shown in main col above) */}
-                {selectedChild.childStatus !== 'archive' && (
-                  <div className="order-3 lg:hidden" data-forms-section>
-                    <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }}>
-                      <FormsDocuments
-                        childSpecificForms={childSpecificForms}
-                        familyForms={familyForms}
-                        rawFormData={parentData}
-                        selectedChildId={selectedChild.id}
-                        selectedChildName={selectedChild.name}
-                        childStatus={selectedChild.childStatus}
-                        onChildSelect={(childName) => {
-                          const child = children.find(c => c.name === childName);
-                          if (child) setSelectedChildId(child.id);
-                        }}
-                        onViewForm={handleFormViewed}
-                        formToOpen={formToOpen}
-                        onFormOpened={() => setFormToOpen(null)}
-                        onFormCompleted={handleFormCompleted}
-                        yearFilter={yearFilter}
-                        onYearFilterChange={setYearFilter}
-                        enrollmentId={selectedChild.enrollmentId}
-                        formOpenGuard={formOpenGuardRef}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-4 sm:p-6 md:p-8 text-center">
-                <div className="text-base sm:text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
-                <div className="text-sm text-muted-foreground mb-3 sm:mb-4">
+              </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 sm:p-10 text-center">
+                <div className="text-base sm:text-lg font-semibold text-slate-800 mb-2">No enrolled children found</div>
+                <div className="text-sm text-slate-500 mb-2">
                   We were unable to load any enrollment records for this parent account.
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-slate-400">
                   If you believe this is an error, please contact your school administrator.
                 </div>
               </div>}

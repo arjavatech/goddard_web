@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download, GraduationCap, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download, GraduationCap, LayoutGrid, List, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -16,7 +16,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { StatCard } from '../../components/ui/stat-card';
-import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
+import { SortDropdown, sortItems } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { PageLoader } from '../../components/ui/page-loader';
 
@@ -107,8 +107,13 @@ export function ParentManagement() {
     setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
   };
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('parentViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('parentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('parentViewMode', mode); };
+  useEffect(() => {
+    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
@@ -118,7 +123,7 @@ export function ParentManagement() {
   const [activatingParentId, setActivatingParentId] = useState<string | null>(null);
   const { showToast } = useToast();
 
-  const schoolId = localStorage.getItem('schoolId');
+  const schoolId = localStorage.getItem('schoolId') ?? '';
 
   const mapParentDetails = useCallback((detail: any): Parent => {
     console.log('Mapping parent detail:', {
@@ -136,10 +141,12 @@ export function ParentManagement() {
     const firstName = detail.firstName || friendlyNameFromEmail(detail.email).first;
     const lastName = detail.lastName || friendlyNameFromEmail(detail.email).last;
     const children: Child[] = detail.children?.map((child: any) => {
-      const [childFirstName, ...childLastNameParts] = child.childFullName.split(' ');
+      const parts = child.childFullName.split(' ');
+      const childFirstName = parts[0] ?? 'Unknown';
+      const childLastNameParts = parts.slice(1);
       return {
         id: child.childId,
-        firstName: childFirstName || 'Unknown',
+        firstName: childFirstName,
         lastName: childLastNameParts.join(' ') || 'Child',
         dob: child.childDob || '—',
         classroom: {
@@ -205,14 +212,15 @@ export function ParentManagement() {
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const sortLabels: Record<string, string> = { name: 'Name', email: 'Email', status: 'Status', children: 'Children' };
-  const sortOptions: SortOption[] = [
-    { label: 'Name A-Z', sortBy: 'name', sortOrder: 'asc' },
-    { label: 'Name Z-A', sortBy: 'name', sortOrder: 'desc' },
-    { label: 'Email A-Z', sortBy: 'email', sortOrder: 'asc' },
-    { label: 'Email Z-A', sortBy: 'email', sortOrder: 'desc' },
-    { label: 'Most Children', sortBy: 'children', sortOrder: 'desc' },
+  const sortOptions = [
+    { label: 'Name (A–Z)', sortBy: 'name', sortOrder: 'asc' as const },
+    { label: 'Name (Z–A)', sortBy: 'name', sortOrder: 'desc' as const },
+    { label: 'Email (A–Z)', sortBy: 'email', sortOrder: 'asc' as const },
+    { label: 'Email (Z–A)', sortBy: 'email', sortOrder: 'desc' as const },
+    { label: 'Children (Most)', sortBy: 'children', sortOrder: 'desc' as const },
+    { label: 'Children (Least)', sortBy: 'children', sortOrder: 'asc' as const },
   ];
+  const sortLabels: Record<string, string> = { name: 'Name', email: 'Email', children: 'Children' };
 
   const filteredParents = useMemo(() => {
     const currentParents = activeTab === 'active' ? parents : deactivatedParents;
@@ -373,7 +381,7 @@ export function ParentManagement() {
       await addChild(schoolId, enrollmentId, {
         childFirstName: newChildFirstName,
         childLastName: newChildLastName,
-        childDob: newChildDob || undefined,
+        childDob: newChildDob,
         gender: newChildGender,
         classroomId: newChildClassroom,
         parentId: selectedParent.id
@@ -625,10 +633,10 @@ export function ParentManagement() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-955 tracking-tight">Parent Management</h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage parent accounts and family information</p>
@@ -819,164 +827,119 @@ export function ParentManagement() {
 
             {/* Conditional Rendering of Views */}
             {viewMode === 'card' ? (
-              <MobileCardList
-                className="p-5"
-                loading={loading}
-                loadingMessage="Loading parents..."
-                emptyMessage="No parents found matching your search criteria."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
-                  <Card key={parent.id || `parent-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
-                    <div>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
+              <div className="p-5 space-y-4">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] text-slate-400 font-semibold">{paginatedParents.length} of {sortedParents.length}</span>
+                </div>
+                {paginatedParents.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                    <p className="text-slate-400 text-sm font-semibold">No parents found matching your search criteria.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedParents.map((parent, index) => (
+                      <div key={parent.id || `parent-card-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                        {/* Header */}
+                        <div className="p-4 flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                            {parent.firstName[0]}{parent.lastName[0]}
+                          </div>
                           <div className="min-w-0 flex-1">
                             {parent.signupStatus === 'Signed' ? (
-                              <Link to={`/admin/parents/${parent.id}`} state={{
-                                parentData: parent
-                              }} className="font-extrabold text-[#0F2D52] hover:underline text-sm block truncate">
+                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
                                 {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                               </Link>
                             ) : (
-                              <span className="font-extrabold text-slate-400 cursor-not-allowed text-sm block truncate">
+                              <span className="font-bold text-sm text-slate-400 block truncate leading-tight">
                                 {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                               </span>
                             )}
-                            <div className="text-xs text-slate-400 font-semibold truncate mt-0.5">
-                              {parent.email}
-                            </div>
+                            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{parent.email}</p>
                           </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                              <Link to={`/admin/parents/${parent.id}`} state={{
-                                parentData: parent
-                              }} className="cursor-pointer">
-                                <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                                View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                              onClick={() => {
-                                setSelectedParent(parent);
-                                loadClassroomsIfNeeded();
-                                setIsAddChildDialogOpen(true);
-                              }}>
-                              <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
-                              Add Child
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                handleResendConfirmation(parent.id, parent.email);
-                              }}
-                            >
-                              {resendingParentId === parent.id ? (
-                                <>
-                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />
-                                  Sending...
-                                </>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
+                                  <Eye className="h-4 w-4 mr-2 text-slate-400" />View Details
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'} onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}>
+                                <UserCircle className="h-4 w-4 mr-2 text-slate-400" />Add Child
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'} onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}>
+                                <RefreshCw className={`h-4 w-4 mr-2 text-slate-400 ${resendingParentId === parent.id ? 'animate-spin' : ''}`} />
+                                {resendingParentId === parent.id ? 'Sending...' : 'Resend Invitation'}
+                              </DropdownMenuItem>
+                              {activeTab === 'active' ? (
+                                <DropdownMenuItem className="text-red-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToDeactivate(parent)}>
+                                  <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
+                                </DropdownMenuItem>
                               ) : (
-                                <>
-                                  <RefreshCw className="h-4 w-4 mr-2 text-slate-400" />
-                                  Resend Invitation
-                                </>
+                                <DropdownMenuItem className="text-emerald-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToActivate(parent)}>
+                                  <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
+                                </DropdownMenuItem>
                               )}
-                            </DropdownMenuItem>
-                            {activeTab === 'active' ? (
-                              <DropdownMenuItem
-                                className="text-red-650 focus:text-red-650 cursor-pointer font-semibold"
-                                disabled={parent.signupStatus === 'Not Signed'}
-                                onClick={() => setParentToDeactivate(parent)}
-                              >
-                                <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                                Deactivate Account
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem
-                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
-                                disabled={parent.signupStatus === 'Not Signed'}
-                                onClick={() => setParentToActivate(parent)}
-                              >
-                                <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />
-                                Activate Account
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      
-                      <div className="flex items-center justify-between mb-3 border-t border-slate-100 pt-3 mt-1">
-                        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                          {parent.signupStatus === 'Signed' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
-                          {parent.signupStatus === 'Not Signed' && <XCircle className="h-3.5 w-3.5 mr-1" />}
-                          {parent.signupStatus}
-                        </Badge>
-                        <span className="text-xs font-semibold text-slate-500">{parent.phoneNumber || 'No phone'}</span>
-                      </div>
-                      
-                      <div className="space-y-1.5 pt-3 border-t border-slate-50">
-                        {parent.children.length === 0 ? (
-                          <div className="text-slate-400 text-xs italic font-medium">No children linked yet</div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Children ({parent.children.length})</div>
-                            <div className="flex flex-wrap gap-2">
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+
+                        <div className="mx-4 border-t border-slate-50" />
+
+                        {/* Status row */}
+                        <div className="px-4 py-3 flex items-center justify-between">
+                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
+                            {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                            {parent.signupStatus}
+                          </Badge>
+                          <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
+                        </div>
+
+                        <div className="mx-4 border-t border-slate-50" />
+
+                        {/* Children */}
+                        <div className="px-4 py-3">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Children ({parent.children.length})</p>
+                          {parent.children.length === 0 ? (
+                            <p className="text-xs text-slate-400 italic">No children linked yet</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-1.5">
                               {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                                <div 
-                                  key={child.id} 
-                                  className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all shadow-xs duration-200 group"
-                                >
-                                  <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
-                                  <Link 
-                                    to={`/admin/parents/${parent.id}`} 
-                                    state={{
-                                      parentData: parent,
-                                      selectedChildId: child.id
-                                    }} 
-                                    className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
-                                  >
+                                <div key={child.id} className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
+                                  <GraduationCap className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                                  <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent, selectedChildId: child.id }} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[90px]">
                                     {child.firstName} {child.lastName}
                                   </Link>
-                                  <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
-                                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
-                                    {child.classroom.name}
-                                  </span>
+                                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400">{child.classroom.name}</span>
                                 </div>
                               ))}
                               {parent.children.length > 2 && (
-                                <button
-                                  onClick={(e) => {
-                                    e.preventDefault();
-                                    toggleParentExpanded(parent.id);
-                                  }}
-                                  className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
-                                >
-                                  {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
+                                <button onClick={(e) => { e.preventDefault(); toggleParentExpanded(parent.id); }} className="inline-flex items-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all">
+                                  {expandedParents[parent.id] ? 'Less' : `+${parent.children.length - 2}`}
                                 </button>
                               )}
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </div>
+                    ))}
+                  </div>
+                )}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-xs text-slate-400 font-semibold">Page {currentPage} of {totalPages}</span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Prev</Button>
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Next</Button>
                     </div>
-                  </Card>
-                )) : []}
-              />
+                  </div>
+                )}
+              </div>
             ) : (
               <DataTable
                 className="relative z-0"
@@ -1015,7 +978,7 @@ export function ParentManagement() {
                     </td>
                     <td className="py-4 px-4 text-xs font-semibold text-slate-600">
                       <div className="font-medium text-slate-900">{parent.email}</div>
-                      <div className="text-slate-400 mt-0.5">{parent.phoneNumber || 'No phone number'}</div>
+                      <div className="text-slate-400 mt-0.5">{(parent as any).phoneNumber || 'No phone number'}</div>
                     </td>
                     <td className="py-4 px-4">
                       {parent.children.length === 0 ? (

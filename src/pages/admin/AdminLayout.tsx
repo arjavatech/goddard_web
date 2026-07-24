@@ -50,6 +50,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
+  const isFromStudents = location.state?.fromStudents === true;
 
   const navGroups = [
     {
@@ -119,7 +120,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
-                    const isActive = currentPath === item.path;
+                    const isActive = item.path === '/admin'
+                      ? currentPath === '/admin'
+                      : isFromStudents && item.path === '/admin/students'
+                      ? true
+                      : isFromStudents && item.path === '/admin/parents'
+                      ? false
+                      : item.path === '/admin/forms'
+                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
+                      : currentPath === item.path || currentPath.startsWith(item.path + '/');
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
                         className={cn(
@@ -175,7 +184,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
-                    const isActive = currentPath === item.path;
+                    const isActive = item.path === '/admin'
+                      ? currentPath === '/admin'
+                      : isFromStudents && item.path === '/admin/students'
+                      ? true
+                      : isFromStudents && item.path === '/admin/parents'
+                      ? false
+                      : item.path === '/admin/forms'
+                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
+                      : currentPath === item.path || currentPath.startsWith(item.path + '/');
                     return (
                       <Link key={i} to={item.path}
                         className={cn(
@@ -248,10 +265,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   )}>
                     {schoolName || 'The Goddard School'}
                   </p>
+                  <p className="text-[9px] sm:text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none truncate">
+                    {isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal'}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
                 <NotificationBell enabled={!!userData} />
 
                 <DropdownMenu>
@@ -272,7 +292,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
@@ -313,7 +333,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           <main className={cn(
             'flex-1 bg-[#F7F9FC]',
             userData?.role ? 'pt-16' : 'pt-0',
-            isParentDetailsPage ? 'p-3 sm:p-5' : 'p-4 sm:p-6'
+            isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
           )}>
             {children}
           </main>

@@ -30,8 +30,13 @@ export function DueForms() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
+  useEffect(() => {
+    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
@@ -66,38 +71,64 @@ export function DueForms() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
+          className="flex min-h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all gap-2"
         >
-          <span className="truncate">
-            {value.length === 0 ? placeholder : `${value.length} selected`}
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <div className="flex flex-wrap gap-1 flex-1">
+            {value.length === 0 ? (
+              <span className="text-slate-400 font-semibold">{placeholder}</span>
+            ) : (
+              value.map(v => (
+                <span
+                  key={v}
+                  className="inline-flex items-center gap-1 bg-[#EFF5FB] text-[#0F2D52] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#0F2D52]/10"
+                >
+                  {v}
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); handleMultiSelectChange(v, value, onValueChange); }}
+                    className="hover:text-red-500 transition-colors cursor-pointer leading-none"
+                  >×</span>
+                </span>
+              ))
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-popover text-popover-foreground shadow-lg">
-            <div className="p-1.5 max-h-60 overflow-y-auto space-y-0.5">
-              {options.map((option) => (
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-white shadow-xl overflow-hidden">
+            <div className="p-1.5 max-h-52 overflow-y-auto space-y-0.5">
+              {options.length > 0 && (
                 <div
-                  key={option}
-                  className="relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-slate-50 hover:text-slate-900"
-                  onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors border-b border-slate-100 mb-0.5 ${
+                    value.length === options.length ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                  onClick={() => onValueChange(value.length === options.length ? [] : [...options])}
                 >
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={value.includes(option)}
-                      onChange={() => {
-                        /* noop */
-                      }}
-                      className="pointer-events-none"
-                    />
+                  <span>Select All</span>
+                  {value.length === options.length && (
+                    <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                  )}
+                </div>
+              )}
+              {options.map((option) => {
+                const selected = value.includes(option);
+                return (
+                  <div
+                    key={option}
+                    className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                      selected ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  >
                     <span>{option}</span>
+                    {selected && (
+                      <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {options.length === 0 && (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No options available
-                </div>
+                <div className="px-3 py-2 text-xs text-slate-400 font-semibold">No options available</div>
               )}
             </div>
           </div>
@@ -467,10 +498,10 @@ export function DueForms() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">              Due Forms Tracking
             </h1>
@@ -548,7 +579,7 @@ export function DueForms() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs overflow-hidden hover:shadow-md transition-all duration-300">
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs hover:shadow-md transition-all duration-300">
           <CardContent className="p-5">
             <div className="flex flex-col sm:flex-row gap-3 mb-4">
               <div className="relative flex-1">
@@ -568,9 +599,9 @@ export function DueForms() {
                   className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all relative"
                 >
                   {showFilters ? (
-                    <><X className="h-4 w-4 mr-1.5" /> Hide Filters</>
+                    <><X className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline"> Hide Filters</span></>
                   ) : (
-                    <><Filter className="h-4 w-4 mr-1.5 text-slate-400" /> Filters</>
+                    <><Filter className="h-4 w-4 sm:mr-1.5 text-slate-400" /><span className="hidden sm:inline"> Filters</span></>
                   )}
                   {!showFilters && activeFilterCount > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-extrabold text-white animate-pulse">
@@ -581,8 +612,8 @@ export function DueForms() {
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all">
-                      {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 mr-1.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 mr-1.5 text-slate-400" />}
-                      <span>{getSortLabel()}</span>
+                      {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 sm:mr-1.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 sm:mr-1.5 text-slate-400" />}
+                      <span className="hidden sm:inline">{getSortLabel()}</span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
@@ -653,34 +684,34 @@ export function DueForms() {
 
         {/* Forms Table */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-50 bg-slate-50/50 px-5">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <CardHeader className="flex flex-col gap-3 pb-3 border-b border-slate-50 bg-slate-50/50 px-5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-sm font-bold text-slate-900">Due Forms ({filteredForms.length})</CardTitle>
               {/* Segmented View Switcher */}
               <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
                 <button
                   type="button"
                   onClick={() => handleViewModeChange('table')}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'table'
                       ? 'bg-white text-[#0F2D52] shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
                   }`}
                 >
                   <List className="h-3.5 w-3.5" />
-                  <span>Table View</span>
+                  <span className="hidden sm:inline">Table View</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleViewModeChange('card')}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'card'
                       ? 'bg-white text-[#0F2D52] shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
                   }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  <span>Card View</span>
+                  <span className="hidden sm:inline">Card View</span>
                 </button>
               </div>
             </div>
@@ -688,8 +719,8 @@ export function DueForms() {
               {selectedForms.length > 0 && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
-                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 text-xs font-bold transition-all group">
+                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400 group-hover:text-white" />
                       Export Selected ({selectedForms.length})
                     </Button>
                   </DropdownMenuTrigger>
@@ -732,8 +763,8 @@ export function DueForms() {
               {filteredForms.length > 0 ? (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
-                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
+                    <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 text-xs font-bold transition-all group">
+                      <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400 group-hover:text-white" />
                       Export All
                     </Button>
                   </DropdownMenuTrigger>
@@ -857,7 +888,7 @@ export function DueForms() {
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                              className="w-full h-9 text-xs font-bold rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+                              className="w-full h-9 text-xs font-bold rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 border border-[#0F2D52] transition-all duration-200"
                             >
                               {remindingFormIds.has(form.id) ? (
                                 <>

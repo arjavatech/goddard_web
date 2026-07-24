@@ -507,7 +507,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-14 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-10 sm:mt-4 p-12 max-w-7xl mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading dashboard data...</p>
@@ -519,10 +519,10 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto pb-8">
+      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
 
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
             <p className="text-sm text-slate-500 mt-0.5 font-medium">Monitor your school's enrollment at a glance</p>
@@ -544,7 +544,7 @@ export function AdminDashboard() {
               transition: { staggerChildren: 0.05 }
             }
           }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
         >
           {statItems.map((item, idx) => {
             const Icon = item.icon;
@@ -576,7 +576,7 @@ export function AdminDashboard() {
         {/* Quick Actions Grid */}
         <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
@@ -606,7 +606,7 @@ export function AdminDashboard() {
         {/* Visual Analytics Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           {/* Donut Chart Card */}
-          <div className="glass-card p-6 lg:col-span-1 flex flex-col justify-between relative overflow-hidden border border-slate-100">
+          <div className="glass-card p-4 sm:p-6 lg:col-span-1 flex flex-col justify-between relative overflow-hidden border border-slate-100">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
@@ -655,7 +655,7 @@ export function AdminDashboard() {
           </div>
 
           {/* Bar Chart Card */}
-          <div className="glass-card p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100">
+          <div className="glass-card p-4 sm:p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100 overflow-hidden">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 mb-1">
@@ -687,7 +687,7 @@ export function AdminDashboard() {
                           const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
                           const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
                           return (
-                            <text x={x} y={y + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
+                            <text x={x} y={(y as number) + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
                               <tspan x={x} dy={0}>{line1}</tspan>
                               {line2 && <tspan x={x} dy={13}>{line2}</tspan>}
                             </text>
@@ -730,72 +730,89 @@ export function AdminDashboard() {
         </div>
 
         {/* Enrollment Progress Section */}
-        <div className="glass-card p-5 sm:p-6 border border-slate-100 shadow-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+        <div className="glass-card p-4 sm:p-5 md:p-6 border border-slate-100 shadow-sm animate-fade-in-up overflow-hidden" style={{ animationDelay: '200ms' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
             <div>
               <h2 className="text-sm font-bold text-slate-900">Enrollment Progress by Classroom</h2>
               <p className="text-xs text-slate-400 mt-0.5">Form completion rate across all classrooms</p>
             </div>
           </div>
 
-          <div className="w-full" style={{ height: `${progressChartHeight}px` }}>
-            {enrollmentProgress.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm text-slate-400">
-                No enrollment data available yet.
+          {enrollmentProgress.length === 0 ? (
+            <div className="h-32 flex items-center justify-center text-sm text-slate-400">
+              No enrollment data available yet.
+            </div>
+          ) : (
+            <>
+              {/* Desktop: Horizontal stacked bar */}
+              <div className="hidden sm:block w-full overflow-x-auto">
+                <div style={{ minWidth: `${Math.max(320, enrollmentProgress.length * 60)}px`, height: `${progressChartHeight}px` }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      layout="vertical"
+                      data={progressChartData}
+                      margin={{ top: 5, right: 16, left: 4, bottom: 5 }}
+                    >
+                      <XAxis 
+                        type="number" 
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <YAxis 
+                        dataKey="name" 
+                        type="category" 
+                        tick={{ fill: '#475569', fontSize: 10, fontWeight: 700 }}
+                        axisLine={false}
+                        tickLine={false}
+                        width={100}
+                      />
+                      <Tooltip 
+                        content={<CustomProgressTooltip />} 
+                        cursor={{ fill: 'rgba(15, 45, 82, 0.02)', radius: 8 }}
+                      />
+                      <Bar dataKey="completed" stackId="a" fill="#10b981" radius={[4, 0, 0, 4]} barSize={18} isAnimationActive={false} />
+                      <Bar dataKey="pending" stackId="a" fill="#E2E8F0" radius={[0, 4, 4, 0]} barSize={18} isAnimationActive={false} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  layout="vertical"
-                  data={progressChartData}
-                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
-                >
-                  <XAxis 
-                    type="number" 
-                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis 
-                    dataKey="name" 
-                    type="category" 
-                    tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={100}
-                  />
-                  <Tooltip 
-                    content={<CustomProgressTooltip />} 
-                    cursor={{ fill: 'rgba(15, 45, 82, 0.02)', radius: 8 }}
-                  />
-                  <Bar 
-                    dataKey="completed" 
-                    stackId="a" 
-                    fill="#10b981" 
-                    radius={[0, 0, 0, 0]} 
-                    barSize={18}
-                  />
-                  <Bar 
-                    dataKey="pending" 
-                    stackId="a" 
-                    fill="#E2E8F0" 
-                    radius={[0, 6, 6, 0]} 
-                    barSize={18}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
+              {/* Mobile: Donut rings per classroom */}
+              <div className="sm:hidden flex flex-col gap-3 py-2">
+                {progressChartData.map((entry, i) => {
+                  const donutData = [
+                    { value: entry.completed, color: '#10b981' },
+                    { value: entry.pending, color: '#E2E8F0' }
+                  ];
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={16} outerRadius={22} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
+                              {donutData.map((d, idx) => <Cell key={idx} fill={d.color} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-[9px] font-extrabold text-emerald-600">{entry.rate}%</span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-700 truncate">{entry.name}</p>
+                        <p className="text-[10px] text-slate-400">{entry.completed} / {entry.total} completed</p>
+                      </div>
+                      <span className="text-[10px] font-extrabold text-emerald-600 flex-shrink-0">{entry.rate}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
 
-          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-bold pt-4 mt-2 border-t border-slate-50">
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md bg-[#10b981]" />
-              <span className="text-slate-500 uppercase tracking-wider">Completed Forms</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-md bg-[#E2E8F0]" />
-              <span className="text-slate-500 uppercase tracking-wider">Pending / Due Forms</span>
-            </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-4 mt-2 border-t border-slate-50">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-[10px] font-bold text-emerald-700">● Completed Forms</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-500">● Pending / Due Forms</span>
           </div>
         </div>
 

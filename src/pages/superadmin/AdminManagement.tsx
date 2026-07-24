@@ -45,7 +45,13 @@ export function AdminManagement() {
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('adminMgmtViewMode') as 'card' | 'table') || 'table');
+  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('adminMgmtViewMode', mode); };
+  React.useEffect(() => {
+    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -281,7 +287,7 @@ export function AdminManagement() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto pb-8">
+      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
         
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
@@ -364,27 +370,27 @@ export function AdminManagement() {
               <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
                 <button
                   type="button"
-                  onClick={() => setViewMode('table')}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  onClick={() => handleViewModeChange('table')}
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'table'
                       ? 'bg-white text-[#0F2D52] shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
                   }`}
                 >
                   <List className="h-3.5 w-3.5" />
-                  <span>Table View</span>
+                  <span className="hidden sm:inline">Table View</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setViewMode('card')}
-                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  onClick={() => handleViewModeChange('card')}
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'card'
                       ? 'bg-white text-[#0F2D52] shadow-xs'
                       : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
                   }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
-                  <span>Card View</span>
+                  <span className="hidden sm:inline">Card View</span>
                 </button>
               </div>
             </div>

@@ -40,12 +40,12 @@ function ParentRow({
         {initials || <User className="w-4 h-4" />}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-slate-800 truncate">{name}</p>
+        <p className="text-xs font-semibold text-slate-800 truncate">{name}</p>
         <div className="flex items-center gap-1.5 mt-0.5">
           <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
           <a
             href={`mailto:${email}`}
-            className="text-xs text-slate-500 hover:text-cyan-600 truncate transition-colors"
+            className="text-[11px] text-slate-500 hover:text-cyan-600 truncate transition-colors"
           >
             {email}
           </a>

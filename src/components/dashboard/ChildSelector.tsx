@@ -34,8 +34,8 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
   if (children.length === 0) {
     return (
       <div className="mb-2">
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Parent Dashboard</h1>
-        <p className="text-sm text-slate-500 mt-1">No enrolled children found for this account.</p>
+        <h1 className="text-base sm:text-2xl font-bold text-slate-900">Parent Dashboard</h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">No enrolled children found for this account.</p>
       </div>
     );
   }
@@ -43,21 +43,21 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
   const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-2">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
       {/* Page title */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center">
           <Users className="w-4 h-4 text-cyan-600" />
         </div>
-        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Dashboard</h1>
+        <h1 className="text-base sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Dashboard</h1>
       </div>
 
       {/* Child picker — only shown when there are multiple children */}
       {children.length > 1 && (
-        <div className="relative" ref={ref}>
+        <div className="relative w-full sm:w-auto" ref={ref}>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs hover:border-cyan-400 hover:shadow-sm transition-all duration-150 text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            className="w-full sm:w-auto flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs hover:border-cyan-400 hover:shadow-sm transition-all duration-150 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
           >
             {/* Avatar */}
             <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
@@ -68,7 +68,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
           </button>
 
           {isOpen && (
-            <div className="absolute top-full left-0 mt-2 z-30 w-64 bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden">
+            <div className="absolute top-full left-0 mt-2 z-30 w-full sm:w-64 bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden">
               <div className="p-1 max-h-72 overflow-auto">
                 {children.map(child => (
                   <button
@@ -85,8 +85,8 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
                       {child.initials}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-sm truncate">{child.name}</p>
-                      <p className="text-xs text-slate-400">
+                      <p className="font-semibold text-xs sm:text-sm truncate">{child.name}</p>
+                      <p className="text-[11px] text-slate-400">
                         {child.formsCompleted}/{child.totalForms} forms · {child.enrollmentProgress}%
                       </p>
                     </div>
@@ -107,7 +107,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
           <div className="w-6 h-6 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold text-[10px]">
             {selectedChild.initials}
           </div>
-          <span className="text-sm font-semibold text-cyan-800">{selectedChild.name}</span>
+          <span className="text-xs sm:text-sm font-semibold text-cyan-800">{selectedChild.name}</span>
         </div>
       )}
     </div>

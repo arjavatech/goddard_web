@@ -26,29 +26,31 @@ export function Pagination({
   const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
   return (
-    <div className={`flex items-center justify-between px-4 py-3 border-t ${className}`}>
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-t ${className}`}>
       {showItemCount && (
-        <div className="text-sm text-slate-500">
-          Showing {startItem} to {endItem} of {totalItems} items
+        <div className="text-xs text-slate-500 text-center sm:text-left">
+          Showing {startItem}–{endItem} of {totalItems}
         </div>
       )}
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-center sm:justify-end gap-1.5">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
           disabled={currentPage === 1}
+          className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
         >
-          Previous
+          Prev
         </Button>
-        <span className="text-sm">
-          Page {currentPage} of {totalPages}
+        <span className="text-xs text-slate-500 font-semibold px-1 whitespace-nowrap">
+          {currentPage} / {totalPages}
         </span>
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
           disabled={currentPage === totalPages}
+          className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
         >
           Next
         </Button>
@@ -60,6 +62,8 @@ export function Pagination({
 interface MobilePaginationProps {
   currentPage: number;
   totalPages: number;
+  totalItems?: number;
+  itemsPerPage?: number;
   onPageChange: (page: number) => void;
   className?: string;
 }
@@ -67,30 +71,40 @@ interface MobilePaginationProps {
 export function MobilePagination({
   currentPage,
   totalPages,
+  totalItems,
+  itemsPerPage,
   onPageChange,
   className = ''
 }: MobilePaginationProps) {
   if (totalPages <= 1) return null;
 
+  const startItem = totalItems && itemsPerPage ? (currentPage - 1) * itemsPerPage + 1 : null;
+  const endItem = totalItems && itemsPerPage ? Math.min(currentPage * itemsPerPage, totalItems) : null;
+
   return (
-    <div className={`flex items-center justify-between mt-4 pt-4 border-t ${className}`}>
-      <div className="text-sm text-slate-500">
-        Page {currentPage} of {totalPages}
+    <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 pt-4 border-t ${className}`}>
+      <div className="text-xs text-slate-500 text-center sm:text-left">
+        {startItem && endItem && totalItems
+          ? `Showing ${startItem}–${endItem} of ${totalItems}`
+          : `Page ${currentPage} of ${totalPages}`}
       </div>
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center justify-center sm:justify-end gap-1.5">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
           disabled={currentPage === 1}
+          className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
         >
-          Previous
+          Prev
         </Button>
+        <span className="text-xs text-slate-500 font-semibold px-1 whitespace-nowrap">{currentPage} / {totalPages}</span>
         <Button
           variant="outline"
           size="sm"
           onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
           disabled={currentPage === totalPages}
+          className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
         >
           Next
         </Button>

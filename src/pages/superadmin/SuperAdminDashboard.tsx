@@ -113,10 +113,10 @@ export function SuperAdminDashboard() {
 
   return (
     <SuperAdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto pb-8">
+      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
 
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               SuperAdmin Dashboard
@@ -144,7 +144,7 @@ export function SuperAdminDashboard() {
               transition: { staggerChildren: 0.05 }
             }
           }}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
         >
           {statItems.map((item, idx) => {
             const Icon = item.icon;
@@ -155,13 +155,13 @@ export function SuperAdminDashboard() {
                   hidden: { opacity: 0, y: 15 },
                   visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
                 }}
-                className="group glass-card p-5 border border-slate-100 hover:border-[#1a6fc4]/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+                className="group glass-card p-4 sm:p-5 border border-slate-100 hover:border-[#1a6fc4]/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
               >
                 <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#EFF5FB]/50 rounded-full blur-xl group-hover:bg-[#EFF5FB]/80 transition-all duration-300" />
-                <div className="flex items-start justify-between gap-3 relative z-10">
+                <div className="flex items-start justify-between gap-2 sm:gap-3 relative z-10">
                   <div className="space-y-1.5 min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
-                    <p className="text-[2.25rem] font-extrabold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
+                    <p className="text-2xl sm:text-[2.25rem] font-extrabold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
                   <div className={`p-3 rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
                     <Icon className={`h-5 w-5 ${item.iconColor}`} />
@@ -175,7 +175,7 @@ export function SuperAdminDashboard() {
         {/* System Analytics Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
           {/* License Status Donut Chart */}
-          <div className="glass-card p-6 lg:col-span-1 flex flex-col justify-between relative overflow-hidden border border-slate-100 shadow-sm">
+          <div className="glass-card p-4 sm:p-6 lg:col-span-1 flex flex-col justify-between relative overflow-hidden border border-slate-100 shadow-sm">
             <div>
               <div className="flex items-center gap-2 mb-1">
                 <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
@@ -224,7 +224,7 @@ export function SuperAdminDashboard() {
           </div>
 
           {/* System Growth & Traffic Area Chart */}
-          <div className="glass-card p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100 shadow-sm">
+          <div className="glass-card p-4 sm:p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100 shadow-sm overflow-hidden">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 mb-1">
@@ -240,7 +240,7 @@ export function SuperAdminDashboard() {
 
             <div className="h-44 my-2">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                <AreaChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorTraffic" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#1a6fc4" stopOpacity={0.2}/>
@@ -272,8 +272,8 @@ export function SuperAdminDashboard() {
         </div>
 
         {/* Schools Overview Table */}
-        <Card className="glass-card border border-slate-100 shadow-sm animate-fade-in-up" style={{ animationDelay: '180ms' } as React.CSSProperties}>
-          <CardHeader className="border-b border-slate-100 pb-4">
+        <Card className="glass-card border border-slate-100 shadow-sm animate-fade-in-up overflow-hidden" style={{ animationDelay: '180ms' } as React.CSSProperties}>
+          <CardHeader className="border-b border-slate-100 pb-4 px-4 sm:px-6">
             <CardTitle className="text-sm font-bold text-slate-900">Schools Overview</CardTitle>
           </CardHeader>
           <CardContent className="pt-0 px-0 pb-0">
@@ -283,31 +283,31 @@ export function SuperAdminDashboard() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full">
+                <table className="w-full min-w-[480px]">
                   <thead>
                     <tr>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">School Name</th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Subdomain</th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</th>
-                      <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
+                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">School Name</th>
+                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Subdomain</th>
+                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</th>
+                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {schools.length > 0 ? schools.map((item, index) => (
                       <tr key={item.school?.id || index} className="transition-colors duration-150 hover:bg-slate-50/50">
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 sm:px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
                               <School className="w-4 h-4 text-[#0F2D52]" />
                             </div>
-                            <span className="text-sm font-semibold text-slate-800">{item.school?.name || 'N/A'}</span>
+                            <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{item.school?.name || 'N/A'}</span>
                           </div>
                         </td>
-                        <td className="px-5 py-3.5 text-sm text-slate-500 font-semibold">{item.school?.subdomain || 'N/A'}</td>
-                        <td className="px-5 py-3.5 text-sm text-slate-600 font-semibold">
+                        <td className="px-4 sm:px-5 py-3.5 text-sm text-slate-500 font-semibold whitespace-nowrap">{item.school?.subdomain || 'N/A'}</td>
+                        <td className="px-4 sm:px-5 py-3.5 text-sm text-slate-600 font-semibold whitespace-nowrap">
                           {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
                         </td>
-                        <td className="px-5 py-3.5">
+                        <td className="px-4 sm:px-5 py-3.5">
                           <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'} className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
                             {item.owner?.is_verified ? 'Active' : 'Inactive'}
                           </Badge>

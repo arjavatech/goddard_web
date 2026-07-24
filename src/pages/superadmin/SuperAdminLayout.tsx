@@ -143,20 +143,20 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top header */}
-          <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200/80 h-16 px-4 lg:px-6 flex items-center justify-between shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center gap-3">
-              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors">
+          <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200/80 h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0">
                 <Menu className="w-5 h-5" />
               </button>
-              <div>
-                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none">
+              <div className="min-w-0">
+                <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none truncate">
                   Super Admin Portal
                 </h1>
-                <p className="text-[11px] text-slate-400 mt-0.5">System Administration</p>
+                <p className="hidden sm:block text-[11px] text-slate-400 mt-0.5 truncate">System Administration</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <NotificationBell enabled={!!userData} />
 
               <DropdownMenu>
@@ -167,7 +167,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     </div>
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                   <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
@@ -199,7 +199,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 bg-[#F7F9FC] pt-16 p-4 sm:p-6">
+          <main className="flex-1 bg-[#F7F9FC] pt-16 p-3 sm:p-4 md:p-6 pb-8">
             {children}
           </main>
         </div>

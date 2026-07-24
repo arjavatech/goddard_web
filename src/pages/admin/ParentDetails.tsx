@@ -16,7 +16,6 @@ import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-import { Loading } from '../../components/ui/loading';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -277,36 +276,25 @@ export function ParentDetails() {
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
-          // Check if there's a selectedChildId in route state first
           const routeSelectedChildId = location.state?.selectedChildId;
+          let targetId = processedChildren[0].id;
 
           if (routeSelectedChildId) {
-            // Find child by ID from route state
-            const targetChild = processedChildren.find(child => child.id === routeSelectedChildId);
-            if (targetChild) {
-              setSelectedChildId(targetChild.id);
-            } else {
-              setSelectedChildId(processedChildren[0].id);
-            }
+            const found = processedChildren.find(child => child.id === routeSelectedChildId);
+            if (found) targetId = found.id;
           } else {
-            // Fallback to student query parameter
             const urlParams = new URLSearchParams(location.search);
             const studentName = urlParams.get('student');
-
             if (studentName) {
-              // Find child by matching name
-              const targetChild = processedChildren.find(child =>
+              const found = processedChildren.find(child =>
                 `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
               );
-              if (targetChild) {
-                setSelectedChildId(targetChild.id);
-              } else {
-                setSelectedChildId(processedChildren[0].id);
-              }
-            } else {
-              setSelectedChildId(processedChildren[0].id);
+              if (found) targetId = found.id;
             }
           }
+
+          setSelectedChildId(targetId);
+          setExpandedChildren({ [targetId]: true });
         }
       } catch (error) {
         if (isMounted) {
@@ -323,18 +311,6 @@ export function ParentDetails() {
       isMounted = false;
     };
   }, [parentId]);
-
-  // Set the first child as expanded by default once parent data is loaded
-  useEffect(() => {
-    if (parent?.children && parent.children.length > 0) {
-      setExpandedChildren(prev => {
-        if (Object.keys(prev).length === 0) {
-          return { [parent.children[0].id]: true };
-        }
-        return prev;
-      });
-    }
-  }, [parent]);
 
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
@@ -512,7 +488,16 @@ export function ParentDetails() {
     setIsReviewDialogOpen(false);
   };
   if (isLoading) {
-    return <AdminLayout><Loading message="Loading parent details..." /></AdminLayout>;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading parent details...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
   if (!parent) {
     return <AdminLayout>
@@ -552,7 +537,7 @@ export function ParentDetails() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Header Section */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
@@ -562,8 +547,7 @@ export function ParentDetails() {
               size="icon"
               className="mr-3 h-9 w-9 bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 rounded-xl transition-all h-9"
               onClick={() => {
-                const referrer = document.referrer;
-                if (referrer.includes('/admin/students') || location.state?.fromStudents) {
+                if (location.state?.fromStudents) {
                   navigate('/admin/students');
                 } else {
                   navigate('/admin/parents');

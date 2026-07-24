@@ -91,8 +91,13 @@ export function StudentManagement() {
     return 'Draft';
   };
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('studentViewMode', mode); };
+  useEffect(() => {
+    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [formFilter, setFormFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -190,36 +195,64 @@ export function StudentManagement() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-background px-3 py-2 text-sm text-slate-700 placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 transition-all"
+          className="flex min-h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all gap-2"
         >
-          <span className="truncate">
-            {value.length === 0 ? placeholder : `${value.length} selected`}
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <div className="flex flex-wrap gap-1 flex-1">
+            {value.length === 0 ? (
+              <span className="text-slate-400 font-semibold">{placeholder}</span>
+            ) : (
+              value.map(v => (
+                <span
+                  key={v}
+                  className="inline-flex items-center gap-1 bg-[#EFF5FB] text-[#0F2D52] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#0F2D52]/10"
+                >
+                  {v}
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); handleMultiSelectChange(v, value, onValueChange); }}
+                    className="hover:text-red-500 transition-colors cursor-pointer leading-none"
+                  >×</span>
+                </span>
+              ))
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-popover text-popover-foreground shadow-lg">
-            <div className="p-1.5 max-h-60 overflow-y-auto space-y-0.5">
-              {options.map((option) => (
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-white shadow-xl overflow-hidden">
+            <div className="p-1.5 max-h-52 overflow-y-auto space-y-0.5">
+              {options.length > 0 && (
                 <div
-                  key={option}
-                  className="relative flex cursor-pointer select-none items-center rounded-lg px-2 py-1.5 text-sm outline-none transition-colors hover:bg-slate-50 hover:text-slate-900"
-                  onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors border-b border-slate-100 mb-0.5 ${
+                    value.length === options.length ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                  onClick={() => onValueChange(value.length === options.length ? [] : [...options])}
                 >
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={value.includes(option)}
-                      onChange={() => { /* noop */ }}
-                      className="pointer-events-none"
-                    />
+                  <span>Select All</span>
+                  {value.length === options.length && (
+                    <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                  )}
+                </div>
+              )}
+              {options.map((option) => {
+                const selected = value.includes(option);
+                return (
+                  <div
+                    key={option}
+                    className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                      selected ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  >
                     <span>{option}</span>
+                    {selected && (
+                      <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {options.length === 0 && (
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  No options available
-                </div>
+                <div className="px-3 py-2 text-xs text-slate-400 font-semibold">No options available</div>
               )}
             </div>
           </div>
@@ -565,22 +598,18 @@ export function StudentManagement() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">
-              Student Management
-            </h1>
-            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
-              Manage student enrollments and track registration progress
-            </p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Student Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage student enrollments and track registration progress</p>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="h-full">
             <StatCard 
               label="Total Students" 
@@ -665,39 +694,36 @@ export function StudentManagement() {
                 </div>
               </div>
               
-              {/* Search Bar */}
-              <div className="flex flex-col md:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
-                  <Input 
-                    placeholder="Search students..." 
-                    className="pl-10 pr-4 h-10 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400" 
-                    value={searchQuery} 
-                    onChange={e => setSearchQuery(e.target.value)} 
-                  />
-                  {searchQuery && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md"
-                      onClick={() => setSearchQuery('')}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-wrap items-center">
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
+                    <Input 
+                      placeholder="Search students..." 
+                      className="pl-10 pr-4 h-9 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400" 
+                      value={searchQuery} 
+                      onChange={e => setSearchQuery(e.target.value)} 
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+
                   <Button
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-4"
+                    className="h-9 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 flex-shrink-0"
                   >
-                    {showFilters ? (
-                      <><X className="h-4 w-4 mr-1.5" />Hide Filters</>
-                    ) : (
-                      <><Filter className="h-4 w-4 mr-1.5" />Filters</>
-                    )}
+                    {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                    <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
                     {!showFilters && activeFilterCount > 0 && (
                       <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
                         {activeFilterCount}
@@ -716,15 +742,14 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 rounded-xl bg-[#EFF5FB] text-[#0F2D52] border border-blue-50 hover:bg-blue-50 font-bold text-xs px-4">
-                          <Download className="h-4 w-4 mr-1.5 text-[#0F2D52]" />
-                          <span>Export ({selectedStudentsForBulkAction.length})</span>
+                        <Button size="sm" className="h-9 rounded-xl bg-[#EFF5FB] text-[#0F2D52] border border-blue-50 hover:bg-blue-50 font-bold text-xs px-3 flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-1.5 text-[#0F2D52]" />
+                          <span className="hidden sm:inline">Export ({selectedStudentsForBulkAction.length})</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
                         <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                          const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
                             s.classroom.name, s.parent.name, s.parent.email,
@@ -732,16 +757,10 @@ export function StudentManagement() {
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
-                          downloadCSV(
-                            `selected_students_export_${new Date().toISOString().split('T')[0]}.csv`,
-                            headers, rows
-                          );
-                        }}>
-                          Export as CSV
-                        </DropdownMenuItem>
+                          downloadCSV(`selected_students_export_${new Date().toISOString().split('T')[0]}.csv`, studentExportHeaders, rows);
+                        }}>Export as CSV</DropdownMenuItem>
                         <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                          const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
                             s.classroom.name, s.parent.name, s.parent.email,
@@ -749,10 +768,8 @@ export function StudentManagement() {
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
-                          printAsPDF('Selected Students Export', headers, rows);
-                        }}>
-                          Export as PDF
-                        </DropdownMenuItem>
+                          printAsPDF('Selected Students Export', studentExportHeaders, rows);
+                        }}>Export as PDF</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -762,25 +779,23 @@ export function StudentManagement() {
                       onClick={() => {
                         setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
                         const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                        if (selectedStudentObjects.length > 0) {
-                          setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
-                        }
+                        if (selectedStudentObjects.length > 0) setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl h-10 transition-all duration-200 font-bold text-xs px-4"
+                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl h-9 font-bold text-xs px-3 flex-shrink-0"
                     >
-                      <GraduationCap className="h-4 w-4 mr-1.5" />
-                      <span>Transfer Selected</span>
+                      <GraduationCap className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Transfer Selected</span>
                     </Button>
                   )}
 
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-10 bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl transition-all duration-200 font-bold text-xs px-4">
-                          <Download className="h-4 w-4 mr-1.5" />
-                          <span>Export All</span>
+                        <Button size="sm" className="h-9 bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl font-bold text-xs px-3 flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-1.5" />
+                          <span className="hidden sm:inline">Export All</span>
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
@@ -789,16 +804,13 @@ export function StudentManagement() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <div title="No records to export">
-                      <Button size="sm" className="h-10 rounded-xl font-bold text-xs" disabled>
-                        <Download className="h-4 w-4 mr-1.5" />
-                        <span>Export All</span>
-                      </Button>
-                    </div>
+                    <Button size="sm" className="h-9 rounded-xl font-bold text-xs px-3 flex-shrink-0" disabled>
+                      <Download className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Export All</span>
+                    </Button>
                   )}
                 </div>
               </div>
-
               {/* Filters */}
               {showFilters && (
                 <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 space-y-4">
@@ -866,149 +878,192 @@ export function StudentManagement() {
 
             {/* Conditional Rendering of Views */}
             {viewMode === 'card' ? (
-              <MobileCardList
-                className="p-5"
-                loading={loading}
-                loadingMessage="Loading students..."
-                emptyMessage="No students found matching your search criteria."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                cards={[
-                  <div key="select-all" className="flex items-center gap-2 pb-2.5 border-b border-slate-100 col-span-full">
+              <div className="p-5 space-y-4">
+                {/* Select All bar */}
+                <div className="flex items-center justify-between px-1">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
                     <Checkbox
-                      checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                      checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
                       onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                        } else {
-                          setSelectedStudentsForBulkAction([]);
-                        }
+                        setSelectedStudentsForBulkAction(checked ? filteredAndSortedStudents.map(s => s.id) : []);
                       }}
                     />
-                    <span className="text-xs font-bold text-slate-700">Select All</span>
-                  </div>,
-                  ...paginatedStudents.map((student, index) => (
-                    <Card key={student.id || `card-${index}`} className="group overflow-hidden border border-slate-100 rounded-2xl p-5 bg-white shadow-xs hover:shadow-md hover:border-slate-200/80 transition-all duration-300 hover:-translate-y-1 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <Checkbox
-                            checked={selectedStudentsForBulkAction.includes(student.id)}
-                            onCheckedChange={(checked) => {
-                              if (checked) {
-                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                              } else {
-                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                              }
-                            }}
-                            className="flex-shrink-0"
-                          />
-                          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
-                          <div className="min-w-0 flex-1">
-                            <Link
-                              to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
-                              state={{ fromStudents: true }}
-                              className="font-extrabold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate"
-                            >
-                              {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                            </Link>
-                            <p className="text-xs text-slate-400 font-bold mt-0.5 uppercase tracking-wider">{student.classroom.name}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setSelectedStudent(student);
-                            setNewStatus(student.childStatus);
-                            setIsStatusDialogOpen(true);
-                          }}
-                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 transition-all border ${
-                            student.childStatus === 'active'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
-                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
+                    <span className="text-xs font-bold text-slate-600">Select All</span>
+                    {selectedStudentsForBulkAction.length > 0 && (
+                      <span className="text-[10px] font-bold text-[#0F2D52] bg-[#EFF5FB] px-2 py-0.5 rounded-full border border-[#0F2D52]/10">
+                        {selectedStudentsForBulkAction.length} selected
+                      </span>
+                    )}
+                  </label>
+                  <span className="text-[11px] text-slate-400 font-semibold">{paginatedStudents.length} of {filteredAndSortedStudents.length}</span>
+                </div>
+
+                {paginatedStudents.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <GraduationCap className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                    <p className="text-slate-400 text-sm font-semibold">No students found matching your search criteria.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {paginatedStudents.map((student, index) => {
+                      const isSelected = selectedStudentsForBulkAction.includes(student.id);
+                      const apiFormStatus = student.formStatus || 'incomplete';
+                      return (
+                        <div
+                          key={student.id || `card-${index}`}
+                          className={`relative rounded-2xl border bg-white transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
+                            isSelected ? 'border-[#0F2D52]/30 ring-2 ring-[#0F2D52]/10 shadow-sm' : 'border-slate-100 shadow-xs'
                           }`}
                         >
-                          <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                          <Edit className="h-3 w-3 opacity-80" />
-                        </button>
-                      </div>
-
-                      {/* Info Panel */}
-                      <div className="space-y-1.5 text-xs pt-3 border-t border-slate-100">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-slate-400 font-semibold">Parent:</span>
-                          <Link
-                            to={`/admin/parents/${student.parent.id}`}
-                            state={{ fromStudents: true }}
-                            className="font-bold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate max-w-[60%] text-right"
-                          >
-                            {student.parent.name}
-                          </Link>
-                        </div>
-                        {student.secondaryParent && (
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-slate-400 font-semibold">Secondary:</span>
-                            <Link
-                              to={`/admin/parents/${student.secondaryParent.id}`}
-                              state={{ fromStudents: true }}
-                              className="font-bold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate max-w-[60%] text-right"
+                          {/* Card Header */}
+                          <div className="p-4 flex items-start gap-3">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => {
+                                setSelectedStudentsForBulkAction(prev =>
+                                  checked ? [...prev, student.id] : prev.filter(id => id !== student.id)
+                                );
+                              }}
+                              className="mt-0.5 flex-shrink-0"
+                            />
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                                {student.firstName[0]}{student.lastName[0]}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <Link
+                                  to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                                  state={{ fromStudents: true }}
+                                  className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
+                                >
+                                  {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)}{' '}
+                                  {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+                                </Link>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <School className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                                  <span className="text-[11px] text-slate-400 font-semibold truncate">{student.classroom.name}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => { setSelectedStudent(student); setNewStatus(student.childStatus); setIsStatusDialogOpen(true); }}
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 border transition-all ${
+                                student.childStatus === 'active'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
+                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
+                              }`}
                             >
-                              {student.secondaryParent.name}
-                            </Link>
+                              {student.childStatus === 'active' ? 'Active' : 'Archived'}
+                              <Edit className="h-2.5 w-2.5" />
+                            </button>
                           </div>
-                        )}
-                      </div>
 
-                      {/* Progress Panel */}
-                      <div className="space-y-1.5 pt-3 border-t border-slate-50">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-slate-400 font-bold uppercase tracking-wider text-[10px]">Enrollment Progress</span>
-                          <span className="font-extrabold text-[#0F2D52]">{student.enrollmentProgress}%</span>
-                        </div>
-                        <Progress value={student.enrollmentProgress} className="h-2 rounded-full bg-slate-100" />
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold pt-1">
-                          <span>{student.formsCompleted} of {student.totalForms} completed</span>
-                          <Badge variant={student.enrollmentStatus === 'Completed-AdminApproved' ? 'success' : 'warning'} className="text-[9px] font-bold rounded-full px-2 py-0.5">
-                            {student.enrollmentStatus === 'Completed-AdminApproved' ? 'Approved' : 'Pending'}
-                          </Badge>
-                        </div>
-                      </div>
+                          {/* Divider */}
+                          <div className="mx-4 border-t border-slate-50" />
 
-                      {/* Actions footer */}
-                      <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-655 hover:bg-slate-50 transition-all ml-auto">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700 hover:bg-slate-50" onClick={() => {
-                              setSelectedStudentForForms(student);
-                              loadFormsIfNeeded();
-                              setIsStudentFormDialogOpen(true);
-                            }}>
-                              <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700 hover:bg-slate-50" onClick={() => {
-                              setSelectedStudentForTransfer(student);
-                              setNewClassroomId('');
-                              setIsTransferDialogOpen(true);
-                            }}>
-                              <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
-                            </DropdownMenuItem>
-                            {student.enrollmentId && (
-                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52] hover:bg-slate-50" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
-                                <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
-                              </DropdownMenuItem>
+                          {/* Parent Info */}
+                          <div className="px-4 py-3 space-y-1.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">Parent</span>
+                              <Link
+                                to={`/admin/parents/${student.parent.id}`}
+                                state={{ fromStudents: true }}
+                                className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
+                              >
+                                {student.parent.name}
+                              </Link>
+                            </div>
+                            {student.secondaryParent && (
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">2nd</span>
+                                <Link
+                                  to={`/admin/parents/${student.secondaryParent.id}`}
+                                  state={{ fromStudents: true }}
+                                  className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
+                                >
+                                  {student.secondaryParent.name}
+                                </Link>
+                              </div>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </Card>
-                  ))
-                ]}
-              />
+                          </div>
+
+                          {/* Divider */}
+                          <div className="mx-4 border-t border-slate-50" />
+
+                          {/* Progress */}
+                          <div className="px-4 py-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-[10px] text-slate-500 font-semibold">{student.formsCompleted}/{student.totalForms} forms</span>
+                                <Badge
+                                  variant={apiFormStatus === 'complete' ? 'success' : 'secondary'}
+                                  className="text-[9px] font-bold rounded-full px-2 py-0.5"
+                                >
+                                  {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                                {student.formsApproved > 0 && (
+                                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
+                                )}
+                                {student.formsInProgress > 0 && (
+                                  <div className="h-full bg-amber-400 transition-all" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
+                                )}
+                              </div>
+                              <span className="text-xs font-extrabold text-[#0F2D52] w-8 text-right">{student.enrollmentProgress}%</span>
+                            </div>
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="px-4 pb-4 pt-1 flex items-center justify-end gap-1">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-[#0F2D52] hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all gap-1.5">
+                                  <MoreHorizontal className="h-3.5 w-3.5" />
+                                  Actions
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
+                                  <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
+                                  <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
+                                </DropdownMenuItem>
+                                {student.enrollmentId && (
+                                  <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
+                                    <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                    <span className="text-xs text-slate-400 font-semibold">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">
+                        Prev
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">
+                        Next
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <DataTable
                 className="relative z-0"
@@ -1024,10 +1079,10 @@ export function StudentManagement() {
                   { 
                     header: (
                       <Checkbox
-                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                        checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
-                            setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                            setSelectedStudentsForBulkAction(filteredAndSortedStudents.map(s => s.id));
                           } else {
                             setSelectedStudentsForBulkAction([]);
                           }

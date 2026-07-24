@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User, ChevronDown } from 'lucide-react';
+import { LogOut, User, ChevronDown, School } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dr
 import { NotificationBell } from '../notifications/NotificationBell';
 
 export function Header() {
-  const { userData } = useUserContext();
+  const { userData, schoolName } = useUserContext();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -33,34 +33,42 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3 shrink-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+          {/* Logo + School Name */}
+          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             <img
               src="./images/gs_logo_lynnwood.png"
               alt="The Goddard School"
-              className="h-10 sm:h-11 w-auto object-contain"
+              className="h-8 sm:h-11 w-auto object-contain flex-shrink-0"
             />
+            {schoolName && (
+              <div className="flex flex-col min-w-0">
+                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none hidden sm:block">School</span>
+                <span className="text-[11px] sm:text-sm font-bold text-[#0F2D52] truncate max-w-[120px] xs:max-w-[160px] sm:max-w-[240px] md:max-w-[320px] leading-tight">
+                  {schoolName}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Right side */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <NotificationBell enabled={!!userData} />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                <button className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-1.5 sm:px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
                   {/* Avatar */}
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0">
                     {initials}
                   </div>
-                  <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-[120px] truncate">
+                  <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-[100px] sm:max-w-[140px] truncate">
                     {displayName}
                   </span>
-                  <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-slate-400" />
+                  <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+              <DropdownMenuContent align="end" className="w-56 sm:w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                 {/* Profile header */}
                 <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                   <div className="flex items-center gap-3">
@@ -98,7 +106,7 @@ export function Header() {
               You'll need to sign in again to access your parent dashboard.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="flex-col sm:flex-row gap-2 pt-1">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-1">
             <Button variant="outline" onClick={() => setShowLogoutModal(false)} className="w-full sm:w-auto rounded-xl">
               Cancel
             </Button>

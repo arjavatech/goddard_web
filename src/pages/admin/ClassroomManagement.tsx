@@ -27,7 +27,12 @@ const getAvatarColorClass = (name: string) => {
 
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : 'table');
+  useEffect(() => {
+    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -210,10 +215,10 @@ export function ClassroomManagement() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Classroom Management</h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage classrooms, student assignments, and template overrides</p>
@@ -228,7 +233,7 @@ export function ClassroomManagement() {
         </div>
 
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="h-full">
             <StatCard 
               label="Total Classrooms" 
@@ -314,114 +319,116 @@ export function ClassroomManagement() {
 
           {/* Conditional Rendering of Views */}
           {viewMode === 'card' ? (
-            <MobileCardList
-              className="p-5"
-              loading={loading}
-              loadingMessage="Loading classrooms..."
-              emptyMessage="No classrooms found matching your search criteria."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-              cards={paginatedClassrooms.map((classroom, index) => (
-                <Card key={classroom.id || `classroom-${index}`} className="group overflow-hidden border border-slate-100 rounded-2xl bg-white shadow-xs hover:shadow-md hover:border-slate-200/80 transition-all duration-300 hover:-translate-y-1">
-                  <CardContent className="p-5 flex flex-col h-full justify-between">
-                    <div>
-                      {/* Header: Avatar, Name, Actions */}
-                      <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="flex items-center space-x-3 min-w-0">
-                          <AvatarInitials 
-                            initials={classroom.name.split(' ').map(w => w[0]).join('')} 
-                            className={`${getAvatarColorClass(classroom.name)} font-bold w-12 h-12 text-base rounded-full shadow-xs flex-shrink-0`} 
-                          />
-                          <div className="min-w-0">
-                            <Link 
-                              to={`/admin/classrooms/${classroom.id}`} 
-                              className="text-base font-extrabold text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-snug"
-                            >
-                              {classroom.name}
-                            </Link>
-                            {/* <p className="text-xs text-slate-400 font-bold mt-0.5 uppercase tracking-wider">Classroom Context</p> */}
+            <div className="p-5 space-y-4">
+              <div className="flex items-center justify-between px-1">
+                <span className="text-[11px] text-slate-400 font-semibold">{paginatedClassrooms.length} of {sortedClassrooms.length}</span>
+              </div>
+              {paginatedClassrooms.length === 0 ? (
+                <div className="py-16 text-center">
+                  <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm font-semibold">No classrooms found matching your search criteria.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedClassrooms.map((classroom, index) => (
+                    <div key={classroom.id || `classroom-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                      {/* Header */}
+                      <div className="p-4 flex items-start gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                          {classroom.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <Link to={`/admin/classrooms/${classroom.id}`} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
+                            {classroom.name}
+                          </Link>
+                          <div className="flex items-center gap-3 mt-1">
+                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                              <Users className="h-3 w-3" />{classroom.studentsCount} students
+                            </span>
+                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                              <FileText className="h-3 w-3" />{classroom.formsCount} forms
+                            </span>
                           </div>
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 hover:bg-slate-50 transition-all">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-750 hover:bg-slate-50" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
                               <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-750 hover:bg-slate-50" onClick={() => openEditDialog(classroom)}>
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => openEditDialog(classroom)}>
                               <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className={`cursor-pointer font-semibold text-xs text-red-650 focus:text-red-700 focus:bg-red-50 hover:bg-red-50 ${classroom.studentsCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`} 
-                              disabled={classroom.studentsCount > 0} 
-                              onClick={() => openDeleteDialog(classroom)}
-                            >
+                            <DropdownMenuItem className={`cursor-pointer font-semibold text-xs text-red-600 ${classroom.studentsCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
                               <Trash2 className="h-4 w-4 mr-2" />Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
 
-                      {/* Stats Panel */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/80 hover:bg-slate-50 transition-all duration-200">
+                      <div className="mx-4 border-t border-slate-50" />
+
+                      {/* Stats */}
+                      <div className="px-4 py-3 grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
                           <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Students</span>
                           <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
-                            <Users className="h-4 w-4 text-[#0F2D52]" />
-                            {classroom.studentsCount}
+                            <Users className="h-3.5 w-3.5 text-[#0F2D52]" />{classroom.studentsCount}
                           </span>
                         </div>
-                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100/80 hover:bg-slate-50 transition-all duration-200">
-                          <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Assigned Forms</span>
+                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
+                          <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Forms</span>
                           <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
-                            <FileText className="h-4 w-4 text-emerald-600" />
-                            {classroom.formsCount}
+                            <FileText className="h-3.5 w-3.5 text-emerald-600" />{classroom.formsCount}
                           </span>
                         </div>
                       </div>
 
-                      {/* Form Badges preview */}
-                      <div className="space-y-1.5">
-                        <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400 mb-1">Assigned Forms</span>
+                      <div className="mx-4 border-t border-slate-50" />
+
+                      {/* Form badges */}
+                      <div className="px-4 py-3">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assigned Forms</p>
                         <div className="flex flex-wrap gap-1.5 min-h-[24px]">
                           {classroom.assignedForms.length > 0 ? (
-                            classroom.assignedForms.slice(0, 3).map(form => (
-                              <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] hover:bg-[#EFF5FB] border-none truncate max-w-[140px]">
-                                {form.name}
-                              </Badge>
-                            ))
+                            <>
+                              {classroom.assignedForms.slice(0, 3).map(form => (
+                                <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] border-none truncate max-w-[130px]">{form.name}</Badge>
+                              ))}
+                              {classroom.assignedForms.length > 3 && (
+                                <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-500">+{classroom.assignedForms.length - 3}</Badge>
+                              )}
+                            </>
                           ) : (
-                            <span className="text-slate-400 text-xs font-semibold italic">No forms assigned</span>
-                          )}
-                          {classroom.assignedForms.length > 3 && (
-                            <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-650 bg-white">
-                              +{classroom.assignedForms.length - 3} more
-                            </Badge>
+                            <span className="text-xs text-slate-400 italic font-medium">No forms assigned</span>
                           )}
                         </div>
                       </div>
-                    </div>
 
-                    {/* Footer link */}
-                    <div className="mt-5 pt-3 border-t border-slate-50 flex items-center justify-between">
-                      <Link 
-                        to={`/admin/classrooms/${classroom.id}`} 
-                        className="text-xs font-extrabold text-[#0F2D52] hover:underline flex items-center gap-1 group/btn"
-                      >
-                        View classroom profile
-                        <span className="group-hover/btn:translate-x-0.5 transition-transform duration-200">→</span>
-                      </Link>
+                      {/* Footer */}
+                      <div className="px-4 pb-4 pt-1">
+                        <Link to={`/admin/classrooms/${classroom.id}`} className="text-xs font-bold text-[#0F2D52] hover:underline flex items-center gap-1">
+                          View classroom profile →
+                        </Link>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
-            />
+                  ))}
+                </div>
+              )}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <span className="text-xs text-slate-400 font-semibold">Page {currentPage} of {totalPages}</span>
+                  <div className="flex items-center gap-1">
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Prev</Button>
+                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Next</Button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <DataTable
               className="relative z-0"

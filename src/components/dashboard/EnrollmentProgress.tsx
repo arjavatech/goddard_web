@@ -111,21 +111,21 @@ export function EnrollmentProgress({
   return (
     <div className="rounded-2xl border border-slate-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
       {/* Header gradient strip */}
-      <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-5 sm:px-6 pt-5 pb-6">
+      <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 sm:px-6 pt-4 sm:pt-5 pb-5 sm:pb-6">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <FileCheck2 className="w-4 h-4 text-slate-300" />
-              <span className="text-xs font-semibold uppercase tracking-widest text-slate-300">
+              <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-widest text-slate-300">
                 Enrollment Progress
               </span>
             </div>
-            <h2 className="text-lg sm:text-xl font-bold text-white leading-snug">
+            <h2 className="text-sm sm:text-xl font-bold text-white leading-snug">
               {isComplete
                 ? `${childName}'s enrollment is complete `
                 : `Complete ${childName}'s enrollment`}
             </h2>
-            <p className="text-sm text-slate-300/80 mt-1">
+            <p className="text-xs sm:text-sm text-slate-300/80 mt-1">
               {completedCount} of {totalForms} forms completed
             </p>
           </div>
@@ -144,7 +144,7 @@ export function EnrollmentProgress({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between text-xs text-slate-300/80">
+          <div className="flex justify-between text-[11px] sm:text-xs text-slate-300/80">
             <span>{completedCount} done</span>
             <span>{totalForms - completedCount} remaining</span>
           </div>
@@ -152,7 +152,7 @@ export function EnrollmentProgress({
       </div>
 
       {/* Form steps */}
-      <div className="px-5 sm:px-6 py-4 space-y-1.5">
+      <div className="px-4 sm:px-6 py-3 sm:py-4 space-y-1.5">
         {visibleForms.map((form, i) => {
           const done = COMPLETION_STATUSES.has(form.status);
           return (
@@ -165,7 +165,7 @@ export function EnrollmentProgress({
             >
               <StatusDot status={form.status} />
               <span className={cn(
-                'text-sm flex-1 min-w-0 truncate',
+                'text-xs sm:text-sm flex-1 min-w-0 truncate',
                 done ? 'text-emerald-700 font-medium' : 'text-slate-600'
               )}>
                 {form.title}
@@ -187,7 +187,7 @@ export function EnrollmentProgress({
         {hasMore && (
           <button
             onClick={() => setShowAll(!showAll)}
-            className="flex items-center gap-1.5 w-full justify-center py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            className="flex items-center gap-1.5 w-full justify-center py-2 text-[11px] sm:text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors"
           >
             {showAll ? (
               <><ChevronUp className="w-3.5 h-3.5" /> Show fewer forms</>
@@ -200,10 +200,10 @@ export function EnrollmentProgress({
 
       {/* CTA */}
       {!isComplete && (
-        <div className="px-5 sm:px-6 pb-5">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-5">
           <Button
             className={cn(
-              'w-full sm:w-auto h-11 px-6 rounded-xl text-sm font-semibold bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center',
+              'w-full h-10 sm:h-11 px-6 rounded-xl text-xs sm:text-sm font-semibold bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center',
               !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20'
             )}
             disabled={!continueAssignmentId}
@@ -236,10 +236,10 @@ export function EnrollmentProgress({
       )}
 
       {isComplete && (
-        <div className="px-5 sm:px-6 pb-5">
+        <div className="px-4 sm:px-6 pb-4 sm:pb-5">
           <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
             <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <p className="text-sm font-semibold text-emerald-800">All forms submitted — enrollment complete!</p>
+            <p className="text-xs sm:text-sm font-semibold text-emerald-800">All forms submitted — enrollment complete!</p>
           </div>
         </div>
       )}

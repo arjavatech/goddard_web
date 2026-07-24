@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
-import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, Calendar, ChevronRight, CheckCircle } from 'lucide-react';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, ChevronRight, CheckCircle, LayoutGrid, List } from 'lucide-react';
+import { Card, CardContent } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
@@ -61,95 +61,75 @@ function FormCard({
   };
 
   return (
-    <Card
+    <div
       className={cn(
-        "rounded-2xl border border-slate-100 bg-white hover:border-slate-200 hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out relative flex flex-col h-full",
+        "rounded-2xl border border-slate-100 bg-white flex flex-col hover:border-slate-200 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200",
         disabled ? "cursor-not-allowed opacity-60 hover:shadow-none hover:translate-y-0" : "cursor-pointer"
       )}
-      onClick={() => {
-        if (disabled) return;
-        onView?.();
-      }}
+      onClick={() => { if (disabled) return; onView?.(); }}
       title={disabled ? (disabledReason || 'Form is not ready yet') : undefined}
     >
-      <CardHeader className="pb-2">
-        <div className="flex flex-col">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <CardTitle className="text-base font-medium">{title}</CardTitle>
-            </div>
-          </div>
-          <StatusBadge status={status} />
+      {/* Card body */}
+      <div className="p-4 flex items-start gap-3 flex-1">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+          <FileText className="h-4 w-4 text-white" />
         </div>
-        <p className="text-sm text-muted-foreground mt-1">{description}</p>
-      </CardHeader>
-      <CardContent className="pt-0 pb-2">
-        <div className="w-full h-1 bg-gray-100 rounded mt-4"></div>
-      </CardContent>
-      <CardFooter className="flex justify-between items-center pt-2">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs text-muted-foreground">
-            Assigned: {lastUpdated}
-          </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{title}</p>
+          <div className="mt-1.5">
+            <StatusBadge status={status} />
+          </div>
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="mx-4 border-t border-slate-50" />
+
+      {/* Footer */}
+      <div className="px-4 py-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[11px] text-slate-400 font-medium truncate">Assigned: {lastUpdated}</p>
           {dueDate && (
-            <span className="text-xs text-muted-foreground">
-              Due: {dueDate}
-            </span>
+            <p className="text-[11px] text-slate-400 font-medium truncate">Due: {dueDate}</p>
           )}
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-shrink-0">
           {isApproved && (
             <>
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (disabled) return;
-                  onView?.();
-                }}
+                className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                onClick={(e) => { e.stopPropagation(); if (disabled) return; onView?.(); }}
                 title="View Form (Read-only)"
               >
-                <Eye className="h-4 w-4" />
+                <Eye className="h-3.5 w-3.5" />
               </Button>
               {recentPdfLink && (
                 <>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (disabled) return;
-                      onDownload?.();
-                    }}
+                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                    onClick={(e) => { e.stopPropagation(); if (disabled) return; onDownload?.(); }}
                     disabled={isLoadingThis}
                     title="Download PDF"
                   >
-                    {isLoadingThis && isLoading?.action === 'download' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
-                    ) : (
-                      <Download className="h-4 w-4" />
-                    )}
+                    {isLoadingThis && isLoading?.action === 'download'
+                      ? <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                      : <Download className="h-3.5 w-3.5" />}
                   </Button>
                   <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (disabled) return;
-                      onPrint?.();
-                    }}
+                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                    onClick={(e) => { e.stopPropagation(); if (disabled) return; onPrint?.(); }}
                     disabled={isLoadingThis}
                     title="Print PDF"
                   >
-                    {isLoadingThis && isLoading?.action === 'print' ? (
-                      <span className="animate-spin h-4 w-4 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
-                    ) : (
-                      <Printer className="h-4 w-4" />
-                    )}
+                    {isLoadingThis && isLoading?.action === 'print'
+                      ? <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                      : <Printer className="h-3.5 w-3.5" />}
                   </Button>
                 </>
               )}
@@ -159,26 +139,23 @@ function FormCard({
             <Button
               variant="outline"
               size="icon"
-              className="h-8 w-8 text-[#0F2D52] border-[#0F2D52]/40 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (disabled) return;
-                onView();
-              }}
+              className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+              onClick={(e) => { e.stopPropagation(); if (disabled) return; onView(); }}
               title="View Form"
             >
-              <Eye className="h-4 w-4" />
+              <Eye className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
-      </CardFooter>
+      </div>
+
       {disabled && disabledReason && (
-        <div className="px-4 pb-4 text-xs text-amber-700 flex items-center gap-1">
-          <AlertCircle className="h-3 w-3" />
+        <div className="px-4 pb-3 text-[11px] text-amber-700 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{disabledReason}</span>
         </div>
       )}
-    </Card>
+    </div>
   );
 }
 interface FormData {
@@ -254,6 +231,18 @@ export function FormsDocuments({
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(
+    window.innerWidth < 640 ? 'card' : (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
+  );
+  const handleViewModeChange = (mode: 'card' | 'table') => {
+    setViewMode(mode);
+    if (window.innerWidth >= 640) localStorage.setItem('parentFormsViewMode', mode);
+  };
+  useEffect(() => {
+    const onResize = () => { if (window.innerWidth < 640) setViewMode('card'); };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const handleDownloadAll = async () => {
     if (!enrollmentId) return;
@@ -755,13 +744,15 @@ export function FormsDocuments({
     const targetId = selectedForm.formId || selectedForm._key;
     
     if (childSpecificForms) {
-      for (const f of childSpecificForms) {
-        if ((f.formId || f._key) === targetId) return f.status;
+      for (const group of childSpecificForms) {
+        for (const f of group.forms) {
+          if ((f.formId || (f as any)._key) === targetId) return f.status;
+        }
       }
     }
     if (familyForms) {
       for (const f of familyForms) {
-        if ((f.formId || f._key) === targetId) return f.status;
+        if ((f.formId || (f as any)._key) === targetId) return f.status;
       }
     }
     if (allForms) {
@@ -1088,54 +1079,67 @@ export function FormsDocuments({
   // Forms grid view with tabs
   return <div className="px-2 sm:px-0">
     <div className="mb-3 sm:mb-4 md:mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2 sm:mb-3 md:mb-4 gap-2 sm:gap-3 md:gap-4">
-        <h2 className="text-base sm:text-lg md:text-xl font-semibold text-foreground">
-          Forms & Documents
-        </h2>
+      <div className="mb-3 sm:mb-4 space-y-2">
+        {/* Row 1: Title */}
+        <h2 className="text-sm sm:text-base font-bold text-slate-900">Forms & Documents</h2>
+        {/* Row 2: Controls */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-0.5 bg-slate-100/80 p-0.5 rounded-lg border border-slate-200/50">
+            <button
+              type="button"
+              onClick={() => handleViewModeChange('card')}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <LayoutGrid className="h-3 w-3" />
+              <span className="hidden sm:inline">Card</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewModeChange('table')}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${
+                viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <List className="h-3 w-3" />
+              <span className="hidden sm:inline">Table</span>
+            </button>
+          </div>
+          {onYearFilterChange && (
+            <Select value={yearFilter} onValueChange={onYearFilterChange}>
+              <SelectTrigger className="w-24 h-7 text-[11px]">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Years</SelectItem>
+                {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
+                  const year = (new Date().getFullYear() - i).toString();
+                  return <SelectItem key={year} value={year}>{year}</SelectItem>;
+                })}
+              </SelectContent>
+            </Select>
+          )}
+          {enrollmentId && (
+            <button
+              onClick={handleDownloadAll}
+              disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
+              title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available' : 'Download all approved forms as ZIP'}
+              className="flex items-center gap-1 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-2 py-1.5 text-[11px] font-medium text-[#0F2D52] transition-all hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isDownloadingAll
+                ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
+                : <Download className="h-3 w-3" />}
+              <span>{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
+            </button>
+          )}
+        </div>
         {openError && (
           <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{openError}</span>
           </div>
         )}
-        <div className="flex items-center gap-2">
-          {onYearFilterChange && (
-            <div className="flex items-center gap-2">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-              <Select value={yearFilter} onValueChange={onYearFilterChange}>
-                <SelectTrigger className="w-28 sm:w-32 md:w-40 text-xs sm:text-sm">
-                  <SelectValue placeholder="Filter by year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
-                  {Array.from({ length: new Date().getFullYear() - 2020 + 1 }, (_, i) => {
-                    const year = (new Date().getFullYear() - i).toString();
-                    return (
-                      <SelectItem key={year} value={year}>
-                        {year}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-          {enrollmentId && (
-            <button
-              onClick={handleDownloadAll}
-              disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
-              title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available to download' : 'Download all approved forms as ZIP'}
-              className="group flex items-center gap-1.5 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-3 py-1.5 text-xs font-medium text-[#0F2D52] shadow-sm transition-all duration-200 hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 hover:shadow disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[#0F2D52]/10 transition-colors group-hover:bg-[#0F2D52]/20">
-                {isDownloadingAll
-                  ? <span className="h-2.5 w-2.5 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
-                  : <Download className="h-2.5 w-2.5" />}
-              </span>
-              <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
-            </button>
-          )}
-        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => {
@@ -1171,10 +1175,70 @@ export function FormsDocuments({
               <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-3 sm:p-4 md:p-6 text-xs sm:text-sm text-muted-foreground">
                 No forms available for {child.childName} yet.
               </div>
+            ) : viewMode === 'table' ? (
+              <div className="rounded-2xl border border-slate-100 bg-white overflow-x-auto">
+                <table className="w-full min-w-[320px] text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/60">
+                      <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] w-[45%]">Form</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] hidden sm:table-cell">Assigned</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] hidden sm:table-cell">Due</th>
+                      <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Status</th>
+                      <th className="text-right px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] w-[40px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {getFormsForTab(child.childId).map(form => {
+                      const isApproved = form.status === 'Approved';
+                      const isDisabled = form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId);
+                      const isLoadingThis = loadingAction?.formId === (form.formId || form._key);
+                      return (
+                        <tr
+                          key={form._key}
+                          className={cn('border-b border-slate-50 last:border-0 transition-colors', isDisabled ? 'opacity-60' : 'hover:bg-slate-50/60 cursor-pointer')}
+                          onClick={() => { if (isDisabled) return; handleView(form); }}
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                                <FileText className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="font-semibold text-slate-900 text-[11px] sm:text-xs line-clamp-2 leading-tight">{form.title}</span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2.5 text-slate-500 text-[11px] hidden sm:table-cell whitespace-nowrap">{form.lastUpdated}</td>
+                          <td className="px-3 py-2.5 text-slate-500 text-[11px] hidden sm:table-cell whitespace-nowrap">{form.dueDate || '—'}</td>
+                          <td className="px-3 py-2.5">
+                            <StatusBadge status={form.status} className="text-[10px] px-1.5 py-0.5 gap-0.5 mt-0" />
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isDisabled} onClick={() => handleView(form)} title="View">
+                                {isLoadingThis && loadingAction?.action === 'view'
+                                  ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                                  : <Eye className="h-3 w-3" />}
+                              </Button>
+                              {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (
+                                <>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isLoadingThis} onClick={() => handleDownload(form)} title="Download">
+                                    {isLoadingThis && loadingAction?.action === 'download' ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" /> : <Download className="h-3 w-3" />}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isLoadingThis} onClick={() => handlePrint(form)} title="Print">
+                                    {isLoadingThis && loadingAction?.action === 'print' ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" /> : <Printer className="h-3 w-3" />}
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2 sm:gap-3 md:gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {getFormsForTab(child.childId).map(form => (
-
                   <FormCard
                     key={form._key}
                     title={form.title}
