@@ -51,15 +51,30 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const currentPath = location.pathname;
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
 
-  const navItems = [
-    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: '/admin' },
-    { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: '/admin/classrooms' },
-    { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: '/admin/students' },
-    { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: '/admin/forms' },
-    { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: '/admin/forms/due' },
-    { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: '/admin/parents' },
+  const navGroups = [
+    {
+      label: 'Workspace',
+      items: [
+        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: '/admin' },
+        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: '/admin/classrooms' },
+        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: '/admin/students' },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: '/admin/parents' },
+      ],
+    },
+    {
+      label: 'Enrollment',
+      items: [
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: '/admin/forms' },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: '/admin/forms/due' },
+      ],
+    },
+    ...(isSuperAdmin ? [{
+      label: 'Administration',
+      items: [
+        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: '/admin/admin-management' },
+      ],
+    }] : []),
   ];
-  if (isSuperAdmin) navItems.push({ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: '/admin/admin-management' });
 
   const initials = userData?.firstName && userData?.lastName
     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase() : 'AD';
@@ -98,25 +113,29 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="px-5 pt-5 pb-2 flex-shrink-0">
-            {/* <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Navigation</p> */}
-          </div>
-          <nav className="flex-1 px-3 pb-4 overflow-y-auto space-y-0.5 scrollbar-thin">
-            {navItems.map((item, i) => {
-              const isActive = currentPath === item.path;
-              return (
-                <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
-                  className={cn(
-                    'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
-                    isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
-                  )}
-                >
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                  <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin pt-4">
+            {navGroups.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+                <div className="space-y-0.5">
+                  {group.items.map((item, i) => {
+                    const isActive = currentPath === item.path;
+                    return (
+                      <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                        className={cn(
+                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                        )}
+                      >
+                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </aside>
 
@@ -130,25 +149,29 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               className="h-12 w-auto object-contain brightness-0 invert opacity-95 max-w-[170px]"
             />
           </div>
-          <div className="px-5 pt-5 pb-2 flex-shrink-0 lg:mt-20">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/80">Navigation</p>
-          </div>
-          <nav className="flex-1 px-3 pb-4 overflow-y-auto space-y-0.5 scrollbar-thin">
-            {navItems.map((item, i) => {
-              const isActive = currentPath === item.path;
-              return (
-                <Link key={i} to={item.path}
-                  className={cn(
-                    'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
-                    isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
-                  )}
-                >
-                  {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                  <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                  <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
-                </Link>
-              );
-            })}
+          <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
+            {navGroups.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+                <div className="space-y-0.5">
+                  {group.items.map((item, i) => {
+                    const isActive = currentPath === item.path;
+                    return (
+                      <Link key={i} to={item.path}
+                        className={cn(
+                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                        )}
+                      >
+                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </aside>
 

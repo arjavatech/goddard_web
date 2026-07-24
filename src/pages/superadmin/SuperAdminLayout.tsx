@@ -39,11 +39,21 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
   const currentPath = location.pathname;
 
-  const navItems = [
-    { icon: <LayoutDashboard className="w-[18px] h-[18px]" />, label: 'Dashboard',    path: '/superadmin-arjava' },
-    { icon: <Crown className="w-[18px] h-[18px]" />,          label: 'Subscription', path: '/superadmin-arjava/subscription' },
-    { icon: <School className="w-[18px] h-[18px]" />,         label: 'Schools',      path: '/superadmin-arjava/schools' },
-    { icon: <Users className="w-[18px] h-[18px]" />,          label: 'Clients',      path: '/superadmin-arjava/clients' },
+  const navGroups = [
+    {
+      label: 'Workspace',
+      items: [
+        { icon: <LayoutDashboard className="w-[18px] h-[18px]" />, label: 'Dashboard', path: '/superadmin-arjava' },
+        { icon: <School className="w-[18px] h-[18px]" />, label: 'Schools', path: '/superadmin-arjava/schools' },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Clients', path: '/superadmin-arjava/clients' },
+      ],
+    },
+    {
+      label: 'Administration',
+      items: [
+        { icon: <Crown className="w-[18px] h-[18px]" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
+      ],
+    },
   ];
 
   const initials = userData?.firstName && userData?.lastName
@@ -57,36 +67,32 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
   const SidebarContent = () => (
     <>
-      <div className="px-5 pt-5 pb-2 flex-shrink-0 lg:mt-20">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/80">Navigation</p>
-      </div>
-      <nav className="flex-1 px-3 pb-4 overflow-y-auto space-y-0.5 scrollbar-thin">
-        {navItems.map((item, i) => {
-          const isActive = currentPath === item.path;
-          return (
-            <Link
-              key={i}
-              to={item.path}
-              onClick={() => setIsSidebarOpen(false)}
-              className={cn(
-                'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
-                isActive
-                  ? 'bg-white/10 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/8'
-              )}
-            >
-              {isActive && (
-                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#1a6fc4] rounded-r-full" />
-              )}
-              <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>
-                {item.icon}
-              </span>
-              <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>
-                {item.label}
-              </span>
-            </Link>
-          );
-        })}
+      <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
+        {navGroups.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+            <div className="space-y-0.5">
+              {group.items.map((item, i) => {
+                const isActive = currentPath === item.path;
+                return (
+                  <Link
+                    key={i}
+                    to={item.path}
+                    onClick={() => setIsSidebarOpen(false)}
+                    className={cn(
+                      'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                      isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                    )}
+                  >
+                    {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                    <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                    <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
     </>
   );

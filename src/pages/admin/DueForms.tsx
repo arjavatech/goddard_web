@@ -30,7 +30,8 @@ export function DueForms() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
+  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
@@ -284,7 +285,7 @@ export function DueForms() {
     paginatedData: paginatedForms,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredForms });
+  } = usePagination({ data: filteredForms, itemsPerPage: viewMode === 'card' ? 9 : 10 });
 
   const dueFormsExportHeaders = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
   
@@ -659,7 +660,7 @@ export function DueForms() {
               <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
                 <button
                   type="button"
-                  onClick={() => setViewMode('table')}
+                  onClick={() => handleViewModeChange('table')}
                   className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'table'
                       ? 'bg-white text-[#0F2D52] shadow-xs'
@@ -671,7 +672,7 @@ export function DueForms() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setViewMode('card')}
+                  onClick={() => handleViewModeChange('card')}
                   className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
                     viewMode === 'card'
                       ? 'bg-white text-[#0F2D52] shadow-xs'

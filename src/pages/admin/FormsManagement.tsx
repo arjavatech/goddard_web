@@ -55,7 +55,8 @@ export function FormsManagement() {
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('formsViewMode') as 'card' | 'table') || 'table');
+  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('formsViewMode', mode); };
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
@@ -164,7 +165,7 @@ export function FormsManagement() {
     setCurrentPage
   } = usePagination({ 
     data: sortedForms,
-    itemsPerPage: 10,
+    itemsPerPage: viewMode === 'card' ? 9 : 10,
     mobileItemsPerPage: 5
   });
   const fetchForms = async (showLoader = true) => {
@@ -457,7 +458,7 @@ export function FormsManagement() {
                     <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 self-start sm:self-auto shadow-xs">
                       <button
                         type="button"
-                        onClick={() => setViewMode('table')}
+                        onClick={() => handleViewModeChange('table')}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           viewMode === 'table'
                             ? 'bg-white text-[#0F2D52] shadow-xs'
@@ -469,7 +470,7 @@ export function FormsManagement() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setViewMode('card')}
+                        onClick={() => handleViewModeChange('card')}
                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                           viewMode === 'card'
                             ? 'bg-white text-[#0F2D52] shadow-xs'
@@ -818,3 +819,4 @@ export function FormsManagement() {
     </AdminLayout>
   );
 }
+
