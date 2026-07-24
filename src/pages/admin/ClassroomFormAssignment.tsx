@@ -269,7 +269,7 @@ export function ClassroomFormAssignment() {
             <Button
               variant="outline"
               onClick={() => navigate('/admin/classrooms')}
-              className="flex items-center self-start w-fit text-xs font-bold bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 rounded-xl transition-all h-9"
+              className="flex items-center self-start w-fit text-xs font-bold bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 hover:text-white border border-slate-200 rounded-xl transition-all h-9"
               size="sm"
             >
               <ChevronLeft className="h-4 w-4 mr-1.5" />
@@ -398,7 +398,7 @@ export function ClassroomFormAssignment() {
                             "whitespace-nowrap flex-shrink-0 text-xs px-4 py-1.5 transition-all duration-200 h-8 border rounded-xl font-bold",
                             activeTab === tab.id
                               ? "bg-[#0F2D52] text-white border-[#0F2D52] shadow-xs"
-                              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-500"
                           )}
                           size="sm"
                         >
@@ -438,7 +438,7 @@ export function ClassroomFormAssignment() {
                           setSelectedFormIds([]);
                           setIsAssignDialogOpen(true);
                         }}
-                        className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl transition-all font-bold text-xs h-9 px-4"
+                        className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 hover:text-white border border-[#0F2D52] rounded-xl transition-all font-bold text-xs h-9 px-4"
                         size="sm"
                       >
                         <Plus className="h-4 w-4 mr-2" />

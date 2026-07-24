@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check, LayoutGrid, List } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
@@ -55,6 +55,7 @@ export function FormsManagement() {
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
@@ -318,7 +319,16 @@ export function FormsManagement() {
   };
   const statuses: FormStatus[] = ['active', 'inactive', 'school_default'];
   if (loading) {
-    return <PageLoader message="Loading forms management..." Layout={AdminLayout} />;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading forms management...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -442,6 +452,34 @@ export function FormsManagement() {
                       <h2 className="text-sm font-bold text-slate-900">Form Directory</h2>
                       <p className="text-xs text-slate-400 font-semibold mt-0.5">{sortedForms.length} of {forms.length} forms</p>
                     </div>
+
+                    {/* Segmented View Switcher */}
+                    <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 self-start sm:self-auto shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('table')}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                          viewMode === 'table'
+                            ? 'bg-white text-[#0F2D52] shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <List className="h-3.5 w-3.5" />
+                        <span>Table View</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('card')}
+                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                          viewMode === 'card'
+                            ? 'bg-white text-[#0F2D52] shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                        <span>Card View</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Tabs */}
@@ -505,166 +543,74 @@ export function FormsManagement() {
                   </div>
                 </div>
 
-                {/* Desktop Table View */}
-                <DataTable
-                  className="hidden lg:block relative z-0"
-                  loading={loading}
-                  loadingMessage="Loading forms..."
-                  emptyMessage="No forms match the current filters."
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalItems={filteredForms.length}
-                  itemsPerPage={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                  columns={[
-                    { header: 'Form Name', className: 'w-1/4' },
-                    { header: 'Due Date', className: 'w-1/8' },
-                    { header: 'Form Link', className: 'w-1/3' },
-                    { header: 'Status', className: 'w-1/8' },
-                    { header: 'Actions', className: 'w-1/8 text-right' },
-                  ]}
-                  rows={paginatedForms.map(form => (
-                    <tr key={form.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                      <td className="py-4 px-4">
-                        <div className="flex items-center gap-2">
-                          <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
-                          <span className="font-bold text-slate-900 text-sm truncate">{form.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-xs font-semibold text-slate-600">
-                        {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center text-xs font-semibold text-[#0F2D52] max-w-xs">
-                          <LinkIcon className="h-3.5 w-3.5 mr-1.5 text-slate-400 flex-shrink-0" />
-                          {form.link ? (
-                            <>
-                              <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1 font-medium">
-                                {form.link}
-                              </a>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigator.clipboard.writeText(form.link);
-                                  setCopiedFormId(form.id);
-                                  setTimeout(() => setCopiedFormId(null), 3000);
-                                }}
-                                className="ml-1.5 p-1 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
-                                title="Copy link"
-                              >
-                                {copiedFormId === form.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-slate-400 font-medium">Not provided</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 bg-[#085cb0] text-white">
-                          {getStatusDisplayName(form.status)}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
-                              <Settings className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                            {form.link && (
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(form.link, '_blank')}>
-                                <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                                View Form
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(form)}>
-                              <Edit className="h-4 w-4 mr-2 text-slate-400" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              disabled={form.status === 'inactive'}
-                              onClick={() => {
-                                setSelectedFormForAssign(form);
-                                setIsAssignToAllDialogOpen(true);
-                              }}
-                            >
-                              <School className="h-4 w-4 mr-2 text-slate-400" />
-                              Assign to All Students
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                />
-
-                {/* Mobile Card View */}
-                <MobileCardList
-                  className="lg:hidden p-4"
-                  loading={loading}
-                  loadingMessage="Loading forms..."
-                  emptyMessage="No forms found matching your search criteria."
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                  gridClassName="space-y-3"
-                  cards={paginatedForms.map(form => (
-                    <Card key={form.id} className="p-4 rounded-xl border border-slate-100 shadow-xs bg-white">
-                      <div className="flex justify-between items-start mb-3 gap-2">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
-                          <h3 className="font-bold text-slate-900 text-sm truncate">{form.name}</h3>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 flex-shrink-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                            {form.link && (
-                              <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(form.link, '_blank')}>
-                                <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                                View Form
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(form)}>
-                              <Edit className="h-4 w-4 mr-2 text-slate-400" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="cursor-pointer"
-                              disabled={form.status === 'inactive'}
-                              onClick={() => {
-                                setSelectedFormForAssign(form);
-                                setIsAssignToAllDialogOpen(true);
-                              }}
-                            >
-                              <School className="h-4 w-4 mr-2 text-slate-400" />
-                              Assign to All Students
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                      
-                      <div className="space-y-2.5 pt-2 border-t border-slate-50">
-                        <div className="flex items-center justify-between gap-2">
-                          <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] font-bold rounded-full px-2 py-0.5 bg-[#085cb0]">
-                            {getStatusDisplayName(form.status)}
-                          </Badge>
-                          <div className="text-xs font-semibold text-slate-500">
-                            Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                {/* Conditional Rendering of Views */}
+                {viewMode === 'card' ? (
+                  <MobileCardList
+                    className="p-4"
+                    loading={loading}
+                    loadingMessage="Loading forms..."
+                    emptyMessage="No forms found matching your search criteria."
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                    cards={paginatedForms.map(form => (
+                      <Card key={form.id} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white flex flex-col justify-between hover:shadow-md transition-all duration-300 hover:-translate-y-1">
+                        <div>
+                          <div className="flex justify-between items-start mb-3 gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
+                              <h3 className="font-bold text-slate-900 text-sm truncate">{form.name}</h3>
+                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                                {form.link && (
+                                  <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(form.link, '_blank')}>
+                                    <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                                    View Form
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(form)}>
+                                  <Edit className="h-4 w-4 mr-2 text-slate-400" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="cursor-pointer"
+                                  disabled={form.status === 'inactive'}
+                                  onClick={() => {
+                                    setSelectedFormForAssign(form);
+                                    setIsAssignToAllDialogOpen(true);
+                                  }}
+                                >
+                                  <School className="h-4 w-4 mr-2 text-slate-400" />
+                                  Assign to All Students
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                          
+                          <div className="space-y-2.5 pt-2 border-t border-slate-100">
+                            <div className="flex items-center justify-between gap-2">
+                              <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 bg-[#085cb0] text-white">
+                                {getStatusDisplayName(form.status)}
+                              </Badge>
+                              <div className="text-xs font-semibold text-slate-500">
+                                Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                              </div>
+                            </div>
                           </div>
                         </div>
                         
-                        <div className="flex items-center text-xs font-semibold text-[#0F2D52] min-w-0 pt-1">
+                        <div className="flex items-center text-xs font-semibold text-[#0F2D52] min-w-0 pt-4 mt-3 border-t border-slate-50">
                           <LinkIcon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0 mr-1.5" />
                           {form.link ? (
                             <>
-                              <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1 font-medium">
+                              <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1 font-medium text-[#1a6fc4]">
                                 {form.link}
                               </a>
                               <button
@@ -684,10 +630,105 @@ export function FormsManagement() {
                             <span className="text-slate-400 font-medium">No link provided</span>
                           )}
                         </div>
-                      </div>
-                    </Card>
-                  ))}
-                />
+                      </Card>
+                    ))}
+                  />
+                ) : (
+                  <DataTable
+                    className="relative z-0"
+                    loading={loading}
+                    loadingMessage="Loading forms..."
+                    emptyMessage="No forms match the current filters."
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={filteredForms.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                    columns={[
+                      { header: 'Form Name', className: 'w-1/4' },
+                      { header: 'Due Date', className: 'w-1/8' },
+                      { header: 'Form Link', className: 'w-1/3' },
+                      { header: 'Status', className: 'w-1/8' },
+                      { header: 'Actions', className: 'w-1/8 text-right' },
+                    ]}
+                    rows={paginatedForms.map(form => (
+                      <tr key={form.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                        <td className="py-4 px-4">
+                          <div className="flex items-center gap-2">
+                            <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
+                            <span className="font-bold text-slate-900 text-sm truncate">{form.name}</span>
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-xs font-semibold text-slate-600">
+                          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                        </td>
+                        <td className="py-4 px-4">
+                          <div className="flex items-center text-xs font-semibold text-[#0F2D52] max-w-xs">
+                            <LinkIcon className="h-3.5 w-3.5 mr-1.5 text-slate-400 flex-shrink-0" />
+                            {form.link ? (
+                              <>
+                                <a href={form.link} target="_blank" rel="noreferrer" className="hover:underline truncate flex-1 font-medium">
+                                  {form.link}
+                                </a>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigator.clipboard.writeText(form.link);
+                                    setCopiedFormId(form.id);
+                                    setTimeout(() => setCopiedFormId(null), 3000);
+                                  }}
+                                  className="ml-1.5 p-1 hover:bg-slate-100 rounded-lg transition-colors flex-shrink-0"
+                                  title="Copy link"
+                                >
+                                  {copiedFormId === form.id ? <Check className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5 text-slate-400" />}
+                                </button>
+                              </>
+                            ) : (
+                              <span className="text-slate-400 font-medium">Not provided</span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 bg-[#085cb0] text-white">
+                            {getStatusDisplayName(form.status)}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                              {form.link && (
+                                <DropdownMenuItem className="cursor-pointer" onClick={() => window.open(form.link, '_blank')}>
+                                  <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                                  View Form
+                                </DropdownMenuItem>
+                              )}
+                              <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(form)}>
+                                <Edit className="h-4 w-4 mr-2 text-slate-400" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                className="cursor-pointer"
+                                disabled={form.status === 'inactive'}
+                                onClick={() => {
+                                  setSelectedFormForAssign(form);
+                                  setIsAssignToAllDialogOpen(true);
+                                }}
+                              >
+                                <School className="h-4 w-4 mr-2 text-slate-400" />
+                                Assign to All Students
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+                  />
+                )}
               </CardContent>
             </div>
           </>

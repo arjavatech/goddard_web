@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download, GraduationCap } from 'lucide-react';
+import { Plus, Search, Mail, UserCircle, Eye, MoreHorizontal, CheckCircle, XCircle, Users, Clock, RefreshCw, UserCheck, Download, GraduationCap, LayoutGrid, List } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
@@ -107,6 +107,7 @@ export function ParentManagement() {
     setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
   };
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
@@ -605,7 +606,16 @@ export function ParentManagement() {
   };
 
   if (loading) {
-    return <PageLoader message="Loading parent management..." Layout={AdminLayout} />;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading parent management...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -723,6 +733,34 @@ export function ParentManagement() {
                       </Button>
                     </div>
                   )}
+
+                  {/* Segmented View Switcher */}
+                  <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                        viewMode === 'table'
+                          ? 'bg-white text-[#0F2D52] shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      <span>Table View</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('card')}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                        viewMode === 'card'
+                          ? 'bg-white text-[#0F2D52] shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      <span>Card View</span>
+                    </button>
+                  </div>
                 </div>
               </div>
               
@@ -777,279 +815,220 @@ export function ParentManagement() {
               </div>
             </div>
 
-            {/* Desktop Table View */}
-            <DataTable
-              className="hidden md:block relative z-0"
-              loading={loading}
-              loadingMessage="Loading parents..."
-              emptyMessage="No parents match the current filters."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={sortedParents.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              columns={[
-                { header: 'Parent', className: 'w-1/3' },
-                { header: 'Email', className: 'w-1/4 hidden lg:table-cell' },
-                { header: 'Children', className: 'w-1/3' },
-                { header: 'Signup Status', className: 'w-1/6 text-center' },
-                { header: 'Actions', className: 'w-1/6 text-right pr-6' },
-              ]}
-              rows={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
-                <tr key={parent.id || `parent-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        {parent.signupStatus === 'Signed' ? (
-                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-[#0F2D52] hover:underline block truncate text-sm">
-                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                          </Link>
-                        ) : (
-                          <span className="font-bold text-slate-400 cursor-not-allowed block truncate text-sm">
-                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                          </span>
-                        )}
-                        <div className="text-xs text-slate-400 font-semibold truncate lg:hidden mt-0.5">{parent.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4 hidden lg:table-cell">
-                    <div className="flex items-center text-xs font-semibold text-slate-600 min-w-0">
-                      <Mail className="h-3.5 w-3.5 mr-1.5 text-slate-400 flex-shrink-0" />
-                      <span className="truncate">{parent.email}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    {parent.children.length === 0 ? (
-                      <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
-                    ) : (
-                      <div className="flex flex-wrap gap-2 py-1 max-w-sm">
-                        {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                          <div 
-                            key={child.id} 
-                            className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
-                          >
-                            <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
-                            <Link
-                              to={`/admin/parents/${parent.id}`}
-                              state={{ parentData: parent, selectedChildId: child.id }}
-                              className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
-                            >
-                              {child.firstName} {child.lastName}
-                            </Link>
-                            <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
-                            <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
-                              {child.classroom.name}
-                            </span>
+            {/* Conditional Rendering of Views */}
+            {viewMode === 'card' ? (
+              <MobileCardList
+                className="p-5"
+                loading={loading}
+                loadingMessage="Loading parents..."
+                emptyMessage="No parents found matching your search criteria."
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
+                  <Card key={parent.id || `parent-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
+                          <div className="min-w-0 flex-1">
+                            {parent.signupStatus === 'Signed' ? (
+                              <Link to={`/admin/parents/${parent.id}`} state={{
+                                parentData: parent
+                              }} className="font-extrabold text-[#0F2D52] hover:underline text-sm block truncate">
+                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                              </Link>
+                            ) : (
+                              <span className="font-extrabold text-slate-400 cursor-not-allowed text-sm block truncate">
+                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                              </span>
+                            )}
+                            <div className="text-xs text-slate-400 font-semibold truncate mt-0.5">
+                              {parent.email}
+                            </div>
                           </div>
-                        ))}
-                        {parent.children.length > 2 && (
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              toggleParentExpanded(parent.id);
-                            }}
-                            className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
-                          >
-                            {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
-                          </button>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                              <Link to={`/admin/parents/${parent.id}`} state={{
+                                parentData: parent
+                              }} className="cursor-pointer">
+                                <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                                View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+                              onClick={() => {
+                                setSelectedParent(parent);
+                                loadClassroomsIfNeeded();
+                                setIsAddChildDialogOpen(true);
+                              }}>
+                              <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
+                              Add Child
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="cursor-pointer"
+                              disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleResendConfirmation(parent.id, parent.email);
+                              }}
+                            >
+                              {resendingParentId === parent.id ? (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />
+                                  Sending...
+                                </>
+                              ) : (
+                                <>
+                                  <RefreshCw className="h-4 w-4 mr-2 text-slate-400" />
+                                  Resend Invitation
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            {activeTab === 'active' ? (
+                              <DropdownMenuItem
+                                className="text-red-650 focus:text-red-650 cursor-pointer font-semibold"
+                                disabled={parent.signupStatus === 'Not Signed'}
+                                onClick={() => setParentToDeactivate(parent)}
+                              >
+                                <XCircle className="h-4 w-4 mr-2 text-red-500" />
+                                Deactivate Account
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
+                                disabled={parent.signupStatus === 'Not Signed'}
+                                onClick={() => setParentToActivate(parent)}
+                              >
+                                <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />
+                                Activate Account
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mb-3 border-t border-slate-100 pt-3 mt-1">
+                        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                          {parent.signupStatus === 'Signed' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
+                          {parent.signupStatus === 'Not Signed' && <XCircle className="h-3.5 w-3.5 mr-1" />}
+                          {parent.signupStatus}
+                        </Badge>
+                        <span className="text-xs font-semibold text-slate-500">{parent.phoneNumber || 'No phone'}</span>
+                      </div>
+                      
+                      <div className="space-y-1.5 pt-3 border-t border-slate-50">
+                        {parent.children.length === 0 ? (
+                          <div className="text-slate-400 text-xs italic font-medium">No children linked yet</div>
+                        ) : (
+                          <div className="space-y-2">
+                            <div className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Children ({parent.children.length})</div>
+                            <div className="flex flex-wrap gap-2">
+                              {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                                <div 
+                                  key={child.id} 
+                                  className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all shadow-xs duration-200 group"
+                                >
+                                  <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
+                                  <Link 
+                                    to={`/admin/parents/${parent.id}`} 
+                                    state={{
+                                      parentData: parent,
+                                      selectedChildId: child.id
+                                    }} 
+                                    className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
+                                  >
+                                    {child.firstName} {child.lastName}
+                                  </Link>
+                                  <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
+                                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
+                                    {child.classroom.name}
+                                  </span>
+                                </div>
+                              ))}
+                              {parent.children.length > 2 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    toggleParentExpanded(parent.id);
+                                  }}
+                                  className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
+                                >
+                                  {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         )}
                       </div>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 text-center">
-                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="inline-flex items-center justify-center text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
-                      {parent.signupStatus}
-                    </Badge>
-                  </td>
-                  <td className="py-4 px-4 text-right pr-6">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                        <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                          <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
-                            <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                          onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
-                        >
-                          <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
-                          Add Child
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                          onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
-                        >
-                          {resendingParentId === parent.id ? (
-                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />Sending...</>
+                    </div>
+                  </Card>
+                )) : []}
+              />
+            ) : (
+              <DataTable
+                className="relative z-0"
+                loading={loading}
+                loadingMessage="Loading parents..."
+                emptyMessage="No parents found matching your search criteria."
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedParents.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                columns={[
+                  { header: 'Parent Name', className: 'w-1/4 pl-6' },
+                  { header: 'Email & Contact', className: 'w-1/4' },
+                  { header: 'Linked Children', className: 'w-1/3' },
+                  { header: 'Status', className: 'w-1/8 text-center' },
+                  { header: 'Actions', className: 'w-1/8 text-right pr-6' },
+                ]}
+                rows={sortedParents.length > 0 ? paginatedParents.map(parent => (
+                  <tr key={parent.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="py-4 px-4 pl-6 font-semibold text-slate-900 text-sm">
+                      <div className="flex items-center gap-3">
+                        <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="bg-[#044ba0] text-white font-bold" />
+                        <div className="min-w-0">
+                          {parent.signupStatus === 'Signed' ? (
+                            <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-[#0F2D52] hover:underline text-sm block truncate">
+                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                            </Link>
                           ) : (
-                            <><RefreshCw className="h-4 w-4 mr-2 text-slate-400" />Resend</>
+                            <span className="font-bold text-slate-400 cursor-not-allowed text-sm block truncate">
+                              {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+                            </span>
                           )}
-                        </DropdownMenuItem>
-                        {activeTab === 'active' ? (
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600 cursor-pointer font-semibold"
-                            disabled={parent.signupStatus === 'Not Signed'}
-                            onClick={() => setParentToDeactivate(parent)}
-                          >
-                            <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
-                            disabled={parent.signupStatus === 'Not Signed'}
-                            onClick={() => setParentToActivate(parent)}
-                          >
-                            <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              )) : []}
-            />
-            
-            {/* Mobile Card View */}
-            <MobileCardList
-              className="md:hidden p-4"
-              loading={loading}
-              loadingMessage="Loading parents..."
-              emptyMessage="No parents found matching your search criteria."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              gridClassName="grid grid-cols-1 sm:grid-cols-2 gap-3"
-              cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
-                <Card key={parent.id || `parent-card-${index}`} className="p-4 rounded-xl border border-slate-100 shadow-xs bg-white">
-                  <div className="flex items-start justify-between mb-3 gap-2">
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        {parent.signupStatus === 'Signed' ? (
-                          <Link to={`/admin/parents/${parent.id}`} state={{
-                            parentData: parent
-                          }} className="font-bold text-[#0F2D52] hover:underline text-sm block truncate">
-                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                          </Link>
-                        ) : (
-                          <span className="font-bold text-slate-400 cursor-not-allowed text-sm block truncate">
-                            {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                          </span>
-                        )}
-                        <div className="text-xs text-slate-400 font-semibold truncate mt-0.5">
-                          {parent.email}
                         </div>
                       </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 flex-shrink-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                        <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                          <Link to={`/admin/parents/${parent.id}`} state={{
-                            parentData: parent
-                          }} className="cursor-pointer">
-                            <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                            View Details
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                          onClick={() => {
-                            setSelectedParent(parent);
-                            loadClassroomsIfNeeded();
-                            setIsAddChildDialogOpen(true);
-                          }}>
-                          <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
-                          Add Child
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="cursor-pointer"
-                          disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleResendConfirmation(parent.id, parent.email);
-                          }}
-                        >
-                          {resendingParentId === parent.id ? (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />
-                              Sending...
-                            </>
-                          ) : (
-                            <>
-                              <RefreshCw className="h-4 w-4 mr-2 text-slate-400" />
-                              Resend
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        {activeTab === 'active' ? (
-                          <DropdownMenuItem
-                            className="text-red-600 focus:text-red-600 cursor-pointer font-semibold"
-                            disabled={parent.signupStatus === 'Not Signed'}
-                            onClick={() => setParentToDeactivate(parent)}
-                          >
-                            <XCircle className="h-4 w-4 mr-2 text-red-500" />
-                            Deactivate
-                          </DropdownMenuItem>
-                        ) : (
-                          <DropdownMenuItem
-                            className="text-green-600 focus:text-green-600 cursor-pointer font-semibold"
-                            disabled={parent.signupStatus === 'Not Signed'}
-                            onClick={() => setParentToActivate(parent)}
-                          >
-                            <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />
-                            Activate
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mb-3 border-t border-slate-50 pt-2.5">
-                    <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                      {parent.signupStatus === 'Signed' && <CheckCircle className="h-3.5 w-3.5 mr-1" />}
-                      {parent.signupStatus === 'Not Signed' && <XCircle className="h-3.5 w-3.5 mr-1" />}
-                      {parent.signupStatus}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-1.5">
-                    {parent.children.length === 0 ? (
-                      <div className="text-slate-400 text-xs italic font-medium">No children linked yet</div>
-                    ) : (
-                      <div className="space-y-2 mt-2">
-                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Children</div>
-                        <div className="flex flex-wrap gap-2">
+                    </td>
+                    <td className="py-4 px-4 text-xs font-semibold text-slate-600">
+                      <div className="font-medium text-slate-900">{parent.email}</div>
+                      <div className="text-slate-400 mt-0.5">{parent.phoneNumber || 'No phone number'}</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      {parent.children.length === 0 ? (
+                        <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 py-1 max-w-sm">
                           {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
                             <div 
                               key={child.id} 
-                              className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all shadow-xs duration-200 group"
+                              className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
                             >
                               <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
-                              <Link 
-                                to={`/admin/parents/${parent.id}`} 
-                                state={{
-                                  parentData: parent,
-                                  selectedChildId: child.id
-                                }} 
+                              <Link
+                                to={`/admin/parents/${parent.id}`}
+                                state={{ parentData: parent, selectedChildId: child.id }}
                                 className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
                               >
                                 {child.firstName} {child.lastName}
@@ -1063,21 +1042,81 @@ export function ParentManagement() {
                           {parent.children.length > 2 && (
                             <button
                               onClick={(e) => {
-                                  e.preventDefault();
-                                  toggleParentExpanded(parent.id);
-                                }}
-                              className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
+                                e.preventDefault();
+                                toggleParentExpanded(parent.id);
+                              }}
+                              className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
                             >
                               {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
                             </button>
                           )}
                         </div>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              )) : []}
-            />
+                      )}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="inline-flex items-center justify-center text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                        {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+                        {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+                        {parent.signupStatus}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-right pr-6">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                          <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                            <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
+                              <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                              View Details
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+                            onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
+                          >
+                            <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
+                            Add Child
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer"
+                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+                            onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
+                          >
+                            {resendingParentId === parent.id ? (
+                              <><RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />Sending...</>
+                            ) : (
+                              <><RefreshCw className="h-4 w-4 mr-2 text-slate-400" />Resend</>
+                            )}
+                          </DropdownMenuItem>
+                          {activeTab === 'active' ? (
+                            <DropdownMenuItem
+                              className="text-red-600 focus:text-red-650 cursor-pointer font-semibold"
+                              disabled={parent.signupStatus === 'Not Signed'}
+                              onClick={() => setParentToDeactivate(parent)}
+                            >
+                              <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
+                              disabled={parent.signupStatus === 'Not Signed'}
+                              onClick={() => setParentToActivate(parent)}
+                            >
+                              <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                )) : []}
+              />
+            )}
           </CardContent>
         </div>
       </motion.div>

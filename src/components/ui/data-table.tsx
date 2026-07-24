@@ -37,13 +37,13 @@ export function DataTable({
   return (
     <div className={className}>
       <div className="overflow-x-auto">
-        <table className="w-full table-fixed border-collapse stagger-rows">
+        <table className="w-full min-w-[800px] table-fixed border-collapse stagger-rows">
           <thead>
-            <tr className="border-b border-slate-100 bg-slate-50/60">
+            <tr className="border-b border-slate-200 bg-slate-500/50">
               {columns.map((col, i) => (
                 <th
                   key={i}
-                  className={`text-left py-3 px-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 ${col.className ?? ''}`}
+                  className={`text-left py-3.5 px-4 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 ${col.className ?? ''}`}
                 >
                   {col.header}
                 </th>

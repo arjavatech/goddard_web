@@ -411,8 +411,37 @@ export function AdminDashboard() {
     total: item.total
   }));
 
-  const CustomPieTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+  const progressChartData = enrollmentProgress.map(item => ({
+    name: item.classroom,
+    completed: item.completed,
+    pending: Math.max(0, item.total - item.completed),
+    total: item.total,
+    rate: item.total > 0 ? Math.round((item.completed / item.total) * 100) : 0,
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  const progressChartHeight = enrollmentProgress.length * 45 + 60;
+
+  interface TooltipPayload {
+    name?: string;
+    value?: number;
+    color?: string;
+    payload?: {
+      name?: string;
+      completed?: number;
+      pending?: number;
+      total?: number;
+      rate?: number;
+      color?: string;
+    };
+  }
+
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: TooltipPayload[];
+  }
+
+  const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
       return (
         <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-lg text-xs font-semibold text-slate-800">
           <p className="flex items-center gap-1.5">
@@ -425,8 +454,8 @@ export function AdminDashboard() {
     return null;
   };
 
-  const CustomBarTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
+  const CustomBarTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-lg text-xs text-slate-600">
@@ -445,8 +474,47 @@ export function AdminDashboard() {
     return null;
   };
 
+  const CustomProgressTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-xl text-xs font-semibold text-slate-800">
+          <p className="font-extrabold text-slate-900 mb-1.5">{data.name}</p>
+          <div className="space-y-1.5 text-slate-600">
+            <p className="flex justify-between gap-6">
+              <span>Completed Forms:</span>
+              <span className="font-bold text-emerald-600">{data.completed}</span>
+            </p>
+            <p className="flex justify-between gap-6">
+              <span>Pending Forms:</span>
+              <span className="font-bold text-slate-400">{data.pending}</span>
+            </p>
+            <p className="flex justify-between gap-6 border-t border-slate-100 pt-1 mt-1 text-slate-800">
+              <span>Total Forms:</span>
+              <span className="font-bold text-slate-700">{data.total}</span>
+            </p>
+            <p className="flex justify-between gap-6 text-[11px] text-[#1a6fc4] font-extrabold mt-1">
+              <span>Completion Rate:</span>
+              <span>{data.rate}%</span>
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
   if (loading) {
-    return <PageLoader message="Loading dashboard data..." Layout={AdminLayout} />;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-14 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading dashboard data...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -494,7 +562,7 @@ export function AdminDashboard() {
                 <div className="flex items-start justify-between gap-3 relative z-10">
                   <div className="space-y-1.5 min-w-0">
                     <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
-                    <p className="text-[2.25rem] font-extrabold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
+                    <p className="text-[2rem] font-bold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
                   <div className={`p-3 rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
                     <Icon className={`h-5 w-5 ${item.iconColor}`} />
@@ -504,6 +572,36 @@ export function AdminDashboard() {
             );
           })}
         </motion.div>
+
+        {/* Quick Actions Grid */}
+        <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {quickActions.map((action, idx) => {
+              const Icon = action.icon;
+              return (
+                <div key={idx} className="glass-card p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex items-center justify-between group transition-all duration-300 gap-4">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
+                      <Icon className={`w-4 h-4 ${action.iconColor}`} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate">{action.description}</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={action.onClick}
+                    variant="default"
+                    className="h-8 px-3 text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0"
+                  >
+                    {action.btnText}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Visual Analytics Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
@@ -619,93 +717,72 @@ export function AdminDashboard() {
           </div>
         </div>
 
-        {/* Enrollment + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Enrollment table */}
-          <div className="glass-card overflow-hidden lg:col-span-3 order-2 lg:order-1 animate-fade-in-up border border-slate-100 shadow-sm" style={{ animationDelay: '200ms' }}>
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Enrollment Progress by Classroom</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Form completion rate across all classrooms</p>
-              </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-left stagger-rows">
-                <thead>
-                  <tr>
-                    <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Classroom</th>
-                    <th className="px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Completed</th>
-                    <th className="px-5 py-3.5 hidden sm:table-cell text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</th>
-                    <th className="px-5 py-3.5 text-right text-[10px] font-bold uppercase tracking-wider text-slate-400">Rate</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {enrollmentProgress.length === 0 ? (
-                    <tr><td colSpan={4} className="px-5 py-10 text-center text-sm text-slate-400">No enrollment data available yet.</td></tr>
-                  ) : (
-                    enrollmentProgress.map((cls, i) => {
-                      const pct = cls.total > 0 ? Math.round(cls.completed / cls.total * 100) : 0;
-                      const barColor = pct === 100 ? 'bg-emerald-500' : pct >= 60 ? 'bg-[#1a6fc4]' : 'bg-amber-500';
-                      const badgeClass = pct === 100
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/60'
-                        : pct >= 60
-                        ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/60'
-                        : 'bg-amber-50 text-amber-700 border border-amber-200/60';
-                      return (
-                        <tr key={`${cls.classroom}-${i}`} className="transition-colors duration-150 cursor-default hover:bg-slate-50/50">
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
-                                <School className="w-4 h-4 text-[#0F2D52]" />
-                              </div>
-                              <span className="text-sm font-semibold text-slate-800">{cls.classroom}</span>
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5 text-sm text-slate-600 font-medium">{cls.completed} / {cls.total}</td>
-                          <td className="px-5 py-3.5 hidden sm:table-cell">
-                            <div className="w-32 h-2 bg-slate-100 rounded-full overflow-hidden">
-                              <div className={`h-full rounded-full transition-all duration-700 ease-out ${barColor}`} style={{ width: `${isAnimated ? pct : 0}%` }} />
-                            </div>
-                          </td>
-                          <td className="px-5 py-3.5 text-right">
-                            <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-full ${badgeClass}`}>{pct}%</span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+        {/* Enrollment Progress Section */}
+        <div className="glass-card p-5 sm:p-6 border border-slate-100 shadow-sm animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Enrollment Progress by Classroom</h2>
+              <p className="text-xs text-slate-400 mt-0.5">Form completion rate across all classrooms</p>
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="space-y-4 lg:col-span-1 order-1 lg:order-2">
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
-            <div className="space-y-3 stagger-children">
-              {quickActions.map((action, idx) => {
-                const Icon = action.icon;
-                return (
-                  <div key={idx} className="glass-card p-4 hover:shadow-md border border-slate-100 flex flex-col justify-between group transition-all duration-300">
-                    <div className="flex items-start gap-3 mb-3">
-                      <div className={`p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm`}>
-                        <Icon className={`w-4 h-4 ${action.iconColor}`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
-                        <p className="text-[11px] text-slate-400 mt-1 leading-relaxed font-medium">{action.description}</p>
-                      </div>
-                    </div>
-                    <Button
-                      onClick={action.onClick}
-                      variant="default"
-                      className="w-full h-9 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold"
-                    >
-                      {action.btnText}
-                    </Button>
-                  </div>
-                );
-              })}
+          <div className="w-full" style={{ height: `${progressChartHeight}px` }}>
+            {enrollmentProgress.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-slate-400">
+                No enrollment data available yet.
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={progressChartData}
+                  margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                >
+                  <XAxis 
+                    type="number" 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    tick={{ fill: '#475569', fontSize: 11, fontWeight: 700 }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={100}
+                  />
+                  <Tooltip 
+                    content={<CustomProgressTooltip />} 
+                    cursor={{ fill: 'rgba(15, 45, 82, 0.02)', radius: 8 }}
+                  />
+                  <Bar 
+                    dataKey="completed" 
+                    stackId="a" 
+                    fill="#10b981" 
+                    radius={[0, 0, 0, 0]} 
+                    barSize={18}
+                  />
+                  <Bar 
+                    dataKey="pending" 
+                    stackId="a" 
+                    fill="#E2E8F0" 
+                    radius={[0, 6, 6, 0]} 
+                    barSize={18}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-bold pt-4 mt-2 border-t border-slate-50">
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-[#10b981]" />
+              <span className="text-slate-500 uppercase tracking-wider">Completed Forms</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-md bg-[#E2E8F0]" />
+              <span className="text-slate-500 uppercase tracking-wider">Pending / Due Forms</span>
             </div>
           </div>
         </div>

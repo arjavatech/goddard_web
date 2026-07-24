@@ -14,7 +14,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X } from 'lucide-react';
+import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
 
 interface NetworkError {
   code?: string;
@@ -45,6 +45,7 @@ export function AdminManagement() {
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -266,7 +267,16 @@ export function AdminManagement() {
   };
 
   if (isLoading && admins.length === 0) {
-    return <PageLoader message="Loading administrator users..." Layout={AdminLayout} />;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading administrator users...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
@@ -349,6 +359,34 @@ export function AdminManagement() {
                   Showing {filteredAdmins.length} of {totalAdmins} administrator{totalAdmins === 1 ? '' : 's'}
                 </p>
               </div>
+              
+              {/* Segmented View Switcher */}
+              <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('table')}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                    viewMode === 'table'
+                      ? 'bg-white text-[#0F2D52] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                  }`}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span>Table View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                    viewMode === 'card'
+                      ? 'bg-white text-[#0F2D52] shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span>Card View</span>
+                </button>
+              </div>
             </div>
             
             <div className="flex flex-col sm:flex-row gap-3">
@@ -400,125 +438,124 @@ export function AdminManagement() {
                 )}
               </div>
             </div>
-          </div>
-
-          {/* Desktop Table View */}
-          <DataTable
-            className="hidden lg:block relative z-0"
-            loading={isLoading}
-            loadingMessage="Loading administrators..."
-            emptyMessage="No administrators found. Try adjusting your search or filters."
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={filteredAdmins.length}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-            columns={[
-              { header: 'Administrator', className: 'w-2/5' },
-              { header: 'Role', className: 'w-1/5' },
-              { header: 'Status', className: 'w-1/5' },
-              { header: 'Actions', className: 'w-1/5 text-right' },
-            ]}
-            rows={paginatedAdmins.map((admin) => {
-              const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
-              return (
-                <tr key={admin.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-3">
-                      <AvatarInitials initials={initials} className="bg-[#EFF5FB] text-[#0F2D52] font-semibold" />
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-sm font-bold text-slate-900 block truncate">
-                            {admin.first_name} {admin.last_name}
-                          </span>
-                          {admin.role.toLowerCase() === 'owner' && (
-                            <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
-                          )}
+          </div>          {/* Conditional Rendering of Views */}
+          {viewMode === 'card' ? (
+            <MobileCardList
+              className="p-4"
+              loading={isLoading}
+              loadingMessage="Loading administrators..."
+              emptyMessage="No administrators found. Try adjusting your search or filters."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              cards={paginatedAdmins.map((admin) => {
+                const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
+                return (
+                  <Card key={admin.id} className="p-5 border border-slate-100 rounded-2xl bg-white shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between mb-3 gap-2">
+                        <div className="flex items-center space-x-3 min-w-0 flex-1">
+                          <AvatarInitials initials={initials} className="bg-[#EFF5FB] text-[#0F2D52] font-semibold w-9 h-9 rounded-full flex-shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-bold text-slate-800 block truncate">
+                                {admin.first_name} {admin.last_name}
+                              </span>
+                              {admin.role.toLowerCase() === 'owner' && (
+                                <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{admin.email}</p>
+                          </div>
                         </div>
-                        <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{admin.email}</p>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewAdmin(admin)}>
+                              <Eye className="w-4 h-4 mr-2 text-slate-400" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
+                              <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
+                            </DropdownMenuItem>
+                            {!admin.is_verified && (
+                              <DropdownMenuItem
+                                className="cursor-pointer font-medium text-xs text-slate-700"
+                                disabled={resendingAdminId === admin.id}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleResendInvite(admin);
+                                }}
+                              >
+                                {resendingAdminId === admin.id ? (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 mr-2 text-slate-400 animate-spin" /> Resending Invite...
+                                  </>
+                                ) : (
+                                  <>
+                                    <RefreshCw className="w-4 h-4 mr-2 text-slate-400" /> Resend Invite
+                                  </>
+                                )}
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-650 focus:text-red-650 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
+                              <Trash2 className="w-4 h-4 mr-2" /> Delete Admin
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs text-slate-400 font-semibold">Role:</span>
+                          <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                            admin.role.toLowerCase() === 'owner' 
+                              ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50' 
+                              : 'bg-slate-50 text-slate-600 border border-slate-200/50'
+                          }`}>
+                            {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
+                          </span>
+                        </div>
+                        <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
+                          {admin.is_verified ? 'Approved' : 'Pending'}
+                        </Badge>
                       </div>
                     </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full ${
-                      admin.role.toLowerCase() === 'owner' 
-                        ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50' 
-                        : 'bg-slate-50 text-slate-600 border border-slate-200/50'
-                    }`}>
-                      {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                      {admin.is_verified ? 'Approved' : 'Pending'}
-                    </Badge>
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                        <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewAdmin(admin)}>
-                          <Eye className="w-4 h-4 mr-2 text-slate-400" /> View Details
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
-                          <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
-                        </DropdownMenuItem>
-                        {!admin.is_verified && (
-                          <DropdownMenuItem
-                            className="cursor-pointer font-medium text-xs text-slate-700"
-                            disabled={resendingAdminId === admin.id}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleResendInvite(admin);
-                            }}
-                          >
-                            {resendingAdminId === admin.id ? (
-                              <>
-                                <RefreshCw className="w-4 h-4 mr-2 text-slate-400 animate-spin" /> Resending...
-                              </>
-                            ) : (
-                              <>
-                                <RefreshCw className="w-4 h-4 mr-2 text-slate-400" /> Resend Invite
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
-                          <Trash2 className="w-4 h-4 mr-2" /> Delete Admin
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              );
-            })}
-          />
-
-          {/* Mobile Card View */}
-          <MobileCardList
-            className="lg:hidden p-4"
-            loading={isLoading}
-            loadingMessage="Loading administrators..."
-            emptyMessage="No administrators found. Try adjusting your search or filters."
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-            gridClassName="space-y-3"
-            cards={paginatedAdmins.map((admin) => {
-              const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
-              return (
-                <Card key={admin.id} className="p-4 border border-slate-100 rounded-xl bg-white shadow-xs">
-                  <CardContent className="p-0">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                  </Card>
+                );
+              })}
+            />
+          ) : (
+            <DataTable
+              className="relative z-0"
+              loading={isLoading}
+              loadingMessage="Loading administrators..."
+              emptyMessage="No administrators found. Try adjusting your search or filters."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredAdmins.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              columns={[
+                { header: 'Administrator', className: 'w-2/5' },
+                { header: 'Role', className: 'w-1/5' },
+                { header: 'Status', className: 'w-1/5' },
+                { header: 'Actions', className: 'w-1/5 text-right' },
+              ]}
+              rows={paginatedAdmins.map((admin) => {
+                const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
+                return (
+                  <tr key={admin.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
+                    <td className="py-4 px-4">
+                      <div className="flex items-center gap-3">
                         <AvatarInitials initials={initials} className="bg-[#EFF5FB] text-[#0F2D52] font-semibold" />
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-sm font-bold text-slate-800 block truncate">
+                            <span className="text-sm font-bold text-slate-900 block truncate">
                               {admin.first_name} {admin.last_name}
                             </span>
                             {admin.role.toLowerCase() === 'owner' && (
@@ -528,6 +565,22 @@ export function AdminManagement() {
                           <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{admin.email}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className={`inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full ${
+                        admin.role.toLowerCase() === 'owner' 
+                          ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50' 
+                          : 'bg-slate-50 text-slate-600 border border-slate-200/50'
+                      }`}>
+                        {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                        {admin.is_verified ? 'Approved' : 'Pending'}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
@@ -561,33 +614,17 @@ export function AdminManagement() {
                               )}
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-600 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
+                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-650 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete Admin
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </div>
-                    
-                    <div className="flex items-center justify-between border-t border-slate-50 pt-2.5 mt-2.5">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-xs text-slate-400 font-semibold">Role:</span>
-                        <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                          admin.role.toLowerCase() === 'owner' 
-                            ? 'bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50' 
-                            : 'bg-slate-50 text-slate-600 border border-slate-200/50'
-                        }`}>
-                          {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
-                        </span>
-                      </div>
-                      <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                        {admin.is_verified ? 'Approved' : 'Pending'}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          />
+                    </td>
+                  </tr>
+                );
+              })}
+            />
+          )}
         </div>
 
         {/* Invite Admin Dialog */}
