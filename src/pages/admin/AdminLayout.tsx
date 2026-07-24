@@ -369,15 +369,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* ── Quick Navigation ── */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400/80">Navigation</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Quick Links</h4>
               <ul className="space-y-2.5">
                 {[
                   { icon: <Home className="h-3.5 w-3.5" />, label: 'Dashboard', path: '/admin' },
                   { icon: <School className="h-3.5 w-3.5" />, label: 'Classrooms', path: '/admin/classrooms' },
-                  { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Students', path: '/admin/students' },
+                  // { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Students', path: '/admin/students' },
                   { icon: <Users className="h-3.5 w-3.5" />, label: 'Parents', path: '/admin/parents' },
                   { icon: <FileText className="h-3.5 w-3.5" />, label: 'Forms', path: '/admin/forms' },
-                  { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Due Forms', path: '/admin/forms/due' },
+                  // { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Due Forms', path: '/admin/forms/due' },
                 ].map(item => (
                   <li key={item.path}>
                     <Link to={item.path}
@@ -392,7 +392,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
             {/* ── Resources ── */}
             <div className="space-y-4">
-              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
               <ul className="space-y-2.5">
                 {!isSuperAdmin && (
                   <>

@@ -556,16 +556,16 @@ export function AdminDashboard() {
                   visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
                 }}
                 onClick={() => navigate(item.path)}
-                className="group glass-card p-5 cursor-pointer border border-slate-100 hover:border-[#1a6fc4]/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+                className="group glass-card p-3 sm:p-5 cursor-pointer border border-slate-100 hover:border-[#1a6fc4]/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
               >
                 <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#EFF5FB]/50 rounded-full blur-xl group-hover:bg-[#EFF5FB]/80 transition-all duration-300" />
-                <div className="flex items-start justify-between gap-3 relative z-10">
-                  <div className="space-y-1.5 min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
-                    <p className="text-[2rem] font-bold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
+                <div className="flex items-start justify-between gap-2 sm:gap-3 relative z-10">
+                  <div className="space-y-1 sm:space-y-1.5 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
+                    <p className="text-2xl sm:text-[2rem] font-bold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
-                  <div className={`p-3 rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
-                    <Icon className={`h-5 w-5 ${item.iconColor}`} />
+                  <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${item.iconColor}`} />
                   </div>
                 </div>
               </motion.div>
@@ -580,20 +580,20 @@ export function AdminDashboard() {
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
-                <div key={idx} className="glass-card p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex items-center justify-between group transition-all duration-300 gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className={`p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
-                      <Icon className={`w-4 h-4 ${action.iconColor}`} />
+                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex items-center justify-between group transition-all duration-300 gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className={`p-2 sm:p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
+                      <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${action.iconColor}`} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate">{action.description}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate hidden sm:block">{action.description}</p>
                     </div>
                   </div>
                   <Button
                     onClick={action.onClick}
                     variant="default"
-                    className="h-8 px-3 text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0 whitespace-nowrap"
                   >
                     {action.btnText}
                   </Button>
@@ -669,50 +669,62 @@ export function AdminDashboard() {
               <p className="text-xs text-slate-400">Completion percentage by classroom</p>
             </div>
 
-            <div className="h-48 my-4">
+            <div className="h-64 my-4 overflow-x-auto">
               {barData.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                    <XAxis 
-                      dataKey="name" 
-                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      domain={[0, 100]} 
-                      tickFormatter={(v) => `${v}%`}
-                      tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(26, 111, 196, 0.04)', radius: 8 }} />
-                    <Bar dataKey="rate" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                      {barData.map((entry, index) => {
-                        const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
-                        return <Cell key={`cell-${index}`} fill={color} />;
-                      })}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                <div style={{ minWidth: `${Math.max(barData.length * 80, 320)}px`, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={barData} margin={{ top: 10, right: 16, left: -25, bottom: 56 }}>
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        tick={(props) => {
+                          const { x, y, payload } = props;
+                          const words = (payload.value as string).split(' ');
+                          const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
+                          const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
+                          return (
+                            <text x={x} y={y + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
+                              <tspan x={x} dy={0}>{line1}</tspan>
+                              {line2 && <tspan x={x} dy={13}>{line2}</tspan>}
+                            </text>
+                          );
+                        }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tickFormatter={(v) => `${v}%`}
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(26, 111, 196, 0.04)', radius: 8 }} />
+                      <Bar dataKey="rate" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                        {barData.map((entry, index) => {
+                          const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-bold pt-3 border-t border-slate-50">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#10b981]" />
-                <span className="text-slate-500 uppercase tracking-wider">100% Completed</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#1a6fc4]" />
-                <span className="text-slate-500 uppercase tracking-wider">On Track (≥60%)</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#f59e0b]" />
-                <span className="text-slate-500 uppercase tracking-wider">Needs Attention (&lt;60%)</span>
-              </div>
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-3 border-t border-slate-50">
+              {[
+                { color: '#10b981', label: '100% Completed' },
+                { color: '#1a6fc4', label: 'On Track (≥60%)' },
+                { color: '#f59e0b', label: 'Needs Attention (<60%)' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
