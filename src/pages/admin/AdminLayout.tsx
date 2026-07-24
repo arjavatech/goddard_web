@@ -1,9 +1,9 @@
 import React, { ReactNode, useState, useEffect } from 'react';
 import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
-  UserCog, Calendar, Phone, Mail, Globe, MapPin, BookOpen,
+  Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings,
+  Eye, ShieldCheck, Settings, UserCog,
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -98,38 +98,38 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* ── Sidebar — sticky, scrolls up with footer ── */}
         {/* Mobile drawer (fixed overlay) */}
         <aside className={cn(
-          'fixed top-0 left-0 h-full w-60 flex flex-col z-50 transition-transform duration-300 lg:hidden',
-          'bg-[#0F2D52] border-r border-[#1a3a60]',
+          'fixed top-0 left-0 h-full w-64 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:hidden',
+          'bg-white border-r border-slate-200 shadow-2xl',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}>
           {/* Logo area */}
-          <div className="h-20 px-5 flex items-center justify-between border-b border-[#1a3a60] flex-shrink-0">
+          <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
-              className="h-12 w-auto object-contain brightness-0 invert opacity-95 max-w-[170px]"
+              className="h-9 w-auto object-contain max-w-[150px]"
             />
-            <button onClick={() => setIsSidebarOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10">
-              <X className="w-5 h-5" />
+            <button onClick={() => setIsSidebarOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all">
+              <X className="w-4 h-4" />
             </button>
           </div>
-          <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin pt-4">
+          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4 pb-2">
             {navGroups.map((group, gi) => (
-              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+              <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 px-3 mb-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
                     const isActive = currentPath === item.path;
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
                         className={cn(
-                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
-                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                          isActive ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                         )}
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-600')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold' : 'font-medium')}>{item.label}</span>
                       </Link>
                     );
                   })}
@@ -137,6 +137,26 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             ))}
           </nav>
+
+          {/* ── Mobile sidebar footer: User + Logout ── */}
+          <div className="flex-shrink-0 border-t border-slate-100 px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+              </div>
+              <button
+                onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
+                title="Sign out"
+                className="flex-shrink-0 p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* Desktop sidebar — sticky, stays in document flow */}
@@ -149,7 +169,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               className="h-12 w-auto object-contain brightness-0 invert opacity-95 max-w-[170px]"
             />
           </div>
-          <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
+          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
             {navGroups.map((group, gi) => (
               <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
@@ -173,22 +193,59 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             ))}
           </nav>
+
+          {/* ── Desktop sidebar footer: User + Logout ── */}
+          <div className="flex-shrink-0 border-t border-[#1a3a60] px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-white/15 shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+              </div>
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                title="Sign out"
+                className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-all duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
         </aside>
 
         {/* ── Main content ── */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top header — fixed, offset from sidebar on desktop */}
           {userData?.role && (
-            <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200/80 h-16 px-4 lg:px-6 flex items-center justify-between">
+            <header className={cn(
+              'fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center justify-between border-b transition-colors duration-300',
+              isSidebarOpen ? 'bg-[#0F2D52] border-[#1a3a60] lg:bg-white lg:border-slate-200' : 'bg-white border-slate-200'
+            )}>
               <div className="flex items-center gap-3">
-                <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors">
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className={cn(
+                    'lg:hidden p-2 rounded-xl transition-all duration-300',
+                    isSidebarOpen
+                      ? 'text-slate-300 hover:text-white hover:bg-white/10'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                  )}
+                >
                   <Menu className="w-5 h-5" />
                 </button>
                 <div>
-                  <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none">
+                  <h1 className={cn(
+                    'text-sm sm:text-base font-bold tracking-tight leading-none transition-colors duration-300',
+                    isSidebarOpen ? 'text-white lg:text-slate-900' : 'text-slate-900'
+                  )}>
                     {isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal'}
                   </h1>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className={cn(
+                    'text-[11px] mt-0.5 transition-colors duration-300',
+                    isSidebarOpen ? 'text-slate-400 lg:text-slate-500' : 'text-slate-500'
+                  )}>
                     {schoolName || 'The Goddard School'}
                   </p>
                 </div>
@@ -199,8 +256,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
+                    <button className={cn(
+                      'flex items-center gap-2 rounded-xl px-2 py-1.5 border border-transparent transition-all duration-150 focus:outline-none',
+                      isSidebarOpen
+                        ? 'hover:bg-white/10 hover:border-white/20 lg:hover:bg-slate-100 lg:hover:border-slate-200'
+                        : 'hover:bg-slate-100 hover:border-slate-200'
+                    )}>
+                      <div className={cn(
+                        'w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-sm flex-shrink-0 ring-1 transition-colors duration-300',
+                        isSidebarOpen
+                          ? 'bg-white/15 ring-white/25 lg:bg-gradient-to-br lg:from-[#0F2D52] lg:to-[#1a6fc4] lg:ring-transparent'
+                          : 'bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] ring-transparent'
+                      )}>
                         {initials}
                       </div>
                     </button>
@@ -253,85 +320,128 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </div>
         {/* END main content column */}
       </div>
-      {/* END sidebar + main row — footer is OUTSIDE this row      {/* ── Footer — full-width, outside the sidebar+content flex row ── */}
-      <footer className="w-full bg-white border-t border-slate-200">
+      {/* END sidebar + main row — footer is OUTSIDE this row */}
+      {/* ── Footer ── */}
+      <footer className="w-full bg-[#1a3a5c]">
+        {/* Main body */}
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
-        {/* Main content grid */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-10 flex flex-col md:flex-row justify-start items-start gap-16 lg:gap-32">
-          {/* Brand */}
-          <div className="space-y-4 max-w-md">
-            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain" />
-            <p className="text-sm text-slate-500 leading-relaxed">
-              Quality early childhood education through play-based learning — nurturing curious, confident, and creative kids since 1988.
-            </p>
-            <div className="flex items-center gap-2.5 pt-1">
-              {schoolPhone && (
-                <a href={`tel:${schoolPhone}`} title={schoolPhone}
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
-                  <Phone className="h-4 w-4" />
-                </a>
-              )}
-              {schoolEmail && (
-                <a href={`mailto:${schoolEmail}`} title={schoolEmail}
-                  className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
-                  <Mail className="h-4 w-4" />
-                </a>
-              )}
-              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-                className="w-9 h-9 rounded-xl bg-white hover:bg-[#0F2D52] hover:text-white flex items-center justify-center text-slate-500 transition-all border border-slate-200 hover:border-[#0F2D52] shadow-xs">
-                <Globe className="h-4 w-4" />
-              </a>
+            {/* ── Brand column ── */}
+            <div className="lg:col-span-2 space-y-4">
+              <img
+                src="/gs_logo_lynnwood.png"
+                alt="The Goddard School"
+                className="h-9 w-auto object-contain brightness-0 invert opacity-90"
+              />
+              <p className="text-sm text-slate-300/70 leading-relaxed max-w-sm">
+                Empowering families through seamless enrollment management — built for The Goddard School's commitment to quality early childhood education.
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                {schoolPhone && (
+                  <a href={`tel:${schoolPhone}`}
+                    className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors flex-shrink-0">
+                      <Phone className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium">{schoolPhone}</span>
+                  </a>
+                )}
+                {schoolEmail && (
+                  <a href={`mailto:${schoolEmail}`}
+                    className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors flex-shrink-0">
+                      <Mail className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium">{schoolEmail}</span>
+                  </a>
+                )}
+                {schoolAddress && (
+                  <span className="inline-flex items-start gap-2.5 text-xs text-slate-300/70 w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Globe className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium leading-relaxed">{schoolAddress}</span>
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Resources */}
-          <div className="space-y-4 min-w-[200px]">
-            <h4 className="text-xs font-bold uppercase tracking-widest text-[#0F2D52]">Resources</h4>
-            <ul className="space-y-3">
-              {!isSuperAdmin && (
+            {/* ── Quick Navigation ── */}
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400/80">Navigation</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { icon: <Home className="h-3.5 w-3.5" />, label: 'Dashboard', path: '/admin' },
+                  { icon: <School className="h-3.5 w-3.5" />, label: 'Classrooms', path: '/admin/classrooms' },
+                  { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Students', path: '/admin/students' },
+                  { icon: <Users className="h-3.5 w-3.5" />, label: 'Parents', path: '/admin/parents' },
+                  { icon: <FileText className="h-3.5 w-3.5" />, label: 'Forms', path: '/admin/forms' },
+                  { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Due Forms', path: '/admin/forms/due' },
+                ].map(item => (
+                  <li key={item.path}>
+                    <Link to={item.path}
+                      className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
+                      <span className="text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0">{item.icon}</span>
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* ── Resources ── */}
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
+              <ul className="space-y-2.5">
+                {!isSuperAdmin && (
+                  <>
+                    <li>
+                      <button onClick={() => setShowHelpModal(true)}
+                        className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                        <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="font-medium">Help Center</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setShowGuideModal(true)}
+                        className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                        <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="font-medium">Admin Guide</span>
+                      </button>
+                    </li>
+                  </>
+                )}
+                {isSuperAdmin && (
+                  <li>
+                    <button onClick={() => setShowSuperGuideModal(true)}
+                      className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                      <ShieldCheck className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                      <span className="font-medium">SuperAdmin Guide</span>
+                    </button>
+                  </li>
+                )}
                 <li>
-                  <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
-                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
-                    <span>Help Center</span>
-                  </button>
+                  <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
+                    <Globe className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium">Goddard School</span>
+                  </a>
                 </li>
-              )}
-              {!isSuperAdmin && (
-                <li>
-                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
-                    <BookOpen className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
-                    <span>Admin Guide</span>
-                  </button>
-                </li>
-              )}
-              {isSuperAdmin && (
-                <li>
-                  <button onClick={() => setShowSuperGuideModal(true)} className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group w-full text-left">
-                    <ShieldCheck className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
-                    <span>SuperAdmin Guide</span>
-                  </button>
-                </li>
-              )}
-              <li>
-                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-2.5 text-sm font-medium text-slate-600 hover:text-[#0F2D52] transition-colors group">
-                  <Globe className="h-4 w-4 text-slate-400 group-hover:text-[#0F2D52] transition-colors" />
-                  <span>Goddard School</span>
-                </a>
-              </li>
-            </ul>
+              </ul>
+            </div>
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-slate-100 bg-[#F7F9FC]">
+        {/* ── Bottom bar ── */}
+        <div className="border-t border-white/10">
           <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-xs text-slate-400 text-center sm:text-left">
               © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
             </p>
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-slate-200 bg-white">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="text-[11px] font-semibold tracking-widest text-slate-500 uppercase">
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
                 {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
               </span>
             </div>
@@ -341,7 +451,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* ── Modals ── */}
       <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl">
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-amber-500" /> SuperAdmin Guide</DialogTitle>
             <DialogDescription>SuperAdmin-exclusive features, roles, and responsibilities</DialogDescription>

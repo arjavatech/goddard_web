@@ -23,7 +23,7 @@ export function SortDropdown({ currentSortBy, currentSortOrder, options, labels,
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={`h-10 sm:h-11 ${className ?? ''}`}>
+        <Button variant="outline" size="sm" className={`h-10 ${className ?? ''}`}>
           {currentSortOrder === 'asc'
             ? <ArrowUp className="h-4 w-4 mr-2" />
             : <ArrowDown className="h-4 w-4 mr-2" />}

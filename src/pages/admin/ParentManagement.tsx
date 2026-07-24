@@ -803,7 +803,7 @@ export function ParentManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5 ">
+                <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sort By</label>
                   <SortDropdown
                     currentSortBy={sortBy}
@@ -811,6 +811,7 @@ export function ParentManagement() {
                     options={sortOptions}
                     labels={sortLabels}
                     onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
+                    className="w-full justify-between rounded-xl border-slate-200 text-xs font-semibold bg-white hover:bg-slate-50 focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]"
                   />
                 </div>
               </div>
