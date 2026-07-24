@@ -750,7 +750,7 @@ export function DueForms() {
               )}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button className="bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl h-10 sm:h-11 transition-all duration-200" size="sm" disabled={bulkRemindLoading}>
+                  <Button className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 border-2 border-[#0F2D52] rounded-xl h-10 sm:h-11 transition-all duration-200" size="sm" disabled={bulkRemindLoading}>
                     {bulkRemindLoading ? (
                       <>
                         <div className="h-4 w-4 mr-1.5 border-2 border-[#0F2D52] border-t-transparent rounded-full animate-spin" />
@@ -951,7 +951,7 @@ export function DueForms() {
                                   variant="outline"
                                   onClick={() => handleSendReminder([form.id])}
                                   disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                                  className="h-8 px-3 text-xs rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 font-bold"
+                                  className="h-8 px-3 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 border border-[#0F2D52] hover:text-white transition-all duration-200 font-bold"
                                 >
                                   {remindingFormIds.has(form.id) ? (
                                     <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />

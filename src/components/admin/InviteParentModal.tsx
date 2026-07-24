@@ -78,6 +78,28 @@ export function InviteParentModal({
   setInviteFormErrors,
   isDialogClosing
 }: InviteParentModalProps) {
+  const [showSecondaryParent, setShowSecondaryParent] = React.useState(false);
+
+  // Auto-expand if there are pre-existing values or errors in secondary parent fields
+  React.useEffect(() => {
+    if (isOpen) {
+      const hasData = !!(
+        (secondaryParentFirstName && secondaryParentFirstName.trim()) ||
+        (secondaryParentLastName && secondaryParentLastName.trim()) ||
+        (secondaryParentEmail && secondaryParentEmail.trim()) ||
+        (secondaryParentPhoneNumber && secondaryParentPhoneNumber.trim()) ||
+        inviteFormErrors.secondaryParentFirstName ||
+        inviteFormErrors.secondaryParentLastName ||
+        inviteFormErrors.secondaryParentEmail
+      );
+      if (hasData) {
+        setShowSecondaryParent(true);
+      } else {
+        setShowSecondaryParent(false);
+      }
+    }
+  }, [isOpen, secondaryParentFirstName, secondaryParentLastName, secondaryParentEmail, secondaryParentPhoneNumber, inviteFormErrors]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg" preventClose>

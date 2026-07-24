@@ -636,9 +636,6 @@ export function AdminManagement() {
         }}>
           <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
             <DialogHeader className="mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#EFF5FB] text-[#0F2D52] flex items-center justify-center mb-3">
-                <UserCheck className="w-5 h-5" />
-              </div>
               <DialogTitle className="text-lg font-bold text-slate-900">Invite New Admin</DialogTitle>
               <p className="text-xs text-slate-500 font-medium">Send an email invitation to register a new administrator account.</p>
             </DialogHeader>

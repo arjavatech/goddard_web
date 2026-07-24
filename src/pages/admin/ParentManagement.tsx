@@ -739,8 +739,8 @@ export function ParentManagement() {
                   <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
                     <button
                       type="button"
-                      onClick={() => handleViewModeChange('table')}
-                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                      onClick={() => setViewMode('table')}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                         viewMode === 'table'
                           ? 'bg-white text-[#0F2D52] shadow-xs'
                           : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
@@ -751,8 +751,8 @@ export function ParentManagement() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => handleViewModeChange('card')}
-                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                      onClick={() => setViewMode('card')}
+                      className={`flex items-center gap-1 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
                         viewMode === 'card'
                           ? 'bg-white text-[#0F2D52] shadow-xs'
                           : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
@@ -803,7 +803,7 @@ export function ParentManagement() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 ">
                   <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sort By</label>
                   <SortDropdown
                     currentSortBy={sortBy}
