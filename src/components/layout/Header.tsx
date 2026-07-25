@@ -37,7 +37,7 @@ export function Header() {
           {/* Logo + School Name */}
           <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
             <img
-              src="./images/gs_logo_lynnwood.png"
+              src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
               className="h-8 sm:h-11 w-auto object-contain flex-shrink-0"
             />

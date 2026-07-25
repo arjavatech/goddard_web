@@ -215,8 +215,6 @@ export function FormsDocuments({
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [countdown, setCountdown] = useState(3);
-  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCountingDownRef = useRef(false);
   const iframeLoadedRef = useRef(false);
@@ -259,7 +257,6 @@ export function FormsDocuments({
       setOpenError(null);
       setShowThankYou(false);
       setIsFrameLoading(false);
-      if (countdownRef.current) clearInterval(countdownRef.current);
       if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
     }
   }, [selectedChildId]);
@@ -656,41 +653,19 @@ export function FormsDocuments({
     if (!selectedFormRef.current || isCountingDownRef.current) return;
     isCountingDownRef.current = true;
     setShowThankYou(true);
-    setCountdown(3);
 
-    
-
-    if (countdownRef.current) clearInterval(countdownRef.current);
     if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
 
-    
+    // Immediately trigger refresh when thank you page starts
+    if (onFormCompleted) onFormCompleted();
 
-    // Start countdown
-    countdownRef.current = setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          // Auto redirect to home
-          setSelectedForm(null);
-          setShowThankYou(false);
-          setIsFrameLoading(false);
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          // Trigger refresh when auto-redirecting
-          if (onFormCompleted) onFormCompleted();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    
-
-    // Fallback timeout in case countdown doesn't work
+    // Auto-close form view and hide success message after exactly 2 seconds
     thankYouTimeoutRef.current = setTimeout(() => {
       setSelectedForm(null);
       setShowThankYou(false);
       setIsFrameLoading(false);
-      if (onFormCompleted) onFormCompleted();
-    }, 15000);
+      isCountingDownRef.current = false;
+    }, 2000);
   };
 
   // Handle form completion detection and auto-redirect
@@ -726,7 +701,6 @@ export function FormsDocuments({
 
     return () => {
       if (urlCheckInterval) clearInterval(urlCheckInterval);
-      if (countdownRef.current) clearInterval(countdownRef.current);
       if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
     };
   }, [selectedForm, isFrameLoading]);
@@ -910,7 +884,6 @@ export function FormsDocuments({
                 setSelectedForm(null);
                 setIsFrameLoading(false);
                 setShowThankYou(false);
-                if (countdownRef.current) clearInterval(countdownRef.current);
                 if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
                 if (onFormCompleted) onFormCompleted();
               }}
@@ -945,9 +918,6 @@ export function FormsDocuments({
                     <h4 className="text-sm font-semibold text-green-900">Form submitted successfully!</h4>
                     <p className="text-xs text-green-700 mt-0.5">We've received your submission.</p>
                   </div>
-                </div>
-                <div className="bg-green-100/80 px-3 py-1 rounded-md text-xs font-semibold text-green-800 border border-green-200">
-                  Updating dashboard in {countdown}s
                 </div>
               </div>
             )}
