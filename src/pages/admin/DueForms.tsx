@@ -888,7 +888,7 @@ export function DueForms() {
                               variant="outline"
                               onClick={() => handleSendReminder([form.id])}
                               disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                              className="w-full h-9 text-xs font-bold rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 border border-[#0F2D52] transition-all duration-200"
+                              className="w-full h-9 text-xs font-bold rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 hover:text-white border border-[#0F2D52] transition-all duration-200"
                             >
                               {remindingFormIds.has(form.id) ? (
                                 <>

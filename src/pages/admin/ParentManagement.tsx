@@ -839,9 +839,10 @@ export function ParentManagement() {
                 cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
                   <Card key={parent.id || `parent-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
                     <div>
+                      {/* Header row */}
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
+                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#0b5298] text-white font-extrabold w-10 h-10 rounded-full" />
                           <div className="min-w-0 flex-1">
                             {parent.signupStatus === 'Signed' ? (
                               <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
@@ -854,89 +855,81 @@ export function ParentManagement() {
                             )}
                             <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{parent.email}</p>
                           </div>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
-                                <MoreHorizontal className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                              <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
-                                  <Eye className="h-4 w-4 mr-2 text-slate-400" />View Details
-                                </Link>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'} onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}>
-                                <UserCircle className="h-4 w-4 mr-2 text-slate-400" />Add Child
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'} onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}>
-                                <RefreshCw className={`h-4 w-4 mr-2 text-slate-400 ${resendingParentId === parent.id ? 'animate-spin' : ''}`} />
-                                {resendingParentId === parent.id ? 'Sending...' : 'Resend Invitation'}
-                              </DropdownMenuItem>
-                              {activeTab === 'active' ? (
-                                <DropdownMenuItem className="text-red-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToDeactivate(parent)}>
-                                  <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem className="text-emerald-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToActivate(parent)}>
-                                  <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
+                                <Eye className="h-4 w-4 mr-2 text-slate-400" />View Details
+                              </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'} onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}>
+                              <UserCircle className="h-4 w-4 mr-2 text-slate-400" />Add Child
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'} onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}>
+                              <RefreshCw className={`h-4 w-4 mr-2 text-slate-400 ${resendingParentId === parent.id ? 'animate-spin' : ''}`} />
+                              {resendingParentId === parent.id ? 'Sending...' : 'Resend Invitation'}
+                            </DropdownMenuItem>
+                            {activeTab === 'active' ? (
+                              <DropdownMenuItem className="text-red-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToDeactivate(parent)}>
+                                <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem className="text-emerald-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToActivate(parent)}>
+                                <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div> {/* Close header row */}
 
-                        <div className="mx-4 border-t border-slate-50" />
+                      <div className="my-3 border-t border-slate-50" />
 
-                        {/* Status row */}
-                        <div className="px-4 py-3 flex items-center justify-between">
-                          <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
-                            {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                            {parent.signupStatus}
-                          </Badge>
-                          <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
-                        </div>
-
-                        <div className="mx-4 border-t border-slate-50" />
-
-                        {/* Children */}
-                        <div className="px-4 py-3">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Children ({parent.children.length})</p>
-                          {parent.children.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic">No children linked yet</p>
-                          ) : (
-                            <div className="flex flex-wrap gap-1.5">
-                              {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                                <div key={child.id} className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
-                                  <GraduationCap className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                                  <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent, selectedChildId: child.id }} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[90px]">
-                                    {child.firstName} {child.lastName}
-                                  </Link>
-                                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400">{child.classroom.name}</span>
-                                </div>
-                              ))}
-                              {parent.children.length > 2 && (
-                                <button onClick={(e) => { e.preventDefault(); toggleParentExpanded(parent.id); }} className="inline-flex items-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all">
-                                  {expandedParents[parent.id] ? 'Less' : `+${parent.children.length - 2}`}
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
+                      {/* Status row */}
+                      <div className="py-2 flex items-center justify-between">
+                        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
+                          {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
+                          {parent.signupStatus}
+                        </Badge>
+                        <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
                       </div>
-                    ))}
-                  </div>
-                )}
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <span className="text-xs text-slate-400 font-semibold">Page {currentPage} of {totalPages}</span>
-                    <div className="flex items-center gap-1">
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Prev</Button>
-                      <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Next</Button>
+
+                      <div className="my-3 border-t border-slate-50" />
+
+                      {/* Children */}
+                      <div className="py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Children ({parent.children.length})</p>
+                        {parent.children.length === 0 ? (
+                          <p className="text-xs text-slate-400 italic">No children linked yet</p>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                              <div key={child.id} className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
+                                <GraduationCap className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent, selectedChildId: child.id }} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[90px]">
+                                  {child.firstName} {child.lastName}
+                                </Link>
+                                <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400">{child.classroom.name}</span>
+                              </div>
+                            ))}
+                            {parent.children.length > 2 && (
+                              <button onClick={(e) => { e.preventDefault(); toggleParentExpanded(parent.id); }} className="inline-flex items-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all">
+                                {expandedParents[parent.id] ? 'Less' : `+${parent.children.length - 2}`}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  </Card>
+                )) : []}
+              />
             ) : (
               <DataTable
                 className="relative z-0"
