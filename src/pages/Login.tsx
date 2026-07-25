@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft, GraduationCap, ShieldCheck, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
@@ -101,7 +101,7 @@ export function Login() {
         <div className="pointer-events-none absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[100px]" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-blue-500/10 blur-[80px]" />
 
-        {/* Logo */}
+        {/* Logo Header */}
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -115,19 +115,8 @@ export function Login() {
           />
         </motion.div>
 
-        {/* Centre copy */}
-        <div className="relative z-10 space-y-8 my-auto mt-8">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="flex items-center gap-3"
-          >
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[10px] font-bold tracking-wider uppercase">
-              <GraduationCap className="w-3.5 h-3.5" /> Goddard School Portal
-            </div>
-          </motion.div>
-
+        {/* Centre copy (Balanced typographic visual layout) */}
+        <div className="relative z-10 space-y-8 my-auto max-w-md mt-8">
           <div className="space-y-4">
             <motion.h1 
               initial={{ opacity: 0, y: 15 }}
@@ -143,31 +132,38 @@ export function Login() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-sm text-slate-300/90 leading-relaxed max-w-sm"
+              className="text-sm text-slate-300/90 leading-relaxed"
             >
-              Sign in to manage enrollment forms, upload physical documentation, track milestones, and stay integrated with our school administrators.
+              Access your school portal to manage classrooms, complete forms, track student progress, and stay connected through a secure, unified platform.
             </motion.p>
           </div>
 
-          {/* Feature highlights */}
+          {/* Premium UI/UX Feature Cards */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.5 }}
-            className="space-y-3.5 max-w-sm pt-2"
+            className="grid grid-cols-1 gap-4 pt-2"
           >
-            {[
-              { text: 'Verify, sign, and submit documents securely', icon: ShieldCheck, color: 'text-cyan-400' },
-              { text: 'Monitor assignment statuses and school updates', icon: Sparkles, color: 'text-amber-400' },
-              { text: 'Automated milestone and learning progress logs', icon: CheckCircle2, color: 'text-emerald-400' },
-            ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 text-sm text-slate-200/90 font-medium">
-                <span className="flex-shrink-0 w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
-                  <item.icon className={`w-3.5 h-3.5 ${item.color}`} />
-                </span>
-                {item.text}
+            <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/[0.08] transition-colors duration-300">
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <ShieldCheck className="w-5 h-5 text-cyan-400" />
               </div>
-            ))}
+              <div>
+                <h3 className="text-sm font-semibold text-white">Smart Form Management</h3>
+                <p className="text-xs text-slate-300/80 mt-0.5 leading-relaxed">Create, complete, and manage enrollment and school forms with a simple, streamlined workflow.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/[0.08] transition-colors duration-300">
+              <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-cyan-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Student & Classroom Insights</h3>
+                <p className="text-xs text-slate-300/80 mt-0.5 leading-relaxed">Monitor student progress, manage classrooms, and access important school information from one place.</p>
+              </div>
+            </div>
           </motion.div>
         </div>
 
@@ -202,9 +198,19 @@ export function Login() {
             Back to school selection
           </button>
 
-          <div className="mb-6 space-y-1">
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
-            <p className="text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
+          <div className="mb-6 space-y-3">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[10px] font-bold tracking-wider uppercase w-fit"
+            >
+              <GraduationCap className="w-3.5 h-3.5 text-[#0F2D52]" /> Goddard School Portal
+            </motion.div>
+            <div className="space-y-1">
+              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
+              <p className="text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
+            </div>
           </div>
 
           {/* Selected school chip */}

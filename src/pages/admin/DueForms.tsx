@@ -921,6 +921,7 @@ export function DueForms() {
                             <th className="text-center py-3.5 px-3 w-12 border-y border-slate-200/85 bg-slate-50/80">
                               <Checkbox
                                 checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
+                                indeterminate={selectedForms.length > 0 && selectedForms.length < filteredForms.length}
                                 onCheckedChange={handleSelectAll}
                               />
                             </th>
@@ -935,7 +936,7 @@ export function DueForms() {
                         </thead>
                         <tbody>
                           {paginatedForms.map(form => (
-                            <tr key={form.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                            <tr key={form.id} className={`border-b border-slate-50 transition-all duration-150 ease-in-out ${selectedForms.includes(form.id) ? 'bg-[#EFF5FB] hover:bg-[#e6f0f9]' : 'hover:bg-[#F8FAFC]'}`}>
                               <td className="py-4 px-3 text-center">
                                 <Checkbox
                                   checked={selectedForms.includes(form.id)}

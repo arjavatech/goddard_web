@@ -827,24 +827,21 @@ export function ParentManagement() {
 
             {/* Conditional Rendering of Views */}
             {viewMode === 'card' ? (
-              <div className="p-5 space-y-4">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[11px] text-slate-400 font-semibold">{paginatedParents.length} of {sortedParents.length}</span>
-                </div>
-                {paginatedParents.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm font-semibold">No parents found matching your search criteria.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginatedParents.map((parent, index) => (
-                      <div key={parent.id || `parent-card-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
-                        {/* Header */}
-                        <div className="p-4 flex items-start gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
-                            {parent.firstName[0]}{parent.lastName[0]}
-                          </div>
+              <MobileCardList
+                className="p-5"
+                loading={loading}
+                loadingMessage="Loading parents..."
+                emptyMessage="No parents found matching your search criteria."
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
+                  <Card key={parent.id || `parent-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
                           <div className="min-w-0 flex-1">
                             {parent.signupStatus === 'Signed' ? (
                               <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">

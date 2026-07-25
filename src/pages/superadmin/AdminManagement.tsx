@@ -462,7 +462,7 @@ export function AdminManagement() {
                     <div>
                       <div className="flex items-start justify-between mb-3 gap-2">
                         <div className="flex items-center space-x-3 min-w-0 flex-1">
-                          <AvatarInitials initials={initials} className="bg-[#EFF5FB] text-[#0F2D52] font-semibold w-9 h-9 rounded-full flex-shrink-0" />
+                          <AvatarInitials initials={initials} className="bg-[#01478d] text-white font-semibold w-9 h-9 rounded-full flex-shrink-0" />
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm font-bold text-slate-800 block truncate">
@@ -558,7 +558,7 @@ export function AdminManagement() {
                   <tr key={admin.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
-                        <AvatarInitials initials={initials} className="bg-[#EFF5FB] text-[#0F2D52] font-semibold" />
+                        <AvatarInitials initials={initials} className="bg-[#0151a0] text-white font-semibold" />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-bold text-slate-900 block truncate">

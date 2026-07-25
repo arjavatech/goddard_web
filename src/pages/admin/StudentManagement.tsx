@@ -885,78 +885,58 @@ export function StudentManagement() {
                     <Checkbox
                       checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
                       onCheckedChange={(checked) => {
-                        setSelectedStudentsForBulkAction(checked ? filteredAndSortedStudents.map(s => s.id) : []);
+                        if (checked) {
+                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                        } else {
+                          setSelectedStudentsForBulkAction([]);
+                        }
                       }}
                     />
-                    <span className="text-xs font-bold text-slate-600">Select All</span>
-                    {selectedStudentsForBulkAction.length > 0 && (
-                      <span className="text-[10px] font-bold text-[#0F2D52] bg-[#EFF5FB] px-2 py-0.5 rounded-full border border-[#0F2D52]/10">
-                        {selectedStudentsForBulkAction.length} selected
-                      </span>
-                    )}
-                  </label>
-                  <span className="text-[11px] text-slate-400 font-semibold">{paginatedStudents.length} of {filteredAndSortedStudents.length}</span>
-                </div>
-
-                {paginatedStudents.length === 0 ? (
-                  <div className="py-16 text-center">
-                    <GraduationCap className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                    <p className="text-slate-400 text-sm font-semibold">No students found matching your search criteria.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {paginatedStudents.map((student, index) => {
-                      const isSelected = selectedStudentsForBulkAction.includes(student.id);
-                      const apiFormStatus = student.formStatus || 'incomplete';
-                      return (
-                        <div
-                          key={student.id || `card-${index}`}
-                          className={`relative rounded-2xl border bg-white transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${
-                            isSelected ? 'border-[#0F2D52]/30 ring-2 ring-[#0F2D52]/10 shadow-sm' : 'border-slate-100 shadow-xs'
+                    <span className="text-xs font-bold text-slate-700">Select All</span>
+                  </div>,
+                  ...paginatedStudents.map((student, index) => (
+                    <Card key={student.id || `card-${index}`} className="group overflow-hidden border border-slate-100 rounded-2xl p-5 bg-white shadow-xs hover:shadow-md hover:border-slate-200/80 transition-all duration-300 hover:-translate-y-1 space-y-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Checkbox
+                            checked={selectedStudentsForBulkAction.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                              } else {
+                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                              }
+                            }}
+                            className="flex-shrink-0"
+                          />
+                          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
+                              state={{ fromStudents: true }}
+                              className="font-extrabold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate"
+                            >
+                              {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+                            </Link>
+                            <p className="text-xs text-slate-400 font-bold mt-0.5 uppercase tracking-wider">{student.classroom.name}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setNewStatus(student.childStatus);
+                            setIsStatusDialogOpen(true);
+                          }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 transition-all border ${
+                            student.childStatus === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
                           }`}
                         >
-                          {/* Card Header */}
-                          <div className="p-4 flex items-start gap-3">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={(checked) => {
-                                setSelectedStudentsForBulkAction(prev =>
-                                  checked ? [...prev, student.id] : prev.filter(id => id !== student.id)
-                                );
-                              }}
-                              className="mt-0.5 flex-shrink-0"
-                            />
-                            <div className="flex items-center gap-3 flex-1 min-w-0">
-                              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
-                                {student.firstName[0]}{student.lastName[0]}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <Link
-                                  to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
-                                  state={{ fromStudents: true }}
-                                  className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
-                                >
-                                  {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)}{' '}
-                                  {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                                </Link>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  <School className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                                  <span className="text-[11px] text-slate-400 font-semibold truncate">{student.classroom.name}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => { setSelectedStudent(student); setNewStatus(student.childStatus); setIsStatusDialogOpen(true); }}
-                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold flex-shrink-0 border transition-all ${
-                                student.childStatus === 'active'
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
-                                  : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'
-                              }`}
-                            >
-                              {student.childStatus === 'active' ? 'Active' : 'Archived'}
-                              <Edit className="h-2.5 w-2.5" />
-                            </button>
-                          </div>
+                          <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+                          <Edit className="h-3 w-3 opacity-80" />
+                        </button>
+                      </div>
 
                           {/* Divider */}
                           <div className="mx-4 border-t border-slate-50" />
@@ -1079,7 +1059,7 @@ export function StudentManagement() {
                   { 
                     header: (
                       <Checkbox
-                        checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
+                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setSelectedStudentsForBulkAction(filteredAndSortedStudents.map(s => s.id));
@@ -1100,7 +1080,7 @@ export function StudentManagement() {
                   { header: 'Progress', className: 'text-right w-[12%]' },
                 ]}
                 rows={paginatedStudents.map((student, index) => (
-                  <tr key={student.id || `row-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
+                  <tr key={student.id || `row-${index}`} className={`border-b border-slate-50 transition-all duration-150 ease-in-out ${selectedStudentsForBulkAction.includes(student.id) ? 'bg-[#EFF5FB] hover:bg-[#e6f0f9]' : 'hover:bg-[#F8FAFC]'}`}>
                     <td className="py-3 px-2 text-center">
                       <Checkbox
                         checked={selectedStudentsForBulkAction.includes(student.id)}
