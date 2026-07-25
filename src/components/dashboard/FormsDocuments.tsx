@@ -52,9 +52,6 @@ function FormCard({
 }: FormCardProps) {
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
-
-
-
   const getBorderColor = () => {
     if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
     return 'border-amber-500';
@@ -81,10 +78,8 @@ function FormCard({
           </div>
         </div>
       </div>
-
       {/* Divider */}
       <div className="mx-4 border-t border-slate-50" />
-
       {/* Footer */}
       <div className="px-4 py-3 flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -148,7 +143,6 @@ function FormCard({
           )}
         </div>
       </div>
-
       {disabled && disabledReason && (
         <div className="px-4 pb-3 text-[11px] text-amber-700 flex items-center gap-1">
           <AlertCircle className="h-3 w-3 flex-shrink-0" />
@@ -172,7 +166,6 @@ interface FormData {
   dueDate?: string | null;
   fromContinueButton?: boolean;
 }
-
 
 interface FormsDocumentsProps {
   childSpecificForms: {
@@ -243,7 +236,6 @@ export function FormsDocuments({
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
-
   const handleDownloadAll = async () => {
     if (!enrollmentId) return;
     setIsDownloadingAll(true);
@@ -279,7 +271,6 @@ export function FormsDocuments({
     if (!trimmed || trimmed === '#') return null;
     return trimmed;
   };
-
   const extractStudentFormAssignmentIdFromUrl = (value: unknown): string | null => {
     if (typeof value !== 'string') return null;
     const trimmed = value.trim();
@@ -293,14 +284,12 @@ export function FormsDocuments({
       return null;
     }
   };
-
   const coerceStudentFormAssignmentIdForPayload = (value: unknown): { raw: string | null; asNumber: number | null; isValid: boolean } => {
     const raw = extractStudentFormAssignmentId(value);
     if (!raw) return { raw: null, asNumber: null, isValid: false };
     const numeric = /^\d+$/.test(raw) ? Number(raw) : Number.NaN;
     return { raw, asNumber: Number.isFinite(numeric) ? numeric : null, isValid: true };
   };
-
   // Combine all forms into a single list with proper typing
   const allForms = useMemo(() => {
     return [
@@ -319,7 +308,6 @@ export function FormsDocuments({
           console.log('Matching form for:', form.title, 'formId:', form.formId);
           console.log('Raw child data:', rawChild);
           console.log('Available raw forms (full):', rawChild?.forms);
-
           const matchingRawForm = rawChild?.forms?.find((rawForm: any) => {
             return rawForm.formId === form.formId ||
               rawForm.formName === form.title ||
@@ -360,7 +348,6 @@ export function FormsDocuments({
       console.log('Selected Child ID:', selectedChildId);
       console.log('Form data:', form);
       console.log('Active Tab:', activeTab);
-
       // Skip validation for forms from Continue button
       if (form.fromContinueButton) {
         console.log('✓ Form from Continue button - bypassing child ID validation');
@@ -394,7 +381,6 @@ export function FormsDocuments({
         null;
       const formId = rawData.formId || form.formId;
       const idForPayload = coerceStudentFormAssignmentIdForPayload(studentFormAssignmentId);
-
       console.log('Form data for URL construction:', {
         status: form.status,
         recentEditLink,
@@ -421,6 +407,7 @@ export function FormsDocuments({
           const link = recentEditLink || filloutFormId;
           if (!link) return false;
           if (link.includes('fillout.com')) return true;
+          if (link.includes('form-builder-atj.pages.dev')) return true; // Custom form builder also uses Fillout API
           if (!link.startsWith('http')) return true; // Legacy slugs/IDs are treated as Fillout
           return false;
         })();
@@ -601,7 +588,6 @@ export function FormsDocuments({
       onFormOpened();
     }
   }, [formToOpen, allForms, selectedChildId]);
-
   // Get forms for the selected tab
   const getFormsForTab = (tabValue: string) => {
     if (tabValue === 'all') {
@@ -614,11 +600,9 @@ export function FormsDocuments({
     }
   };
 
-
   const handleDownload = async (form: any) => {
     const pdfLink = form.rawData?.recent_pdf_link || form.recentPdfLink;
     if (!pdfLink) return;
-
     setLoadingAction({ action: 'download', formId: form.formId || form._key });
     try {
       const response = await fetch(pdfLink);
@@ -673,10 +657,14 @@ export function FormsDocuments({
     isCountingDownRef.current = true;
     setShowThankYou(true);
     setCountdown(3);
+
     
+
     if (countdownRef.current) clearInterval(countdownRef.current);
     if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
+
     
+
     // Start countdown
     countdownRef.current = setInterval(() => {
       setCountdown(prev => {
@@ -693,7 +681,9 @@ export function FormsDocuments({
         return prev - 1;
       });
     }, 1000);
+
     
+
     // Fallback timeout in case countdown doesn't work
     thankYouTimeoutRef.current = setTimeout(() => {
       setSelectedForm(null);
@@ -706,7 +696,6 @@ export function FormsDocuments({
   // Handle form completion detection and auto-redirect
   useEffect(() => {
     let urlCheckInterval: ReturnType<typeof setInterval>;
-
     // Monitor iframe URL changes for thank you page detection
     const monitorIframeUrl = () => {
       const activeForm = selectedFormRef.current;
@@ -726,11 +715,15 @@ export function FormsDocuments({
         // We'll rely on message passing or user interaction
       }
     };
+
     
+
     if (selectedForm) {
       urlCheckInterval = setInterval(monitorIframeUrl, 2000);
     }
+
     
+
     return () => {
       if (urlCheckInterval) clearInterval(urlCheckInterval);
       if (countdownRef.current) clearInterval(countdownRef.current);
@@ -743,6 +736,7 @@ export function FormsDocuments({
     if (!selectedForm) return null;
     const targetId = selectedForm.formId || selectedForm._key;
     
+
     if (childSpecificForms) {
       for (const group of childSpecificForms) {
         for (const f of group.forms) {
@@ -766,7 +760,6 @@ export function FormsDocuments({
   // Monitor form status changes from API response triggers to fire the thank-you screen
   useEffect(() => {
     if (!selectedForm) return;
-
     const currentStatus = getActiveFormStatus();
     if (
       currentStatus === 'Submitted' || 
@@ -811,7 +804,9 @@ export function FormsDocuments({
         const findSubmissionInObject = (obj: any, depth = 0): boolean => {
           if (depth > 4) return false;
           if (!obj || typeof obj !== 'object') return false;
+
           
+
           // Check direct keys of current object
           const success = obj.success === true || obj.success === 'true';
           const submissionId = obj.submission_id || obj.submissionId;
@@ -826,7 +821,6 @@ export function FormsDocuments({
               return true;
             }
           }
-
           // Scan all keys recursively
           for (const key in obj) {
             try {
@@ -844,7 +838,6 @@ export function FormsDocuments({
           }
           return false;
         };
-
         if (findSubmissionInObject(parsedData)) {
           isSubmitted = true;
         } else {
@@ -880,7 +873,6 @@ export function FormsDocuments({
             // Ignore serialization error
           }
         }
-
         if (serializedString) {
           const lower = serializedString.toLowerCase();
           if (
@@ -1055,7 +1047,6 @@ export function FormsDocuments({
       </div>
     );
   }
-
   // Show archived message if child is archived
   if (childStatus === 'archive') {
     return <div className="px-2 sm:px-0">
@@ -1141,7 +1132,6 @@ export function FormsDocuments({
           </div>
         )}
       </div>
-
       <Tabs value={activeTab} onValueChange={(value) => {
         setActiveTab(value);
         // If a child tab is clicked, notify parent to update selected child

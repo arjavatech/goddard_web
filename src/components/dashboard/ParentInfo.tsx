@@ -34,7 +34,7 @@ function ParentRow({
     <div className="flex items-center gap-3">
       <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
         isPrimary
-          ? 'bg-cyan-100 text-cyan-700'
+          ? 'bg-[#EFF5FB] text-[#0F2D52]'
           : 'bg-slate-100 text-slate-600'
       }`}>
         {initials || <User className="w-4 h-4" />}
@@ -45,7 +45,7 @@ function ParentRow({
           <Mail className="w-3 h-3 text-slate-400 flex-shrink-0" />
           <a
             href={`mailto:${email}`}
-            className="text-[11px] text-slate-500 hover:text-cyan-600 truncate transition-colors"
+            className="text-[11px] text-slate-500 hover:text-[#1a6fc4] truncate transition-colors"
           >
             {email}
           </a>
@@ -64,10 +64,10 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
     : null;
 
   return (
-    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out">
+    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:border-[#1a6fc4]/20 hover:shadow-md hover:-translate-y-[3px] transition-all duration-300 relative">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <User className="w-4 h-4 text-cyan-600" />
+          <User className="w-4 h-4 text-[#0F2D52]" />
           Account Information
         </CardTitle>
       </CardHeader>

@@ -46,8 +46,8 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
       {/* Page title */}
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-cyan-50 flex items-center justify-center">
-          <Users className="w-4 h-4 text-cyan-600" />
+        <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center">
+          <Users className="w-4 h-4 text-[#0F2D52]" />
         </div>
         <h1 className="text-base sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Dashboard</h1>
       </div>
@@ -57,10 +57,10 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
         <div className="relative w-full sm:w-auto" ref={ref}>
           <button
             onClick={() => setIsOpen(!isOpen)}
-            className="w-full sm:w-auto flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs hover:border-cyan-400 hover:shadow-sm transition-all duration-150 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/20"
+            className="w-full sm:w-auto flex items-center gap-2 bg-white rounded-xl px-3 py-2 border border-slate-200 shadow-xs hover:border-[#1a6fc4]/50 hover:shadow-sm transition-all duration-150 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-[#1a6fc4]/20"
           >
             {/* Avatar */}
-            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
+            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-[10px] flex-shrink-0">
               {selectedChild.initials}
             </div>
             <span className="font-semibold text-slate-800">{selectedChild.name}</span>
@@ -77,11 +77,11 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
                     className={cn(
                       'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors',
                       child.id === selectedChildId
-                        ? 'bg-cyan-50 text-cyan-800'
+                        ? 'bg-[#EFF5FB] text-[#0F2D52]'
                         : 'text-slate-700 hover:bg-slate-50'
                     )}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                       {child.initials}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -91,7 +91,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
                       </p>
                     </div>
                     {child.id === selectedChildId && (
-                      <Check className="w-4 h-4 text-cyan-600 flex-shrink-0" />
+                      <Check className="w-4 h-4 text-[#0F2D52] flex-shrink-0" />
                     )}
                   </button>
                 ))}
@@ -103,11 +103,11 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
 
       {/* Single child — just show name as a pill */}
       {children.length === 1 && (
-        <div className="flex items-center gap-2 bg-cyan-50 rounded-xl px-3 py-2 border border-cyan-100">
-          <div className="w-6 h-6 rounded-full bg-cyan-600 text-white flex items-center justify-center font-bold text-[10px]">
+        <div className="flex items-center gap-2 bg-[#EFF5FB] rounded-xl px-3 py-2 border border-[#0F2D52]/10">
+          <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-[10px]">
             {selectedChild.initials}
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-cyan-800">{selectedChild.name}</span>
+          <span className="text-xs sm:text-sm font-semibold text-[#0F2D52]">{selectedChild.name}</span>
         </div>
       )}
     </div>

@@ -43,7 +43,6 @@ export function Header() {
             />
             {schoolName && (
               <div className="flex flex-col min-w-0">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider leading-none hidden sm:block">School</span>
                 <span className="text-[11px] sm:text-sm font-bold text-[#0F2D52] truncate max-w-[120px] xs:max-w-[160px] sm:max-w-[240px] md:max-w-[320px] leading-tight">
                   {schoolName}
                 </span>
@@ -59,7 +58,7 @@ export function Header() {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-1.5 sm:px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
                   {/* Avatar */}
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0">
                     {initials}
                   </div>
                   <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-[100px] sm:max-w-[140px] truncate">
@@ -72,7 +71,7 @@ export function Header() {
                 {/* Profile header */}
                 <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-700 text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
                       {initials}
                     </div>
                     <div className="min-w-0">

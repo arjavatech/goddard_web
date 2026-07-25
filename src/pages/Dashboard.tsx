@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
@@ -10,7 +11,6 @@ import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 type FormStatus = NormalizedFormStatus;
 type ChildFormCard = {
   title: string;
@@ -324,19 +324,27 @@ export function Dashboard() {
   };
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-5 md:py-7">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
-        {loading ? <div className="py-16 text-center text-muted-foreground text-sm">
-            Loading parent dashboard...
-          </div> : <>
+        {loading ? <div className="py-16 text-center text-muted-foreground text-sm flex items-center justify-center min-h-[400px]">
+            <div className="animate-pulse">
+              <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+              <p className="text-slate-500 text-sm font-semibold">Loading parent dashboard...</p>
+            </div>
+          </div> : <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
             <div className="mb-4 sm:mb-5">
               <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
             </div>
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-5">
+            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-4 sm:gap-5">
                 {/* Left main column */}
-                <div className="order-1 lg:col-span-2 xl:col-span-7 space-y-3 sm:space-y-4">
+                <div className="order-1 lg:col-span-2 xl:col-span-7 space-y-4">
                   <div className="animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
@@ -348,7 +356,7 @@ export function Dashboard() {
                     />
                   </div>
                   {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
@@ -386,16 +394,16 @@ export function Dashboard() {
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
-              </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white/60 p-6 sm:p-10 text-center">
-                <div className="text-base sm:text-lg font-semibold text-slate-800 mb-2">No enrolled children found</div>
-                <div className="text-sm text-slate-500 mb-2">
+              </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
+                <div className="text-base sm:text-lg font-bold text-slate-900 mb-2">No enrolled children found</div>
+                <div className="text-sm text-slate-500 mb-4 max-w-md mx-auto">
                   We were unable to load any enrollment records for this parent account.
                 </div>
-                <div className="text-xs text-slate-400">
+                <div className="text-xs text-slate-400 font-medium">
                   If you believe this is an error, please contact your school administrator.
                 </div>
               </div>}
-          </>}
+          </motion.div>}
       </main>
       <Footer />
     </div>;

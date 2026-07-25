@@ -109,7 +109,7 @@ export function EnrollmentProgress({
   const hasMore = sorted.length > 4;
 
   return (
-    <div className="rounded-2xl border border-slate-100 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden">
+    <div className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:-translate-y-[2px] transition-all duration-300 relative overflow-hidden">
       {/* Header gradient strip */}
       <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 sm:px-6 pt-4 sm:pt-5 pb-5 sm:pb-6">
         <div className="flex items-start justify-between gap-3 mb-4">
@@ -203,8 +203,8 @@ export function EnrollmentProgress({
         <div className="px-4 sm:px-6 pb-4 sm:pb-5">
           <Button
             className={cn(
-              'w-full h-10 sm:h-11 px-6 rounded-xl text-xs sm:text-sm font-semibold bg-white text-[#0F2D52] border-2 border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 shadow-sm flex items-center justify-center',
-              !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-white text-[#0F2D52]/40 border-2 border-[#0F2D52]/20'
+              'w-full h-10 sm:h-11 px-6 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none flex items-center justify-center transition-all duration-200',
+              !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 border-none'
             )}
             disabled={!continueAssignmentId}
             onClick={() => {

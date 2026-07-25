@@ -36,10 +36,10 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
   }
 
   return (
-    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out">
+    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:border-[#1a6fc4]/20 hover:shadow-md hover:-translate-y-[3px] transition-all duration-300 relative">
       <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <Users className="w-4 h-4 text-cyan-600" />
+          <Users className="w-4 h-4 text-[#0F2D52]" />
           Children Overview
         </CardTitle>
       </CardHeader>
@@ -48,9 +48,7 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
           const isSelected = child.id === selectedChildId;
           const progressColor = child.enrollmentProgress === 100
             ? 'text-emerald-600'
-            : child.enrollmentProgress >= 50
-              ? 'text-cyan-600'
-              : 'text-amber-600';
+            : 'text-[#1a6fc4]';
 
           return (
             <button
@@ -59,7 +57,7 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
               className={cn(
                 'w-full text-left p-3 rounded-xl border transition-all duration-150',
                 isSelected
-                  ? 'border-cyan-200 bg-cyan-50/70 shadow-[0_0_0_1px_rgba(8,145,178,0.15)]'
+                  ? 'border-[#0F2D52]/20 bg-[#EFF5FB]/50 shadow-[0_0_0_1px_rgba(15,45,82,0.15)]'
                   : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/60'
               )}
             >
@@ -68,7 +66,7 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
                 <div className={cn(
                   'w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm text-white flex-shrink-0 shadow-sm',
                   isSelected
-                    ? 'bg-gradient-to-br from-cyan-500 to-cyan-700'
+                    ? 'bg-gradient-to-br from-[#0F2D52] to-[#1E4B83]'
                     : 'bg-gradient-to-br from-slate-400 to-slate-500'
                 )}>
                   {child.initials}

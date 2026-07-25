@@ -5,6 +5,7 @@ import { useAuth } from '../services/auth/useAuth';
 interface UserContextValue {
   userData: UserData | null;
   schoolName: string;
+  schoolSubdomain: string;
   schoolPhone: string;
   schoolEmail: string;
   schoolAddress: string;
@@ -16,9 +17,30 @@ interface UserContextValue {
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
+function getSchoolSlug(name: string): string {
+  if (!name) return 'goddard';
+  let cleanName = name.toLowerCase();
+  
+  if (cleanName.includes('goddard school -')) {
+    cleanName = cleanName.split('goddard school -')[1]?.trim() || cleanName;
+  } else if (cleanName.includes('goddard schools,')) {
+    cleanName = cleanName.split('goddard schools,')[1]?.trim() || cleanName;
+  } else if (cleanName.includes('goddard school')) {
+    cleanName = cleanName.replace('goddard school', '').trim();
+  } else if (cleanName.includes('goddard')) {
+    cleanName = cleanName.replace('goddard', '').trim();
+  }
+  
+  return cleanName
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [schoolName, setSchoolName] = useState('The Goddard School');
+  const [schoolSubdomain, setSchoolSubdomain] = useState('goddard');
   const [schoolPhone, setSchoolPhone] = useState('');
   const [schoolEmail, setSchoolEmail] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
@@ -41,7 +63,14 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       const data = await fetchUserContext();
       setUserData(data);
-      if (data.schoolData?.name) setSchoolName(data.schoolData.name);
+      if (data.schoolData?.name) {
+        setSchoolName(data.schoolData.name);
+      }
+      if (data.schoolData?.subdomain) {
+        setSchoolSubdomain(data.schoolData.subdomain);
+      } else if (data.schoolData?.name) {
+        setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
+      }
       if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
       if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
       if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
@@ -73,7 +102,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, user?.id, user?.email]);
 
   return (
-    <UserContext.Provider value={{ userData, schoolName, schoolPhone, schoolEmail, schoolAddress, loading, error, refreshUserData: loadUserData, isReady }}>
+    <UserContext.Provider value={{ userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, loading, error, refreshUserData: loadUserData, isReady }}>
       {children}
     </UserContext.Provider>
   );

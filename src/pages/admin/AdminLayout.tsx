@@ -31,7 +31,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
   const isSuperAdmin = userData?.role === 'SuperAdmin';
 
   const handleLogout = async () => {
@@ -48,31 +48,33 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
 
-  const currentPath = location.pathname;
+  const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const isFromStudents = location.state?.fromStudents === true;
+
+  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
 
   const navGroups = [
     {
       label: 'Workspace',
       items: [
-        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: '/admin' },
-        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: '/admin/classrooms' },
-        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: '/admin/students' },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: '/admin/parents' },
+        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
+        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
+        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
       ],
     },
     {
       label: 'Enrollment',
       items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: '/admin/forms' },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: '/admin/forms/due' },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: `${schoolPrefix}/admin/forms/due` },
       ],
     },
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: [
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: '/admin/admin-management' },
+        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
       ],
     }] : []),
   ];
@@ -184,15 +186,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
-                    const isActive = item.path === '/admin'
+                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                    const isActive = normalizedItemPath === '/admin'
                       ? currentPath === '/admin'
-                      : isFromStudents && item.path === '/admin/students'
+                      : isFromStudents && normalizedItemPath === '/admin/students'
                       ? true
-                      : isFromStudents && item.path === '/admin/parents'
+                      : isFromStudents && normalizedItemPath === '/admin/parents'
                       ? false
-                      : item.path === '/admin/forms'
+                      : normalizedItemPath === '/admin/forms'
                       ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
-                      : currentPath === item.path || currentPath.startsWith(item.path + '/');
+                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
                     return (
                       <Link key={i} to={item.path}
                         className={cn(
