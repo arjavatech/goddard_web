@@ -100,17 +100,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         {/* Mobile drawer (fixed overlay) */}
         <aside className={cn(
           'fixed top-0 left-0 h-full w-64 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:hidden',
-          'bg-[#0F2D52] border-r border-[#1a3a60] shadow-2xl',
+          'bg-white border-r border-slate-100 shadow-2xl',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}>
           {/* Logo area */}
-          <div className="h-16 px-5 flex items-center justify-between border-b border-[#1a3a60] flex-shrink-0">
+          <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
-              className="h-9 w-auto object-contain brightness-0 invert opacity-95 max-w-[150px]"
+              className="h-9 w-auto object-contain max-w-[150px]"
             />
-            <button onClick={() => setIsSidebarOpen(false)} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-all">
+            <button onClick={() => setIsSidebarOpen(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -133,12 +133,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
-                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                          isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                         )}
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
                       </Link>
                     );
                   })}
@@ -148,19 +148,19 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </nav>
 
           {/* ── Mobile sidebar footer: User + Logout ── */}
-          <div className="flex-shrink-0 border-t border-[#1a3a60] px-4 py-3.5">
+          <div className="flex-shrink-0 border-t border-slate-100 px-4 py-3.5">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-white/15 shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-[#0F2D52]/10 shadow-sm">
                 {initials}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+                <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+                <p className="text-[11px] text-slate-500 truncate mt-0.5">{userData?.email}</p>
               </div>
               <button
                 onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
                 title="Sign out"
-                className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-all duration-200"
+                className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
               >
                 <LogOut className="w-4 h-4" />
               </button>
@@ -236,34 +236,57 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top header */}
           {userData?.role && (
-            <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center justify-between border-b bg-white border-slate-200 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+            <header className={cn(
+              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center justify-between border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
+              isSidebarOpen ? "bg-[#0F2D52] border-[#1a3a60]" : "bg-white border-slate-200"
+            )}>
               <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                 <button
                   onClick={() => setIsSidebarOpen(true)}
-                  className="lg:hidden p-2 rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all flex-shrink-0"
+                  className={cn(
+                    "lg:hidden p-2 rounded-xl transition-all flex-shrink-0",
+                    isSidebarOpen
+                      ? "text-slate-200 hover:text-white hover:bg-white/10"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  )}
                 >
                   <Menu className="w-5 h-5" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none truncate">
+                  <h1 className={cn(
+                    "text-sm sm:text-base font-bold tracking-tight leading-none truncate transition-colors duration-300",
+                    isSidebarOpen ? "text-white" : "text-slate-900"
+                  )}>
                   {schoolName || 'The Goddard School'}
                   </h1>
-                  <p className="text-[11px] text-slate-400 mt-0.5 truncate">
-                       {isSuperAdmin ? 'Super Admin Portal' : 'Admin Portal'}
-                  </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-                <NotificationBell enabled={!!userData} />
+                <div className={cn(
+                  "transition-colors flex items-center justify-center",
+                  isSidebarOpen
+                    ? "[&_button]:text-slate-200 hover:[&_button]:bg-white/10 hover:[&_button]:text-white"
+                    : ""
+                )}>
+                  <NotificationBell enabled={!!userData} />
+                </div>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                    <button className={cn(
+                      "flex items-center gap-2 rounded-xl px-2 py-1.5 border border-transparent transition-all duration-150 focus:outline-none",
+                      isSidebarOpen
+                        ? "hover:bg-white/10 hover:border-white/10"
+                        : "hover:bg-slate-100 hover:border-slate-200"
+                    )}>
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                         {initials}
                       </div>
-                      <span className="hidden sm:block text-sm font-semibold text-slate-700 max-w-[100px] truncate">
+                      <span className={cn(
+                        "hidden sm:block text-sm font-semibold max-w-[100px] truncate transition-colors duration-300",
+                        isSidebarOpen ? "text-slate-200" : "text-slate-700"
+                      )}>
                         {userData?.firstName}
                       </span>
                     </button>

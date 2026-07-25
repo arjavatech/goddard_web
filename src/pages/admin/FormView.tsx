@@ -318,21 +318,21 @@ export function FormView() {
               )}
             </div>
             {/* Form container with dynamic height */}
-            <div className="mt-6 rounded-md">
+            <div className="mt-6">
               {isApproved && recentPdfLink ? (
-                <div>
-                  <div className="flex items-center justify-between mb-3 p-2 bg-gray-50 rounded-lg">
+                <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
+                  <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setPageNumber(p => Math.max(1, p - 1))}
                       disabled={pageNumber <= 1}
-                      className="flex items-center gap-1 text-xs px-2"
+                      className="flex items-center gap-1 text-xs px-2 h-8"
                     >
                       <ChevronLeft className="h-3 w-3" />
                       Prev
                     </Button>
-                    <span className="text-xs sm:text-sm font-medium px-2">
+                    <span className="text-xs sm:text-sm font-semibold px-2 text-slate-800">
                       {pageNumber} / {numPages || '...'}
                     </span>
                     <Button
@@ -340,15 +340,15 @@ export function FormView() {
                       size="sm"
                       onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
                       disabled={pageNumber >= (numPages || 1)}
-                      className="flex items-center gap-1 text-xs px-2"
+                      className="flex items-center gap-1 text-xs px-2 h-8"
                     >
                       Next
                       <ChevronRight className="h-3 w-3" />
                     </Button>
                   </div>
-                  <div className="relative flex justify-center overflow-x-auto">
+                  <div className="relative flex-1 flex justify-center items-center overflow-hidden bg-slate-50/40 p-2 sm:p-4">
                     {isFrameLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
+                      <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                         <Loading message="Loading PDF..." size="md" />
                       </div>
                     )}
@@ -360,10 +360,10 @@ export function FormView() {
                     >
                       <Page
                         pageNumber={pageNumber}
-                        width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 80) : 800}
+                        width={typeof window !== 'undefined' ? Math.min(760, window.innerWidth - 64) : 760}
                         renderTextLayer={true}
                         renderAnnotationLayer={false}
-                        className="shadow-lg"
+                        className="shadow-md"
                       />
                     </Document>
                   </div>
@@ -371,9 +371,9 @@ export function FormView() {
               ) : (() => {
                 if (selectedUrl && selectedUrl !== '#') {
                   return (
-                    <div className="relative">
+                    <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden relative">
                       {isFrameLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md">
+                        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-10">
                           <Loading message="Loading form..." size="md" />
                         </div>
                       )}
@@ -381,14 +381,13 @@ export function FormView() {
                         src={selectedUrl}
                         style={{
                           width: '100%',
+                          height: '100%',
                           border: 'none',
-                          borderRadius: '8px',
                           opacity: isFrameLoading ? 0 : 1,
                           transition: 'opacity 0.3s ease-in-out',
-                          overflow: 'auto'
+                          overflow: 'hidden'
                         }}
-                        className="w-full h-[75vh] min-h-[600px] sm:min-h-[750px] md:min-h-[900px]"
-                        scrolling="auto"
+                        scrolling="no"
                         title={formData.title}
                         allow="fullscreen"
                         onLoad={() => setIsFrameLoading(false)}
@@ -397,7 +396,7 @@ export function FormView() {
                   );
                 }
                 return (
-                  <div className="flex items-center justify-center min-h-[400px] text-gray-500">
+                  <div className="flex items-center justify-center min-h-[400px] text-gray-500 bg-white border border-slate-100 rounded-xl">
                     Unable to load form. Please check the form configuration.
                   </div>
                 );
