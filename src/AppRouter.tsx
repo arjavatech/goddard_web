@@ -52,7 +52,7 @@ export function AppRouter() {
           <BrowserRouter>
             <ScrollToTop />
             <Routes>
-            <Route path="/" element={<SelectSchool />} />
+            <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<ProtectedRoute>
                   <App />
                 </ProtectedRoute>} />

@@ -18,6 +18,7 @@ async function cleanupFcmRegistration(): Promise<void> {
     try { localStorage.removeItem(FCM_TOKEN_STORAGE_KEY); } catch { /* noop */ }
   }
   try { await deleteFcmToken(); } catch { /* noop */ }
+  try { localStorage.removeItem('fillout_user_context'); } catch { /* noop */ }
 }
 type UseAuth = {
   user: User | null;

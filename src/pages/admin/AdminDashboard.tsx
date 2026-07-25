@@ -561,8 +561,8 @@ export function AdminDashboard() {
                 <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#EFF5FB]/50 rounded-full blur-xl group-hover:bg-[#EFF5FB]/80 transition-all duration-300" />
                 <div className="flex items-start justify-between gap-2 sm:gap-3 relative z-10">
                   <div className="space-y-1 sm:space-y-1.5 min-w-0">
-                    <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 truncate">{item.label}</p>
-                    <p className="text-2xl sm:text-[2rem] font-bold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">{item.label}</p>
+                    <p className="text-2xl font-extrabold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
                   <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
                     <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${item.iconColor}`} />
@@ -654,8 +654,8 @@ export function AdminDashboard() {
             </div>
           </div>
 
-          {/* Bar Chart Card */}
-          <div className="glass-card p-4 sm:p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100 overflow-hidden">
+          {/* Bar Chart Card - desktop only */}
+          <div className="hidden sm:flex glass-card p-4 sm:p-6 lg:col-span-2 flex-col justify-between border border-slate-100 overflow-hidden">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 mb-1">
@@ -723,6 +723,69 @@ export function AdminDashboard() {
                 <div key={label} className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
                   <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile: Classroom Comparison as donut rings */}
+          <div className="sm:hidden glass-card p-4 border border-slate-100 overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-50 text-[#1a6fc4] border border-blue-100">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#0F2D52]">Classroom Comparison</h3>
+                  <p className="text-[10px] text-slate-400">Completion % by classroom</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">{enrollmentProgress.length} classes</span>
+            </div>
+            {barData.length === 0 ? (
+              <div className="h-20 flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
+            ) : (
+              <div className="flex flex-col gap-3 py-1">
+                {barData.map((entry, i) => {
+                  const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
+                  const badgeClass = entry.rate === 100 ? 'text-emerald-600' : entry.rate >= 60 ? 'text-[#1a6fc4]' : 'text-amber-500';
+                  const donutData = [
+                    { value: entry.rate, color },
+                    { value: 100 - entry.rate, color: '#E2E8F0' }
+                  ];
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={16} outerRadius={22} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
+                              {donutData.map((d, idx) => <Cell key={idx} fill={d.color} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-[9px] font-extrabold ${badgeClass}`}>{entry.rate}%</span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-700 truncate">{entry.name}</p>
+                        <p className="text-[10px] text-slate-400">{entry.completed} / {entry.total} completed</p>
+                      </div>
+                      <span className={`text-[10px] font-extrabold flex-shrink-0 ${badgeClass}`}>{entry.rate}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-3 mt-1 border-t border-slate-50">
+              {[
+                { color: '#10b981', label: '100%' },
+                { color: '#1a6fc4', label: '≥60%' },
+                { color: '#f59e0b', label: '<60%' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
                 </div>
               ))}
             </div>

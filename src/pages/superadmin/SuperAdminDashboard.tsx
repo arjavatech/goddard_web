@@ -223,8 +223,8 @@ export function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* System Growth & Traffic Area Chart */}
-          <div className="glass-card p-4 sm:p-6 lg:col-span-2 flex flex-col justify-between border border-slate-100 shadow-sm overflow-hidden">
+          {/* System Growth & Traffic Area Chart - desktop only */}
+          <div className="hidden sm:flex glass-card p-4 sm:p-6 lg:col-span-2 flex-col justify-between border border-slate-100 shadow-sm overflow-hidden">
             <div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 mb-1">
@@ -267,6 +267,70 @@ export function SuperAdminDashboard() {
             <div className="flex items-center justify-between text-[11px] font-bold pt-3 border-t border-slate-50 text-slate-400 uppercase tracking-wider">
               <span>Feb: Platform Launch</span>
               <span>Jul: Peak Activity</span>
+            </div>
+          </div>
+
+          {/* Mobile: School comparison as list */}
+          <div className="sm:hidden glass-card p-4 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-50 text-[#1a6fc4] border border-blue-100">
+                  <Activity className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#0F2D52]">Schools Overview</h3>
+                  <p className="text-[10px] text-slate-400">Verification status by school</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">{schools.length} total</span>
+            </div>
+            {schools.length === 0 ? (
+              <div className="h-20 flex items-center justify-center text-xs text-slate-400">No schools found</div>
+            ) : (
+              <div className="flex flex-col gap-3 py-1">
+                {schools.map((item, i) => {
+                  const isActive = item.owner?.is_verified;
+                  const color = isActive ? '#10b981' : '#f59e0b';
+                  const badgeClass = isActive ? 'text-emerald-600' : 'text-amber-500';
+                  const donutData = [
+                    { value: isActive ? 1 : 0, color },
+                    { value: isActive ? 0 : 1, color: '#E2E8F0' }
+                  ];
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={16} outerRadius={22} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
+                              {donutData.map((d, idx) => <Cell key={idx} fill={d.color} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Building className={`w-3.5 h-3.5 ${badgeClass}`} />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-700 truncate">{item.school?.name || 'N/A'}</p>
+                        <p className="text-[10px] text-slate-400 truncate">{item.school?.subdomain || 'N/A'}</p>
+                      </div>
+                      <span className={`text-[10px] font-extrabold flex-shrink-0 ${badgeClass}`}>
+                        {isActive ? 'Active' : 'Pending'}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-3 mt-1 border-t border-slate-50">
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#10b981]" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Active ({activeCount})</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-[#f59e0b]" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">Pending ({inactiveCount})</span>
+              </div>
             </div>
           </div>
         </div>

@@ -656,10 +656,10 @@ export function ParentManagement() {
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
                     Total Parents
                   </p>
-                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{parents.length}</p>
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight">{parents.length}</p>
                 </div>
                 <div className="p-2.5 bg-[#EFF5FB] rounded-xl flex-shrink-0 ml-2">
                   <Users className="h-4 w-4 text-[#0F2D52]" />
@@ -672,10 +672,10 @@ export function ParentManagement() {
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
                     Signed Up
                   </p>
-                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight">
                     {parents.filter(p => p.signupStatus === 'Signed').length}
                   </p>
                 </div>
@@ -690,10 +690,10 @@ export function ParentManagement() {
             <CardContent className="p-4 sm:p-5">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
                     Pending Signup
                   </p>
-                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
+                  <p className="text-2xl font-extrabold text-slate-900 tracking-tight">
                     {parents.filter(p => p.signupStatus === 'Not Signed').length}
                   </p>
                 </div>

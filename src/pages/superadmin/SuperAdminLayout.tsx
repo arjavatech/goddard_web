@@ -65,7 +65,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
         {navGroups.map((group, gi) => (
@@ -94,6 +94,26 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           </div>
         ))}
       </nav>
+      {mobile && (
+        <div className="flex-shrink-0 border-t border-[#1a3a60] px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-white/15">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+              <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+            </div>
+            <button
+              onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
+              title="Sign out"
+              className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-all"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 
@@ -125,7 +145,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               <X className="w-5 h-5" />
             </button>
           </div>
-          <SidebarContent />
+          <SidebarContent mobile />
         </aside>
 
         {/* Desktop sidebar */}
@@ -143,7 +163,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         {/* Main content */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Top header */}
-          <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 bg-white/95 backdrop-blur-sm border-b border-slate-200/80 h-16 px-3 sm:px-4 lg:px-6 flex items-center justify-between gap-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+          <header className="fixed top-0 right-0 left-0 lg:left-60 z-40 bg-white border-b border-slate-200 h-16 px-4 lg:px-6 flex items-center justify-between gap-2 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
               <button onClick={() => setIsSidebarOpen(true)} className="lg:hidden p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors flex-shrink-0">
                 <Menu className="w-5 h-5" />
@@ -161,10 +181,13 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                  <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
                       {initials}
                     </div>
+                    <span className="hidden sm:block text-sm font-semibold text-slate-700 max-w-[100px] truncate">
+                      {userData?.firstName}
+                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
@@ -180,6 +203,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                             : 'Super Administrator'}
                         </p>
                         <p className="text-xs text-slate-400 truncate">{userData?.email || 'System SuperAdmin'}</p>
+                        <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-500">Super Admin</span>
                       </div>
                     </div>
                   </div>

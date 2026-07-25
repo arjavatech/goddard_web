@@ -1,63 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Building2, ArrowLeft, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
 import { fetchUserContext } from '../services/api/user';
+import { prefilloutProvision } from '../services/api/fillout';
 import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
-import { fetchSchools, getSelectedSchool, setSelectedSchool, School } from '../services/api/schools';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../components/ui/dialog';
+
 
 export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [formData, setFormData] = useState({ email: '', password: '', rememberMe: false });
-  const [schools, setSchools] = useState<School[]>([]);
-  const [selectedSchool, setSelectedSchoolState] = useState<School | null>(null);
-  const [schoolMismatchError, setSchoolMismatchError] = useState('');
-  const [showSchoolSelector, setShowSchoolSelector] = useState(false);
-  const [isLoadingSchools, setIsLoadingSchools] = useState(false);
 
-  const { signInWithPassword, signOut } = useAuth();
+  const { signInWithPassword } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
 
-  useEffect(() => {
-    const loadSchools = async () => {
-      setIsLoadingSchools(true);
-      try {
-        const fetched = await fetchSchools();
-        setSchools(fetched);
-        const stored = getSelectedSchool();
-        if (stored) {
-          setSelectedSchoolState(stored);
-        } else if (fetched.length > 0) {
-          setSelectedSchoolState(fetched[0]);
-        }
-      } catch (err) {
-        console.error('Failed to load schools:', err);
-      } finally {
-        setIsLoadingSchools(false);
-      }
-    };
-    loadSchools();
-  }, []);
-
-  const handleSchoolChange = (school: School) => {
-    setSelectedSchoolState(school);
-    setSelectedSchool(school);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedSchool) { setShowSchoolSelector(true); return; }
     const err = validateEmail(formData.email);
     if (err) { setEmailError(err); return; }
 
@@ -65,12 +33,8 @@ export function Login() {
     try {
       await signInWithPassword(formData.email, formData.password);
       const userCtx = await fetchUserContext();
-      if (userCtx.schoolId && userCtx.schoolId !== selectedSchool.id) {
-        await signOut();
-        setSchoolMismatchError('Your account is registered to a different school. Please go back and select the correct school.');
-        setIsLoading(false);
-        return;
-      }
+      // Provision Fillout user once after login (cached in localStorage, one-time per session)
+      prefilloutProvision(userCtx).catch(() => {/* non-blocking */});
       let redirectTo = location.state?.from?.pathname;
       if (!redirectTo) {
         const isAdmin = userCtx.role && ['admin','superadmin'].includes(userCtx.role.toLowerCase());
@@ -122,7 +86,7 @@ export function Login() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              className="text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight"
+              className="text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight"
             >
               Welcome Back to <br />
               <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">The Goddard Portal</span>
@@ -132,7 +96,7 @@ export function Login() {
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-sm text-slate-300/90 leading-relaxed"
+              className="text-xs lg:text-sm text-slate-300/90 leading-relaxed"
             >
               Access your school portal to manage classrooms, complete forms, track student progress, and stay connected through a secure, unified platform.
             </motion.p>
@@ -150,8 +114,8 @@ export function Login() {
                 <ShieldCheck className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white">Smart Form Management</h3>
-                <p className="text-xs text-slate-300/80 mt-0.5 leading-relaxed">Create, complete, and manage enrollment and school forms with a simple, streamlined workflow.</p>
+                <h3 className="text-xs lg:text-sm font-semibold text-white">Smart Form Management</h3>
+                <p className="text-[11px] lg:text-xs text-slate-300/80 mt-0.5 leading-relaxed">Create, complete, and manage enrollment and school forms with a simple, streamlined workflow.</p>
               </div>
             </div>
 
@@ -160,8 +124,8 @@ export function Login() {
                 <Sparkles className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h3 className="text-sm font-semibold text-white">Student & Classroom Insights</h3>
-                <p className="text-xs text-slate-300/80 mt-0.5 leading-relaxed">Monitor student progress, manage classrooms, and access important school information from one place.</p>
+                <h3 className="text-xs lg:text-sm font-semibold text-white">Student & Classroom Insights</h3>
+                <p className="text-[11px] lg:text-xs text-slate-300/80 mt-0.5 leading-relaxed">Monitor student progress, manage classrooms, and access important school information from one place.</p>
               </div>
             </div>
           </motion.div>
@@ -182,68 +146,39 @@ export function Login() {
       </div>
 
       {/* ── Right form panel ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-6 sm:p-12 md:p-16 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] auth-panel-right">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen px-4 py-8 sm:px-8 sm:py-12 md:px-16 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] auth-panel-right">
         {/* Mobile logo */}
-        <div className="lg:hidden mb-8 text-center">
-          <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-12 w-auto mx-auto" />
+        <div className="lg:hidden mb-6 text-center">
+          <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto mx-auto" />
         </div>
 
-        <div className="w-full max-w-md">
-          {/* Back link */}
-          <button
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-[#0F2D52] mb-6 transition-colors font-semibold group"
-          >
-            <ArrowLeft className="w-4 h-4 transition-transform duration-200 group-hover:-translate-x-0.5" />
-            Back to school selection
-          </button>
-
-          <div className="mb-6 space-y-3">
+        <div className="w-full max-w-sm sm:max-w-md">
+          <div className="mb-5 space-y-2">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[10px] font-bold tracking-wider uppercase w-fit"
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[9px] sm:text-[10px] font-bold tracking-wider uppercase w-fit"
             >
               <GraduationCap className="w-3.5 h-3.5 text-[#0F2D52]" /> Goddard School Portal
             </motion.div>
             <div className="space-y-1">
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
-              <p className="text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
+              <p className="text-xs sm:text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
             </div>
           </div>
-
-          {/* Selected school chip */}
-          {selectedSchool && (
-            <div className="flex items-center gap-3.5 px-4 py-3 rounded-xl bg-[#EFF5FB] border border-[#EFF5FB]/85 mb-6 shadow-sm shadow-[#0D2644]/5">
-              <div className="w-7 h-7 rounded-md bg-[#0F2D52] flex items-center justify-center flex-shrink-0">
-                <Building2 className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Goddard location</p>
-                <p className="text-xs font-bold text-[#0f2d52] truncate mt-0.5">{selectedSchool.name}</p>
-              </div>
-              <button 
-                type="button" 
-                onClick={() => setShowSchoolSelector(true)}
-                className="text-xs font-bold text-[#1a6fc4] hover:text-[#0f2d52] underline transition-colors pr-1"
-              >
-                Change
-              </button>
-            </div>
-          )}
 
           {/* Form card */}
           <motion.div 
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-8 sm:p-10 space-y-5"
+            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 sm:p-8 space-y-4"
           >
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Email */}
               <div className="space-y-2">
-                <label htmlFor="email" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <label htmlFor="email" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   Email Address
                 </label>
                 <div className="relative group">
@@ -255,7 +190,7 @@ export function Login() {
                     required
                     value={formData.email}
                     onChange={handleInputChange}
-                    className={`w-full pl-11 pr-4 py-3 h-12 rounded-xl border text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 ${
+                    className={`w-full pl-11 pr-4 py-2.5 h-11 rounded-xl border text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 ${
                       emailError 
                         ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' 
                         : 'border-slate-200'
@@ -269,10 +204,10 @@ export function Login() {
               {/* Password */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  <label htmlFor="password" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Password
                   </label>
-                  <Link to="/forgot-password" className="text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors">
+                  <Link to="/forgot-password" className="text-[11px] sm:text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors">
                     Forgot password?
                   </Link>
                 </div>
@@ -285,7 +220,7 @@ export function Login() {
                     required
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full pl-11 pr-11 py-3 h-12 rounded-xl border border-slate-200 text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
                     placeholder="••••••••"
                   />
                   <button
@@ -322,23 +257,9 @@ export function Login() {
                       )}
                     </div>
                   </div>
-                  <span className="text-xs text-slate-600 font-semibold leading-none">Remember me</span>
+                  <span className="text-[11px] sm:text-xs text-slate-600 font-semibold leading-none">Remember me</span>
                 </label>
               </div>
-
-              {/* School mismatch */}
-              {schoolMismatchError && (
-                <div className="rounded-xl border border-red-200 bg-red-50/50 px-4 py-3 space-y-1">
-                  <p className="text-xs text-red-700 leading-normal">{schoolMismatchError}</p>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/')}
-                    className="text-xs font-bold text-red-700 underline hover:text-red-800"
-                  >
-                    Go back and select correct school
-                  </button>
-                </div>
-              )}
 
               {/* Submit */}
               <motion.div
@@ -349,7 +270,7 @@ export function Login() {
                 <Button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full h-12 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] active:scale-[0.98] border-none shadow-md shadow-[#0F2D52]/10 transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none"
+                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] active:scale-[0.98] border-none shadow-md shadow-[#0F2D52]/10 transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none"
                 >
                   {isLoading ? (
                     <span className="flex items-center justify-center gap-2">
@@ -380,7 +301,7 @@ export function Login() {
             </form>
           </motion.div>
 
-          <p className="text-center text-xs text-slate-400 mt-6">
+          <p className="text-center text-[10px] sm:text-xs text-slate-400 mt-6">
             © {new Date().getFullYear()} The Goddard School. All rights reserved.
           </p>
         </div>
@@ -388,45 +309,7 @@ export function Login() {
 
       <AlertModal open={alertState.open} onClose={hideAlert} type={alertState.type} title={alertState.title} message={alertState.message} />
 
-      {/* School Selector Modal */}
-      <Dialog open={showSchoolSelector} onOpenChange={setShowSchoolSelector}>
-        <DialogContent className="w-[95vw] max-w-md max-h-[85vh] overflow-y-auto rounded-2xl p-6">
-          <DialogHeader className="space-y-1.5">
-            <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
-              <Building2 className="h-5 w-5 text-[#0F2D52]" />
-              Select School
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">Choose the Goddard School location you want to access</DialogDescription>
-          </DialogHeader>
-          <div className="py-3 space-y-2">
-            {isLoadingSchools ? (
-              <div className="flex justify-center py-8">
-                <span className="h-8 w-8 rounded-full border-2 border-[#0F2D52] border-t-transparent animate-spin" />
-              </div>
-            ) : (
-              schools.map((school) => (
-                <button
-                  key={school.id}
-                  type="button"
-                  onClick={() => handleSchoolChange(school)}
-                  className={`w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-semibold ${
-                    selectedSchool?.id === school.id
-                      ? 'border-[#0F2D52]/30 bg-[#EFF5FB] text-[#0F2D52]'
-                      : 'border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                  }`}
-                >
-                  {school.name}
-                  {school.subdomain && <span className="block text-xs font-normal text-slate-400 mt-0.5">{school.subdomain}</span>}
-                </button>
-              ))
-            )}
-          </div>
-          <div className="flex justify-end gap-2 pt-2 border-t border-slate-50">
-            <Button variant="outline" className="h-10 rounded-xl px-4 text-xs font-semibold" onClick={() => setShowSchoolSelector(false)}>Cancel</Button>
-            <Button className="h-10 rounded-xl px-4 text-xs font-semibold bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white hover:from-[#091629] hover:to-[#0F2D52] border-none" onClick={() => setShowSchoolSelector(false)}>Continue</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+
     </div>
   );
 }

@@ -41,15 +41,21 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 async function performSessionRefresh(): Promise<string | null> {
+  if (!supabase) return null;
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
       const { data: refreshData, error } = await supabase.auth.refreshSession();
 
-      if (error || !refreshData.session?.access_token) {
-        console.error('Failed to refresh session:', error);
+      if (error) {
+        // No session to refresh — not an error worth logging (e.g. unauthenticated page load)
+        if (error.name !== 'AuthSessionMissingError') {
+          console.error('Failed to refresh session:', error);
+        }
         return null;
       }
+
+      if (!refreshData.session?.access_token) return null;
 
       lastTokenRefreshTime = Date.now();
       return refreshData.session.access_token;

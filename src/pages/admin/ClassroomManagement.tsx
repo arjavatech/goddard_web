@@ -331,21 +331,21 @@ export function ClassroomManagement() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {paginatedClassrooms.map((classroom, index) => (
-                    <div key={classroom.id || `classroom-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
+                    <div key={classroom.id || `classroom-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
                       {/* Header */}
-                      <div className="p-4 flex items-start gap-3">
+                      <div className="p-4 flex items-start gap-3 min-w-0">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
                           {classroom.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
                         </div>
-                        <div className="min-w-0 flex-1">
+                        <div className="min-w-0 flex-1 overflow-hidden">
                           <Link to={`/admin/classrooms/${classroom.id}`} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
                             {classroom.name}
                           </Link>
-                          <div className="flex items-center gap-3 mt-1">
-                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                          <div className="flex items-center gap-3 mt-1 flex-wrap">
+                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
                               <Users className="h-3 w-3" />{classroom.studentsCount} students
                             </span>
-                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1">
+                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
                               <FileText className="h-3 w-3" />{classroom.formsCount} forms
                             </span>
                           </div>
@@ -373,7 +373,7 @@ export function ClassroomManagement() {
                       <div className="mx-4 border-t border-slate-50" />
 
                       {/* Stats */}
-                      <div className="px-4 py-3 grid grid-cols-2 gap-3">
+                      <div className="px-4 py-3 grid grid-cols-2 gap-3 flex-shrink-0">
                         <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
                           <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Students</span>
                           <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
@@ -391,16 +391,16 @@ export function ClassroomManagement() {
                       <div className="mx-4 border-t border-slate-50" />
 
                       {/* Form badges */}
-                      <div className="px-4 py-3">
+                      <div className="px-4 py-3 flex-1">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assigned Forms</p>
                         <div className="flex flex-wrap gap-1.5 min-h-[24px]">
                           {classroom.assignedForms.length > 0 ? (
                             <>
                               {classroom.assignedForms.slice(0, 3).map(form => (
-                                <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] border-none truncate max-w-[130px]">{form.name}</Badge>
+                                <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] border-none truncate max-w-[120px]">{form.name}</Badge>
                               ))}
                               {classroom.assignedForms.length > 3 && (
-                                <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-500">+{classroom.assignedForms.length - 3}</Badge>
+                                <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-500 whitespace-nowrap">+{classroom.assignedForms.length - 3}</Badge>
                               )}
                             </>
                           ) : (
@@ -410,7 +410,7 @@ export function ClassroomManagement() {
                       </div>
 
                       {/* Footer */}
-                      <div className="px-4 pb-4 pt-1">
+                      <div className="px-4 pb-4 pt-1 mt-auto">
                         <Link to={`/admin/classrooms/${classroom.id}`} className="text-xs font-bold text-[#0F2D52] hover:underline flex items-center gap-1">
                           View classroom profile →
                         </Link>

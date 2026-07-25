@@ -624,13 +624,24 @@ export function StudentManagement() {
             <StatCard
               label="Completion Rate"
               value={
-                <div className="flex flex-col items-start gap-2">
-                  <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
+                <div className="flex items-center gap-3">
+                  <div className="relative w-12 h-12 flex-shrink-0">
+                    <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="20" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                      <circle
+                        cx="24" cy="24" r="20" fill="none"
+                        stroke="#10b981" strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 20}`}
+                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - completionRate / 100)}`}
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-emerald-600">{completionRate}%</span>
+                  </div>
+                  <span className="text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
                     {completionRate}%
                   </span>
-                  <div className="w-24 mt-1 bg-slate-100 h-2 rounded-full overflow-hidden">
-                    <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${completionRate}%` }} />
-                  </div>
                 </div>
               }
               icon={Users}
@@ -881,23 +892,34 @@ export function StudentManagement() {
               <div className="p-5 space-y-4">
                 {/* Select All bar */}
                 <div className="flex items-center justify-between px-1">
-                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                    <Checkbox
-                      checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                        } else {
-                          setSelectedStudentsForBulkAction([]);
-                        }
-                      }}
-                    />
-                    <span className="text-xs font-bold text-slate-700">Select All</span>
-                  </div>,
-                  ...paginatedStudents.map((student, index) => (
-                    <Card key={student.id || `card-${index}`} className="group overflow-hidden border border-slate-100 rounded-2xl p-5 bg-white shadow-xs hover:shadow-md hover:border-slate-200/80 transition-all duration-300 hover:-translate-y-1 space-y-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                  <Checkbox
+                    checked={selectedStudentsForBulkAction.length === filteredAndSortedStudents.length && filteredAndSortedStudents.length > 0}
+                    onCheckedChange={(checked) => {
+                      if (checked) {
+                        setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
+                      } else {
+                        setSelectedStudentsForBulkAction([]);
+                      }
+                    }}
+                  />
+                  <span className="text-xs font-bold text-slate-700">Select All</span>
+                </label>
+                <span className="text-[11px] text-slate-400 font-semibold">{paginatedStudents.length} of {filteredAndSortedStudents.length}</span>
+              </div>
+              {paginatedStudents.length === 0 ? (
+                <div className="py-16 text-center">
+                  <GraduationCap className="h-10 w-10 text-slate-200 mx-auto mb-3" />
+                  <p className="text-slate-400 text-sm font-semibold">No students found matching your search criteria.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {paginatedStudents.map((student, index) => {
+                    const apiFormStatus = student.formStatus || 'incomplete';
+                    return (
+                    <Card key={student.id || `card-${index}`} className="group overflow-hidden border border-slate-100 rounded-2xl p-5 bg-white shadow-xs hover:shadow-md hover:border-slate-200/80 transition-all duration-300 hover:-translate-y-1 flex flex-col gap-4">
+                      <div className="flex items-start justify-between gap-2 min-w-0">
+                        <div className="flex items-center gap-2 flex-1 min-w-0 overflow-hidden">
                           <Checkbox
                             checked={selectedStudentsForBulkAction.includes(student.id)}
                             onCheckedChange={(checked) => {
@@ -909,8 +931,8 @@ export function StudentManagement() {
                             }}
                             className="flex-shrink-0"
                           />
-                          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full" />
-                          <div className="min-w-0 flex-1">
+                          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="bg-[#EFF5FB] text-[#0F2D52] font-extrabold w-10 h-10 rounded-full flex-shrink-0" />
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <Link
                               to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
                               state={{ fromStudents: true }}
@@ -918,7 +940,6 @@ export function StudentManagement() {
                             >
                               {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                             </Link>
-                            <p className="text-xs text-slate-400 font-bold mt-0.5 uppercase tracking-wider">{student.classroom.name}</p>
                           </div>
                         </div>
                         <button
@@ -938,94 +959,103 @@ export function StudentManagement() {
                         </button>
                       </div>
 
-                          {/* Divider */}
-                          <div className="mx-4 border-t border-slate-50" />
+                      {/* Divider */}
+                      <div className="border-t border-slate-50" />
 
-                          {/* Parent Info */}
-                          <div className="px-4 py-3 space-y-1.5">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">Parent</span>
-                              <Link
-                                to={`/admin/parents/${student.parent.id}`}
-                                state={{ fromStudents: true }}
-                                className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
-                              >
-                                {student.parent.name}
-                              </Link>
-                            </div>
-                            {student.secondaryParent && (
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">2nd</span>
-                                <Link
-                                  to={`/admin/parents/${student.secondaryParent.id}`}
-                                  state={{ fromStudents: true }}
-                                  className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
-                                >
-                                  {student.secondaryParent.name}
-                                </Link>
-                              </div>
-                            )}
+                      {/* Parent & Class Info */}
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">Class</span>
+                          <Link
+                            to={`/admin/classrooms/${student.classroom.id}`}
+                            className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
+                          >
+                            {student.classroom.name}
+                          </Link>
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">Parent</span>
+                          <Link
+                            to={`/admin/parents/${student.parent.id}`}
+                            state={{ fromStudents: true }}
+                            className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
+                          >
+                            {student.parent.name}
+                          </Link>
+                        </div>
+                        {student.secondaryParent && (
+                          <div className="flex items-center gap-2 min-w-0 overflow-hidden">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 w-16 flex-shrink-0">2nd</span>
+                            <Link
+                              to={`/admin/parents/${student.secondaryParent.id}`}
+                              state={{ fromStudents: true }}
+                              className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] hover:underline truncate"
+                            >
+                              {student.secondaryParent.name}
+                            </Link>
                           </div>
+                        )}
+                      </div>
 
-                          {/* Divider */}
-                          <div className="mx-4 border-t border-slate-50" />
+                      {/* Divider */}
+                      <div className="border-t border-slate-50" />
 
-                          {/* Progress */}
-                          <div className="px-4 py-3 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</span>
-                              <div className="flex items-center gap-2">
-                                <span className="text-[10px] text-slate-500 font-semibold">{student.formsCompleted}/{student.totalForms} forms</span>
-                                <Badge
-                                  variant={apiFormStatus === 'complete' ? 'success' : 'secondary'}
-                                  className="text-[9px] font-bold rounded-full px-2 py-0.5"
-                                >
-                                  {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
-                                </Badge>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
-                                {student.formsApproved > 0 && (
-                                  <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
-                                )}
-                                {student.formsInProgress > 0 && (
-                                  <div className="h-full bg-amber-400 transition-all" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
-                                )}
-                              </div>
-                              <span className="text-xs font-extrabold text-[#0F2D52] w-8 text-right">{student.enrollmentProgress}%</span>
-                            </div>
-                          </div>
-
-                          {/* Footer Actions */}
-                          <div className="px-4 pb-4 pt-1 flex items-center justify-end gap-1">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-[#0F2D52] hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all gap-1.5">
-                                  <MoreHorizontal className="h-3.5 w-3.5" />
-                                  Actions
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
-                                  <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
-                                </DropdownMenuItem>
-                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
-                                  <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
-                                </DropdownMenuItem>
-                                {student.enrollmentId && (
-                                  <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
-                                    <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                      {/* Progress */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Progress</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-slate-500 font-semibold">{student.formsCompleted}/{student.totalForms} forms</span>
+                            <Badge
+                              variant={apiFormStatus === 'complete' ? 'success' : 'secondary'}
+                              className="text-[9px] font-bold rounded-full px-2 py-0.5"
+                            >
+                              {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
+                            </Badge>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                            {student.formsApproved > 0 && (
+                              <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
+                            )}
+                            {student.formsInProgress > 0 && (
+                              <div className="h-full bg-amber-400 transition-all" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
+                            )}
+                          </div>
+                          <span className="text-xs font-extrabold text-[#0F2D52] w-8 text-right">{student.enrollmentProgress}%</span>
+                        </div>
+                      </div>
+
+                      {/* Footer Actions */}
+                      <div className="flex items-center justify-end gap-1 mt-auto">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold text-slate-500 hover:text-[#0F2D52] hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all gap-1.5">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                              Actions
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
+                              <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
+                              <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
+                            </DropdownMenuItem>
+                            {student.enrollmentId && (
+                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
+                                <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </Card>
+                    );
+                  })}
+                </div>
+              )}
 
                 {/* Pagination */}
                 {totalPages > 1 && (

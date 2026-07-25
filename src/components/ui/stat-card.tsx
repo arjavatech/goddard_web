@@ -36,10 +36,10 @@ export function StatCard({
       <CardContent className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1 space-y-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 truncate">
+            <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">
               {label}
             </p>
-            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
+            <div className="text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
               {value}
             </div>
             {trend && (
