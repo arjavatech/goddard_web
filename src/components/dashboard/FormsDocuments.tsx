@@ -691,13 +691,13 @@ export function FormsDocuments({
       }
     };
 
-    
+
 
     if (selectedForm) {
       urlCheckInterval = setInterval(monitorIframeUrl, 2000);
     }
 
-    
+
 
     return () => {
       if (urlCheckInterval) clearInterval(urlCheckInterval);
@@ -709,7 +709,7 @@ export function FormsDocuments({
   const getActiveFormStatus = (): string | null => {
     if (!selectedForm) return null;
     const targetId = selectedForm.formId || selectedForm._key;
-    
+
 
     if (childSpecificForms) {
       for (const group of childSpecificForms) {
@@ -736,9 +736,9 @@ export function FormsDocuments({
     if (!selectedForm) return;
     const currentStatus = getActiveFormStatus();
     if (
-      currentStatus === 'Submitted' || 
-      currentStatus === 'Approved' || 
-      currentStatus === 'submitted' || 
+      currentStatus === 'Submitted' ||
+      currentStatus === 'Approved' ||
+      currentStatus === 'submitted' ||
       currentStatus === 'approved'
     ) {
       console.log('[FormsDocuments] Active form submission detected via API status change! Status:', currentStatus);
@@ -779,7 +779,7 @@ export function FormsDocuments({
           if (depth > 4) return false;
           if (!obj || typeof obj !== 'object') return false;
 
-          
+
 
           // Check direct keys of current object
           const success = obj.success === true || obj.success === 'true';
@@ -825,8 +825,8 @@ export function FormsDocuments({
             type === 'FORM_SUBMITTED' ||
             type === 'submit' ||
             (typeof type === 'string' && (
-              type.toLowerCase().includes('submit') || 
-              type.toLowerCase().includes('success') || 
+              type.toLowerCase().includes('submit') ||
+              type.toLowerCase().includes('success') ||
               type.toLowerCase().includes('complete')
             ))
           ) {
@@ -1049,9 +1049,8 @@ export function FormsDocuments({
             <button
               type="button"
               onClick={() => handleViewModeChange('card')}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${
-                viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               <LayoutGrid className="h-3 w-3" />
               <span className="hidden sm:inline">Card</span>
@@ -1059,9 +1058,8 @@ export function FormsDocuments({
             <button
               type="button"
               onClick={() => handleViewModeChange('table')}
-              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${
-                viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
-              }`}
+              className={`flex items-center gap-1 px-2 py-1.5 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
             >
               <List className="h-3 w-3" />
               <span className="hidden sm:inline">Table</span>

@@ -98,8 +98,10 @@ const makeFriendlyName = (email: string) => {
 };
 export function ParentDetails() {
   const {
+    schoolSlug,
     parentId
   } = useParams<{
+    schoolSlug: string;
     parentId: string;
   }>();
   const location = useLocation();
@@ -799,13 +801,13 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    <Link to={`/admin/forms/view/${form.id}`} state={{
+                                    <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
                                       classDetails: child.classroom?.name || 'Unassigned',
                                       parentId: parent.id,
-                                      returnPath: `/admin/parents/${parentId}`,
+                                      returnPath: `/${schoolSlug || 'goddard'}/admin/parents/${parentId}`,
                                       filloutFormUrl: form.link,
                                       recentEditLink: form.recentEditLink,
                                       filloutFormId: form.filloutFormId,

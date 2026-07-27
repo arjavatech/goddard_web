@@ -57,7 +57,7 @@ function NavigateToAdmin() {
   }
   
   const targetPath = location.pathname.replace(/^\/admin/, `/${schoolSubdomain || 'goddard'}/admin`);
-  return <Navigate to={targetPath} replace />;
+  return <Navigate to={targetPath} replace state={location.state} />;
 }
 
 export function AppRouter() {
