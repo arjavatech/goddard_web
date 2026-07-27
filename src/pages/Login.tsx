@@ -36,9 +36,10 @@ export function Login() {
       // Provision Fillout user once after login (cached in localStorage, one-time per session)
       prefilloutProvision(userCtx).catch(() => {/* non-blocking */});
       let redirectTo = location.state?.from?.pathname;
-      if (!redirectTo) {
+      if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
+        const subdomain = userCtx.schoolData?.subdomain || 'goddard';
         const isAdmin = userCtx.role && ['admin','superadmin'].includes(userCtx.role.toLowerCase());
-        redirectTo = isAdmin ? '/admin' : '/dashboard';
+        redirectTo = isAdmin ? `/${subdomain}/admin` : `/${subdomain}/dashboard`;
       }
       navigate(redirectTo, { replace: true });
     } catch (err) {

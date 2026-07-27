@@ -194,7 +194,7 @@ export function Dashboard() {
   
   useEffect(() => {
     // Wait for user data to be loaded
-    if (userLoading) {
+    if (userLoading || !userData) {
       return;
     }
 

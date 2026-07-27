@@ -49,7 +49,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isReady, setIsReady] = useState(false);
   const { user, isAuthenticated } = useAuth();
 
-  const loadUserData = async () => {
+  const loadUserData = async (retries = 3, delay = 500) => {
     if (!isAuthenticated || !user) {
       setUserData(null);
       setLoading(false);
@@ -58,42 +58,46 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
 
     setIsReady(false);
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await fetchUserContext();
-      setUserData(data);
-      if (data.schoolData?.name) {
-        setSchoolName(data.schoolData.name);
+    setLoading(true);
+    setError(null);
+
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const data = await fetchUserContext();
+        setUserData(data);
+        if (data.schoolData?.name) {
+          setSchoolName(data.schoolData.name);
+        }
+        if (data.schoolData?.subdomain) {
+          setSchoolSubdomain(data.schoolData.subdomain);
+        } else if (data.schoolData?.name) {
+          setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
+        }
+        if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
+        if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
+        if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
+        
+        setLoading(false);
+        setIsReady(true);
+        return; // Success
+      } catch (err) {
+        console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
+        if (attempt === retries) {
+          console.error('Failed to fetch user context after all retries:', err);
+          const errorMessage = err instanceof Error ? err.message : 'Failed to load user data';
+          
+          const status = (err as any)?.status;
+          if (status === 401 || status === 403) {
+            setUserData(null);
+          }
+          
+          setError(errorMessage);
+          setLoading(false);
+          setIsReady(true);
+        } else {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-      if (data.schoolData?.subdomain) {
-        setSchoolSubdomain(data.schoolData.subdomain);
-      } else if (data.schoolData?.name) {
-        setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
-      }
-      if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
-      if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
-      if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
-    } catch (err) {
-      console.error('Failed to fetch user context:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load user data';
-      
-      // Only clear user data on actual auth errors (401/403), not on other errors
-      const status = (err as any)?.status;
-      if (status === 401 || status === 403) {
-        setUserData(null);
-      }
-      
-      // Don't show error to user on first load - just log it
-      // This prevents the "Session Error" modal from appearing unnecessarily
-      if (loading) {
-        console.warn('Initial user data load failed, will retry:', errorMessage);
-      } else {
-        setError(errorMessage);
-      }
-    } finally {
-      setLoading(false);
-      setIsReady(true);
     }
   };
 
