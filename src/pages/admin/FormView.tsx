@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -53,16 +53,30 @@ export function FormView() {
     setIsFrameLoading(false);
   }, []);
 
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(760);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(Math.max(100, entry.contentRect.width));
+      }
+    });
+    resizeObserver.observe(containerRef.current);
+    return () => resizeObserver.disconnect();
+  }, []);
+
   // Get the form data and navigation state from the location state
   const formData = location.state?.form;
 
   // Check if form is reviewable (only when status is in_progress or submitted)
   // Handle both normalized and raw status values
   const isReviewable = formData?.status === 'In Progress' ||
-                       formData?.status === 'Submitted' ||
-                       formData?.status === 'in_progress' ||
-                       formData?.status === 'in progress' ||
-                       formData?.status === 'submitted';
+    formData?.status === 'Submitted' ||
+    formData?.status === 'in_progress' ||
+    formData?.status === 'in progress' ||
+    formData?.status === 'submitted';
   const isApproved = formData?.status === 'Approved' || formData?.status === 'approved';
   const childName = location.state?.childName;
   const classDetails = location.state?.classDetails || 'Unassigned Class';
@@ -205,206 +219,208 @@ export function FormView() {
   };
   if (!formData) {
     return <AdminLayout>
-        <div className="space-y-6">
-          <div className="flex items-center space-x-4">
-            <Button variant="outline" onClick={handleBack} size="icon">
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <h1 className="text-2xl font-bold">Form Not Found</h1>
-          </div>
-          <Card>
-            <CardContent className="p-6">
-              <div className="text-center py-8">
-                <p>
-                  The form information could not be found. Please go back and
-                  try again.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="space-y-6">
+        <div className="flex items-center space-x-4">
+          <Button variant="outline" onClick={handleBack} size="icon">
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <h1 className="text-2xl font-bold">Form Not Found</h1>
         </div>
-      </AdminLayout>;
+        <Card>
+          <CardContent className="p-6">
+            <div className="text-center py-8">
+              <p>
+                The form information could not be found. Please go back and
+                try again.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AdminLayout>;
   }
 
 
   const selectedUrl = getFormUrl();
   return <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className="flex items-center space-x-3 sm:space-x-4">
-            <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
-              <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-            </Button>
-            <div className="flex items-center min-w-0 flex-1">
-              {childName && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
-                  <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                    <User className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                    <span className="text-sm sm:text-base truncate">{childName}</span>
-                  </div>
-                  <div className="flex items-center gap-1 sm:gap-2 min-w-0">
-                    <School className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                    <span className="text-sm sm:text-base truncate">{classDetails}</span>
-                  </div>
-                </div>}
-            </div>
-          </div>
-          <div className="flex flex-col items-start sm:items-end gap-2">
-            <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-              <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-              <span className="truncate">Last updated: {formData.lastUpdated}</span>
-            </div>
-            <div>
-              <StatusBadge status={formData.status} />
-            </div>
+    <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+          </Button>
+          <div className="flex items-center min-w-0 flex-1">
+            {childName && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
+              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                <User className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="text-sm sm:text-base truncate">{childName}</span>
+              </div>
+              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+                <School className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                <span className="text-sm sm:text-base truncate">{classDetails}</span>
+              </div>
+            </div>}
           </div>
         </div>
-        <Card className="glass-card">
-          <CardContent className="p-6">
-            <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
-              <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
-              {isApproved ? (
-                <div className="flex items-center gap-2 text-green-600">
-                  {/* <CheckCircle className="h-4 w-4 flex-shrink-0" />
+        <div className="flex flex-col items-start sm:items-end gap-2">
+          <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
+            <Calendar className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+            <span className="truncate">Last updated: {formData.lastUpdated}</span>
+          </div>
+          <div>
+            <StatusBadge status={formData.status} />
+          </div>
+        </div>
+      </div>
+      <Card className="glass-card">
+        <CardContent className="p-6">
+          <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+            <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
+            {isApproved ? (
+              <div className="flex items-center gap-2 text-green-600">
+                {/* <CheckCircle className="h-4 w-4 flex-shrink-0" />
                   <span>This form has been approved and is read-only.</span> */}
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Textarea
+                  placeholder="Add notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[60px] w-full sm:w-64 text-sm"
+                  rows={2}
+                />
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={handleApprove}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isApproving ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleReject}
+                    variant="destructive"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isRejecting ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
                 </div>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  <Textarea
-                    placeholder="Add notes..."
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[60px] w-full sm:w-64 text-sm"
-                    rows={2}
-                  />
-                  <div className="flex gap-2 w-full sm:w-auto">
-                    <Button
-                      onClick={handleApprove}
-                      className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                      size="sm"
-                      disabled={!isReviewable || isApproving || isRejecting}
-                    >
-                      {isApproving ? (
-                        <span className="flex items-center">
-                          <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                          Processing...
-                        </span>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-1" />
-                          Approve
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      onClick={handleReject}
-                      variant="destructive"
-                      size="sm"
-                      disabled={!isReviewable || isApproving || isRejecting}
-                    >
-                      {isRejecting ? (
-                        <span className="flex items-center">
-                          <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                          Processing...
-                        </span>
-                      ) : (
-                        <>
-                          <XCircle className="h-4 w-4 mr-1" />
-                          Reject
-                        </>
-                      )}
-                    </Button>
-                  </div>
+              </div>
+            )}
+          </div>
+          {/* Form container with dynamic height */}
+          <div className="mt-6">
+            {isApproved && recentPdfLink ? (
+              <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                    disabled={pageNumber <= 1}
+                    className="flex items-center gap-1 text-xs px-2 h-8"
+                  >
+                    <ChevronLeft className="h-3 w-3" />
+                    Prev
+                  </Button>
+                  <span className="text-xs sm:text-sm font-semibold px-2 text-slate-800">
+                    {pageNumber} / {numPages || '...'}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
+                    disabled={pageNumber >= (numPages || 1)}
+                    className="flex items-center gap-1 text-xs px-2 h-8"
+                  >
+                    Next
+                    <ChevronRight className="h-3 w-3" />
+                  </Button>
                 </div>
-              )}
-            </div>
-            {/* Form container with dynamic height */}
-            <div className="mt-6">
-              {isApproved && recentPdfLink ? (
-                <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
-                  <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(p => Math.max(1, p - 1))}
-                      disabled={pageNumber <= 1}
-                      className="flex items-center gap-1 text-xs px-2 h-8"
-                    >
-                      <ChevronLeft className="h-3 w-3" />
-                      Prev
-                    </Button>
-                    <span className="text-xs sm:text-sm font-semibold px-2 text-slate-800">
-                      {pageNumber} / {numPages || '...'}
-                    </span>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
-                      disabled={pageNumber >= (numPages || 1)}
-                      className="flex items-center gap-1 text-xs px-2 h-8"
-                    >
-                      Next
-                      <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div className="relative flex-1 flex justify-center items-center overflow-hidden bg-slate-50/40 p-2 sm:p-4">
+                <div 
+                  ref={containerRef} 
+                  className="relative flex-1 flex justify-center items-start overflow-y-auto bg-slate-50/40 p-2 sm:p-4"
+                >
+                  {isFrameLoading && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                      <Loading message="Loading PDF..." size="md" />
+                    </div>
+                  )}
+                  <Document
+                    file={recentPdfLink}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    loading={<Loading message="Loading PDF..." size="md" />}
+                    error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
+                  >
+                    <Page
+                      pageNumber={pageNumber}
+                      width={containerWidth}
+                      renderTextLayer={true}
+                      renderAnnotationLayer={false}
+                      className="shadow-md"
+                    />
+                  </Document>
+                </div>
+              </div>
+            ) : (() => {
+              if (selectedUrl && selectedUrl !== '#') {
+                return (
+                  <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden relative">
                     {isFrameLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                        <Loading message="Loading PDF..." size="md" />
+                      <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-10">
+                        <Loading message="Loading form..." size="md" />
                       </div>
                     )}
-                    <Document
-                      file={recentPdfLink}
-                      onLoadSuccess={onDocumentLoadSuccess}
-                      loading={<Loading message="Loading PDF..." size="md" />}
-                      error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
-                    >
-                      <Page
-                        pageNumber={pageNumber}
-                        width={typeof window !== 'undefined' ? Math.min(760, window.innerWidth - 64) : 760}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        className="shadow-md"
-                      />
-                    </Document>
-                  </div>
-                </div>
-              ) : (() => {
-                if (selectedUrl && selectedUrl !== '#') {
-                  return (
-                    <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden relative">
-                      {isFrameLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-10">
-                          <Loading message="Loading form..." size="md" />
-                        </div>
-                      )}
-                      <iframe
-                        src={selectedUrl}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          border: 'none',
-                          opacity: isFrameLoading ? 0 : 1,
-                          transition: 'opacity 0.3s ease-in-out',
-                          overflow: 'hidden'
-                        }}
-                        scrolling="no"
-                        title={formData.title}
-                        allow="fullscreen"
-                        onLoad={() => setIsFrameLoading(false)}
-                      />
-                    </div>
-                  );
-                }
-                return (
-                  <div className="flex items-center justify-center min-h-[400px] text-gray-500 bg-white border border-slate-100 rounded-xl">
-                    Unable to load form. Please check the form configuration.
+                    <iframe
+                      src={selectedUrl}
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        opacity: isFrameLoading ? 0 : 1,
+                        transition: 'opacity 0.3s ease-in-out'
+                      }}
+                      scrolling="auto"
+                      title={formData.title}
+                      allow="fullscreen"
+                      onLoad={() => setIsFrameLoading(false)}
+                    />
                   </div>
                 );
-              })()}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+              }
+              return (
+                <div className="flex items-center justify-center min-h-[400px] text-gray-500 bg-white border border-slate-100 rounded-xl">
+                  Unable to load form. Please check the form configuration.
+                </div>
+              );
+            })()}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
 
-    </AdminLayout>;
+  </AdminLayout>;
 }
