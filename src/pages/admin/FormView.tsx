@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -55,6 +56,12 @@ export function FormView() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(760);
+  const formContainerRef = useRef<HTMLDivElement>(null);
+  const [formContainerSize, setFormContainerSize] = useState<{ w: number; h: number }>({ w: 794, h: 600 });
+
+  const filloutFormId = location.state?.filloutFormId;
+
+  useIframeScrollLock();
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -65,6 +72,20 @@ export function FormView() {
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!formContainerRef.current) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setFormContainerSize({
+          w: Math.max(100, entry.contentRect.width),
+          h: Math.max(100, entry.contentRect.height),
+        });
+      }
+    });
+    ro.observe(formContainerRef.current);
+    return () => ro.disconnect();
   }, []);
 
   // Get the form data and navigation state from the location state
@@ -83,7 +104,7 @@ export function FormView() {
   const returnPath = location.state?.returnPath || '/admin/parents';
   const filloutFormUrl = location.state?.filloutFormUrl;
   const recentEditLink = location.state?.recentEditLink;
-  const filloutFormId = location.state?.filloutFormId;
+  // const filloutFormId = location.state?.filloutFormId;
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
   const recentPdfLink = location.state?.recentPdfLink;
 
@@ -243,7 +264,7 @@ export function FormView() {
 
   const selectedUrl = getFormUrl();
   return <AdminLayout>
-    <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
+    <div className="space-y-6 max-w-7xl mx-auto mt-16">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
@@ -387,31 +408,47 @@ export function FormView() {
               </div>
             ) : (() => {
               if (selectedUrl && selectedUrl !== '#') {
+                const A4_W = 794;
+                const A4_H = 1123;
+                const scaleX = formContainerSize.w / A4_W;
+                const scaleY = formContainerSize.h / A4_H;
+                const scale = Math.min(scaleX, scaleY, 1);
                 return (
-                  <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden relative">
-                    {isFrameLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white rounded-xl z-10">
-                        <Loading message="Loading form..." size="md" />
-                      </div>
-                    )}
-                    <iframe
-                      src={selectedUrl}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none',
-                        opacity: isFrameLoading ? 0 : 1,
-                        transition: 'opacity 0.3s ease-in-out'
-                      }}
-                      scrolling="auto"
-                      title={formData.title}
-                      allow="fullscreen"
-                      onLoad={() => setIsFrameLoading(false)}
-                    />
+                  <div
+                    ref={formContainerRef}
+                    className="w-full"
+                    style={{ height: 'calc(100vh - 280px)', minHeight: 400, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}
+                  >
+                    <div style={{
+                      width: A4_W,
+                      height: A4_H,
+                      position: 'relative',
+                      borderRadius: 12,
+                      overflow: 'hidden',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
+                      border: '1px solid #e2e8f0',
+                      background: '#fff',
+                      transform: `scale(${scale})`,
+                      transformOrigin: 'top center',
+                      flexShrink: 0,
+                    }}>
+                      {isFrameLoading && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                          <Loading message="Loading form..." size="md" />
+                        </div>
+                      )}
+                      <iframe
+                        src={selectedUrl}
+                        style={{ width: A4_W, height: A4_H, border: 'none', display: 'block', opacity: isFrameLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out' }}
+                        title={formData.title}
+                        allow="fullscreen"
+                        onLoad={() => setIsFrameLoading(false)}
+                      />
+                    </div>
                   </div>
                 );
               }
-              return (
+                            return (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500 bg-white border border-slate-100 rounded-xl">
                   Unable to load form. Please check the form configuration.
                 </div>

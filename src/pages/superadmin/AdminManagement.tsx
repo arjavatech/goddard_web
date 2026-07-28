@@ -550,7 +550,7 @@ export function AdminManagement() {
                 { header: 'Administrator', className: 'w-2/5' },
                 { header: 'Role', className: 'w-1/5' },
                 { header: 'Status', className: 'w-1/5' },
-                { header: 'Actions', className: 'w-1/5 text-right' },
+                { header: 'Actions', className: 'w-1/5' },
               ]}
               rows={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
@@ -586,7 +586,7 @@ export function AdminManagement() {
                         {admin.is_verified ? 'Approved' : 'Pending'}
                       </Badge>
                     </td>
-                    <td className="py-4 px-4 text-right">
+                    <td className="py-4 px-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">

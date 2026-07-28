@@ -444,7 +444,7 @@ export function ClassroomManagement() {
                 { header: 'Classroom', className: 'w-1/4' },
                 { header: 'Students', className: 'w-1/8' },
                 { header: 'Assigned Forms', className: 'w-1/4' },
-                { header: 'Actions', className: 'w-1/8 text-right' },
+                { header: 'Actions', className: 'w-1/8' },
               ]}
               rows={paginatedClassrooms.map((classroom, index) => (
                 <tr key={classroom.id || `classroom-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
@@ -473,7 +473,7 @@ export function ClassroomManagement() {
                       {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">+{classroom.assignedForms.length - 2} more</Badge>}
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-right">
+                  <td className="py-4 px-4">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650"><MoreHorizontal className="h-4 w-4" /></Button>

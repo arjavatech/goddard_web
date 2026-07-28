@@ -542,32 +542,37 @@ export function ParentDetails() {
         className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
       >
         {/* Header Section */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-12 sm:mt-10 bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
-          <div className="flex items-center">
-            <Button
-              variant="outline"
-              size="icon"
-              className="mr-3 h-9 w-9 bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 rounded-xl transition-all h-9"
-              onClick={() => {
-                if (location.state?.fromStudents) {
-                  navigate('/admin/students');
-                } else {
-                  navigate('/admin/parents');
-                }
-              }}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">
-                {parent.firstName} {parent.lastName}
-              </h1>
-              {/* <p className="text-xs text-slate-450 font-semibold mt-0.5">{parent.email}</p> */}
+        <div className="mt-12 sm:mt-10 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 flex-shrink-0 bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
+                onClick={() => {
+                  if (location.state?.fromStudents) {
+                    navigate('/admin/students');
+                  } else {
+                    navigate('/admin/parents');
+                  }
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-extrabold text-slate-950 tracking-tight truncate">
+                  {parent.firstName} {parent.lastName}
+                </h1>
+                <div className="flex items-center gap-1.5 mt-0.5 sm:hidden">
+                  <MailIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-500 font-medium truncate">{parent.email}</span>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 bg-[#EFF5FB] px-4 py-2 rounded-xl border border-blue-50 text-xs font-bold text-[#0F2D52]">
-            <MailIcon className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>{parent.email}</span>
+            <div className="hidden sm:flex items-center gap-2 bg-[#EFF5FB] px-4 py-2 rounded-xl border border-blue-50 text-xs font-bold text-[#0F2D52] flex-shrink-0 max-w-[280px]">
+              <MailIcon className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{parent.email}</span>
+            </div>
           </div>
         </div>
 
@@ -700,18 +705,19 @@ export function ParentDetails() {
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 flex-shrink-0">
                           <Badge
                             variant={child.forms.every(f => f.status === 'Approved') ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}
-                            className="text-[10px] rounded-full px-2.5 py-0.5 font-bold flex-shrink-0"
+                            className="text-[10px] rounded-full px-2 py-0.5 font-bold whitespace-nowrap"
                           >
-                            {child.enrollmentProgress}% Completed
+                            <span className="hidden sm:inline">{child.enrollmentProgress}% Completed</span>
+                            <span className="sm:hidden">{child.enrollmentProgress}%</span>
                           </Badge>
                           <div className="text-slate-400 hover:text-slate-600 transition-colors">
                             {isExpanded ? (
-                              <ChevronUp className="h-4.5 w-4.5" />
+                              <ChevronUp className="h-4 w-4" />
                             ) : (
-                              <ChevronDown className="h-4.5 w-4.5" />
+                              <ChevronDown className="h-4 w-4" />
                             )}
                           </div>
                         </div>
@@ -733,7 +739,7 @@ export function ParentDetails() {
                           ) : childFilteredForms && childFilteredForms.length > 0 ? (
                             childFilteredForms.map(form => (
                               <div key={form.id} className="border border-slate-100 rounded-xl p-4 bg-slate-50/20 hover:bg-slate-50/40 hover:border-slate-200 transition-all">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                                <div className="flex flex-col gap-3">
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2">
                                       <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
@@ -768,7 +774,7 @@ export function ParentDetails() {
                                       Last updated: {form.lastUpdated}
                                     </p>
                                   </div>
-                                  <div className="flex flex-wrap gap-2 items-center flex-shrink-0">
+                                  <div className="flex flex-wrap gap-2 items-center">
                                     {form.status === 'Approved' && form.recentPdfLink && (
                                       <div className="flex gap-1.5">
                                         <Button

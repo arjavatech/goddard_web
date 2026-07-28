@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
+import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, ChevronRight, CheckCircle, LayoutGrid, List } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
@@ -174,19 +175,23 @@ interface FormsDocumentsProps {
     forms: FormData[];
   }[];
   familyForms: FormData[];
-  rawFormData?: any; // Raw parent data to access form URLs
-  selectedChildId?: string; // ID of the currently selected child
-  selectedChildName?: string; // Name of the currently selected child
-  childStatus?: 'active' | 'archive'; // Status of the currently selected child
-  onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
-  onViewForm: (form: any) => void; // Callback to view a form
-  formToOpen?: any; // Form to automatically open
-  onFormOpened?: () => void; // Callback when form is opened
-  onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
-  yearFilter?: string; // Year filter value
-  onYearFilterChange?: (year: string) => void; // Callback to change year filter
-  enrollmentId?: string; // For downloading all forms
-  formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
+  rawFormData?: any;
+  selectedChildId?: string;
+  selectedChildName?: string;
+  childStatus?: 'active' | 'archive';
+  onChildSelect?: (childName: string) => void;
+  onViewForm: (form: any) => void;
+  formToOpen?: any;
+  onFormOpened?: () => void;
+  onFormCompleted?: () => void;
+  yearFilter?: string;
+  onYearFilterChange?: (year: string) => void;
+  enrollmentId?: string;
+  formOpenGuard?: MutableRefObject<boolean>;
+  // Child info for pre-filling forms
+  selectedChildDob?: string;
+  selectedChildGender?: string;
+  parentEmail?: string;
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -203,6 +208,9 @@ export function FormsDocuments({
   onYearFilterChange,
   enrollmentId,
   formOpenGuard,
+  selectedChildDob,
+  selectedChildGender,
+  parentEmail,
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
   const { user } = useAuth();
@@ -219,6 +227,75 @@ export function FormsDocuments({
   const isCountingDownRef = useRef(false);
   const iframeLoadedRef = useRef(false);
   const selectedFormRef = useRef<any>(null);
+
+  // Prevent the parent page from auto-scrolling to the top when the user
+  // clicks inside the cross-origin Fillout iframe (e.g. a country-code
+  // selector in a phone field).
+  useIframeScrollLock();
+
+  const iframeContainerRef = useRef<HTMLDivElement>(null);
+  // Start with a large default — the form service will update this via postMessage.
+  // 5000px covers any realistic form length without requiring an exact measurement.
+  const [formHeight, setFormHeight] = useState<number>(5000);
+
+  // Stable embed ID — unique per form load so we can match resize postMessages
+  // from this specific iframe. Regenerated whenever the selected form changes.
+  const embedIdRef = useRef<string>(`fe-${Date.now()}`);
+
+  // Reset to safe large default when a new form is opened.
+  useEffect(() => {
+    setFormHeight(5000);
+    embedIdRef.current = `fe-${Date.now()}`;
+  }, [selectedForm]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // Log every message so the exact format from your form service is visible
+      // in browser devtools → Console as [iframe-msg] lines.
+      console.log('[iframe-msg] origin:', event.origin, '| raw data:', event.data);
+
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (!data || typeof data !== 'object') return;
+
+        // Extract height from every known field name across all common form services.
+        const h =
+          // { type:'form_resized', size:<px> }  — Fillout-style
+          (data.type === 'form_resized' ? data.size : undefined) ??
+          // { height:<px> }
+          data.height ??
+          // { value:<px> }
+          data.value ??
+          // { clientHeight:<px> }
+          data.clientHeight ??
+          // { size:<px> }
+          data.size ??
+          // { payload:{ height:<px> } }
+          data.payload?.height ??
+          data.payload?.size ??
+          // { data:{ height:<px> } }
+          data.data?.height ??
+          data.data?.size;
+
+        if (typeof h === 'number' && h > 0) {
+          // Use the reported height directly — the form service reports the
+          // full content height including its own padding. No extra buffer needed.
+          // The 5000px initial default ensures no clipping before this fires.
+          const safeHeight = Math.ceil(h);
+          console.log('[iframe-msg] height found:', h, '→ setting formHeight to', safeHeight);
+          setFormHeight(safeHeight);
+        }
+      } catch (e) {
+        if (typeof event.data === 'string') {
+          console.log('[iframe-msg] non-JSON string message:', event.data);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
@@ -498,7 +575,6 @@ export function FormsDocuments({
               formUrl = appendFilloutUserParams(formUrl, filloutCtx);
             }
           }
-        } else {
           // Non-Fillout form: Use the direct URLs provided by the alternative form service
           formUrl = recentEditLink || filloutFormId || '#';
 
@@ -987,23 +1063,47 @@ export function FormsDocuments({
                         }
                       }
                     `}</style>
-                    <iframe
-                      src={selectedForm.viewUrl}
-                      className="w-full h-[60vh] sm:h-[70vh] md:h-[80vh] min-h-[400px] sm:min-h-[500px] md:min-h-[1000px] border-none rounded-lg transition-opacity duration-300"
-                      style={{
-                        opacity: isFrameLoading ? 0 : 1
-                      }}
-                      title={selectedForm.title}
-                      onLoad={() => {
-                        console.log('iframe onLoad triggered! loadedRef:', iframeLoadedRef.current);
-                        if (iframeLoadedRef.current) {
-                          console.log('iframe onLoad detected redirect! Starting countdown...');
-                          startThankYouCountdown();
-                        }
-                        iframeLoadedRef.current = true;
-                        setIsFrameLoading(false);
-                      }}
-                    />
+                    {/*
+                      Render the iframe at full container width, no transform/scale.
+                      Height starts at a safe default (formHeight) and updates via
+                      the form_resized postMessage from the Fillout form page.
+                      contain:'content' prevents scrollIntoView() from escaping to
+                      the parent window (mobile country-code selector fix).
+                    */}
+                    <div
+                      ref={iframeContainerRef}
+                      style={{ contain: 'content' }}
+                      className="w-full rounded-xl overflow-hidden bg-white border border-slate-200/80 shadow-lg"
+                    >
+                      <iframe
+                        src={selectedForm.viewUrl}
+                        style={{
+                          width: '100%',
+                          // Height is controlled by formHeight state.
+                          // formHeight starts at 1500px and is updated by
+                          // form_resized postMessages from the Fillout form.
+                          height: `${formHeight}px`,
+                          border: 'none',
+                          display: 'block',
+                          opacity: isFrameLoading ? 0 : 1,
+                          transition: 'opacity 0.3s ease-in-out',
+                          overscrollBehavior: 'contain',
+                          scrollMargin: 0,
+                          overflow: 'hidden',
+                        }}
+                        scrolling="no"
+                        title={selectedForm.title}
+                        onLoad={() => {
+                          console.log('iframe onLoad triggered! loadedRef:', iframeLoadedRef.current);
+                          if (iframeLoadedRef.current) {
+                            console.log('iframe onLoad detected redirect! Starting countdown...');
+                            startThankYouCountdown();
+                          }
+                          iframeLoadedRef.current = true;
+                          setIsFrameLoading(false);
+                        }}
+                      />
+                    </div>
                   </>
                 )
               ) : (
