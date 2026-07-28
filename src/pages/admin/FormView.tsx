@@ -56,12 +56,61 @@ export function FormView() {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(760);
-  const formContainerRef = useRef<HTMLDivElement>(null);
-  const [formContainerSize, setFormContainerSize] = useState<{ w: number; h: number }>({ w: 794, h: 600 });
 
+  const iframeContainerRef = useRef<HTMLDivElement>(null);
+  // Start with a large default — updated by postMessage from the form service.
+  const [formHeight, setFormHeight] = useState<number>(5000);
+
+  // Stable embed ID — unique per form load so we can match resize postMessages
+  // from this specific iframe. Regenerated whenever the URL changes.
+  const embedIdRef = useRef<string>(`fe-${Date.now()}`);
+
+  // Reset to safe large default when a new form is loaded.
   const filloutFormId = location.state?.filloutFormId;
+  useEffect(() => {
+    setFormHeight(5000);
+    embedIdRef.current = `fe-${Date.now()}`;
+  }, [resolvedResumeLink, filloutFormId]);
 
+  // Prevent the parent page from auto-scrolling to the top when the user
+  // clicks inside the cross-origin Fillout iframe (e.g. a country-code
+  // selector in a phone field). See hook for full explanation.
   useIframeScrollLock();
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      // ── Diagnostic: log every single message raw ─────────────────────
+      console.log('[iframe-msg] origin:', event.origin, '| raw data:', event.data);
+
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (!data || typeof data !== 'object') return;
+
+        const h =
+          (data.type === 'form_resized' ? data.size : undefined) ??
+          data.height ??
+          data.value ??
+          data.clientHeight ??
+          data.size ??
+          data.payload?.height ??
+          data.payload?.size ??
+          data.data?.height ??
+          data.data?.size;
+
+        if (typeof h === 'number' && h > 0) {
+          console.log('[iframe-msg] height found:', h, '→ setting formHeight to', Math.ceil(h));
+          setFormHeight(Math.ceil(h));
+        }
+      } catch (e) {
+        if (typeof event.data === 'string') {
+          console.log('[iframe-msg] non-JSON string:', event.data);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -72,20 +121,6 @@ export function FormView() {
     });
     resizeObserver.observe(containerRef.current);
     return () => resizeObserver.disconnect();
-  }, []);
-
-  useEffect(() => {
-    if (!formContainerRef.current) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setFormContainerSize({
-          w: Math.max(100, entry.contentRect.width),
-          h: Math.max(100, entry.contentRect.height),
-        });
-      }
-    });
-    ro.observe(formContainerRef.current);
-    return () => ro.disconnect();
   }, []);
 
   // Get the form data and navigation state from the location state
@@ -264,7 +299,7 @@ export function FormView() {
 
   const selectedUrl = getFormUrl();
   return <AdminLayout>
-    <div className="space-y-6 max-w-7xl mx-auto mt-16">
+    <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
@@ -408,47 +443,45 @@ export function FormView() {
               </div>
             ) : (() => {
               if (selectedUrl && selectedUrl !== '#') {
-                const A4_W = 794;
-                const A4_H = 1123;
-                const scaleX = formContainerSize.w / A4_W;
-                const scaleY = formContainerSize.h / A4_H;
-                const scale = Math.min(scaleX, scaleY, 1);
                 return (
                   <div
-                    ref={formContainerRef}
-                    className="w-full"
-                    style={{ height: 'calc(100vh - 280px)', minHeight: 400, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', overflow: 'hidden' }}
+                    ref={iframeContainerRef}
+                    className="w-full rounded-xl overflow-hidden bg-white border border-slate-200/80 shadow-lg"
+                    style={{
+                      // contain:'content' prevents scrollIntoView() inside the
+                      // cross-origin iframe from propagating to the parent window.
+                      contain: 'content',
+                    }}
                   >
-                    <div style={{
-                      width: A4_W,
-                      height: A4_H,
-                      position: 'relative',
-                      borderRadius: 12,
-                      overflow: 'hidden',
-                      boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-                      border: '1px solid #e2e8f0',
-                      background: '#fff',
-                      transform: `scale(${scale})`,
-                      transformOrigin: 'top center',
-                      flexShrink: 0,
-                    }}>
-                      {isFrameLoading && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                          <Loading message="Loading form..." size="md" />
-                        </div>
-                      )}
-                      <iframe
-                        src={selectedUrl}
-                        style={{ width: A4_W, height: A4_H, border: 'none', display: 'block', opacity: isFrameLoading ? 0 : 1, transition: 'opacity 0.3s ease-in-out' }}
-                        title={formData.title}
-                        allow="fullscreen"
-                        onLoad={() => setIsFrameLoading(false)}
-                      />
-                    </div>
+                    {isFrameLoading && (
+                      <div className="flex items-center justify-center bg-white rounded-xl py-20">
+                        <Loading message="Loading form..." size="md" />
+                      </div>
+                    )}
+                    <iframe
+                      src={selectedUrl}
+                      style={{
+                        width: '100%',
+                        // Height is driven by formHeight state.
+                        // Starts at 1500px; updated by form_resized postMessages.
+                        height: `${formHeight}px`,
+                        border: 'none',
+                        display: 'block',
+                        opacity: isFrameLoading ? 0 : 1,
+                        transition: 'opacity 0.3s ease-in-out',
+                        overscrollBehavior: 'contain',
+                        scrollMargin: 0,
+                        overflow: 'hidden',
+                      }}
+                      scrolling="no"
+                      title={formData.title}
+                      allow="fullscreen"
+                      onLoad={() => setIsFrameLoading(false)}
+                    />
                   </div>
                 );
               }
-                            return (
+              return (
                 <div className="flex items-center justify-center min-h-[400px] text-gray-500 bg-white border border-slate-100 rounded-xl">
                   Unable to load form. Please check the form configuration.
                 </div>

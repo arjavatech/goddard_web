@@ -175,23 +175,19 @@ interface FormsDocumentsProps {
     forms: FormData[];
   }[];
   familyForms: FormData[];
-  rawFormData?: any;
-  selectedChildId?: string;
-  selectedChildName?: string;
-  childStatus?: 'active' | 'archive';
-  onChildSelect?: (childName: string) => void;
-  onViewForm: (form: any) => void;
-  formToOpen?: any;
-  onFormOpened?: () => void;
-  onFormCompleted?: () => void;
-  yearFilter?: string;
-  onYearFilterChange?: (year: string) => void;
-  enrollmentId?: string;
-  formOpenGuard?: MutableRefObject<boolean>;
-  // Child info for pre-filling forms
-  selectedChildDob?: string;
-  selectedChildGender?: string;
-  parentEmail?: string;
+  rawFormData?: any; // Raw parent data to access form URLs
+  selectedChildId?: string; // ID of the currently selected child
+  selectedChildName?: string; // Name of the currently selected child
+  childStatus?: 'active' | 'archive'; // Status of the currently selected child
+  onChildSelect?: (childName: string) => void; // Callback when a child tab is clicked
+  onViewForm: (form: any) => void; // Callback to view a form
+  formToOpen?: any; // Form to automatically open
+  onFormOpened?: () => void; // Callback when form is opened
+  onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
+  yearFilter?: string; // Year filter value
+  onYearFilterChange?: (year: string) => void; // Callback to change year filter
+  enrollmentId?: string; // For downloading all forms
+  formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -208,9 +204,6 @@ export function FormsDocuments({
   onYearFilterChange,
   enrollmentId,
   formOpenGuard,
-  selectedChildDob,
-  selectedChildGender,
-  parentEmail,
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
   const { user } = useAuth();
@@ -575,6 +568,7 @@ export function FormsDocuments({
               formUrl = appendFilloutUserParams(formUrl, filloutCtx);
             }
           }
+        } else {
           // Non-Fillout form: Use the direct URLs provided by the alternative form service
           formUrl = recentEditLink || filloutFormId || '#';
 
