@@ -36,12 +36,23 @@ export function Login() {
       const userData = await fetchUserContext();
       prefilloutProvision(userData).catch(() => {/* non-blocking */});
 
+      const userSubdomain = userData.schoolData?.subdomain || 'goddard';
+      const isAdmin = userData.role && ['admin', 'superadmin'].includes(userData.role.toLowerCase());
+
       let redirectTo = location.state?.from?.pathname;
-      if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
-        const subdomain = userData.schoolData?.subdomain || 'goddard';
-        const isAdmin = userData.role && ['admin', 'superadmin'].includes(userData.role.toLowerCase());
-        redirectTo = isAdmin ? `/${subdomain}/admin` : `/${subdomain}/dashboard`;
+
+      // Discard any "from" path that belongs to a different school's subdomain
+      if (redirectTo) {
+        const fromSubdomain = redirectTo.split('/').filter(Boolean)[0];
+        if (fromSubdomain !== userSubdomain) {
+          redirectTo = null;
+        }
       }
+
+      if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
+        redirectTo = isAdmin ? `/${userSubdomain}/admin` : `/${userSubdomain}/dashboard`;
+      }
+
       navigate(redirectTo, { replace: true });
     } catch (err) {
       showToast('error', (err as Error).message, 'Login Failed');

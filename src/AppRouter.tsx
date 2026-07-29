@@ -35,6 +35,7 @@ import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagemen
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
+import { SubdomainGuard } from './routes/security/SubdomainGuard';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -75,9 +76,9 @@ export function AppRouter() {
             <Route path="/dashboard" element={<ProtectedRoute>
                   <App />
                 </ProtectedRoute>} />
-            <Route path="/:schoolSlug/dashboard" element={<ProtectedRoute>
-                  <App />
-                </ProtectedRoute>} />
+            <Route element={<SubdomainGuard />}>
+              <Route path="/:schoolSlug/dashboard" element={<App />} />
+            </Route>
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
                 </ProtectedRoute>} />
@@ -95,9 +96,7 @@ export function AppRouter() {
             </Route>
 
             {/* School-Scoped Admin Routes */}
-            <Route element={<ProtectedRoute>
-                  <Outlet />
-                </ProtectedRoute>}>
+            <Route element={<SubdomainGuard />}>
               <Route path="/:schoolSlug/admin" element={<AdminDashboard />} />
               <Route path="/:schoolSlug/admin/classrooms" element={<ClassroomManagement />} />
               <Route path="/:schoolSlug/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
