@@ -278,7 +278,7 @@ export function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [userData, userLoading, user?.id, refreshTrigger, yearFilter]);
+  }, [userData?.parentId, userData?.schoolId, userLoading, refreshTrigger, yearFilter]);
   useEffect(() => {
     if (children.length === 0) {
       setSelectedChildId(null);

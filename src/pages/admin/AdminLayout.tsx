@@ -122,15 +122,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
-                    const isActive = item.path === '/admin'
+                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                    const isActive = normalizedItemPath === '/admin'
                       ? currentPath === '/admin'
-                      : isFromStudents && item.path === '/admin/students'
+                      : isFromStudents && normalizedItemPath === '/admin/students'
                       ? true
-                      : isFromStudents && item.path === '/admin/parents'
+                      : isFromStudents && normalizedItemPath === '/admin/parents'
                       ? false
-                      : item.path === '/admin/forms'
+                      : normalizedItemPath === '/admin/forms'
                       ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
-                      : currentPath === item.path || currentPath.startsWith(item.path + '/');
+                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
                         className={cn(

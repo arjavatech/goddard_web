@@ -32,45 +32,129 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)] relative">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)]">
+        {/* Mobile: two-row layout — logo + school name stacked */}
+        {schoolName && (
+          <div className="sm:hidden flex items-center justify-between px-3 pt-2 pb-1">
+            <img
+              src="/gs_logo_lynnwood.png"
+              alt="The Goddard School"
+              className="h-7 w-auto object-contain flex-shrink-0"
+            />
+            <span className="text-[11px] font-bold text-[#0F2D52] text-center flex-1 px-2 truncate">
+              {schoolName}
+            </span>
+            <div className="flex items-center gap-1 flex-shrink-0">
+              <NotificationBell enabled={!!userData} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 rounded-xl px-1 py-1 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-xs shadow-sm flex-shrink-0">
+                      {initials}
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+                        <p className="text-xs text-slate-400">Parent</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <button
+                      onClick={() => setShowLogoutModal(true)}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      Sign out
+                    </button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        )}
+
+        {/* Mobile fallback row (no school name): single row with logo + controls */}
+        {!schoolName && (
+          <div className="sm:hidden flex items-center justify-between px-3 h-14">
+            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-8 w-auto object-contain" />
+            <div className="flex items-center gap-1">
+              <NotificationBell enabled={!!userData} />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-1 rounded-xl px-1 py-1 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                      {initials}
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm">
+                        {initials}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+                        <p className="text-xs text-slate-400">Parent</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-2">
+                    <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                      <LogOut className="w-4 h-4" /> Sign out
+                    </button>
+                  </div>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop (sm+): single-row three-column layout */}
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 hidden sm:flex items-center justify-between gap-2">
           {/* Logo — left */}
           <div className="flex items-center flex-shrink-0">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
-              className="h-8 sm:h-11 w-auto object-contain"
+              className="h-11 w-auto object-contain"
             />
           </div>
 
           {/* School Name — center */}
           {schoolName && (
-            <div className="absolute left-1/2 -translate-x-1/2 px-2">
-              <span className="text-[11px] sm:text-sm font-bold text-[#0F2D52] whitespace-nowrap leading-tight">
+            <div className="flex-1 flex justify-center px-2">
+              <span className="text-sm font-bold text-[#0F2D52] whitespace-nowrap leading-tight">
                 {schoolName}
               </span>
             </div>
           )}
 
-          {/* Right side */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          {/* Right side — desktop only */}
+          <div className="flex items-center gap-2 flex-shrink-0">
             <NotificationBell enabled={!!userData} />
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-1.5 sm:gap-2 rounded-xl px-1.5 sm:px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
-                  {/* Avatar */}
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-xs sm:text-sm shadow-sm flex-shrink-0">
+                <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all duration-150 focus:outline-none">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
                     {initials}
                   </div>
-                  <span className="hidden sm:block text-sm font-medium text-slate-700 max-w-[100px] sm:max-w-[140px] truncate">
+                  <span className="text-sm font-medium text-slate-700 max-w-[140px] truncate">
                     {displayName}
                   </span>
-                  <ChevronDown className="hidden sm:block w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 sm:w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
-                {/* Profile header */}
+              <DropdownMenuContent align="end" className="w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                 <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
@@ -82,7 +166,6 @@ export function Header() {
                     </div>
                   </div>
                 </div>
-                {/* Logout button */}
                 <div className="p-2">
                   <button
                     onClick={() => setShowLogoutModal(true)}

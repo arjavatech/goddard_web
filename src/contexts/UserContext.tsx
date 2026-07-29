@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { fetchUserContext, type UserContext as UserData } from '../services/api/user';
 import { useAuth } from '../services/auth/useAuth';
 
@@ -47,15 +47,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const loadingRef = useRef(false);
   const { user, isAuthenticated } = useAuth();
 
-  const loadUserData = async (retries = 3, delay = 500) => {
+  const loadUserData = async (retries = 3, delay = 500, force = false) => {
     if (!isAuthenticated || !user) {
       setUserData(null);
       setLoading(false);
       setIsReady(true);
       return;
     }
+
+    // Prevent concurrent duplicate fetches (e.g. rapid auth state changes)
+    if (loadingRef.current) return;
+    loadingRef.current = true;
 
     setIsReady(false);
     setLoading(true);
@@ -79,6 +84,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         
         setLoading(false);
         setIsReady(true);
+        loadingRef.current = false;
         return; // Success
       } catch (err) {
         console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
@@ -94,6 +100,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setError(errorMessage);
           setLoading(false);
           setIsReady(true);
+          loadingRef.current = false;
         } else {
           await new Promise(resolve => setTimeout(resolve, delay));
         }
@@ -106,7 +113,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [isAuthenticated, user?.id, user?.email]);
 
   return (
-    <UserContext.Provider value={{ userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, loading, error, refreshUserData: loadUserData, isReady }}>
+    <UserContext.Provider value={{ userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, loading, error, refreshUserData: () => loadUserData(3, 500, true), isReady }}>
       {children}
     </UserContext.Provider>
   );

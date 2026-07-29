@@ -8,35 +8,35 @@ const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
 
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
-let lastTokenRefreshTime = 0;
 let isClearing = false;
-const TOKEN_REFRESH_INTERVAL = 5 * 60 * 1000; // Refresh every 5 minutes
+// Proactively refresh when less than 5 minutes remain before expiry
+const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 
 export async function getAuthToken(): Promise<string | null> {
   if (isAuthBypassed) return 'bypass-token';
   if (!supabase) return null;
 
-  // First, try to get the current session
+  // Get the current session
   const { data: sessionData } = await supabase.auth.getSession();
 
-  // If session exists and is valid, return the token
   if (sessionData.session?.access_token) {
-    // Proactively refresh if token is getting old
-    const now = Date.now();
-    if (now - lastTokenRefreshTime > TOKEN_REFRESH_INTERVAL) {
-      lastTokenRefreshTime = now;
-      // Refresh in background without blocking
-      refreshSessionInBackground();
+    const expiresAt = sessionData.session.expires_at;
+    if (expiresAt) {
+      const timeUntilExpiry = expiresAt * 1000 - Date.now();
+      // Only refresh proactively when token is close to expiry
+      if (timeUntilExpiry < REFRESH_THRESHOLD_MS) {
+        refreshSessionInBackground();
+      }
     }
     return sessionData.session.access_token;
   }
 
-  // If already refreshing, wait for the existing refresh
+  // No valid session — if already refreshing, wait for it
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
   }
 
-  // Start refresh process
+  // Attempt a full session refresh
   return performSessionRefresh();
 }
 
@@ -57,7 +57,6 @@ async function performSessionRefresh(): Promise<string | null> {
 
       if (!refreshData.session?.access_token) return null;
 
-      lastTokenRefreshTime = Date.now();
       return refreshData.session.access_token;
     } finally {
       isRefreshing = false;
@@ -70,9 +69,14 @@ async function performSessionRefresh(): Promise<string | null> {
 
 function refreshSessionInBackground(): void {
   if (!supabase || isRefreshing) return;
-  supabase.auth.refreshSession().catch(err => {
-    console.error('Background session refresh failed:', err);
-  });
+  isRefreshing = true;
+  supabase.auth.refreshSession()
+    .catch(err => {
+      console.error('Background session refresh failed:', err);
+    })
+    .finally(() => {
+      isRefreshing = false;
+    });
 }
 
 export async function clearSession(): Promise<void> {
@@ -96,7 +100,6 @@ export async function clearSession(): Promise<void> {
   } catch (err) {
     console.error('Error clearing session:', err);
   }
-  lastTokenRefreshTime = 0;
   isRefreshing = false;
   refreshPromise = null;
   
