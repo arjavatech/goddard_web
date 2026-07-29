@@ -459,7 +459,7 @@ export function FormView() {
                       src={selectedUrl}
                       style={{
                         width: '100%',
-                        height: `${embeddedResize.height ?? formHeight}px`,
+                        height: `${embeddedResize.height ?? (embeddedResize.isDynamic ? 320 : formHeight)}px`,
                         border: 'none',
                         display: 'block',
                         opacity: isFrameLoading ? 0 : 1,

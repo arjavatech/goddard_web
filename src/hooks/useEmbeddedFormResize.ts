@@ -34,6 +34,13 @@ export function useEmbeddedFormResize(formUrl: string | null | undefined) {
   useEffect(() => {
     if (!expectedOrigin) return undefined;
 
+    // The iframe and parent are separate React apps. Either app's useEffect can
+    // run first, so retry the handshake briefly instead of relying on one load
+    // event that may arrive before the child installs its message listener.
+    initializeChild();
+    const retryId = window.setInterval(initializeChild, 250);
+    const stopRetryId = window.setTimeout(() => window.clearInterval(retryId), 5_000);
+
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== expectedOrigin || event.source !== iframeRef.current?.contentWindow) return;
 
@@ -45,14 +52,19 @@ export function useEmbeddedFormResize(formUrl: string | null | undefined) {
         return;
       }
 
-      if (data.type !== RESIZE_MESSAGE || data.channelId !== channelIdRef.current) return;
+      if (data.type !== RESIZE_MESSAGE) return;
       if (typeof data.height !== 'number' || data.height < 1 || data.height > MAX_EMBED_HEIGHT) return;
 
+      window.clearInterval(retryId);
       setHeight(Math.ceil(data.height));
     };
 
     window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    return () => {
+      window.clearInterval(retryId);
+      window.clearTimeout(stopRetryId);
+      window.removeEventListener('message', handleMessage);
+    };
   }, [expectedOrigin, initializeChild]);
 
   return {
