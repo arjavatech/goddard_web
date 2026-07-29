@@ -1,8 +1,11 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Progress } from '../ui/progress';
 import { Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
+
+interface ChildForm {
+  status: string;
+}
 
 interface Child {
   id: string;
@@ -15,6 +18,7 @@ interface Child {
   totalForms: number;
   parentType?: string;
   classroom: string;
+  forms?: ChildForm[];
 }
 
 interface ChildrenOverviewProps {
@@ -46,9 +50,17 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
       <CardContent className="pt-0 space-y-2">
         {children.map(child => {
           const isSelected = child.id === selectedChildId;
-          const progressColor = child.enrollmentProgress === 100
-            ? 'text-emerald-600'
-            : 'text-[#1a6fc4]';
+          const forms = child.forms ?? [];
+          const total = forms.length;
+          // Segment counts
+          const approvedCount = forms.filter(f => f.status === 'Approved').length;
+          const pendingCount  = forms.filter(f => f.status === 'Submitted' || f.status === 'In Progress').length;
+          const draftCount    = total - approvedCount - pendingCount;
+          // Segment widths as percentages of the full bar
+          const approvedPct = total > 0 ? (approvedCount / total) * 100 : 0;
+          const pendingPct  = total > 0 ? (pendingCount  / total) * 100 : 0;
+          const draftPct    = total > 0 ? (draftCount    / total) * 100 : 0;
+          const progressColor = approvedCount === total && total > 0 ? 'text-emerald-600' : 'text-[#1a6fc4]';
 
           return (
             <button
@@ -83,7 +95,17 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
                   <p className="text-[11px] text-slate-400 truncate mb-1.5">
                     Age {child.age} · {child.classroom}
                   </p>
-                  <Progress value={child.enrollmentProgress} className="h-1.5" />
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 overflow-hidden flex">
+                    {approvedPct > 0 && (
+                      <div className="h-full transition-all duration-500 ease-out" style={{ width: `${approvedPct}%`, background: '#10b981' }} />
+                    )}
+                    {pendingPct > 0 && (
+                      <div className="h-full transition-all duration-500 ease-out" style={{ width: `${pendingPct}%`, background: '#f59e0b' }} />
+                    )}
+                    {draftPct > 0 && (
+                      <div className="h-full transition-all duration-500 ease-out" style={{ width: `${draftPct}%`, background: '#cbd5e1' }} />
+                    )}
+                  </div>
                   <p className="text-[10px] text-slate-400 mt-1">
                     {child.formsCompleted} of {child.totalForms} forms complete
                   </p>

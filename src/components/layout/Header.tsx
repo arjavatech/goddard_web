@@ -32,23 +32,25 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)]">
+      <header className="sticky top-0 z-40 w-full bg-white/95 backdrop-blur-sm border-b border-slate-100 shadow-[0_1px_3px_0_rgb(0_0_0/0.05)] relative">
         <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
-          {/* Logo + School Name */}
-          <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+          {/* Logo — left */}
+          <div className="flex items-center flex-shrink-0">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
-              className="h-8 sm:h-11 w-auto object-contain flex-shrink-0"
+              className="h-8 sm:h-11 w-auto object-contain"
             />
-            {schoolName && (
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] sm:text-sm font-bold text-[#0F2D52] truncate max-w-[120px] xs:max-w-[160px] sm:max-w-[240px] md:max-w-[320px] leading-tight">
-                  {schoolName}
-                </span>
-              </div>
-            )}
           </div>
+
+          {/* School Name — center */}
+          {schoolName && (
+            <div className="absolute left-1/2 -translate-x-1/2 px-2">
+              <span className="text-[11px] sm:text-sm font-bold text-[#0F2D52] whitespace-nowrap leading-tight">
+                {schoolName}
+              </span>
+            </div>
+          )}
 
           {/* Right side */}
           <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">

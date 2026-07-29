@@ -34,7 +34,7 @@ function ParentRow({
     <div className="flex items-center gap-3">
       <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0 ${
         isPrimary
-          ? 'bg-[#EFF5FB] text-[#0F2D52]'
+          ? 'bg-[#003c77] text-white'
           : 'bg-slate-100 text-slate-600'
       }`}>
         {initials || <User className="w-4 h-4" />}

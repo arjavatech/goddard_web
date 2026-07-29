@@ -13,8 +13,8 @@ interface StatusBadgeProps {
 
 const CONFIG: Record<Status, { variant: NonNullable<VariantProps<typeof badgeVariants>['variant']>; icon: React.ReactNode; label: string }> = {
   Approved:        { variant: 'success',  icon: <CheckCircle2 className="w-3 h-3" />, label: 'Approved' },
-  Submitted:       { variant: 'info',     icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
-  'In Progress':   { variant: 'info',     icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  Submitted:       { variant: 'warning',  icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  'In Progress':   { variant: 'warning',  icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
   'Needs Revision':{ variant: 'warning',  icon: <AlertCircle className="w-3 h-3" />,  label: 'Needs Revision' },
   Draft:           { variant: 'secondary',icon: <FileText className="w-3 h-3" />,     label: 'Draft' },
 };

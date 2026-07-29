@@ -240,10 +240,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Top header */}
           {userData?.role && (
             <header className={cn(
-              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center justify-between border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
+              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
               isSidebarOpen ? "bg-[#0F2D52] border-[#1a3a60]" : "bg-white border-slate-200"
             )}>
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+              {/* Left col — hamburger (mobile only), flex-1 to balance right col */}
+              <div className="flex-1 flex items-center">
                 <button
                   onClick={() => setIsSidebarOpen(true)}
                   className={cn(
@@ -255,17 +256,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 >
                   <Menu className="w-5 h-5" />
                 </button>
-                <div className="min-w-0">
-                  <h1 className={cn(
-                    "text-sm sm:text-base font-bold tracking-tight leading-none truncate transition-colors duration-300",
-                    isSidebarOpen ? "text-white" : "text-slate-900"
-                  )}>
-                  {schoolName || 'The Goddard School'}
-                  </h1>
-                </div>
               </div>
 
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {/* Center col — school name */}
+              <div className="flex-1 flex items-center justify-center">
+                <h1 className={cn(
+                  "text-sm sm:text-base font-bold tracking-tight leading-none whitespace-nowrap transition-colors duration-300",
+                  isSidebarOpen ? "text-white" : "text-slate-900"
+                )}>
+                  {schoolName || 'The Goddard School'}
+                </h1>
+              </div>
+
+              {/* Right col — notification + user menu */}
+              <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-2">
                 <div className={cn(
                   "transition-colors flex items-center justify-center",
                   isSidebarOpen

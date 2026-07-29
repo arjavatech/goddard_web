@@ -286,17 +286,17 @@ export function Login() {
               </motion.div>
 
               {/* Divider */}
-              <div className="relative my-1">
+              {/* <div className="relative my-1">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-slate-100" />
                 </div>
                 <div className="relative flex justify-center">
                   <span className="bg-white px-3 text-[10px] sm:text-xs text-slate-400 font-medium">or continue with</span>
                 </div>
-              </div>
+              </div> */}
 
               {/* Google Sign In */}
-              <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
+              {/* <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
                 <button
                   type="button"
                   disabled={isGoogleLoading || isLoading}
@@ -320,7 +320,7 @@ export function Login() {
                   )}
                   Sign in with Google
                 </button>
-              </motion.div>
+              </motion.div> */}
             </form>
           </motion.div>
 

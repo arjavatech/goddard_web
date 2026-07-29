@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronRight, Check, AlertCircle, Clock, FileCheck2, ChevronDown, ChevronUp } from 'lucide-react';
-import { Button } from '../ui/button';
+import React from 'react';
+import { AlertCircle, FileCheck2 } from 'lucide-react';
 import { Progress } from '../ui/progress';
 import { cn } from '../../lib/utils';
 import { COMPLETION_STATUSES, type NormalizedFormStatus } from '../../lib/formStatus';
@@ -21,36 +20,6 @@ interface EnrollmentProgressProps {
   enrollmentId?: string;
 }
 
-function StatusDot({ status }: { status: NormalizedFormStatus }) {
-  if (COMPLETION_STATUSES.has(status)) {
-    return (
-      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
-        <Check className="w-3 h-3 text-white stroke-[2.5]" />
-      </span>
-    );
-  }
-  if (status === 'Needs Revision') {
-    return (
-      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center shadow-sm">
-        <AlertCircle className="w-3 h-3 text-white stroke-[2.5]" />
-      </span>
-    );
-  }
-  if (status === 'In Progress') {
-    return (
-      <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-400 flex items-center justify-center shadow-sm">
-        <Clock className="w-3 h-3 text-white stroke-[2.5]" />
-      </span>
-    );
-  }
-  // Pending / Draft
-  return (
-    <span className="flex-shrink-0 w-5 h-5 rounded-full border-2 border-slate-300 bg-white flex items-center justify-center">
-      <span className="w-1.5 h-1.5 rounded-full bg-slate-300" />
-    </span>
-  );
-}
-
 export function EnrollmentProgress({
   childName,
   forms,
@@ -59,8 +28,6 @@ export function EnrollmentProgress({
   childId,
   enrollmentId,
 }: EnrollmentProgressProps) {
-  const [showAll, setShowAll] = useState(false);
-
   // Archived child
   if (childStatus === 'archive') {
     return (
@@ -78,35 +45,10 @@ export function EnrollmentProgress({
     );
   }
 
-  // Sort forms: completed first
-  const sorted = [...forms].sort((a, b) => {
-    const order: Record<string, number> = { Approved: 1, Submitted: 2, 'In Progress': 3, 'Needs Revision': 4, Draft: 5 };
-    return (order[a.status] || 6) - (order[b.status] || 6);
-  });
-
   const completedCount = forms.filter(f => COMPLETION_STATUSES.has(f.status)).length;
   const totalForms = forms.length;
   const progress = totalForms > 0 ? Math.round((completedCount / totalForms) * 100) : 0;
   const isComplete = progress === 100;
-
-  const incompleteForm = sorted.find(f => !COMPLETION_STATUSES.has(f.status));
-
-  const continueAssignmentId = (() => {
-    const direct = incompleteForm?.studentFormAssignmentId;
-    if (typeof direct === 'string' && direct.trim()) return direct.trim();
-    if (typeof incompleteForm?.filloutFormId === 'string') {
-      const parts = incompleteForm.filloutFormId.split('?');
-      if (parts.length > 1) {
-        const p = new URLSearchParams(parts[1]);
-        const v = p.get('student_form_assignment_id');
-        if (v?.trim()) return v.trim();
-      }
-    }
-    return null;
-  })();
-
-  const visibleForms = sorted.slice(0, showAll ? sorted.length : Math.min(4, sorted.length));
-  const hasMore = sorted.length > 4;
 
   return (
     <div className="rounded-2xl border border-slate-100 bg-white shadow-sm hover:shadow-md hover:-translate-y-[2px] transition-all duration-300 relative overflow-hidden">
@@ -150,99 +92,6 @@ export function EnrollmentProgress({
           </div>
         </div>
       </div>
-
-      {/* Form steps */}
-      <div className="px-4 sm:px-6 py-3 sm:py-4 space-y-1.5">
-        {visibleForms.map((form, i) => {
-          const done = COMPLETION_STATUSES.has(form.status);
-          return (
-            <div
-              key={form.formId || i}
-              className={cn(
-                'flex items-center gap-3 px-3 py-2.5 rounded-xl transition-colors',
-                done ? 'bg-emerald-50/60' : 'bg-slate-50/60'
-              )}
-            >
-              <StatusDot status={form.status} />
-              <span className={cn(
-                'text-xs sm:text-sm flex-1 min-w-0 truncate',
-                done ? 'text-emerald-700 font-medium' : 'text-slate-600'
-              )}>
-                {form.title}
-              </span>
-              {!done && form.status === 'Needs Revision' && (
-                <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-amber-600 bg-amber-100 rounded-full px-2 py-0.5">
-                  Revision
-                </span>
-              )}
-              {!done && form.status === 'In Progress' && (
-                <span className="flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider text-blue-600 bg-blue-100 rounded-full px-2 py-0.5">
-                  In Progress
-                </span>
-              )}
-            </div>
-          );
-        })}
-
-        {hasMore && (
-          <button
-            onClick={() => setShowAll(!showAll)}
-            className="flex items-center gap-1.5 w-full justify-center py-2 text-[11px] sm:text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors"
-          >
-            {showAll ? (
-              <><ChevronUp className="w-3.5 h-3.5" /> Show fewer forms</>
-            ) : (
-              <><ChevronDown className="w-3.5 h-3.5" /> +{sorted.length - 4} more forms</>
-            )}
-          </button>
-        )}
-      </div>
-
-      {/* CTA */}
-      {!isComplete && (
-        <div className="px-4 sm:px-6 pb-4 sm:pb-5">
-          <Button
-            className={cn(
-              'w-full h-10 sm:h-11 px-6 rounded-xl text-xs sm:text-sm font-bold bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none flex items-center justify-center transition-all duration-200',
-              !continueAssignmentId && 'opacity-60 cursor-not-allowed bg-slate-100 text-slate-400 border-none'
-            )}
-            disabled={!continueAssignmentId}
-            onClick={() => {
-              if (!continueAssignmentId || !incompleteForm || !onContinue) return;
-              const actualChildId = childId || incompleteForm.childId || 'continue-form';
-              const invalidIds = ['wed', 'sdexewsa', 'sdceswd'];
-              const isValidFormId = incompleteForm.filloutFormId &&
-                !invalidIds.includes(incompleteForm.filloutFormId.toLowerCase());
-              onContinue({
-                ...incompleteForm,
-                childId: actualChildId,
-                childName,
-                _key: `child-${actualChildId}-form-${incompleteForm.formId}`,
-                fromContinueButton: true,
-                rawData: {
-                  form_id: incompleteForm.formId,
-                  fillout_form_id: isValidFormId ? incompleteForm.filloutFormId : null,
-                  recent_edit_link: incompleteForm.recentEditLink,
-                  recent_pdf_link: incompleteForm.recentPdfLink,
-                  student_form_assignment_id: continueAssignmentId,
-                },
-              });
-            }}
-          >
-            Continue — {incompleteForm?.title}
-            <ChevronRight className="ml-1.5 w-4 h-4" />
-          </Button>
-        </div>
-      )}
-
-      {isComplete && (
-        <div className="px-4 sm:px-6 pb-4 sm:pb-5">
-          <div className="flex items-center gap-2.5 px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
-            <Check className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <p className="text-xs sm:text-sm font-semibold text-emerald-800">All forms submitted — enrollment complete!</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
