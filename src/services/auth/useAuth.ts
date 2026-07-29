@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { createContext, createElement, useContext, useEffect, useRef, useState, useCallback, type ReactNode } from 'react';
 import { type AuthError, type Provider, type User, type Session } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
@@ -25,6 +25,7 @@ type UseAuth = {
   isAuthenticated: boolean;
   isBypassed: boolean;
   loading: boolean;
+  authGeneration: number;
   signInWithPassword: (email: string, password: string) => Promise<void>;
   signUpWithPassword: (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => Promise<{
     user: User | null;
@@ -36,9 +37,16 @@ type UseAuth = {
   signInWithProvider: (provider: Provider) => Promise<void>;
   signOut: () => Promise<void>;
 };
-export function useAuth(): UseAuth {
+
+const AuthContext = createContext<UseAuth | undefined>(undefined);
+
+function useAuthState(): UseAuth {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // A new generation represents a fresh authenticated session. Profile data
+  // is keyed to this value so it cannot be reused after logout or re-login.
+  const [authGeneration, setAuthGeneration] = useState(0);
+  const sessionTokenRef = useRef<string | null>(null);
   useEffect(() => {
     if (isAuthBypassed) {
       const devUser = {
@@ -51,6 +59,7 @@ export function useAuth(): UseAuth {
         created_at: new Date().toISOString()
       } as unknown as User;
       setUser(devUser);
+      setAuthGeneration(1);
       setLoading(false);
       return;
     }
@@ -59,24 +68,26 @@ export function useAuth(): UseAuth {
       return;
     }
 
-    // Get initial session
-    supabase.auth.getSession().then(({
-      data: {
-        session
-      }
-    }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
+    // Supabase immediately emits INITIAL_SESSION to this subscription. Using
+    // it as the only initial-session source avoids a duplicate profile load.
     const {
       data: {
         subscription
       }
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      const previousToken = sessionTokenRef.current;
+      sessionTokenRef.current = session?.access_token ?? null;
       setUser(session?.user ?? null);
       setLoading(false);
+      if (event === 'SIGNED_OUT') {
+        setAuthGeneration(generation => generation + 1);
+      } else if (
+        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
+        session?.access_token &&
+        session.access_token !== previousToken
+      ) {
+        setAuthGeneration(generation => generation + 1);
+      }
     });
     return () => subscription.unsubscribe();
   }, []);
@@ -167,6 +178,9 @@ export function useAuth(): UseAuth {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
     await cleanupFcmRegistration();
+    // Do not let the next login reuse a school selected by the previous user.
+    localStorage.removeItem('schoolId');
+    localStorage.removeItem('selectedSchool');
     const {
       error
     } = await supabase.auth.signOut();
@@ -177,6 +191,7 @@ export function useAuth(): UseAuth {
     isAuthenticated: !!user,
     isBypassed: isAuthBypassed,
     loading,
+    authGeneration,
     signInWithPassword,
     signUpWithPassword,
     resetPassword,
@@ -184,4 +199,17 @@ export function useAuth(): UseAuth {
     signInWithProvider,
     signOut
   };
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const auth = useAuthState();
+  return createElement(AuthContext.Provider, { value: auth }, children);
+}
+
+export function useAuth(): UseAuth {
+  const auth = useContext(AuthContext);
+  if (!auth) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return auth;
 }

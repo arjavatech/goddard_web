@@ -618,7 +618,7 @@ export function AdminDashboard() {
             </div>
             
             <div className="h-48 relative flex items-center justify-center my-2">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                 <PieChart>
                   <Pie
                     data={pieData}
@@ -674,7 +674,7 @@ export function AdminDashboard() {
                 <div className="h-full flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
               ) : (
                 <div style={{ minWidth: `${Math.max(barData.length * 80, 320)}px`, height: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                     <BarChart data={barData} margin={{ top: 10, right: 16, left: -25, bottom: 56 }}>
                       <XAxis
                         dataKey="name"
@@ -756,7 +756,7 @@ export function AdminDashboard() {
                   return (
                     <div key={i} className="flex items-center gap-3">
                       <div className="relative w-12 h-12 flex-shrink-0">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
                           <PieChart>
                             <Pie data={donutData} cx="50%" cy="50%" innerRadius={16} outerRadius={22} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
                               {donutData.map((d, idx) => <Cell key={idx} fill={d.color} />)}

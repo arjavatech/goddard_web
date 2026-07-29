@@ -47,73 +47,108 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const loadingRef = useRef(false);
-  const { user, isAuthenticated } = useAuth();
+  const [profileGeneration, setProfileGeneration] = useState<number | null>(null);
+  const activeRequestRef = useRef<{ key: string; promise: Promise<void> } | null>(null);
+  const { user, isAuthenticated, authGeneration } = useAuth();
 
-  const loadUserData = async (retries = 3, delay = 500, force = false) => {
+  const resetUserContext = () => {
+    activeRequestRef.current = null;
+    setUserData(null);
+    setSchoolName('The Goddard School');
+    setSchoolSubdomain('goddard');
+    setSchoolPhone('');
+    setSchoolEmail('');
+    setSchoolAddress('');
+    setError(null);
+    setLoading(false);
+    setIsReady(true);
+    setProfileGeneration(null);
+  };
+
+  const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
     if (!isAuthenticated || !user) {
-      setUserData(null);
-      setLoading(false);
-      setIsReady(true);
-      return;
+      resetUserContext();
+      return Promise.resolve();
     }
 
-    // Prevent concurrent duplicate fetches (e.g. rapid auth state changes)
-    if (loadingRef.current) return;
-    loadingRef.current = true;
+    const requestKey = `${user.id}:${authGeneration}`;
+    if (!force && activeRequestRef.current?.key === requestKey) {
+      return activeRequestRef.current.promise;
+    }
 
-    setIsReady(false);
-    setLoading(true);
-    setError(null);
+    const request = (async () => {
+      setIsReady(false);
+      setLoading(true);
+      setError(null);
+      setProfileGeneration(null);
 
-    for (let attempt = 1; attempt <= retries; attempt++) {
       try {
-        const data = await fetchUserContext();
-        setUserData(data);
-        if (data.schoolData?.name) {
-          setSchoolName(data.schoolData.name);
-        }
-        if (data.schoolData?.subdomain) {
-          setSchoolSubdomain(data.schoolData.subdomain);
-        } else if (data.schoolData?.name) {
-          setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
-        }
-        if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
-        if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
-        if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
-        
-        setLoading(false);
-        setIsReady(true);
-        loadingRef.current = false;
-        return; // Success
-      } catch (err) {
-        console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
-        if (attempt === retries) {
-          console.error('Failed to fetch user context after all retries:', err);
-          const errorMessage = err instanceof Error ? err.message : 'Failed to load user data';
-          
-          const status = (err as any)?.status;
-          if (status === 401 || status === 403) {
-            setUserData(null);
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            const data = await fetchUserContext();
+            if (activeRequestRef.current?.key !== requestKey) return;
+
+            setUserData(data);
+            if (data.schoolData?.name) {
+              setSchoolName(data.schoolData.name);
+            }
+            if (data.schoolData?.subdomain) {
+              setSchoolSubdomain(data.schoolData.subdomain);
+            } else if (data.schoolData?.name) {
+              setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
+            }
+            if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
+            if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
+            if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
+            setProfileGeneration(authGeneration);
+
+            return;
+          } catch (err) {
+            console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
+            if (attempt === retries) {
+              if (activeRequestRef.current?.key !== requestKey) return;
+
+              console.error('Failed to fetch user context after all retries:', err);
+              const errorMessage = err instanceof Error ? err.message : 'Failed to load user data';
+              const status = (err as any)?.status;
+
+              if (status === 401 || status === 403) {
+                setUserData(null);
+              }
+
+              setError(errorMessage);
+            } else {
+              await new Promise(resolve => setTimeout(resolve, delay));
+            }
           }
-          
-          setError(errorMessage);
+        }
+      } finally {
+        if (activeRequestRef.current?.key === requestKey) {
           setLoading(false);
           setIsReady(true);
-          loadingRef.current = false;
-        } else {
-          await new Promise(resolve => setTimeout(resolve, delay));
+          activeRequestRef.current = null;
         }
       }
-    }
+    })();
+
+    activeRequestRef.current = { key: requestKey, promise: request };
+    return request;
   };
 
   useEffect(() => {
     loadUserData();
-  }, [isAuthenticated, user?.id, user?.email]);
+  }, [isAuthenticated, user?.id, authGeneration]);
+
+  const profileIsCurrent = isAuthenticated && profileGeneration === authGeneration;
+  const visibleUserData = profileIsCurrent ? userData : null;
+  const visibleSchoolName = profileIsCurrent ? schoolName : 'The Goddard School';
+  const visibleSchoolSubdomain = profileIsCurrent ? schoolSubdomain : 'goddard';
+  const visibleSchoolPhone = profileIsCurrent ? schoolPhone : '';
+  const visibleSchoolEmail = profileIsCurrent ? schoolEmail : '';
+  const visibleSchoolAddress = profileIsCurrent ? schoolAddress : '';
 
   return (
-    <UserContext.Provider value={{ userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, loading, error, refreshUserData: () => loadUserData(3, 500, true), isReady }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady }}>
       {children}
     </UserContext.Provider>
   );

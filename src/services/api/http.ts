@@ -30,7 +30,8 @@ export async function httpFetch<T>(req: HttpRequest, opts: FetchOptions = {}): P
     res = await fetchWithTokenRefresh(url, {
       method: req.method,
       headers,
-      body: req.body ? JSON.stringify(req.body) : undefined
+      body: req.body ? JSON.stringify(req.body) : undefined,
+      cache: req.cache
     });
 
     const contentType = res.headers.get('content-type') || '';

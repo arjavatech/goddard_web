@@ -4,6 +4,7 @@ import { App } from './App';
 import SelectSchool from './SelectSchool';
 
 import { UserProvider, useUserContext } from './contexts/UserContext';
+import { AuthProvider } from './services/auth/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { AuthErrorBoundary } from './components/AuthErrorBoundary';
@@ -63,10 +64,11 @@ function NavigateToAdmin() {
 
 export function AppRouter() {
   return <AuthErrorBoundary>
-      <UserProvider>
-        <NotificationsProvider>
-        <ToastProvider>
-          <BrowserRouter>
+      <AuthProvider>
+        <UserProvider>
+          <NotificationsProvider>
+          <ToastProvider>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <ScrollToTop />
             <Routes>
             <Route path="/" element={<Login />} />
@@ -125,9 +127,10 @@ export function AppRouter() {
             <Route path="*" element={<NotFound />} />
 
           </Routes>
-        </BrowserRouter>
-        </ToastProvider>
-        </NotificationsProvider>
-      </UserProvider>
+            </BrowserRouter>
+          </ToastProvider>
+          </NotificationsProvider>
+        </UserProvider>
+      </AuthProvider>
     </AuthErrorBoundary>;
 }

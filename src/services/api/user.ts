@@ -56,27 +56,45 @@ const userContextSchema = z.object({
   school_data: schoolDataSchema.nullable().optional(),
 }).passthrough();
 
+let inFlightUserContextRequest: Promise<UserContext> | null = null;
+
 export async function fetchUserContext(): Promise<UserContext> {
-  const data = await authedFetch({
-    method: 'GET',
-    url: '/users/me'
-  }, userContextSchema);
+  if (inFlightUserContextRequest) return inFlightUserContextRequest;
 
-  localStorage.setItem('schoolId', data.school_id || data.schoolId || '');
+  const request = (async () => {
+    const data = await authedFetch({
+      method: 'GET',
+      url: '/users/me',
+      // Profile data is session-specific; never reuse an HTTP cache entry from
+      // a previous login.
+      cache: 'no-store'
+    }, userContextSchema);
 
-  const result: UserContext = {
-    role: data.role,
-    schoolId: data.school_id || data.schoolId || null,
-    parentId: data.parent_id || data.parentId || data.user_id || data.userId || null,
-    email: data.email,
-    firstName: data.first_name || data.firstName,
-    lastName: data.last_name || data.lastName,
-    schoolData: data.school_data || null,
-  };
+    localStorage.setItem('schoolId', data.school_id || data.schoolId || '');
 
-  if (!result.parentId && data.email) {
-    result.parentId = data.email;
+    const result: UserContext = {
+      role: data.role,
+      schoolId: data.school_id || data.schoolId || null,
+      parentId: data.parent_id || data.parentId || data.user_id || data.userId || null,
+      email: data.email,
+      firstName: data.first_name || data.firstName,
+      lastName: data.last_name || data.lastName,
+      schoolData: data.school_data || null,
+    };
+
+    if (!result.parentId && data.email) {
+      result.parentId = data.email;
+    }
+
+    return result;
+  })();
+
+  inFlightUserContextRequest = request;
+  try {
+    return await request;
+  } finally {
+    if (inFlightUserContextRequest === request) {
+      inFlightUserContextRequest = null;
+    }
   }
-
-  return result;
 }

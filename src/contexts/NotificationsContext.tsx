@@ -75,7 +75,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setTimeout(() => n.close(), 6_000);
     } catch (err) {
       // Some browsers throw if the page isn't focused — ignore.
-      console.debug('[notifications] desktop notification suppressed', err);
     }
   }, []);
 
@@ -138,7 +137,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       //    requestFcmToken() handles SW registration internally and is idempotent.
       const token = await requestFcmToken();
       if (token) {
-        console.log('[FCM] push token ready:', token);
         try {
           localStorage.setItem('goddard.fcm-token', token);
         } catch (err) {
@@ -151,8 +149,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
       // 3. Handle messages that arrive while the tab is open (foreground).
       //    Background messages are handled entirely by firebase-messaging-sw.js.
-      unsubscribeForeground = await onForegroundMessage((payload) => {
-        console.log('[FCM] foreground message:', payload);
+      unsubscribeForeground = await onForegroundMessage(() => {
         // Refetch so the bell count and drawer update immediately.
         void refetchRef.current();
       });

@@ -84,17 +84,6 @@ const config = {
   }
 } as const;
 
-// Development logging
-if (config.isDev) {
-  console.log('🔧 Environment Configuration:', {
-    isDev: config.isDev,
-    isAuthBypassed: config.isAuthBypassed,
-    useMockApi: env.VITE_USE_MOCK_API,
-    apiBaseUrl: config.apiBaseUrl,
-    supabaseConfigured: config.supabase.isConfigured
-  });
-}
-
 // Export individual values for backward compatibility
 export const {
   env: envVars,

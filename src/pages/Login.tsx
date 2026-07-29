@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
 import { prefilloutProvision } from '../services/api/fillout';
+import { fetchUserContext } from '../services/api/user';
 import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
-import { useUserContext } from '../contexts/UserContext';
 
 
 export function Login() {
@@ -17,42 +17,12 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [formData, setFormData] = useState({ email: '', password: '', rememberMe: false });
-  // pendingRedirect is set to true after a successful sign-in so the effect
-  // below can watch for UserContext to finish loading and then redirect.
-  const [pendingRedirect, setPendingRedirect] = useState(false);
-
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const { signInWithPassword, signInWithProvider } = useAuth();
-  const { userData, isReady } = useUserContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
-  // Ref to ensure Fillout provisioning runs only once per login
-  const filloutProvisionedRef = useRef(false);
-
-  // Once the user has signed in and UserContext has finished loading,
-  // perform the redirect and Fillout provisioning using context data.
-  // This replaces the previous direct fetchUserContext() call in handleSubmit,
-  // eliminating the duplicate /users/me request.
-  useEffect(() => {
-    if (!pendingRedirect || !isReady || !userData) return;
-
-    // Provision Fillout once per login session (non-blocking, cached)
-    if (!filloutProvisionedRef.current) {
-      filloutProvisionedRef.current = true;
-      prefilloutProvision(userData).catch(() => {/* non-blocking */});
-    }
-
-    let redirectTo = location.state?.from?.pathname;
-    if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
-      const subdomain = userData.schoolData?.subdomain || 'goddard';
-      const isAdmin = userData.role && ['admin', 'superadmin'].includes(userData.role.toLowerCase());
-      redirectTo = isAdmin ? `/${subdomain}/admin` : `/${subdomain}/dashboard`;
-    }
-    navigate(redirectTo, { replace: true });
-  }, [pendingRedirect, isReady, userData]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validateEmail(formData.email);
@@ -61,10 +31,18 @@ export function Login() {
     setIsLoading(true);
     try {
       await signInWithPassword(formData.email, formData.password);
-      // Signal that we're waiting for UserContext to load before redirecting.
-      // UserContext's useEffect will fire from the auth state change and call
-      // /users/me exactly once — no duplicate call here.
-      setPendingRedirect(true);
+      // Keep the established dev-branch behavior: load the fresh profile
+      // directly after Supabase confirms the password login, then redirect.
+      const userData = await fetchUserContext();
+      prefilloutProvision(userData).catch(() => {/* non-blocking */});
+
+      let redirectTo = location.state?.from?.pathname;
+      if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
+        const subdomain = userData.schoolData?.subdomain || 'goddard';
+        const isAdmin = userData.role && ['admin', 'superadmin'].includes(userData.role.toLowerCase());
+        redirectTo = isAdmin ? `/${subdomain}/admin` : `/${subdomain}/dashboard`;
+      }
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       showToast('error', (err as Error).message, 'Login Failed');
       setIsLoading(false);

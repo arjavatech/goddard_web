@@ -9,6 +9,7 @@ export type HttpRequest = {
   url: string;
   headers?: Record<string, string>;
   body?: unknown;
+  cache?: RequestCache;
 };
 export type HttpResponse<T> = {
   status: number;
