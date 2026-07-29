@@ -116,26 +116,29 @@ export function ClassroomDetails() {
           return;
         }
 
-        // Fetch class-based enrollments using the new API
-        const [classrooms, classStats, classEnrollments] = await Promise.all([
-          fetchClassrooms(schoolId).catch(() => []),
-          fetchClassEnrollmentStats(schoolId).catch(() => []),
-          fetchClassBasedEnrollments(schoolId, classroomId).catch(() => [])
-        ]);
+        // Fetch classrooms list first to resolve ID/name mapping
+        const classrooms = await fetchClassrooms(schoolId).catch(() => []);
         
-        // Cache classrooms for the invite modal (lazy load guard)
         if (isMounted && classrooms.length > 0) {
           setAllClassrooms(classrooms.map(cls => ({ id: cls.id, name: cls.name })));
           setClassroomsLoaded(true);
-          setChildClassroom(classroomId || '');
         }
 
-        const targetClassroom = classrooms.find(cls => cls.id === classroomId);
+        const targetClassroom = classrooms.find(cls => cls.id === classroomId || cls.name === classroomId);
         if (!targetClassroom && isMounted) {
           setError('Classroom not found');
           setLoading(false);
           return;
         }
+
+        const resolvedClassroomId = targetClassroom ? targetClassroom.id : classroomId;
+        setChildClassroom(resolvedClassroomId || '');
+
+        // Fetch remaining data using resolved UUID classroomId
+        const [classStats, classEnrollments] = await Promise.all([
+          fetchClassEnrollmentStats(schoolId).catch(() => []),
+          fetchClassBasedEnrollments(schoolId, resolvedClassroomId).catch(() => [])
+        ]);
 
         const className = targetClassroom?.name || '';
         const stats = classStats.find(stat => stat.className === className);

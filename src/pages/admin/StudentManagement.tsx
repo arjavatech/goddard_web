@@ -89,10 +89,14 @@ export function StudentManagement() {
     return 'Draft';
   };
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
+  const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('studentViewMode', mode); };
   useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    const handleResize = () => { 
+      setWindowWidth(window.innerWidth);
+      if (window.innerWidth < 768) setViewMode('card'); 
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -267,10 +271,7 @@ export function StudentManagement() {
         setStudents([]);
         return;
       }
-      const [enrollmentData, classrooms] = await Promise.all([
-        fetchStudentEnrollments(schoolId),
-        fetchClassrooms(schoolId)
-      ]);
+      const enrollmentData = await fetchStudentEnrollments(schoolId);
       
       const enrollments = enrollmentData.enrollments || [];
       if (!enrollments || enrollments.length === 0) {
@@ -324,10 +325,8 @@ export function StudentManagement() {
         // Calculate progress based on completed forms
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-        const classroomName = enrollment.class_name;
-        // Find the classroom ID by matching the name
-        const classroom = classrooms.find(c => c.name === classroomName);
-        const classroomId = classroom?.id || 'unassigned';
+        const classroomName = enrollment.class_name || 'Unassigned';
+        const classroomId = classroomName;
 
         const parentEmail = enrollment.primary_email || 'parent@example.com';
         const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
@@ -356,7 +355,7 @@ export function StudentManagement() {
           totalForms: total,
           classroom: {
             id: classroomId,
-            name: classroomName || 'Unassigned'
+            name: classroomName
           },
           parent: {
             id: parentId,
@@ -375,10 +374,16 @@ export function StudentManagement() {
         setStudents(mappedStudents);
       }
       
-      // Set available classrooms
-      const classroomsList = classrooms.map(classroom => ({
-        id: classroom.id,
-        name: classroom.name
+      // Set available classrooms from unique class names in enrollments
+      const uniqueClassNames = new Set<string>();
+      enrollments.forEach((enrollment: EnrollmentData) => {
+        if (enrollment.class_name && enrollment.class_name.trim() !== '') {
+          uniqueClassNames.add(enrollment.class_name);
+        }
+      });
+      const classroomsList = Array.from(uniqueClassNames).map(name => ({
+        id: name,
+        name: name
       }));
       setAvailableClassrooms(classroomsList);
     } catch (error) {
@@ -471,13 +476,24 @@ export function StudentManagement() {
     }),
   [filteredStudents, sortBy, sortOrder]);
 
+  const calculatedItemsPerPage = useMemo(() => {
+    if (viewMode !== 'card') return 10;
+    // Mobile view (<768px) is handled internally by usePagination.
+    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
+    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
+    if (windowWidth >= 768 && windowWidth < 1024) {
+      return 10;
+    }
+    return 9;
+  }, [viewMode, windowWidth]);
+
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedStudents,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredAndSortedStudents, itemsPerPage: viewMode === 'card' ? 9 : 10 });
+  } = usePagination({ data: filteredAndSortedStudents, itemsPerPage: calculatedItemsPerPage });
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
@@ -1581,9 +1597,21 @@ export function StudentManagement() {
                     return;
                   }
                   
+                  // Resolve the classroom UUID dynamically
+                  let targetClassroomId = newClassroomId;
+                  try {
+                    const classrooms = await fetchClassrooms(schoolId || '');
+                    const matched = classrooms.find(c => c.name === newClassroomId || c.id === newClassroomId);
+                    if (matched) {
+                      targetClassroomId = matched.id;
+                    }
+                  } catch (err) {
+                    console.warn('Failed to resolve classroom UUID for transfer:', err);
+                  }
+                  
                   await promoteStudent(
                     selectedStudentForTransfer.enrollmentId,
-                    newClassroomId,
+                    targetClassroomId,
                     'Age progression to new class',
                     new Date().toISOString()
                   );
@@ -1735,14 +1763,24 @@ export function StudentManagement() {
               onClick={async () => {
                 if (!bulkTransferToGrade || selectedStudentsForTransfer.length === 0) return;
                 try {
-                  // const user = await fetchUserContext();
-                  
+                  // Resolve classroom UUID dynamically for bulk transfer
+                  let targetClassroomId = bulkTransferToGrade;
+                  try {
+                    const classrooms = await fetchClassrooms(schoolId || '');
+                    const matched = classrooms.find(c => c.name === bulkTransferToGrade || c.id === bulkTransferToGrade);
+                    if (matched) {
+                      targetClassroomId = matched.id;
+                    }
+                  } catch (err) {
+                    console.warn('Failed to resolve classroom UUID for bulk transfer:', err);
+                  }
+
                   // Prepare promotions array
                   const promotions = selectedStudentsForTransfer.map(studentId => {
                     const student = students.find(s => s.id === studentId);
                     return {
                       enrollment_id: student?.enrollmentId || '',
-                      to_classroom_id: bulkTransferToGrade,
+                      to_classroom_id: targetClassroomId,
                       reason: 'Bulk transfer to new class',
                       effective_date: new Date().toISOString()
                     };
