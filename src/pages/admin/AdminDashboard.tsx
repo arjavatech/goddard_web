@@ -580,12 +580,12 @@ export function AdminDashboard() {
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
-                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex items-center justify-between group transition-all duration-300 gap-2 sm:gap-4">
+                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex flex-row md:flex-col xl:flex-row md:items-stretch xl:items-center justify-between group transition-all duration-300 gap-2 sm:gap-4">
                   <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
                     <div className={`p-2 sm:p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
                       <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${action.iconColor}`} />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate hidden sm:block">{action.description}</p>
                     </div>
@@ -593,7 +593,7 @@ export function AdminDashboard() {
                   <Button
                     onClick={action.onClick}
                     variant="default"
-                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0 whitespace-nowrap"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0 whitespace-nowrap md:w-full xl:w-auto md:mt-2.5 xl:mt-0"
                   >
                     {action.btnText}
                   </Button>

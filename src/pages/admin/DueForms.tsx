@@ -30,10 +30,14 @@ export function DueForms() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
+  const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
   useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
+    const handleResize = () => { 
+      setWindowWidth(window.innerWidth);
+      if (window.innerWidth < 768) setViewMode('card'); 
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -310,13 +314,24 @@ export function DueForms() {
     setFilteredForms(sorted);
   }, [filteredFormsData, sortBy, sortOrder]);
 
+  const calculatedItemsPerPage = useMemo(() => {
+    if (viewMode !== 'card') return 10;
+    // Mobile view (<768px) is handled internally by usePagination.
+    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
+    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
+    if (windowWidth >= 768 && windowWidth < 1024) {
+      return 10;
+    }
+    return 9;
+  }, [viewMode, windowWidth]);
+
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedForms,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredForms, itemsPerPage: viewMode === 'card' ? 9 : 10 });
+  } = usePagination({ data: filteredForms, itemsPerPage: calculatedItemsPerPage });
 
   const dueFormsExportHeaders = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
   
