@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
+import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -12,6 +13,7 @@ import { reviewStudentFormAssignment, getFormResumeLink } from '../../services/a
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { Document, Page, pdfjs } from 'react-pdf';
+import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
 import 'react-pdf/dist/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -58,17 +60,18 @@ export function FormView() {
   const [containerWidth, setContainerWidth] = useState<number>(760);
 
   const iframeContainerRef = useRef<HTMLDivElement>(null);
-  // Start with a large default — updated by postMessage from the form service.
-  const [formHeight, setFormHeight] = useState<number>(5000);
+  // Use a page-sized fallback for embeds that do not publish their content height.
+  // Forms that support postMessage still replace this with their exact height.
+  const [formHeight, setFormHeight] = useState<number>(1050);
 
   // Stable embed ID — unique per form load so we can match resize postMessages
   // from this specific iframe. Regenerated whenever the URL changes.
   const embedIdRef = useRef<string>(`fe-${Date.now()}`);
 
-  // Reset to safe large default when a new form is loaded.
+  // Reset to the page-sized fallback when a new form is loaded.
   const filloutFormId = location.state?.filloutFormId;
   useEffect(() => {
-    setFormHeight(5000);
+    setFormHeight(1050);
     embedIdRef.current = `fe-${Date.now()}`;
   }, [resolvedResumeLink, filloutFormId]);
 
@@ -79,9 +82,6 @@ export function FormView() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // ── Diagnostic: log every single message raw ─────────────────────
-      console.log('[iframe-msg] origin:', event.origin, '| raw data:', event.data);
-
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (!data || typeof data !== 'object') return;
@@ -98,14 +98,9 @@ export function FormView() {
           data.data?.size;
 
         if (typeof h === 'number' && h > 0) {
-          console.log('[iframe-msg] height found:', h, '→ setting formHeight to', Math.ceil(h));
           setFormHeight(Math.ceil(h));
         }
-      } catch (e) {
-        if (typeof event.data === 'string') {
-          console.log('[iframe-msg] non-JSON string:', event.data);
-        }
-      }
+      } catch { /* Ignore non-resize messages from the embedded form. */ }
     };
 
     window.addEventListener('message', handleMessage);
@@ -143,19 +138,20 @@ export function FormView() {
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
   const recentPdfLink = location.state?.recentPdfLink;
 
-  const isFillout = (() => {
+  const usesResumeLink = (() => {
     const link = recentEditLink || filloutFormId || filloutFormUrl;
     if (!link) return false;
     if (link.includes('fillout.com')) return true;
+    if (isFormBuilderUrl(link)) return true;
     if (!link.startsWith('http')) return true;
     return false;
   })();
 
   useEffect(() => {
-    if (studentFormAssignmentId && isFillout) {
+    if (studentFormAssignmentId && usesResumeLink) {
       getFormResumeLink(studentFormAssignmentId).then(setResolvedResumeLink);
     }
-  }, [studentFormAssignmentId, isFillout]);
+  }, [studentFormAssignmentId, usesResumeLink]);
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
@@ -273,6 +269,9 @@ export function FormView() {
       setIsRejecting(false);
     }
   };
+  const selectedUrl = getFormUrl();
+  const embeddedResize = useEmbeddedFormResize(selectedUrl);
+
   if (!formData) {
     return <AdminLayout>
       <div className="space-y-6">
@@ -295,9 +294,6 @@ export function FormView() {
       </div>
     </AdminLayout>;
   }
-
-
-  const selectedUrl = getFormUrl();
   return <AdminLayout>
     <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
@@ -459,12 +455,11 @@ export function FormView() {
                       </div>
                     )}
                     <iframe
+                      ref={embeddedResize.iframeRef}
                       src={selectedUrl}
                       style={{
                         width: '100%',
-                        // Height is driven by formHeight state.
-                        // Starts at 1500px; updated by form_resized postMessages.
-                        height: `${formHeight}px`,
+                        height: `${embeddedResize.height ?? formHeight}px`,
                         border: 'none',
                         display: 'block',
                         opacity: isFrameLoading ? 0 : 1,
@@ -473,10 +468,13 @@ export function FormView() {
                         scrollMargin: 0,
                         overflow: 'hidden',
                       }}
-                      scrolling="no"
+                      scrolling={embeddedResize.isDynamic ? 'no' : 'auto'}
                       title={formData.title}
                       allow="fullscreen"
-                      onLoad={() => setIsFrameLoading(false)}
+                      onLoad={() => {
+                        embeddedResize.handleLoad();
+                        setIsFrameLoading(false);
+                      }}
                     />
                   </div>
                 );

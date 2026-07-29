@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
+import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
 import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, ChevronRight, CheckCircle, LayoutGrid, List } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
@@ -13,6 +14,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { cn } from '../../lib/utils';
+import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
 
 // Configure PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc = new URL(
@@ -216,6 +218,7 @@ export function FormsDocuments({
   const previousChildIdRef = useRef<string | undefined>(selectedChildId);
   const [selectedForm, setSelectedForm] = useState<any>(null);
   const [isFrameLoading, setIsFrameLoading] = useState(false);
+  const embeddedResize = useEmbeddedFormResize(selectedForm?.viewUrl);
   const [openError, setOpenError] = useState<string | null>(null);
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
@@ -231,26 +234,22 @@ export function FormsDocuments({
   useIframeScrollLock();
 
   const iframeContainerRef = useRef<HTMLDivElement>(null);
-  // Start with a large default — the form service will update this via postMessage.
-  // 5000px covers any realistic form length without requiring an exact measurement.
-  const [formHeight, setFormHeight] = useState<number>(5000);
+  // Page-sized fallback for embeds that do not report their content height.
+  // Fillout-style embeds still replace this through postMessage.
+  const [formHeight, setFormHeight] = useState<number>(1050);
 
   // Stable embed ID — unique per form load so we can match resize postMessages
   // from this specific iframe. Regenerated whenever the selected form changes.
   const embedIdRef = useRef<string>(`fe-${Date.now()}`);
 
-  // Reset to safe large default when a new form is opened.
+  // Reset to the page-sized fallback when a new form is opened.
   useEffect(() => {
-    setFormHeight(5000);
+    setFormHeight(1050);
     embedIdRef.current = `fe-${Date.now()}`;
   }, [selectedForm]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Log every message so the exact format from your form service is visible
-      // in browser devtools → Console as [iframe-msg] lines.
-      console.log('[iframe-msg] origin:', event.origin, '| raw data:', event.data);
-
       try {
         const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
         if (!data || typeof data !== 'object') return;
@@ -277,16 +276,10 @@ export function FormsDocuments({
         if (typeof h === 'number' && h > 0) {
           // Use the reported height directly — the form service reports the
           // full content height including its own padding. No extra buffer needed.
-          // The 5000px initial default ensures no clipping before this fires.
           const safeHeight = Math.ceil(h);
-          console.log('[iframe-msg] height found:', h, '→ setting formHeight to', safeHeight);
           setFormHeight(safeHeight);
         }
-      } catch (e) {
-        if (typeof event.data === 'string') {
-          console.log('[iframe-msg] non-JSON string message:', event.data);
-        }
-      }
+      } catch { /* Ignore non-resize messages from the embedded form. */ }
     };
 
     window.addEventListener('message', handleMessage);
@@ -478,7 +471,7 @@ export function FormsDocuments({
           const link = recentEditLink || filloutFormId;
           if (!link) return false;
           if (link.includes('fillout.com')) return true;
-          if (link.includes('form-builder-atj.pages.dev')) return true; // Custom form builder also uses Fillout API
+          if (isFormBuilderUrl(link)) return true; // Supports every tenant subdomain.
           if (!link.startsWith('http')) return true; // Legacy slugs/IDs are treated as Fillout
           return false;
         })();
@@ -1099,13 +1092,11 @@ export function FormsDocuments({
                       className="w-full rounded-xl overflow-hidden bg-white border border-slate-200/80 shadow-lg"
                     >
                       <iframe
+                        ref={embeddedResize.iframeRef}
                         src={selectedForm.viewUrl}
                         style={{
                           width: '100%',
-                          // Height is controlled by formHeight state.
-                          // formHeight starts at 1500px and is updated by
-                          // form_resized postMessages from the Fillout form.
-                          height: `${formHeight}px`,
+                          height: `${embeddedResize.height ?? formHeight}px`,
                           border: 'none',
                           display: 'block',
                           opacity: isFrameLoading ? 0 : 1,
@@ -1114,14 +1105,11 @@ export function FormsDocuments({
                           scrollMargin: 0,
                           overflow: 'hidden',
                         }}
-                        scrolling="no"
+                        scrolling={embeddedResize.isDynamic ? 'no' : 'auto'}
                         title={selectedForm.title}
                         onLoad={() => {
-                          console.log('iframe onLoad triggered! loadedRef:', iframeLoadedRef.current);
-                          if (iframeLoadedRef.current) {
-                            console.log('iframe onLoad detected redirect! Starting countdown...');
-                            startThankYouCountdown();
-                          }
+                          embeddedResize.handleLoad();
+                          if (iframeLoadedRef.current) startThankYouCountdown();
                           iframeLoadedRef.current = true;
                           setIsFrameLoading(false);
                         }}
