@@ -188,6 +188,8 @@ interface FormsDocumentsProps {
   onYearFilterChange?: (year: string) => void; // Callback to change year filter
   enrollmentId?: string; // For downloading all forms
   formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
+  selectedChildDob?: string; // DOB of the selected child
+  parentEmail?: string; // Parent email
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -204,6 +206,8 @@ export function FormsDocuments({
   onYearFilterChange,
   enrollmentId,
   formOpenGuard,
+  selectedChildDob,
+  parentEmail,
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
   const { user } = useAuth();
@@ -577,6 +581,31 @@ export function FormsDocuments({
             formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
           }
         }
+      }
+      // Prefill Fillout form fields: child name, child dob, email
+      // Fillout supports prefilling via query params using the exact field label
+      if (formUrl && formUrl !== '#') {
+        const params = new URLSearchParams();
+        if (form.childName) {
+          // Common field label variations used in Fillout forms
+          params.set('Child Name', form.childName);
+          params.set('Child\'s Name', form.childName);
+          params.set('Student Name', form.childName);
+          params.set('Student\'s Name', form.childName);
+        }
+        if (selectedChildDob) {
+          params.set('Child DOB', selectedChildDob);
+          params.set('Child\'s Date of Birth', selectedChildDob);
+          params.set('Date of Birth', selectedChildDob);
+          params.set('DOB', selectedChildDob);
+        }
+        if (parentEmail) {
+          params.set('Email', parentEmail);
+          params.set('Parent Email', parentEmail);
+          params.set('Email Address', parentEmail);
+        }
+        const paramStr = params.toString();
+        if (paramStr) formUrl += `${formUrl.includes('?') ? '&' : '?'}${paramStr}`;
       }
       console.log('Final form URL:', formUrl);
       console.log('[Fillout] READY payload (frontend):', {

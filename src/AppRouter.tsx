@@ -24,6 +24,7 @@ import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
+import { NotFound } from './pages/NotFound';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
 import { SchoolManagement } from './pages/superadmin/SchoolManagement';
@@ -119,6 +120,9 @@ export function AppRouter() {
               <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
               <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
             </Route>
+
+            {/* 404 Catch-all */}
+            <Route path="*" element={<NotFound />} />
 
           </Routes>
         </BrowserRouter>

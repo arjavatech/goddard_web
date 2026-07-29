@@ -381,6 +381,8 @@ export function Dashboard() {
                         onYearFilterChange={setYearFilter}
                         enrollmentId={selectedChild.enrollmentId}
                         formOpenGuard={formOpenGuardRef}
+                        selectedChildDob={selectedChild.dob}
+                        parentEmail={parentData?.email || userData?.email || ''}
                       />
                     </div>
                   )}
