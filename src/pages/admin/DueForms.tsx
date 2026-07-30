@@ -924,6 +924,8 @@ export function DueForms() {
                     <MobilePagination
                       currentPage={currentPage}
                       totalPages={totalPages}
+                      totalItems={filteredForms.length}
+                      itemsPerPage={itemsPerPage}
                       onPageChange={setCurrentPage}
                     />
                   </div>
