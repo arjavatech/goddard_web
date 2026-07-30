@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -29,6 +29,14 @@ interface ChildrenOverviewProps {
 
 export function ChildrenOverview({ children, selectedChildId, onSelectChild }: ChildrenOverviewProps) {
   const activeRef = useRef<HTMLButtonElement>(null);
+  const [showAll, setShowAll] = useState(false);
+
+  const selectedIndex = children.findIndex(c => c.id === selectedChildId);
+  const visibleChildren = showAll
+    ? children
+    : selectedIndex >= 2
+      ? [children[0], children[selectedIndex]]
+      : children.slice(0, 2);
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -52,8 +60,8 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
           Children Overview
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
-        {children.map(child => {
+      <CardContent className="pt-0 space-y-2 pr-1">
+        {visibleChildren.map(child => {
           const isSelected = child.id === selectedChildId;
           const forms = child.forms ?? [];
           const total = forms.length;
@@ -120,6 +128,14 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
             </button>
           );
         })}
+        {children.length > 2 && (
+          <button
+            onClick={() => setShowAll(prev => !prev)}
+            className="w-full text-center text-xs font-medium text-[#0F2D52] hover:text-[#0F2D52] py-1.5 transition-colors"
+          >
+            {showAll ? 'View Less' : `View More (${children.length - 2} more)`}
+          </button>
+        )}
       </CardContent>
     </Card>
   );

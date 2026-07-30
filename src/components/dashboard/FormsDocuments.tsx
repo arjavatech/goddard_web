@@ -1182,7 +1182,7 @@ export function FormsDocuments({
               onClick={handleDownloadAll}
               disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
               title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available' : 'Download all approved forms as ZIP'}
-              className="h-7 px-2 text-[11px] gap-1 border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52] hover:text-white"
+              className="h-7 px-2 text-[11px] gap-1 border-[#0F2D52] hover:text-white bg-[#0F2D52] hover:bg-[#0F2D52] text-white"
             >
               {isDownloadingAll
                 ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
