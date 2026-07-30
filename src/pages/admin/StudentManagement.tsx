@@ -913,8 +913,8 @@ export function StudentManagement() {
                             <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="flex-shrink-0 bg-[#04488c] text-white font-extrabold w-10 h-10 rounded-full" />
                             <div className="min-w-0 flex-1">
                               <Link
-                                to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
-                                state={{ fromStudents: true }}
+                                to={`/admin/parents/${student.parent.id}?childId=${student.id}`}
+                                state={{ fromStudents: true, selectedChildId: student.id }}
                                 className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
                               >
                                 {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
@@ -1069,7 +1069,7 @@ export function StudentManagement() {
                       <div className="flex items-center">
                         <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-3 bg-[#044ba0] text-white font-bold" />
                         <div className="min-w-0">
-                          <Link to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} state={{ fromStudents: true }} className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm">
+                          <Link to={`/admin/parents/${student.parent.id}?childId=${student.id}`} state={{ fromStudents: true, selectedChildId: student.id }} className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm">
                             {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                           </Link>
                         </div>

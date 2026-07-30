@@ -286,11 +286,9 @@ export function ParentDetails() {
             if (found) targetId = found.id;
           } else {
             const urlParams = new URLSearchParams(location.search);
-            const studentName = urlParams.get('student');
-            if (studentName) {
-              const found = processedChildren.find(child =>
-                `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
-              );
+            const childIdFromUrl = urlParams.get('childId');
+            if (childIdFromUrl) {
+              const found = processedChildren.find(child => child.id === childIdFromUrl);
               if (found) targetId = found.id;
             }
           }
