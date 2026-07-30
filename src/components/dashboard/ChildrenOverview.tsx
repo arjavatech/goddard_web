@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
@@ -28,6 +28,11 @@ interface ChildrenOverviewProps {
 }
 
 export function ChildrenOverview({ children, selectedChildId, onSelectChild }: ChildrenOverviewProps) {
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedChildId]);
   if (children.length === 0) {
     return (
       <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:-translate-y-[3px] hover:shadow-md transition-all duration-250 ease-in-out">
@@ -47,7 +52,7 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
           Children Overview
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 space-y-2">
+      <CardContent className="pt-0 space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
         {children.map(child => {
           const isSelected = child.id === selectedChildId;
           const forms = child.forms ?? [];
@@ -65,6 +70,7 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
           return (
             <button
               key={child.id}
+              ref={isSelected ? activeRef : null}
               onClick={() => onSelectChild(child.id)}
               className={cn(
                 'w-full text-left p-3 rounded-xl border transition-all duration-150',

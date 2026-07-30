@@ -64,14 +64,14 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
     : null;
 
   return (
-    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:border-[#1a6fc4]/20 hover:shadow-md hover:-translate-y-[3px] transition-all duration-300 relative">
-      <CardHeader className="pb-3">
+    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:border-[#1a6fc4]/20 hover:shadow-md hover:-translate-y-[3px] transition-all duration-300 relative self-start">
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-700">
           <User className="w-4 h-4 text-[#0F2D52]" />
           Account Information
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0 space-y-3">
+      <CardContent className="pt-0 pb-4 space-y-3">
         <ParentRow name={primaryName} email={parentData.email} isPrimary />
 
         {additionalName && parentData.additional_email && (

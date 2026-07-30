@@ -1,3 +1,4 @@
+import React from 'react';
 import { Navigate, Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { GraduationCap, ShieldOff } from 'lucide-react';
@@ -8,7 +9,10 @@ export function SchoolNotFound() {
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
+  const [isLoading, setIsLoading] = React.useState(false);
+
   const handleGoHome = async () => {
+    setIsLoading(true);
     await signOut();
     window.location.replace('/');
   };
@@ -91,9 +95,11 @@ export function SchoolNotFound() {
 
           <button
             onClick={handleGoHome}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0F2D52] hover:bg-[#1E4B83] text-white text-sm font-semibold rounded-xl transition-colors duration-200 shadow-sm"
+            disabled={isLoading}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-[#0F2D52] hover:bg-[#1E4B83] text-white text-sm font-semibold rounded-xl transition-colors duration-200 shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
           >
-            Go to Home Page
+            {isLoading && <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+            {isLoading ? 'Redirecting...' : 'Go to Login Page'}
           </button>
         </motion.div>
       </div>

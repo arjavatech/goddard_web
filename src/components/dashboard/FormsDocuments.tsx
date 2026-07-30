@@ -417,9 +417,8 @@ export function FormsDocuments({
         console.log('✓ Form from Continue button - bypassing child ID validation');
       } else {
         // Ensure we're using the correct child's data
-        if (form.childId && selectedChildId && form.childId !== selectedChildId) {
+        if (form.childId && form.childId !== activeTab && form.childId !== selectedChildId) {
           console.warn('Form child ID does not match selected child ID - blocking form open');
-          console.log('Expected child ID:', selectedChildId, 'Got child ID:', form.childId);
           return;
         }
         console.log('✓ Child ID validation passed - opening form for correct child');
@@ -670,8 +669,8 @@ export function FormsDocuments({
     } else if (tabValue === 'family') {
       return allForms.filter(form => !form.childId);
     } else {
-      // Individual child tab - filter by childId and ensure it matches selectedChildId
-      return allForms.filter(form => form.childId === tabValue && form.childId === selectedChildId);
+      // Individual child tab - filter by childId matching the active tab
+      return allForms.filter(form => form.childId === tabValue);
     }
   };
 
@@ -1203,7 +1202,6 @@ export function FormsDocuments({
         setActiveTab(value);
         // If a child tab is clicked, notify parent to update selected child
         if (value !== 'family' && onChildSelect) {
-          // Find the child by ID and pass their name to onChildSelect
           const child = childSpecificForms.find(c => c.childId === value);
           if (child) {
             onChildSelect(child.childName);

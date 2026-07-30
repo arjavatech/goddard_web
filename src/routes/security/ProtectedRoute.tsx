@@ -24,7 +24,7 @@ export function ProtectedRoute({
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  if (isAuthenticated && !userData) {
+  if (!isReady) {
     if (userError) {
       return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
@@ -41,9 +41,6 @@ export function ProtectedRoute({
         </div>
       );
     }
-    return <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>;
   }
 
   if (!isReady) {

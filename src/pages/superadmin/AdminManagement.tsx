@@ -159,7 +159,7 @@ export function AdminManagement() {
     } catch (err) {
       const errorResponse = err as NetworkError;
       if (errorResponse?.code === 'EMAIL_BOUNCE' || errorResponse?.status === 502) {
-        showToast('error', errorResponse.message);
+        showToast('error', errorResponse.message ?? 'Failed to send invitation');
         return;
       }
 
@@ -193,7 +193,7 @@ export function AdminManagement() {
     } catch (error) {
       const err = error as NetworkError;
       if (err?.code === 'EMAIL_BOUNCE' || err?.status === 502) {
-        showToast('error', err.message);
+        showToast('error', err.message ?? 'Failed to resend invitation');
       } else {
         console.error('Error resending invitation:', error);
         showToast('error', 'Failed to resend invitation');

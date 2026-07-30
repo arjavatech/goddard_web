@@ -358,7 +358,7 @@ export function Dashboard() {
                     />
                   </div>
                   {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
-                  <div className="grid grid-cols-1 gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                  <div className="grid grid-cols-1  gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
