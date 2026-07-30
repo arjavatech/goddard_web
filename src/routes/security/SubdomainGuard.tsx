@@ -133,5 +133,11 @@ export function SubdomainGuard() {
     return <SchoolNotFound />;
   }
 
+  // Check if trying to access admin routes without admin role
+  const isAdminRoute = location.pathname.includes('/admin');
+  if (isAdminRoute && userData?.role?.toLowerCase() !== 'admin') {
+    return <Navigate to={`/${schoolSubdomain}/dashboard`} replace />;
+  }
+
   return <Outlet />;
 }
