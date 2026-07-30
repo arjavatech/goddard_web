@@ -22,6 +22,7 @@ interface ChildSelectorProps {
 export function ChildSelector({ children, selectedChildId, onSelectChild }: ChildSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const sortedChildren = [...children].sort((a, b) => a.name.localeCompare(b.name));
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -31,7 +32,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  if (children.length === 0) {
+  if (sortedChildren.length === 0) {
     return (
       <div className="mb-2">
         <h1 className="text-base sm:text-2xl font-bold text-slate-900">Parent Dashboard</h1>
@@ -40,7 +41,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
     );
   }
 
-  const selectedChild = children.find(c => c.id === selectedChildId) || children[0];
+  const selectedChild = sortedChildren.find(c => c.id === selectedChildId) || sortedChildren[0];
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
@@ -53,7 +54,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
       </div>
 
       {/* Child picker — only shown when there are multiple children */}
-      {children.length > 1 && (
+      {sortedChildren.length > 1 && (
         <div className="relative w-full sm:w-auto" ref={ref}>
           <button
             onClick={() => setIsOpen(!isOpen)}
@@ -70,7 +71,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
           {isOpen && (
             <div className="absolute top-full left-0 mt-2 z-30 w-full sm:w-64 bg-white rounded-xl border border-slate-100 shadow-xl overflow-hidden">
               <div className="p-1 max-h-72 overflow-auto">
-                {children.map(child => (
+                {sortedChildren.map(child => (
                   <button
                     key={child.id}
                     onClick={() => { onSelectChild(child.id); setIsOpen(false); }}
@@ -102,7 +103,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
       )}
 
       {/* Single child — just show name as a pill */}
-      {children.length === 1 && (
+      {sortedChildren.length === 1 && (
         <div className="flex items-center gap-2 bg-[#EFF5FB] rounded-xl px-3 py-2 border border-[#0F2D52]/10">
           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-[10px]">
             {selectedChild.initials}

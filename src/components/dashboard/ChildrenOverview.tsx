@@ -31,12 +31,13 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
   const activeRef = useRef<HTMLButtonElement>(null);
   const [showAll, setShowAll] = useState(false);
 
-  const selectedIndex = children.findIndex(c => c.id === selectedChildId);
+  const sortedChildren = [...children].sort((a, b) => a.name.localeCompare(b.name));
+  const selectedIndex = sortedChildren.findIndex(c => c.id === selectedChildId);
   const visibleChildren = showAll
-    ? children
+    ? sortedChildren
     : selectedIndex >= 2
-      ? [children[0], children[selectedIndex]]
-      : children.slice(0, 2);
+      ? [sortedChildren[0], sortedChildren[selectedIndex]]
+      : sortedChildren.slice(0, 2);
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -128,12 +129,12 @@ export function ChildrenOverview({ children, selectedChildId, onSelectChild }: C
             </button>
           );
         })}
-        {children.length > 2 && (
+        {sortedChildren.length > 2 && (
           <button
             onClick={() => setShowAll(prev => !prev)}
             className="w-full text-center text-xs font-medium text-[#0F2D52] hover:text-[#0F2D52] py-1.5 transition-colors"
           >
-            {showAll ? 'View Less' : `View More (${children.length - 2} more)`}
+            {showAll ? 'View Less' : `View More (${sortedChildren.length - 2} more)`}
           </button>
         )}
       </CardContent>

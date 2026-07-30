@@ -1214,7 +1214,7 @@ export function FormsDocuments({
               {familyForms.length > 0 && (
                 <TabsTrigger value="family" className="text-xs sm:text-sm px-2 sm:px-3">Family Forms</TabsTrigger>
               )}
-              {childSpecificForms.length > 1 && childSpecificForms.map((child) => (
+              {childSpecificForms.length > 1 && [...childSpecificForms].sort((a, b) => a.childName.localeCompare(b.childName)).map((child) => (
                 <TabsTrigger key={child.childId} value={child.childId} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3">
                   <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
                   <span className="hidden sm:inline">{child.childName}</span>
