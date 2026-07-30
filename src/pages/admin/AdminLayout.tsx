@@ -171,17 +171,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
         </aside>
 
-        {/* Desktop sidebar — sticky, stays in document flow */}
-        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 sticky top-0 self-start h-screen bg-[#0F2D52] border-r border-[#1a3a60] z-30">
+        {/* Desktop sidebar — fixed position */}
+        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 fixed top-0 left-0 h-screen bg-[#0F2D52] border-r border-[#1a3a60] z-30">
           {/* Logo area */}
-          <div className="h-20 px-5 flex items-center border-b border-[#1a3a60] flex-shrink-0 lg:fixed lg:top-0 lg:left-0 lg:w-60 bg-[#0F2D52] z-40 border-r border-r-[#1a3a60]">
+          <div className="h-20 px-5 flex items-center border-b border-[#1a3a60] flex-shrink-0 bg-[#0F2D52]">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
               className="h-12 w-auto object-contain brightness-0 invert opacity-95 max-w-[170px]"
             />
           </div>
-          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
+          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4">
             {navGroups.map((group, gi) => (
               <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
@@ -237,7 +237,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         </aside>
 
         {/* ── Main content ── */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-60">
           {/* Top header */}
           {userData?.role && (
             <header className={cn(
@@ -339,20 +339,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Page content */}
           <main className={cn(
-            'flex-1 bg-[#F7F9FC]',
+            'flex-1 bg-[#F7F9FC] pb-96',
             userData?.role ? 'pt-16' : 'pt-0',
             isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
           )}>
             {children}
           </main>
-        </div>
-        {/* END main content column */}
-      </div>
-      {/* END sidebar + main row — footer is OUTSIDE this row */}
-      {/* ── Footer ── */}
-      <footer className="w-full bg-[#1a3a5c]">
-        {/* Main body */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
+          {/* ── Footer ── */}
+          <footer className="w-full bg-[#1a3a5c]">
+            {/* Main body */}
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
             {/* ── Brand column ── */}
@@ -458,24 +454,26 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </li>
               </ul>
             </div>
-          </div>
-        </div>
-
-        {/* ── Bottom bar ── */}
-        <div className="border-t border-white/10">
-          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-            <p className="text-xs text-slate-400 text-center sm:text-left">
-              © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-              <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-                {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-              </span>
             </div>
-          </div>
+
+            {/* ── Bottom bar ── */}
+            <div className="border-t border-white/10">
+              <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p className="text-xs text-slate-400 text-center sm:text-left">
+                  © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                    {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            </div>
+          </footer>
         </div>
-      </footer>
+      </div>
 
       {/* ── Modals ── */}
       <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
