@@ -326,7 +326,7 @@ export function Dashboard() {
   };
   return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}

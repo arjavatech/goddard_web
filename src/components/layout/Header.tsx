@@ -119,7 +119,7 @@ export function Header() {
         )}
 
         {/* Desktop (sm+): single-row three-column layout */}
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 hidden sm:flex items-center justify-between gap-2">
+        <div className="w-full h-16 hidden sm:flex items-center justify-between gap-2 px-2 sm:px-3 lg:px-4">
           {/* Logo — left */}
           <div className="flex items-center flex-shrink-0">
             <img
