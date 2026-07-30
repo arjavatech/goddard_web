@@ -8,9 +8,10 @@ import {
   type NotificationFilter,
 } from '../services/api/notifications';
 import { requestFcmToken, onForegroundMessage } from '../services/firebase';
+import { getNotificationWebSocket, disconnectNotificationWebSocket } from '../services/websocket/notificationWebSocket';
+import { wsApiUrl } from '../config/env';
 import { useUserContext } from './UserContext';
 
-const POLL_INTERVAL_MS = 30_000;
 const PAGE_SIZE = 100;
 
 type NotificationsContextValue = {
@@ -56,7 +57,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   // for ones the user hasn't seen this session.
   const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const isFirstFetchRef = useRef(true);
-  const intervalRef = useRef<number | null>(null);
   const isFetchingRef = useRef(false);
   const refetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
 
@@ -162,7 +162,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     };
   }, [enabled]);
 
-  // Polling + visibility-aware refetch.
+  // WebSocket connection for real-time notifications
   useEffect(() => {
     if (!loggedIn) {
       setAllItems([]);
@@ -171,45 +171,58 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setInitialLoading(true);
       isFirstFetchRef.current = true;
       seenUnreadIdsRef.current = new Set();
-      if (intervalRef.current != null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
+      disconnectNotificationWebSocket();
       return;
     }
 
-    // Kick off the first fetch immediately on login (parallel with other app data).
+    // Initial fetch on login
     void refetchRef.current();
 
-    const startInterval = () => {
-      if (intervalRef.current != null) return;
-      intervalRef.current = window.setInterval(() => void refetchRef.current(), POLL_INTERVAL_MS);
-    };
-    const stopInterval = () => {
-      if (intervalRef.current != null) {
-        window.clearInterval(intervalRef.current);
-        intervalRef.current = null;
+    // Setup WebSocket connection
+    const ws = getNotificationWebSocket(wsApiUrl);
+    
+    const unsubscribe = ws.subscribe(event => {
+      if (event.type === 'notification:new') {
+        const notification = event.data;
+        setAllItems(prev => [notification, ...prev]);
+        setTotal(prev => prev + 1);
+        
+        if (!notification.is_read) {
+          setUnreadCount(prev => prev + 1);
+          if (!seenUnreadIdsRef.current.has(notification.id)) {
+            seenUnreadIdsRef.current.add(notification.id);
+            fireDesktopNotification(notification);
+          }
+        }
+      } else if (event.type === 'notification:updated') {
+        const updated = event.data;
+        setAllItems(prev =>
+          prev.map(item =>
+            item.id === updated.id ? { ...item, ...updated } : item
+          )
+        );
+        
+        if (updated.is_read) {
+          setUnreadCount(prev => Math.max(0, prev - 1));
+        }
+      } else if (event.type === 'sync') {
+        // Handle missed notifications on reconnect
+        const missedNotifications = event.data;
+        setAllItems(prev => {
+          const newIds = new Set(missedNotifications.map((n: any) => n.id));
+          const existing = prev.filter(n => !newIds.has(n.id));
+          return [...missedNotifications, ...existing];
+        });
       }
-    };
+    });
 
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        void refetchRef.current();
-        startInterval();
-      } else {
-        stopInterval();
-      }
-    };
-
-    if (document.visibilityState === 'visible') startInterval();
-    document.addEventListener('visibilitychange', handleVisibility);
+    void ws.connect();
 
     return () => {
-      stopInterval();
-      document.removeEventListener('visibilitychange', handleVisibility);
+      unsubscribe();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedIn]);
+  }, [loggedIn, fireDesktopNotification]);
 
   const items = useMemo(() => {
     if (filter === 'all') return allItems;
