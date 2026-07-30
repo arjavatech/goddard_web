@@ -330,7 +330,7 @@ export function Dashboard() {
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
-        {loading ? <div className="py-16 text-center text-muted-foreground text-sm flex items-center justify-center min-h-[400px]">
+        {loading ? <div className="py-16 text-center text-muted-foreground text-sm flex items-center justify-center min-h-screen">
             <div className="animate-pulse">
               <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
               <p className="text-slate-500 text-sm font-semibold">Loading parent dashboard...</p>

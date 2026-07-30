@@ -339,14 +339,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* Page content */}
           <main className={cn(
-            'flex-1 bg-[#F7F9FC] pb-96',
+            'flex-1 bg-[#F7F9FC]',
             userData?.role ? 'pt-16' : 'pt-0',
             isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
           )}>
             {children}
           </main>
-          {/* ── Footer ── */}
-          <footer className="w-full bg-[#1a3a5c]">
+        </div>
+      </div>
+
+      {/* ── Footer (outside main flex) ── */}
+      <footer className="w-full bg-[#1a3a5c]">
             {/* Main body */}
             <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
@@ -471,9 +474,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
             </div>
             </div>
-          </footer>
-        </div>
-      </div>
+      </footer>
 
       {/* ── Modals ── */}
       <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
