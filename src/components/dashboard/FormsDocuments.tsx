@@ -545,21 +545,21 @@ export function FormsDocuments({
           // initials saved on earlier forms can be re-used in this one. Provisioning
           // failures degrade gracefully — the form still opens without re-use.
           if (formUrl && formUrl !== '#') {
-            const parentEmail = (userData?.email || user?.email || '').trim().toLowerCase();
+            const filloutEmail = (userData?.email || user?.email || '').trim().toLowerCase();
             // Stable identity only: Goddard parentId or the email itself. The auth
             // user id must not be used — before userData loads it would provision a
             // second Fillout user for the same parent (and the dev bypass id is
             // shared by everyone).
-            const externalUserId = userData?.parentId || parentEmail;
+            const externalUserId = userData?.parentId || filloutEmail;
             if (!externalUserId) {
               console.warn('[Fillout] Skipping user provisioning — parent identity not loaded yet (no parentId/email)');
             }
             if (externalUserId) {
               const parentName =
-                [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || parentEmail || 'Goddard Parent';
+                [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || filloutEmail || 'Goddard Parent';
               const filloutCtx = await getFilloutUserContext({
                 externalUserId,
-                email: parentEmail || `${externalUserId}@goddard.parent`,
+                email: filloutEmail || `${externalUserId}@goddard.parent`,
                 name: parentName,
               });
               formUrl = appendFilloutUserParams(formUrl, filloutCtx);
@@ -575,29 +575,15 @@ export function FormsDocuments({
           }
         }
       }
-      // Prefill Fillout form fields: child name, child dob, email
-      // Fillout supports prefilling via query params using the exact field label
-      if (formUrl && formUrl !== '#') {
-        const params = new URLSearchParams();
-        if (form.childName) {
-          // Common field label variations used in Fillout forms
-          params.set('Child Name', form.childName);
-          params.set('Child\'s Name', form.childName);
-          params.set('Student Name', form.childName);
-          params.set('Student\'s Name', form.childName);
-        }
-        if (selectedChildDob) {
-          params.set('Child DOB', selectedChildDob);
-          params.set('Child\'s Date of Birth', selectedChildDob);
-          params.set('Date of Birth', selectedChildDob);
-          params.set('DOB', selectedChildDob);
-        }
-        if (parentEmail) {
-          params.set('Email', parentEmail);
-          params.set('Parent Email', parentEmail);
-          params.set('Email Address', parentEmail);
-        }
-        const paramStr = params.toString();
+      // Prefill only for Fillout forms (not PDF viewer)
+      if (!isReadOnly && formUrl && formUrl !== '#') {
+        const prefill: Record<string, string> = {};
+        if (form.childName) prefill['child_name'] = form.childName;
+        if (selectedChildDob) prefill['child_dob'] = selectedChildDob;
+        if (parentEmail) prefill['email'] = parentEmail;
+        const paramStr = Object.entries(prefill)
+          .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+          .join('&');
         if (paramStr) formUrl += `${formUrl.includes('?') ? '&' : '?'}${paramStr}`;
       }
       console.log('Final form URL:', formUrl);
@@ -1191,17 +1177,19 @@ export function FormsDocuments({
             </Select>
           )}
           {enrollmentId && (
-            <button
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleDownloadAll}
               disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
               title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available' : 'Download all approved forms as ZIP'}
-              className="flex items-center gap-1 rounded-lg border border-dashed border-[#0F2D52]/40 bg-white/60 px-2 py-1.5 text-[11px] font-medium text-[#0F2D52] transition-all hover:border-[#0F2D52] hover:bg-[#0F2D52]/5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="h-7 px-2 text-[11px] gap-1 border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52] hover:text-white"
             >
               {isDownloadingAll
-                ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
+                ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
                 : <Download className="h-3 w-3" />}
               <span>{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
-            </button>
+            </Button>
           )}
         </div>
         {openError && (

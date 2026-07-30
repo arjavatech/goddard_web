@@ -37,6 +37,7 @@ type DashboardChild = {
   initials: string;
   age: string;
   dob: string;
+  rawDob: string | null;
   enrollmentProgress: number;
   formsCompleted: number;
   totalForms: number;
@@ -167,6 +168,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
       return age >= 0 ? `${age} years` : '—';
     })(),
     dob: formatDate(child.childDob) || '—',
+    rawDob: child.childDob || null,
     enrollmentProgress,
     formsCompleted: completedCount,
     totalForms,
@@ -356,7 +358,7 @@ export function Dashboard() {
                     />
                   </div>
                   {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                  <div className="grid grid-cols-1 gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
@@ -381,7 +383,7 @@ export function Dashboard() {
                         onYearFilterChange={setYearFilter}
                         enrollmentId={selectedChild.enrollmentId}
                         formOpenGuard={formOpenGuardRef}
-                        selectedChildDob={selectedChild.dob}
+                        selectedChildDob={selectedChild.rawDob || undefined}
                         parentEmail={parentData?.email || userData?.email || ''}
                       />
                     </div>

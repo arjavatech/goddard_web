@@ -81,7 +81,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     onClick={() => setIsSidebarOpen(false)}
                     className={cn(
                       'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
-                      isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                      isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/[0.08]'
                     )}
                   >
                     {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-[#1a6fc4] rounded-r-full" />}
@@ -223,7 +223,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 bg-[#F7F9FC] pt-16 p-3 sm:p-4 md:p-6 pb-8">
+          <main className="flex-1 bg-[#F7F9FC] p-3 sm:p-4 md:p-6 pb-8">
             {children}
           </main>
         </div>

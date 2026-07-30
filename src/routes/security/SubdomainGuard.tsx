@@ -4,8 +4,14 @@ import { GraduationCap, ShieldOff } from 'lucide-react';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 
-function SchoolNotFound() {
+export function SchoolNotFound() {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleGoHome = async () => {
+    await signOut();
+    window.location.replace('/');
+  };
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
 
@@ -84,7 +90,7 @@ function SchoolNotFound() {
           </div>
 
           <button
-            onClick={() => navigate('/', { replace: true })}
+            onClick={handleGoHome}
             className="inline-flex items-center gap-2 px-6 py-3 bg-[#0F2D52] hover:bg-[#1E4B83] text-white text-sm font-semibold rounded-xl transition-colors duration-200 shadow-sm"
           >
             Go to Home Page
@@ -101,7 +107,7 @@ export function SubdomainGuard() {
   const { isAuthenticated, loading: authLoading } = useAuth();
   const { userData, schoolSubdomain, isReady } = useUserContext();
 
-  if (authLoading || (isAuthenticated && !isReady)) {
+  if (authLoading || !isReady) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />

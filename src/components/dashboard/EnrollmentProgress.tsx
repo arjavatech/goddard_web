@@ -73,8 +73,8 @@ export function EnrollmentProgress({
           </div>
           {/* Progress ring — desktop */}
           <div className="hidden sm:flex flex-col items-center justify-center w-16 h-16 rounded-full bg-white/15 flex-shrink-0 border-2 border-white/20">
-            <span className="text-xl font-extrabold text-white leading-none">{progress}</span>
-            <span className="text-[10px] font-semibold text-slate-300 leading-tight">%</span>
+            <p className="text-xl font-extrabold text-white leading-none">{progress} <span className="text-[14px] font-semibold text-slate-300 leading-tight">%</span></p>
+           
           </div>
         </div>
 
@@ -86,10 +86,14 @@ export function EnrollmentProgress({
               style={{ width: `${progress}%` }}
             />
           </div>
-          <div className="flex justify-between text-[11px] sm:text-xs text-slate-300/80">
-            <span>{completedCount} done</span>
-            <span>{totalForms - completedCount} remaining</span>
-          </div>
+          {isComplete ? (
+            <p className="text-[11px] sm:text-xs text-slate-300/80 text-center">All {totalForms} forms completed</p>
+          ) : (
+            <div className="flex justify-between text-[11px] sm:text-xs text-slate-300/80">
+              <span>{completedCount} done</span>
+              <span>{totalForms - completedCount} remaining</span>
+            </div>
+          )}
         </div>
       </div>
     </div>

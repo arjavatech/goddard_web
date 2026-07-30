@@ -113,7 +113,7 @@ export function SuperAdminDashboard() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
+      <div className="container mx-auto px-0 py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
 
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">
@@ -346,47 +346,70 @@ export function SuperAdminDashboard() {
                 <span className="h-7 w-7 rounded-full border-2 border-[#0F2D52] border-t-transparent animate-spin" />
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[480px]">
-                  <thead>
-                    <tr>
-                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">School Name</th>
-                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Subdomain</th>
-                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</th>
-                      <th className="px-4 sm:px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {schools.length > 0 ? schools.map((item, index) => (
-                      <tr key={item.school?.id || index} className="transition-colors duration-150 hover:bg-slate-50/50">
-                        <td className="px-4 sm:px-5 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
-                              <School className="w-4 h-4 text-[#0F2D52]" />
-                            </div>
-                            <span className="text-sm font-semibold text-slate-800 whitespace-nowrap">{item.school?.name || 'N/A'}</span>
-                          </div>
-                        </td>
-                        <td className="px-4 sm:px-5 py-3.5 text-sm text-slate-500 font-semibold whitespace-nowrap">{item.school?.subdomain || 'N/A'}</td>
-                        <td className="px-4 sm:px-5 py-3.5 text-sm text-slate-600 font-semibold whitespace-nowrap">
-                          {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
-                        </td>
-                        <td className="px-4 sm:px-5 py-3.5">
-                          <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'} className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
-                            {item.owner?.is_verified ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </td>
-                      </tr>
-                    )) : (
+              <>
+                {/* Desktop table */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="w-full min-w-[480px]">
+                    <thead>
                       <tr>
-                        <td colSpan={4} className="px-5 py-12 text-center text-sm text-slate-400">
-                          No schools found
-                        </td>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">School Name</th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Subdomain</th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Admin</th>
+                        <th className="px-5 py-3.5 text-left text-[10px] font-bold uppercase tracking-wider text-slate-400">Status</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {schools.length > 0 ? schools.map((item, index) => (
+                        <tr key={item.school?.id || index} className="transition-colors duration-150 hover:bg-slate-50/50">
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
+                                <School className="w-4 h-4 text-[#0F2D52]" />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-800">{item.school?.name || 'N/A'}</span>
+                            </div>
+                          </td>
+                          <td className="px-5 py-3.5 text-sm text-slate-500 font-semibold">{item.school?.subdomain || 'N/A'}</td>
+                          <td className="px-5 py-3.5 text-sm text-slate-600 font-semibold">
+                            {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'} className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+                              {item.owner?.is_verified ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </td>
+                        </tr>
+                      )) : (
+                        <tr>
+                          <td colSpan={4} className="px-5 py-12 text-center text-sm text-slate-400">No schools found</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Mobile card list */}
+                <div className="sm:hidden divide-y divide-slate-50">
+                  {schools.length > 0 ? schools.map((item, index) => (
+                    <div key={item.school?.id || index} className="flex items-center gap-3 px-4 py-3">
+                      <div className="w-9 h-9 rounded-lg bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
+                        <School className="w-4 h-4 text-[#0F2D52]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold text-slate-800 truncate">{item.school?.name || 'N/A'}</p>
+                        <p className="text-[11px] text-slate-400 truncate">
+                          {item.school?.subdomain || 'N/A'} · {item.owner ? `${item.owner.first_name} ${item.owner.last_name}` : 'N/A'}
+                        </p>
+                      </div>
+                      <Badge variant={item.owner?.is_verified ? 'success' : 'secondary'} className="rounded-full px-2.5 py-0.5 text-xs font-semibold flex-shrink-0">
+                        {item.owner?.is_verified ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+                  )) : (
+                    <p className="px-4 py-10 text-center text-sm text-slate-400">No schools found</p>
+                  )}
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
