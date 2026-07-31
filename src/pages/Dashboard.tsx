@@ -227,7 +227,7 @@ export function Dashboard() {
         if (!isMounted) return;
 
         if (!parentData) {
-          throw new Error('Unable to fetch parent data.');
+          throw new Error('Access Restricted. This page is available only for parent users. Please log in using a parent account.');
         }
 
         // Store raw parent data for form viewing
