@@ -92,7 +92,9 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
             if (!isNaN(date.getTime())) {
               return date.toLocaleDateString();
             }
-          } catch (e) {}
+          } catch (e) {
+            // Ignore invalid date strings
+          }
         }
         return '—';
       })(),
@@ -215,7 +217,9 @@ export function Dashboard() {
     }
 
     let isMounted = true;
-    setLoading(true);
+    if (!parentData || children.length === 0) {
+      setLoading(true);
+    }
 
     // Fetch parent data
     fetchSingleParent(parentId, userData.schoolId)
@@ -318,10 +322,15 @@ export function Dashboard() {
   };
 
   // For FormsDocuments.onViewForm — form is already being opened by handleView; no action needed here
-  const handleFormViewed = (_form: any) => {};
+  const handleFormViewed = (_form: any) => {
+    // No action needed here
+  };
 
   // Handle form completion - refresh data to update form status
-  const handleFormCompleted = () => {
+  const handleFormCompleted = (forceFullRefresh?: boolean) => {
+    if (forceFullRefresh) {
+      setLoading(true);
+    }
     setRefreshTrigger(prev => prev + 1);
   };
   return <div className="min-h-screen bg-slate-50 flex flex-col">

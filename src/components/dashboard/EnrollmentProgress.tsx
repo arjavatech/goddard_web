@@ -73,7 +73,7 @@ export function EnrollmentProgress({
           </div>
           {/* Progress ring — desktop */}
           <div className="hidden sm:flex flex-col items-center justify-center w-16 h-16 rounded-full bg-white/15 flex-shrink-0 border-2 border-white/20">
-            <p className="text-xl font-extrabold text-white leading-none">{progress} <span className="text-[14px] font-semibold text-slate-300 leading-tight">%</span></p>
+            <p className="text-md font-extrabold text-white leading-none">{progress} <span className="text-[14px] font-semibold text-slate-300 leading-tight">%</span></p>
            
           </div>
         </div>

@@ -44,7 +44,7 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
   const selectedChild = sortedChildren.find(c => c.id === selectedChildId) || sortedChildren[0];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2">
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2 mt-6">
       {/* Page title */}
       <div className="flex items-center gap-2">
         <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center">

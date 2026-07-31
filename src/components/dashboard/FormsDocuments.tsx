@@ -185,7 +185,7 @@ interface FormsDocumentsProps {
   onViewForm: (form: any) => void; // Callback to view a form
   formToOpen?: any; // Form to automatically open
   onFormOpened?: () => void; // Callback when form is opened
-  onFormCompleted?: () => void; // Callback when form is completed to trigger refresh
+  onFormCompleted?: (forceFullRefresh?: boolean) => void; // Callback when form is completed to trigger refresh
   yearFilter?: string; // Year filter value
   onYearFilterChange?: (year: string) => void; // Callback to change year filter
   enrollmentId?: string; // For downloading all forms
@@ -734,7 +734,7 @@ export function FormsDocuments({
     if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
 
     // Immediately trigger refresh when thank you page starts
-    if (onFormCompleted) onFormCompleted();
+    if (onFormCompleted) onFormCompleted(false);
 
     // Auto-close form view and hide success message after exactly 2 seconds
     thankYouTimeoutRef.current = setTimeout(() => {
@@ -811,6 +811,17 @@ export function FormsDocuments({
   // Monitor form status changes from API response triggers to fire the thank-you screen
   useEffect(() => {
     if (!selectedForm) return;
+
+    // Only monitor status changes for forms that were opened in an incomplete state
+    const initialStatus = selectedForm.status;
+    const wasCompletedInitially =
+      initialStatus === 'Submitted' ||
+      initialStatus === 'Approved' ||
+      initialStatus === 'submitted' ||
+      initialStatus === 'approved';
+
+    if (wasCompletedInitially) return;
+
     const currentStatus = getActiveFormStatus();
     if (
       currentStatus === 'Submitted' ||
@@ -962,7 +973,7 @@ export function FormsDocuments({
                 setIsFrameLoading(false);
                 setShowThankYou(false);
                 if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-                if (onFormCompleted) onFormCompleted();
+                if (onFormCompleted) onFormCompleted(true);
               }}
             >
               <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -985,7 +996,7 @@ export function FormsDocuments({
 
         <Card className="glass-card animate-fade-in">
           <CardContent className="p-2 sm:p-3 md:p-6">
-            {showThankYou && (
+            {/* {showThankYou && (
               <div className="mb-4 bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center justify-between shadow-sm animate-fade-in-up">
                 <div className="flex items-center gap-3">
                   <div className="rounded-full bg-green-100 p-1.5">
@@ -997,7 +1008,7 @@ export function FormsDocuments({
                   </div>
                 </div>
               </div>
-            )}
+            )} */}
             <div className="relative">
               {isFrameLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
@@ -1094,7 +1105,6 @@ export function FormsDocuments({
                         title={selectedForm.title}
                         onLoad={() => {
                           embeddedResize.handleLoad();
-                          if (iframeLoadedRef.current) startThankYouCountdown();
                           iframeLoadedRef.current = true;
                           setIsFrameLoading(false);
                         }}
