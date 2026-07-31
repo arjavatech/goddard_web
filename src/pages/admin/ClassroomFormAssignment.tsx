@@ -14,6 +14,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchClassEnrollmentStats, assignFormToClassroom, assignFormToClassStudents, deleteClassFormOverride, assignFormToAllStudents } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { cn } from '../../lib/utils';
+import { motion } from 'framer-motion';
 type FormStatus = 'Default' | 'Active' | 'Inactive' | 'Archive';
 interface Form {
   id: string;
@@ -86,6 +88,7 @@ export function ClassroomFormAssignment() {
           }
         }
       } catch (error) {
+        console.error('Failed to load form assignments:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -252,150 +255,156 @@ export function ClassroomFormAssignment() {
   }];
   const [activeTab, setActiveTab] = useState('all');
   const filteredForms = selectedClassroom ? selectedClassroom.assignedForms.filter(form => activeTab === 'all' || form.status.toLowerCase() === activeTab) : [];
-  return <AdminLayout>
-    <div className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl">
-      <div className="space-y-4 sm:space-y-6">
-        {/* Header Section */}
-        <div className="flex flex-col space-y-3 sm:space-y-4">
-          <Button
-            variant="outline"
-            onClick={() => navigate('/admin/classrooms')}
-            className="flex items-center self-start w-fit text-sm"
-            size="sm"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            <span className="hidden sm:inline">Back to Classrooms</span>
-            <span className="sm:hidden">Back</span>
-          </Button>
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4 py-4 sm:py-6 max-w-7xl pb-10"
+      >
+        <div className="space-y-6">
+          {/* Header Section */}
+          <div className="flex flex-col space-y-4 mt-12 sm:mt-10 animate-fade-in bg-white p-5 rounded-2xl border border-slate-100 shadow-xs">
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/classrooms')}
+              className="flex items-center self-start w-fit text-xs font-bold bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 hover:text-white border border-slate-200 rounded-xl transition-all h-9"
+              size="sm"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1.5" />
+              <span>Back to Classrooms</span>
+            </Button>
 
-          {/* Controls Section */}
-          <div className="flex flex-col lg:flex-row gap-3 lg:gap-4">
-            <Select value={selectedClassroomId} onValueChange={setSelectedClassroomId}>
-              <SelectTrigger className="w-full lg:w-[200px]">
-                <SelectValue placeholder="Select classroom" />
-              </SelectTrigger>
-              <SelectContent>
-                {classrooms.map(classroom => (
-                  <SelectItem key={classroom.id} value={classroom.id}>
-                    {classroom.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* Controls Section */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Select value={selectedClassroomId} onValueChange={setSelectedClassroomId}>
+                <SelectTrigger className="w-full sm:w-[220px] rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] h-10 font-medium">
+                  <SelectValue placeholder="Select classroom" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-100 shadow-xl bg-white">
+                  {classrooms.map(classroom => (
+                    <SelectItem key={classroom.id} value={classroom.id} className="cursor-pointer">
+                      {classroom.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <div className="relative flex-1">
-              <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-amazon-teal' : 'text-gray-400'
-                }`} />
-              <Input
-                placeholder="Search forms..."
-                className={`pl-9 transition-all ${formSearchQuery
-                    ? 'bg-amazon-teal/5 border-amazon-teal/30 ring-1 ring-amazon-teal/20'
-                    : 'bg-white'
-                  }`}
-                value={formSearchQuery}
-                onChange={e => setFormSearchQuery(e.target.value)}
-              />
-              {formSearchQuery && (
-                <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-gray-400 hover:text-gray-600"
-                    onClick={() => setFormSearchQuery('')}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              )}
+              <div className="relative flex-1">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
+                <Input
+                  placeholder="Search forms..."
+                  className="pl-9 pr-8 h-10 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400"
+                  value={formSearchQuery}
+                  onChange={e => setFormSearchQuery(e.target.value)}
+                />
+                {formSearchQuery && (
+                  <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md"
+                      onClick={() => setFormSearchQuery('')}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Main Content Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            {/* Classrooms Sidebar */}
+            <div className="lg:col-span-1">
+              <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white h-full">
+                <CardHeader className="pb-3 border-b border-slate-50">
+                  <CardTitle className="text-sm font-bold text-slate-900">Classrooms</CardTitle>
+                  <p className="text-xs text-slate-400 font-semibold mt-0.5">{classrooms.length} total</p>
+                </CardHeader>
+                <CardContent className="pt-4 px-3">
+                  <div className="space-y-1.5 max-h-[300px] sm:max-h-[600px] overflow-y-auto pr-1">
+                    {classrooms.map(classroom => {
+                      const isActive = classroom.id === selectedClassroomId;
+                      return (
+                        <div
+                          key={classroom.id}
+                          className={`p-3 rounded-xl cursor-pointer transition-all duration-200 ${isActive
+                            ? 'bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white shadow-md shadow-[#0F2D52]/10 font-bold'
+                            : 'hover:bg-slate-50/80 hover:shadow-xs border border-transparent text-slate-700 font-semibold'
+                          }`}
+                          onClick={() => setSelectedClassroomId(classroom.id)}
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="text-xs sm:text-sm truncate pr-2">
+                              {classroom.name}
+                            </div>
+                            <div className="flex items-center flex-shrink-0 text-xs opacity-90">
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              <span>{classroom.assignedForms.length}</span>
+                              {isActive && <ChevronRight className="h-3.5 w-3.5 ml-1" />}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
-
-          </div>
-        </div>
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          {/* Classrooms Sidebar */}
-          <div className="lg:col-span-1">
-            <Card className="glass-card h-full">
-              <CardHeader className="pb-2 sm:pb-3">
-                <CardTitle className="text-base sm:text-lg">Classrooms</CardTitle>
-                <p className="text-xs sm:text-sm text-gray-500">{classrooms.length} total</p>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1 sm:space-y-2 max-h-[300px] sm:max-h-[600px] overflow-y-auto pr-1 sm:pr-2">
-                  {classrooms.map(classroom => (
-                    <div
-                      key={classroom.id}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-all duration-200 ${classroom.id === selectedClassroomId
-                          ? 'bg-amazon-teal text-white shadow-md'
-                          : 'hover:bg-gray-50 hover:shadow-sm border border-gray-100'
-                        }`}
-                      onClick={() => setSelectedClassroomId(classroom.id)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div className="font-medium truncate pr-2 text-xs sm:text-sm">
-                          {classroom.name}
-                        </div>
-                        <div className="flex items-center flex-shrink-0 text-xs">
-                          <FileText className="h-3 w-3 mr-1" />
-                          <span>{classroom.assignedForms.length}</span>
-                          {classroom.id === selectedClassroomId && (
-                            <ChevronRight className="h-3 w-3 ml-1" />
-                          )}
-                        </div>
-                      </div>
+            {/* Forms Content */}
+            <div className="lg:col-span-3">
+              <Card className="glass-card rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Selected Classroom</p>
+                      <CardTitle className="text-base sm:text-lg font-extrabold text-slate-950 truncate mt-0.5">
+                        {selectedClassroom?.name || 'Select Classroom'}
+                      </CardTitle>
+                      <p className="text-xs text-slate-400 font-semibold mt-0.5">
+                        {selectedClassroom?.assignedForms.length || 0} assigned forms
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-          {/* Forms Content */}
-          <div className="lg:col-span-3">
-            <Card className="glass-card">
-              <CardHeader className="pb-3 sm:pb-4">
-                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg sm:text-xl truncate">
-                      {selectedClassroom?.name || 'Select Classroom'}
-                    </CardTitle>
-                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                      {selectedClassroom?.assignedForms.length || 0} assigned forms
-                    </p>
+                    <Button
+                      onClick={() => {
+                        setFormSearchQuery('');
+                        setSelectedFormIds([]);
+                        setIsAssignDialogOpen(true);
+                      }}
+                      className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold rounded-xl h-10 text-xs px-4 w-full sm:w-auto"
+                      disabled={!selectedClassroom}
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Manage Forms
+                    </Button>
                   </div>
-                  <Button
-                    onClick={() => {
-                      setFormSearchQuery('');
-                      setSelectedFormIds([]);
-                      setIsAssignDialogOpen(true);
-                    }}
-                    className="bg-amazon-teal hover:bg-amazon-teal/90 w-full lg:w-auto lg:min-w-[140px]"
-                    disabled={!selectedClassroom}
-                    size="sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Manage Forms
-                  </Button>
-                </div>
-              </CardHeader>
+                </CardHeader>
 
-              <CardContent className="pt-0">
-                {/* Filter Tabs */}
-                <div className="mb-4 sm:mb-6">
-                  <div className="flex space-x-1 overflow-x-auto scrollbar-hide pb-2 -mx-1">
-                    <div className="flex space-x-1 min-w-max px-1">
+                <CardContent className="pt-5 px-5">
+                  {/* Filter Tabs */}
+                  <div className="mb-5 overflow-x-auto">
+                    <div className="flex space-x-1 pb-1">
                       {tabs.map(tab => (
                         <Button
                           key={tab.id}
-                          variant={activeTab === tab.id ? 'default' : 'outline'}
-                          size="sm"
                           onClick={() => setActiveTab(tab.id)}
-                          className="whitespace-nowrap flex-shrink-0 text-xs px-2 sm:px-4 py-1.5 sm:py-2 transition-all h-8 sm:h-9"
+                          className={cn(
+                            "whitespace-nowrap flex-shrink-0 text-xs px-4 py-1.5 transition-all duration-200 h-8 border rounded-xl font-bold",
+                            activeTab === tab.id
+                              ? "bg-[#0F2D52] text-white border-[#0F2D52] shadow-xs"
+                              : "bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-500"
+                          )}
+                          size="sm"
                         >
                           {tab.label}
                           {selectedClassroom && (
-                            <span className={`ml-1 sm:ml-2 px-1 sm:px-1.5 py-0.5 rounded text-xs ${activeTab === tab.id ? 'bg-white/20' : 'bg-gray-100 text-gray-600'
-                              }`}>
+                            <span className={`ml-1.5 px-1.5 py-0.5 rounded text-[10px] ${activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                               {tab.id === 'all'
                                 ? selectedClassroom.assignedForms.length
                                 : selectedClassroom.assignedForms.filter(f => f.status.toLowerCase() === tab.id).length
@@ -406,337 +415,276 @@ export function ClassroomFormAssignment() {
                       ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Forms List */}
-                {loading ? (
-                  <div className="text-center py-8 sm:py-12">
-                    <Loading message="Loading classrooms..." size="sm" />
-                  </div>
-                ) : !selectedClassroom ? (
-                  <div className="text-center py-8 sm:py-12 text-gray-500">
-                    <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
-                    <p className="text-base sm:text-lg font-medium mb-2">Select a Classroom</p>
-                    <p className="text-xs sm:text-sm px-4">Choose a classroom from the sidebar to view and manage assigned forms.</p>
-                  </div>
-                ) : selectedClassroom.assignedForms.length === 0 ? (
-                  <div className="text-center py-8 sm:py-12 text-gray-500">
-                    <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
-                    <p className="text-base sm:text-lg font-medium mb-2">No Forms Assigned</p>
-                    <p className="text-xs sm:text-sm mb-4 sm:mb-6 px-4">This classroom doesn't have any forms assigned yet.</p>
-                    <Button
-                      onClick={() => {
-                        setFormSearchQuery('');
-                        setSelectedFormIds([]);
-                        setIsAssignDialogOpen(true);
-                      }}
-                      variant="outline"
-                      className="bg-white hover:bg-gray-50"
-                      size="sm"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Manage Forms
-                    </Button>
-                  </div>
-                ) : filteredForms.length === 0 ? (
-                  <div className="text-center py-8 sm:py-12 text-gray-500">
-                    <FileText className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-3 sm:mb-4 text-gray-300" />
-                    <p className="text-base sm:text-lg font-medium mb-2">No {activeTab === 'all' ? '' : activeTab} Forms</p>
-                    <p className="text-xs sm:text-sm px-4">No forms match the selected filter.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {filteredForms.map(form => (
-                      <div
-                        key={form.id}
-                        className="flex items-center justify-between p-3 lg:p-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 min-h-[60px] lg:min-h-[70px]"
+                  {/* Forms List */}
+                  {loading ? (
+                    <div className="text-center py-12">
+                      <Loading message="Loading classrooms..." size="sm" />
+                    </div>
+                  ) : !selectedClassroom ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                      <p className="text-sm font-bold mb-1 text-slate-800">Select a Classroom</p>
+                      <p className="text-xs font-semibold px-4 max-w-sm mx-auto">Choose a classroom from the sidebar to view and manage assigned forms.</p>
+                    </div>
+                  ) : selectedClassroom.assignedForms.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                      <p className="text-sm font-bold mb-1 text-slate-800">No Forms Assigned</p>
+                      <p className="text-xs font-semibold mb-5 px-4 max-w-sm mx-auto">This classroom doesn't have any forms assigned yet.</p>
+                      <Button
+                        onClick={() => {
+                          setFormSearchQuery('');
+                          setSelectedFormIds([]);
+                          setIsAssignDialogOpen(true);
+                        }}
+                        className="bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 hover:text-white border border-[#0F2D52] rounded-xl transition-all font-bold text-xs h-9 px-4"
+                        size="sm"
                       >
-                        <div className="flex items-center min-w-0 flex-1 gap-3 lg:gap-4">
-                          <div className="flex-shrink-0 w-8 h-8 lg:w-10 lg:h-10 bg-amazon-teal/10 rounded-lg flex items-center justify-center">
-                            <FileText className="h-4 w-4 lg:h-5 lg:w-5 text-amazon-teal" />
-                          </div>
-                          <div className="min-w-0 flex-1 lg:flex lg:items-center lg:justify-between lg:gap-4">
-                            <div className="min-w-0 flex-1">
-                              <div className="font-medium text-gray-900 truncate text-sm lg:text-base">
-                                {form.name}
+                        <Plus className="h-4 w-4 mr-2" />
+                        Manage Forms
+                      </Button>
+                    </div>
+                  ) : filteredForms.length === 0 ? (
+                    <div className="text-center py-12 text-slate-400">
+                      <FileText className="h-10 w-10 mx-auto mb-3 text-slate-300" />
+                      <p className="text-sm font-bold mb-1 text-slate-800">No {activeTab === 'all' ? '' : activeTab} Forms</p>
+                      <p className="text-xs font-semibold px-4">No forms match the selected filter.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {filteredForms.map(form => (
+                        <div
+                          key={form.id}
+                          className="flex items-center justify-between p-3.5 bg-white rounded-xl border border-slate-100 hover:border-blue-100/50 hover:bg-slate-50/10 hover:shadow-xs transition-all duration-200 min-h-[60px]"
+                        >
+                          <div className="flex items-center min-w-0 flex-1 gap-3">
+                            <div className="flex-shrink-0 w-9 h-9 bg-[#EFF5FB] border border-blue-50 text-[#0F2D52] rounded-lg flex items-center justify-center">
+                              <FileText className="h-4 w-4 text-[#0F2D52]" />
+                            </div>
+                            <div className="min-w-0 flex-1 sm:flex sm:items-center sm:justify-between sm:gap-4">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-bold text-slate-800 truncate text-sm">
+                                  {form.name}
+                                </div>
+                                <div className="sm:hidden mt-1">
+                                  <Badge
+                                    variant={getStatusBadgeVariant(form.status)}
+                                    className="text-[10px] rounded-full px-2.5 py-0.5 font-bold"
+                                  >
+                                    {form.status}
+                                  </Badge>
+                                </div>
                               </div>
-                              <div className="lg:hidden mt-1">
+                              <div className="hidden sm:block flex-shrink-0">
                                 <Badge
                                   variant={getStatusBadgeVariant(form.status)}
-                                  className="text-xs h-5"
+                                  className="text-[10px] rounded-full px-2.5 py-0.5 font-bold"
                                 >
                                   {form.status}
                                 </Badge>
                               </div>
                             </div>
-                            <div className="hidden lg:block flex-shrink-0">
-                              <Badge
-                                variant={getStatusBadgeVariant(form.status)}
-                                className="text-xs h-6 px-3"
-                              >
-                                {form.status}
-                              </Badge>
-                            </div>
                           </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveForm(form.id)}
+                            className="text-slate-400 hover:text-red-500 hover:bg-red-50 flex-shrink-0 ml-3 transition-colors h-8 w-8 rounded-lg"
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleRemoveForm(form.id)}
-                          className="text-gray-400 hover:text-red-500 hover:bg-red-50 flex-shrink-0 ml-2 lg:ml-4 transition-colors h-8 w-8 lg:h-9 lg:w-9"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    {/* Delete Form Dialog */}
-    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-      <DialogContent className="w-[90vw] sm:w-[80vw] md:w-[70vw] lg:w-[60vw] max-w-md mx-4" preventClose>
-        <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">Remove Form</DialogTitle>
-        </DialogHeader>
-        <div className="py-3 sm:py-4">
-          <p className="text-sm sm:text-base text-gray-600">
-            Are you sure you want to remove{' '}
-            <span className="font-medium">{formToDelete?.name}</span> from {selectedClassroom?.name}? This
-            action cannot be undone.
-          </p>
-        </div>
-        <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-          <Button
-            variant="outline"
-            onClick={() => setIsDeleteDialogOpen(false)}
-            className="w-full sm:w-auto h-9 sm:h-10 text-sm"
-          >
-            Cancel
-          </Button>
-          <AsyncButton
-            variant="destructive"
-            onClick={confirmDeleteForm}
-            className="w-full sm:w-auto h-9 sm:h-10 text-sm"
-          >
-            Remove Form
-          </AsyncButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-
-    {/* Manage Forms Dialog */}
-    <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-      <DialogContent className="w-[95vw] sm:w-[90vw] md:w-[85vw] lg:w-[70vw] xl:w-[60vw] max-w-2xl max-h-[90vh] sm:max-h-[85vh] flex flex-col p-0 gap-0" preventClose>
-        {/* Header */}
-        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 md:py-5 border-b bg-gradient-to-r from-amazon-teal/5 to-amazon-teal/10">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-amazon-teal/15 rounded-lg flex items-center justify-center flex-shrink-0">
-              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <DialogTitle className="text-lg sm:text-xl font-semibold text-gray-900 truncate">
-                Add Forms to Classroom
-              </DialogTitle>
-              <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 truncate">
-                Select forms to assign to <span className="font-medium text-amazon-teal">{selectedClassroom?.name}</span>
-              </p>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
+      </motion.div>
 
-        {/* Content */}
-        <div className="flex-1 flex flex-col min-h-0">
-          {/* Search and Stats Bar */}
-          <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 bg-gray-50/50 border-b">
-            <div className="flex flex-col gap-3 sm:gap-4">
-              <div className="relative">
-                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${formSearchQuery ? 'text-amazon-teal' : 'text-gray-400'
-                  }`} />
+      {/* Delete Form Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-md rounded-2xl border border-slate-100 bg-white" preventClose>
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 pr-6">Remove Form</DialogTitle>
+          </DialogHeader>
+          <div className="py-3">
+            <p className="text-sm text-slate-600 font-semibold">
+              Are you sure you want to remove{' '}
+              <span className="font-extrabold text-[#0F2D52]">{formToDelete?.name}</span> from {selectedClassroom?.name}? This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="w-full sm:w-auto h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50"
+            >
+              Cancel
+            </Button>
+            <AsyncButton
+              variant="destructive"
+              onClick={confirmDeleteForm}
+              className="w-full sm:w-auto h-10 text-sm rounded-xl font-bold"
+            >
+              Remove Form
+            </AsyncButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Manage Forms Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-2xl max-h-[90dvh] flex flex-col p-0 gap-0 rounded-2xl border border-slate-100 bg-white overflow-hidden" preventClose>
+          {/* Header */}
+          <div className="flex-shrink-0 px-4 sm:px-6 py-4 border-b bg-slate-50/50">
+            <div className="flex items-center gap-3 pr-6">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-[#EFF5FB] border border-blue-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-[#0F2D52]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                  Add Forms to Classroom
+                </DialogTitle>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-0.5 font-semibold truncate">
+                  Assigning to <span className="font-extrabold text-[#0F2D52]">{selectedClassroom?.name}</span>
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Search + Filter */}
+          <div className="flex-shrink-0 px-4 sm:px-6 py-3 border-b bg-white">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+              <div className="relative flex-1">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 transition-colors ${formSearchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <Input
-                  placeholder="Search available forms..."
-                  className={`pl-9 h-9 sm:h-10 text-sm transition-all border-gray-200 focus:border-amazon-teal focus:ring-amazon-teal/20 ${formSearchQuery
-                      ? 'border-amazon-teal/40 ring-2 ring-amazon-teal/10 bg-amazon-teal/5'
-                      : 'bg-white'
-                    }`}
+                  placeholder="Search forms..."
+                  className="pl-8 h-9 text-sm border-slate-200 focus:border-[#0F2D52] focus:ring-[#0F2D52]/15 rounded-xl bg-white"
                   value={formSearchQuery}
                   onChange={e => setFormSearchQuery(e.target.value)}
                 />
                 {formSearchQuery && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-5 w-5 sm:h-6 sm:w-6 text-gray-400 hover:text-gray-600"
-                    onClick={() => setFormSearchQuery('')}
-                  >
+                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 hover:text-slate-600 rounded-md" onClick={() => setFormSearchQuery('')}>
                     <X className="h-3 w-3" />
                   </Button>
                 )}
               </div>
-              <div className="flex flex-col gap-3 sm:gap-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2">Form Status</label>
-                  <Select value={selectedFormStatus} onValueChange={(value) => setSelectedFormStatus(value as 'active' | 'inactive' | 'school_default')}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="school_default">Default</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+              <Select value={selectedFormStatus} onValueChange={(v) => setSelectedFormStatus(v as 'active' | 'inactive' | 'school_default')}>
+                <SelectTrigger className="w-full sm:w-36 rounded-xl border-slate-200 text-xs h-9 font-semibold bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl border-slate-100 shadow-xl bg-white">
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="school_default">Default</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          {/* Forms List */}
-          <div className="flex-1 overflow-y-auto min-h-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4">
+          {/* Forms List — scrollable */}
+          <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-6 py-3">
             {availableForms.length === 0 ? (
-              <div className="flex items-center justify-center h-full min-h-[250px] sm:min-h-[300px]">
-                <div className="text-center max-w-sm px-4">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                    <FileText className="h-6 w-6 sm:h-8 sm:w-8 text-gray-400" />
+              <div className="flex items-center justify-center min-h-[180px]">
+                <div className="text-center px-4">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <FileText className="h-5 w-5 text-slate-400" />
                   </div>
-                  <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-2">No Available Forms</h3>
-                  {formSearchQuery ? (
-                    <p className="text-sm text-gray-600">
-                      No forms match your search for <span className="font-medium">'{formSearchQuery}'</span>.
-                      <br className="hidden sm:block" />Try adjusting your search terms.
-                    </p>
-                  ) : selectedClassroom?.assignedForms.length === allForms.length ? (
-                    <p className="text-sm text-gray-600">
-                      All available forms have already been assigned to this classroom.
-                    </p>
-                  ) : (
-                    <p className="text-sm text-gray-600">
-                      No active forms are currently available for assignment.
-                    </p>
-                  )}
+                  <p className="text-sm font-bold text-slate-800 mb-1">No Available Forms</p>
+                  <p className="text-xs text-slate-400 font-semibold">
+                    {formSearchQuery
+                      ? <>No forms match <span className="font-bold text-[#0F2D52]">'{formSearchQuery}'</span>.</>  
+                      : 'All forms are already assigned or none are available.'}
+                  </p>
                 </div>
               </div>
             ) : (
-              <div className="grid gap-2 sm:gap-3">
+              <div className="grid gap-2">
                 {availableForms.map(form => {
                   const isSelected = selectedFormIds.includes(form.id);
                   const isInactive = form.status === 'Inactive';
                   return (
                     <div
                       key={form.id}
-                      className={`group relative flex items-center p-3 sm:p-4 rounded-lg sm:rounded-xl border-2 transition-all duration-200 ${isInactive ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'} ${isSelected
-                          ? 'border-amazon-teal bg-amazon-teal/5 shadow-sm'
-                          : isInactive ? 'border-gray-200 bg-gray-50/50' : 'border-gray-200 hover:border-amazon-teal/40 hover:bg-gray-50/50'
-                        }`}
                       onClick={() => {
                         if (isInactive) return;
-                        if (isSelected) {
-                          setSelectedFormIds(selectedFormIds.filter(id => id !== form.id));
-                        } else {
-                          setSelectedFormIds([...selectedFormIds, form.id]);
-                        }
+                        setSelectedFormIds(isSelected
+                          ? selectedFormIds.filter(id => id !== form.id)
+                          : [...selectedFormIds, form.id]
+                        );
                       }}
+                      className={`relative flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-150 ${
+                        isInactive ? 'cursor-not-allowed opacity-50 border-slate-100 bg-slate-50/50'
+                        : isSelected ? 'cursor-pointer border-[#0F2D52] bg-[#0F2D52]/5'
+                        : 'cursor-pointer border-slate-100 hover:border-[#0F2D52]/30 hover:bg-slate-50/40'
+                      }`}
                     >
-                      {/* Selection Indicator */}
-                      <div className={`absolute top-2 sm:top-3 right-2 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 transition-all ${isSelected
-                          ? 'bg-amazon-teal border-amazon-teal'
-                          : isInactive ? 'border-gray-300' : 'border-gray-300 group-hover:border-amazon-teal/60'
-                        }`}>
-                        {isSelected && (
-                          <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-white absolute top-0.5 left-0.5" />
-                        )}
-                      </div>
-
                       <Checkbox
-                        id={`form-${form.id}`}
                         checked={isSelected}
                         disabled={isInactive}
-                        className="mr-3 sm:mr-4 flex-shrink-0"
+                        className="flex-shrink-0 border-slate-300 data-[state=checked]:bg-[#0F2D52] data-[state=checked]:border-[#0F2D52]"
                       />
-
-                      <div className="flex items-center flex-1 min-w-0 gap-3 sm:gap-4">
-                        <div className={`flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl flex items-center justify-center transition-colors ${isSelected ? 'bg-amazon-teal/20' : 'bg-amazon-teal/10'
-                          }`}>
-                          <FileText className={`h-5 w-5 sm:h-6 sm:w-6 transition-colors ${isSelected ? 'text-amazon-teal' : 'text-amazon-teal/70'
-                            }`} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <h4 className={`font-semibold truncate text-sm sm:text-base mb-1 ${isInactive ? 'text-gray-500' : 'text-gray-900'}`}>
-                            {form.name}
-                          </h4>
-                          <div className="flex items-center gap-2">
-                            <Badge
-                              variant={getStatusBadgeVariant(form.status)}
-                              className="text-xs h-5 sm:h-6 px-2 sm:px-3 font-medium"
-                            >
-                              {form.status}
-                            </Badge>
-                            {isInactive && (
-                              <span className="text-xs text-gray-500 font-medium">Not available</span>
-                            )}
-                          </div>
+                      <div className={`flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center ${isSelected ? 'bg-[#0F2D52]/15' : 'bg-[#EFF5FB]'}`}>
+                        <FileText className="h-4 w-4 text-[#0F2D52]" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className={`font-bold text-sm truncate ${isInactive ? 'text-slate-400' : 'text-slate-800'}`}>{form.name}</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] rounded-full px-2 py-0 font-bold">{form.status}</Badge>
+                          {isInactive && <span className="text-[10px] text-slate-400 font-semibold">Not available</span>}
                         </div>
                       </div>
+                      {isSelected && (
+                        <CheckCircle2 className="flex-shrink-0 h-4 w-4 text-[#0F2D52]" />
+                      )}
                     </div>
                   );
                 })}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-3 sm:py-4 border-t bg-white">
-          <div className="flex flex-col gap-3 sm:gap-4">
-            <div className="flex items-center justify-center sm:justify-start">
-              {selectedFormIds.length > 0 && (
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-medium text-amazon-teal">
-                  <CheckCircle2 className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span>{selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected</span>
-                </div>
-              )}
-              {selectedFormIds.length === 0 && (
-                <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left">
-                  Select forms to add to the classroom
-                </div>
-              )}
+          {/* Footer */}
+          <div className="flex-shrink-0 px-4 sm:px-6 py-3 border-t bg-white">
+            <div className="flex items-center justify-between gap-2 mb-2.5">
+              <span className="text-[11px] font-semibold text-slate-400">
+                {selectedFormIds.length > 0
+                  ? <span className="flex items-center gap-1.5 text-[#0F2D52] font-bold"><CheckCircle2 className="h-3.5 w-3.5" />{selectedFormIds.length} form{selectedFormIds.length !== 1 ? 's' : ''} selected</span>
+                  : 'Select forms to add to the classroom'}
+              </span>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <Button
                 variant="outline"
-                onClick={() => {
-                  setIsAssignDialogOpen(false);
-                  setSelectedFormIds([]);
-                }}
-                className="flex-1 sm:flex-none px-4 sm:px-6 h-9 sm:h-10 border-gray-300 hover:bg-gray-50 text-sm"
+                onClick={() => { setIsAssignDialogOpen(false); setSelectedFormIds([]); }}
+                className="h-9 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600"
               >
                 Cancel
               </Button>
               <AsyncButton
                 onClick={handleAssignToAllStudents}
-                className="flex-1 sm:flex-none bg-amazon-teal hover:bg-amazon-teal/90 text-white px-4 sm:px-6 h-9 sm:h-10 shadow-sm text-sm"
+                className="h-9 bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl text-xs font-bold"
                 disabled={selectedFormIds.length === 0}
               >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
-                Assign to All Students
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                All Students
               </AsyncButton>
               <AsyncButton
                 onClick={handleAssignToClass}
-                className="flex-1 sm:flex-none bg-amazon-orange hover:bg-amazon-orange/90 text-white px-4 sm:px-6 h-9 sm:h-10 shadow-sm text-sm"
+                className="h-9 bg-[#0F2D52] hover:bg-[#1E4B83] text-white rounded-xl text-xs font-bold"
                 disabled={selectedFormIds.length === 0}
               >
-                <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-2" />
+                <Plus className="h-3.5 w-3.5 mr-1" />
                 Assign to Class
               </AsyncButton>
             </div>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  </AdminLayout>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
 }

@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AsyncButton } from '../ui/async-button';
 import { ValidatedEmailInput } from '../ui/validated-email-input';
-import { Mail } from 'lucide-react';
+import { Mail, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 
 interface InviteParentModalProps {
   isOpen: boolean;
@@ -78,16 +78,38 @@ export function InviteParentModal({
   setInviteFormErrors,
   isDialogClosing
 }: InviteParentModalProps) {
+  const [showSecondaryParent, setShowSecondaryParent] = React.useState(false);
+
+  // Auto-expand if there are pre-existing values or errors in secondary parent fields
+  React.useEffect(() => {
+    if (isOpen) {
+      const hasData = !!(
+        (secondaryParentFirstName && secondaryParentFirstName.trim()) ||
+        (secondaryParentLastName && secondaryParentLastName.trim()) ||
+        (secondaryParentEmail && secondaryParentEmail.trim()) ||
+        (secondaryParentPhoneNumber && secondaryParentPhoneNumber.trim()) ||
+        inviteFormErrors.secondaryParentFirstName ||
+        inviteFormErrors.secondaryParentLastName ||
+        inviteFormErrors.secondaryParentEmail
+      );
+      if (hasData) {
+        setShowSecondaryParent(true);
+      } else {
+        setShowSecondaryParent(false);
+      }
+    }
+  }, [isOpen, secondaryParentFirstName, secondaryParentLastName, secondaryParentEmail, secondaryParentPhoneNumber, inviteFormErrors]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+      <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg" preventClose>
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl font-semibold">Invite New Parent</DialogTitle>
+          <DialogTitle className="text-lg font-bold text-slate-900">Invite New Parent</DialogTitle>
         </DialogHeader>
         <div className="space-y-5 py-3">
           {/* Primary Parent */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Primary Parent Information</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Primary Parent Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
@@ -127,78 +149,24 @@ export function InviteParentModal({
             </div>
           </div>
 
-          {/* Secondary Parent */}
-          <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Secondary Parent <span className="font-normal text-muted-foreground">(Optional)</span></h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium mb-1.5">First Name</label>
-                <Input
-                  value={secondaryParentFirstName}
-                  onChange={e => {
-                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                    setSecondaryParentFirstName(val);
-                    if (inviteFormErrors.secondaryParentFirstName) setInviteFormErrors(prev => ({ ...prev, secondaryParentFirstName: '' }));
-                    if (!val.trim() && !secondaryParentLastName.trim() && !secondaryParentPhoneNumber.trim())
-                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
-                  }}
-                  placeholder="Enter first name"
-                  className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
-                />
-                {inviteFormErrors.secondaryParentFirstName && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>}
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Last Name</label>
-                <Input
-                  value={secondaryParentLastName}
-                  onChange={e => {
-                    const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
-                    setSecondaryParentLastName(val);
-                    if (inviteFormErrors.secondaryParentLastName) setInviteFormErrors(prev => ({ ...prev, secondaryParentLastName: '' }));
-                    if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentPhoneNumber.trim())
-                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
-                  }}
-                  placeholder="Enter last name"
-                  className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
-                />
-                {inviteFormErrors.secondaryParentLastName && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>}
-              </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <ValidatedEmailInput
-                value={secondaryParentEmail}
-                onChange={setSecondaryParentEmail}
-                errors={inviteFormErrors}
-                errorKey="secondaryParentEmail"
-                setErrors={setInviteFormErrors}
-                isDialogClosing={isDialogClosing}
-                required={false}
-                skipRequiredCheck={() => !
-                  (secondaryParentFirstName.trim() ||
-                  secondaryParentLastName.trim() ||
-                  secondaryParentPhoneNumber.trim())
-                }
-              />
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
-                  value={secondaryParentPhoneNumber}
-                  onChange={e => {
-                    const val = e.target.value.replace(/[^0-9+\-\s()]/g, '');
-                    setSecondaryParentPhoneNumber(val);
-                    if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentLastName.trim())
-                      setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
-                  }}
-                  placeholder="Enter phone number"
-                />
-              </div>
-            </div>
-          </div>
+          {/* Secondary Parent — collapsible */}
+          <SecondaryParentSection
+            secondaryParentFirstName={secondaryParentFirstName}
+            setSecondaryParentFirstName={setSecondaryParentFirstName}
+            secondaryParentLastName={secondaryParentLastName}
+            setSecondaryParentLastName={setSecondaryParentLastName}
+            secondaryParentEmail={secondaryParentEmail}
+            setSecondaryParentEmail={setSecondaryParentEmail}
+            secondaryParentPhoneNumber={secondaryParentPhoneNumber}
+            setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+            inviteFormErrors={inviteFormErrors}
+            setInviteFormErrors={setInviteFormErrors}
+            isDialogClosing={isDialogClosing}
+          />
 
           {/* Child Information */}
           <div className="space-y-3">
-            <h3 className="text-sm sm:text-base font-semibold border-b pb-2">Child Information</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Child Information</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
@@ -273,19 +241,25 @@ export function InviteParentModal({
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-0 pt-2">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">Cancel</Button>
+        <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3 pt-2">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+          >
+            Cancel
+          </Button>
           <AsyncButton
             onClick={onInvite}
-            className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto"
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200"
             disabled={(() => {
               const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
               const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;
               if (!primaryParentValid || !childValid) return true;
-              const hasSecondaryParentData = 
-                secondaryParentFirstName.trim() || 
-                secondaryParentLastName.trim() || 
-                secondaryParentEmail.trim() || 
+              const hasSecondaryParentData =
+                secondaryParentFirstName.trim() ||
+                secondaryParentLastName.trim() ||
+                secondaryParentEmail.trim() ||
                 secondaryParentPhoneNumber.trim();
               if (hasSecondaryParentData) {
                 return !(secondaryParentFirstName.trim() && secondaryParentLastName.trim() && secondaryParentEmail.trim());
@@ -299,5 +273,144 @@ export function InviteParentModal({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+interface SecondaryParentSectionProps {
+  secondaryParentFirstName: string;
+  setSecondaryParentFirstName: (v: string) => void;
+  secondaryParentLastName: string;
+  setSecondaryParentLastName: (v: string) => void;
+  secondaryParentEmail: string;
+  setSecondaryParentEmail: (v: string) => void;
+  secondaryParentPhoneNumber: string;
+  setSecondaryParentPhoneNumber: (v: string) => void;
+  inviteFormErrors: { [key: string]: string };
+  setInviteFormErrors: (errors: { [key: string]: string } | ((prev: { [key: string]: string }) => { [key: string]: string })) => void;
+  isDialogClosing: boolean;
+}
+
+function SecondaryParentSection({
+  secondaryParentFirstName, setSecondaryParentFirstName,
+  secondaryParentLastName, setSecondaryParentLastName,
+  secondaryParentEmail, setSecondaryParentEmail,
+  secondaryParentPhoneNumber, setSecondaryParentPhoneNumber,
+  inviteFormErrors, setInviteFormErrors, isDialogClosing,
+}: SecondaryParentSectionProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleToggle = () => {
+    if (isOpen) {
+      // Collapse — clear all secondary fields and errors
+      setSecondaryParentFirstName('');
+      setSecondaryParentLastName('');
+      setSecondaryParentEmail('');
+      setSecondaryParentPhoneNumber('');
+      setInviteFormErrors(prev => ({
+        ...prev,
+        secondaryParentFirstName: '',
+        secondaryParentLastName: '',
+        secondaryParentEmail: '',
+      }));
+    }
+    setIsOpen(prev => !prev);
+  };
+
+  return (
+    <div className="border border-slate-200 rounded-xl overflow-hidden">
+      {/* Dropdown trigger */}
+      <button
+        type="button"
+        onClick={handleToggle}
+        className="w-full flex items-center justify-between px-4 py-3 bg-slate-50 hover:bg-slate-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <UserPlus className="w-4 h-4 text-slate-400" />
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
+            Secondary Parent
+          </span>
+          <span className="text-xs text-slate-400 font-normal">(Optional)</span>
+        </div>
+        {isOpen ? (
+          <ChevronUp className="w-4 h-4 text-slate-400" />
+        ) : (
+          <ChevronDown className="w-4 h-4 text-slate-400" />
+        )}
+      </button>
+
+      {/* Collapsible content */}
+      {isOpen && (
+        <div className="px-4 pb-4 pt-3 space-y-3 bg-white">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium mb-1.5">First Name</label>
+              <Input
+                value={secondaryParentFirstName}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setSecondaryParentFirstName(val);
+                  if (inviteFormErrors.secondaryParentFirstName)
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentFirstName: '' }));
+                  if (!val.trim() && !secondaryParentLastName.trim() && !secondaryParentPhoneNumber.trim())
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
+                }}
+                placeholder="Enter first name"
+                className={inviteFormErrors.secondaryParentFirstName ? 'border-red-500' : ''}
+              />
+              {inviteFormErrors.secondaryParentFirstName && (
+                <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentFirstName}</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Last Name</label>
+              <Input
+                value={secondaryParentLastName}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^a-zA-Z\s]/g, '');
+                  setSecondaryParentLastName(val);
+                  if (inviteFormErrors.secondaryParentLastName)
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentLastName: '' }));
+                  if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentPhoneNumber.trim())
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
+                }}
+                placeholder="Enter last name"
+                className={inviteFormErrors.secondaryParentLastName ? 'border-red-500' : ''}
+              />
+              {inviteFormErrors.secondaryParentLastName && (
+                <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <ValidatedEmailInput
+              value={secondaryParentEmail}
+              onChange={setSecondaryParentEmail}
+              errors={inviteFormErrors}
+              errorKey="secondaryParentEmail"
+              setErrors={setInviteFormErrors}
+              isDialogClosing={isDialogClosing}
+              required={false}
+              skipRequiredCheck={() =>
+                !(secondaryParentFirstName.trim() || secondaryParentLastName.trim() || secondaryParentPhoneNumber.trim())
+              }
+            />
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Phone Number (Optional)</label>
+              <Input
+                type="tel"
+                value={secondaryParentPhoneNumber}
+                onChange={e => {
+                  const val = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                  setSecondaryParentPhoneNumber(val);
+                  if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentLastName.trim())
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
+                }}
+                placeholder="Enter phone number"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

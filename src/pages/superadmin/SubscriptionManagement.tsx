@@ -6,13 +6,13 @@ import { Crown, Check } from 'lucide-react';
 export function SubscriptionManagement() {
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto mt-16 sm:mt-18">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Subscription Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage subscription plans and billing
             </p>
           </div>
@@ -28,7 +28,7 @@ export function SubscriptionManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-2xl font-bold">$29/month</div>
+                <div className="text-xl sm:text-2xl font-bold">$29/month</div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
@@ -52,7 +52,7 @@ export function SubscriptionManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-2xl font-bold">$99/month</div>
+                <div className="text-xl sm:text-2xl font-bold">$99/month</div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />
@@ -80,7 +80,7 @@ export function SubscriptionManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <div className="text-2xl font-bold">Custom</div>
+                <div className="text-xl sm:text-2xl font-bold">Custom</div>
                 <ul className="space-y-2 text-sm">
                   <li className="flex items-center gap-2">
                     <Check className="h-4 w-4 text-green-500" />

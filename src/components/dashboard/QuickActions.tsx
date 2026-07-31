@@ -22,7 +22,7 @@ export function QuickActions({
         <h2 className="text-xl font-semibold mb-4 text-foreground">
           Quick Actions
         </h2>
-        {actions.length === 0 ? <p className="text-sm text-muted-foreground">
+        {actions.length === 0 ? <p className="text-sm text-slate-500">
             {emptyMessage}
           </p> : <div className="space-y-3">
             {actions.map((action, index) => <Button key={index} type="button" variant="outline" disabled={action.disabled} onClick={action.onClick} className="w-full justify-start text-foreground border-gray-200 h-12 hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-60 disabled:cursor-not-allowed">

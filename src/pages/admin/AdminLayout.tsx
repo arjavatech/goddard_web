@@ -1,5 +1,10 @@
-import React, { ReactNode, useState } from 'react';
-import { Home, School, FileText, Users, LogOut, GraduationCap, Menu, X, User, Settings, UserCog, Calendar, Phone, Mail, Globe, MapPin, BookOpen, LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle, Eye, ShieldCheck } from 'lucide-react';
+import React, { ReactNode, useState, useEffect } from 'react';
+import {
+  Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
+  Calendar, Phone, Mail, Globe, BookOpen,
+  LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
+  Eye, ShieldCheck, Settings, UserCog,
+} from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -12,12 +17,11 @@ import { Loading } from '../../components/ui/loading';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { HelpCenterContent } from '../../components/HelpCenterContent';
 import { SuperAdminGuideContent } from '../../components/SuperAdminGuideContent';
-interface AdminLayoutProps {
-  children: ReactNode;
-}
-export function AdminLayout({
-  children
-}: AdminLayoutProps) {
+import { cn } from '../../lib/utils';
+
+interface AdminLayoutProps { children: ReactNode; }
+
+export function AdminLayout({ children }: AdminLayoutProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -26,531 +30,541 @@ export function AdminLayout({
   const [showSuperGuideModal, setShowSuperGuideModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    signOut
-  } = useAuth();
-  const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
-
+  const { signOut } = useAuth();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
   const isSuperAdmin = userData?.role === 'SuperAdmin';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    try {
-      await signOut();
-    } catch (err) {
-      console.error('Logout error during Admin sign out:', err);
-    } finally {
-      // Clear all stored data to reset tokens, auth state, and user data completely
-      localStorage.clear();
-      sessionStorage.clear();
-      
-      setIsLoggingOut(false);
-      setShowLogoutModal(false);
-      
-      // Perform a full redirect to clean/reset all React memory context/states
+    try { await signOut(); } catch (err) { console.error('Logout error:', err); } finally {
+      localStorage.clear(); sessionStorage.clear();
+      setIsLoggingOut(false); setShowLogoutModal(false);
       window.location.href = '/';
     }
   };
-  const currentPath = location.pathname;
-  const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
-  const navigationItems = [{
-    icon: <Home className="w-5 h-5" />,
-    label: 'Dashboard',
-    path: '/admin'
-  }, {
-    icon: <School className="w-5 h-5" />,
-    label: 'Classrooms',
-    path: '/admin/classrooms'
-  }, {
-    icon: <GraduationCap className="w-5 h-5" />,
-    label: 'Students',
-    path: '/admin/students'
-  }, {
-    icon: <FileText className="w-5 h-5" />,
-    label: 'Forms',
-    path: '/admin/forms'
-  }, {
-    icon: <Calendar className="w-5 h-5" />,
-    label: 'Due Forms',
-    path: '/admin/forms/due'
-  }, {
-    icon: <Users className="w-5 h-5" />,
-    label: 'Parents',
-    path: '/admin/parents'
-  }];
 
-  // Add Admins menu only for SuperAdmin
-  if (isSuperAdmin) {
-    navigationItems.push({
-      icon: <UserCog className="w-5 h-5" />,
-      label: 'Admins',
-      path: '/admin/admin-management'
-    });
-  }
-  React.useEffect(() => {
-    if (isSidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
+  useEffect(() => {
+    document.body.style.overflow = isSidebarOpen ? 'hidden' : 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
 
-  const footerRef = React.useRef<HTMLElement>(null);
-  const [footerHeight, setFooterHeight] = React.useState(0);
-  React.useEffect(() => {
-    const update = () => {
-      if (!footerRef.current) return;
-      const rect = footerRef.current.getBoundingClientRect();
-      const visible = Math.max(0, window.innerHeight - rect.top);
-      setFooterHeight(visible);
-    };
-    update();
-    window.addEventListener('scroll', update, { passive: true });
-    window.addEventListener('resize', update);
-    const observer = new ResizeObserver(update);
-    if (footerRef.current) observer.observe(footerRef.current);
-    return () => {
-      window.removeEventListener('scroll', update);
-      window.removeEventListener('resize', update);
-      observer.disconnect();
-    };
-  }, []);
+  const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
+  const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
+  const isFromStudents = location.state?.fromStudents === true;
+
+  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+
+  const navGroups = [
+    {
+      label: 'Workspace',
+      items: [
+        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
+        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
+        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+      ],
+    },
+    {
+      label: 'Enrollment',
+      items: [
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: `${schoolPrefix}/admin/forms/due` },
+      ],
+    },
+    ...(isSuperAdmin ? [{
+      label: 'Administration',
+      items: [
+        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+      ],
+    }] : []),
+  ];
+
+  const initials = userData?.firstName && userData?.lastName
+    ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase() : 'AD';
 
   if (!isReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Loading size="md" message="" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loading size="md" message="Loading portal…" />
       </div>
     );
   }
 
-  return <div className="min-h-screen bg-background flex flex-col">
-    {/* Mobile Overlay */}
-    {isSidebarOpen && (
-      <div
-        className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-        onClick={() => setIsSidebarOpen(false)}
-      />
-    )}
+  return (
+    <div className="min-h-screen bg-[#F7F9FC] flex flex-col font-sans">
+      {/* Mobile overlay */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-[2px] z-40 lg:hidden" onClick={() => setIsSidebarOpen(false)} />
+      )}
 
-    {/* Sidebar + Main wrapper */}
-    <div className="flex flex-1">
-      {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 w-64 bg-white border-r border-gray-200 flex flex-col z-30 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`} style={{ bottom: footerHeight }}>
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <img src="/gs_logo_lynnwood.png" alt="App Logo" className="h-18 w-auto max-h-none shrink-0 max-w-[200px]" />
-            <button
-              onClick={() => setIsSidebarOpen(false)}
-              className="lg:hidden p-1.5 rounded-md hover:bg-gray-100 flex-shrink-0"
-            >
+      <div className="flex flex-1 min-h-screen">
+        {/* ── Sidebar — sticky, scrolls up with footer ── */}
+        {/* Mobile drawer (fixed overlay) */}
+        <aside className={cn(
+          'fixed top-0 left-0 h-full w-64 flex flex-col z-50 transition-transform duration-300 ease-in-out lg:hidden',
+          'bg-white border-r border-slate-100 shadow-2xl',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}>
+          {/* Logo area */}
+          <div className="h-16 px-5 flex items-center justify-between border-b border-slate-100 flex-shrink-0">
+            <img
+              src="/gs_logo_lynnwood.png"
+              alt="The Goddard School"
+              className="h-9 w-auto object-contain max-w-[150px]"
+            />
+            <button onClick={() => setIsSidebarOpen(false)} className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-all">
               <X className="w-4 h-4" />
             </button>
           </div>
-        </div>
-        <nav className="flex-1 p-6 overflow-y-auto min-h-0">
-
-          <ul className="space-y-2">
-            {navigationItems.map((item, index) => (
-              <li key={index}>
-                <Link
-                  to={item.path}
-                  onClick={() => setIsSidebarOpen(false)}
-                  className={`flex items-center space-x-4 px-4 py-3.5 rounded-lg transition-all duration-200 ${currentPath === item.path ? 'bg-amazon-teal text-white shadow-sm' : 'text-gray-700 hover:bg-gray-50 hover:text-amazon-teal'}`}
-                >
-                  <span className={`${currentPath === item.path ? 'text-white' : 'text-gray-500'}`}>
-                    {item.icon}
-                  </span>
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              </li>
+          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4 pb-2">
+            {navGroups.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+                <div className="space-y-0.5">
+                  {group.items.map((item, i) => {
+                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                    const isActive = normalizedItemPath === '/admin'
+                      ? currentPath === '/admin'
+                      : isFromStudents && normalizedItemPath === '/admin/students'
+                      ? true
+                      : isFromStudents && normalizedItemPath === '/admin/parents'
+                      ? false
+                      : normalizedItemPath === '/admin/forms'
+                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
+                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
+                    return (
+                      <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                        className={cn(
+                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                          isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        )}
+                      >
+                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
-          </ul>
-        </nav>
+          </nav>
 
-      </aside>
-
-      {/* Main content */}
-      <div className="flex-1 flex flex-col lg:ml-64">
-        {/* Header - Only show after role is fetched */}
-        {userData?.role && (
-          <header className="fixed top-0 right-0 left-0 lg:left-64 bg-white shadow-sm border-b border-gray-100 py-3 px-4 lg:px-6 flex items-center justify-between z-10">
-            <div className="flex items-center space-x-3">
+          {/* ── Mobile sidebar footer: User + Logout ── */}
+          <div className="flex-shrink-0 border-t border-slate-100 px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-[#0F2D52]/10 shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+                <p className="text-[11px] text-slate-500 truncate mt-0.5">{userData?.email}</p>
+              </div>
               <button
-                onClick={() => setIsSidebarOpen(true)}
-                className="lg:hidden p-1.5 rounded-md hover:bg-gray-100"
+                onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
+                title="Sign out"
+                className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-600 hover:bg-red-50 transition-all duration-200"
               >
-                <Menu className="w-5 h-5" />
+                <LogOut className="w-4 h-4" />
               </button>
-              <div>
-                <h1 className="text-lg lg:text-xl font-semibold text-foreground">
-                  {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+            </div>
+          </div>
+        </aside>
+
+        {/* Desktop sidebar — fixed position */}
+        <aside className="hidden lg:flex flex-col w-60 flex-shrink-0 fixed top-0 left-0 h-screen bg-[#0F2D52] border-r border-[#1a3a60] z-30">
+          {/* Logo area */}
+          <div className="h-20 px-5 flex items-center border-b border-[#1a3a60] flex-shrink-0 bg-[#0F2D52]">
+            <img
+              src="/gs_logo_lynnwood.png"
+              alt="The Goddard School"
+              className="h-12 w-auto object-contain brightness-0 invert opacity-95 max-w-[170px]"
+            />
+          </div>
+          <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4">
+            {navGroups.map((group, gi) => (
+              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
+                <div className="space-y-0.5">
+                  {group.items.map((item, i) => {
+                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                    const isActive = normalizedItemPath === '/admin'
+                      ? currentPath === '/admin'
+                      : isFromStudents && normalizedItemPath === '/admin/students'
+                      ? true
+                      : isFromStudents && normalizedItemPath === '/admin/parents'
+                      ? false
+                      : normalizedItemPath === '/admin/forms'
+                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
+                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
+                    return (
+                      <Link key={i} to={item.path}
+                        className={cn(
+                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                        )}
+                      >
+                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* ── Desktop sidebar footer: User + Logout ── */}
+          <div className="flex-shrink-0 border-t border-[#1a3a60] px-4 py-3.5">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a6fc4] to-[#0F2D52] text-white flex items-center justify-center font-bold text-xs flex-shrink-0 ring-1 ring-white/15 shadow-sm">
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
+                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+              </div>
+              <button
+                onClick={() => setShowLogoutModal(true)}
+                title="Sign out"
+                className="flex-shrink-0 p-2 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/15 transition-all duration-200"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </aside>
+
+        {/* ── Main content ── */}
+        <div className="flex-1 flex flex-col min-w-0 lg:ml-60">
+          {/* Top header */}
+          {userData?.role && (
+            <header className={cn(
+              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
+              isSidebarOpen ? "bg-[#0F2D52] border-[#1a3a60]" : "bg-white border-slate-200"
+            )}>
+              {/* Left col — hamburger (mobile only), flex-1 to balance right col */}
+              <div className="flex-1 flex items-center">
+                <button
+                  onClick={() => setIsSidebarOpen(true)}
+                  className={cn(
+                    "lg:hidden p-2 rounded-xl transition-all flex-shrink-0",
+                    isSidebarOpen
+                      ? "text-slate-200 hover:text-white hover:bg-white/10"
+                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                  )}
+                >
+                  <Menu className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Center col — school name */}
+              <div className="flex-1 flex items-center justify-center">
+                <h1 className={cn(
+                  "text-sm sm:text-base font-bold tracking-tight leading-none whitespace-nowrap transition-colors duration-300",
+                  isSidebarOpen ? "text-white" : "text-slate-900"
+                )}>
+                  {schoolName || 'The Goddard School'}
                 </h1>
-                <p className="text-xs text-gray-500">Role: {userData?.role}</p>
+              </div>
+
+              {/* Right col — notification + user menu */}
+              <div className="flex-1 flex items-center justify-end gap-1.5 sm:gap-2">
+                <div className={cn(
+                  "transition-colors flex items-center justify-center",
+                  isSidebarOpen
+                    ? "[&_button]:text-slate-200 hover:[&_button]:bg-white/10 hover:[&_button]:text-white"
+                    : ""
+                )}>
+                  <NotificationBell enabled={!!userData} />
+                </div>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className={cn(
+                      "flex items-center gap-2 rounded-xl px-2 py-1.5 border border-transparent transition-all duration-150 focus:outline-none",
+                      isSidebarOpen
+                        ? "hover:bg-white/10 hover:border-white/10"
+                        : "hover:bg-slate-100 hover:border-slate-200"
+                    )}>
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
+                        {initials}
+                      </div>
+                      <span className={cn(
+                        "hidden sm:block text-sm font-semibold max-w-[100px] truncate transition-colors duration-300",
+                        isSidebarOpen ? "text-slate-200" : "text-slate-700"
+                      )}>
+                        {userData?.firstName}
+                      </span>
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                    <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
+                          <p className="text-xs text-slate-400 truncate">{userData?.email}</p>
+                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="p-2 space-y-0.5">
+                      <DropdownMenuItem onClick={() => navigate('/admin')} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
+                        <LayoutDashboard className="w-4 h-4 text-slate-400" /> Dashboard
+                      </DropdownMenuItem>
+                      {!isSuperAdmin && (
+                        <DropdownMenuItem onClick={() => setShowHelpModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
+                          <BookOpen className="w-4 h-4 text-slate-400" /> Help Center
+                        </DropdownMenuItem>
+                      )}
+                      {isSuperAdmin && (
+                        <DropdownMenuItem onClick={() => setShowSuperGuideModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
+                          <ShieldCheck className="w-4 h-4 text-slate-400" /> SuperAdmin Guide
+                        </DropdownMenuItem>
+                      )}
+                    </div>
+                    <DropdownMenuSeparator className="bg-slate-100" />
+                    <div className="p-2">
+                      <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
+                        <LogOut className="w-4 h-4" /> Sign out
+                      </button>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </header>
+          )}
+
+          {/* Page content */}
+          <main className={cn(
+            'flex-1 bg-[#F7F9FC]',
+            userData?.role ? 'pt-16' : 'pt-0',
+            isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
+          )}>
+            {children}
+          </main>
+        </div>
+      </div>
+
+      {/* ── Footer (outside main flex) ── */}
+      <footer className="w-full bg-[#1a3a5c]">
+            {/* Main body */}
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+
+            {/* ── Brand column ── */}
+            <div className="lg:col-span-2 space-y-4">
+              <img
+                src="/gs_logo_lynnwood.png"
+                alt="The Goddard School"
+                className="h-9 w-auto object-contain brightness-0 invert opacity-90"
+              />
+              <p className="text-sm text-slate-300/70 leading-relaxed max-w-sm">
+                Empowering families through seamless enrollment management — built for The Goddard School's commitment to quality early childhood education.
+              </p>
+              <div className="flex flex-col gap-2 pt-1">
+                {schoolPhone && (
+                  <a href={`tel:${schoolPhone}`}
+                    className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors flex-shrink-0">
+                      <Phone className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium">{schoolPhone}</span>
+                  </a>
+                )}
+                {schoolEmail && (
+                  <a href={`mailto:${schoolEmail}`}
+                    className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center group-hover:bg-white/20 transition-colors flex-shrink-0">
+                      <Mail className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium">{schoolEmail}</span>
+                  </a>
+                )}
+                {schoolAddress && (
+                  <span className="inline-flex items-start gap-2.5 text-xs text-slate-300/70 w-fit">
+                    <span className="w-6 h-6 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <Globe className="h-3 w-3 text-slate-300" />
+                    </span>
+                    <span className="font-medium leading-relaxed">{schoolAddress}</span>
+                  </span>
+                )}
               </div>
             </div>
-            <div className="flex items-center gap-2">
-            <NotificationBell enabled={!!userData} />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center space-x-2 hover:bg-gray-50 rounded-lg p-2 transition-all duration-200 border border-transparent hover:border-gray-200 hover:shadow-sm">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                    {userData?.firstName && userData?.lastName
-                      ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-                      : 'AD'}
-                  </div>
 
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 p-0 bg-white shadow-lg border border-gray-200">
-                <div className="p-4 border-b border-gray-100">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-                      <User className="w-5 h-5 text-gray-600" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-gray-900">
-                        {userData?.firstName && userData?.lastName
-                          ? `${userData.firstName} ${userData.lastName}`
-                          : 'Administrator'}
-                      </p>
-                      <p className="text-xs text-gray-500">System Administrator</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3">
-                  <button
-                    onClick={() => setShowLogoutModal(true)}
-                    className="w-full flex items-center justify-center px-4 py-2.5 bg-amazon-teal hover:bg-amazon-teal/90 text-white text-sm font-medium rounded-lg transition-colors duration-200"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    Logout
-                  </button>
-                </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* ── Quick Navigation ── */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Quick Links</h4>
+              <ul className="space-y-2.5">
+                {[
+                  { icon: <Home className="h-3.5 w-3.5" />, label: 'Dashboard', path: '/admin' },
+                  { icon: <School className="h-3.5 w-3.5" />, label: 'Classrooms', path: '/admin/classrooms' },
+                  // { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Students', path: '/admin/students' },
+                  { icon: <Users className="h-3.5 w-3.5" />, label: 'Parents', path: '/admin/parents' },
+                  { icon: <FileText className="h-3.5 w-3.5" />, label: 'Forms', path: '/admin/forms' },
+                  // { icon: <Calendar className="h-3.5 w-3.5" />, label: 'Due Forms', path: '/admin/forms/due' },
+                ].map(item => (
+                  <li key={item.path}>
+                    <Link to={item.path}
+                      className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
+                      <span className="text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0">{item.icon}</span>
+                      <span className="font-medium">{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </header>
-        )}
-        {/* Page content */}
-        <main className={`flex-1 sm:p-6 ${isParentDetailsPage ? 'p-2' : 'p-0'} ${userData?.role ? 'sm:pt-20 pt-20' : 'sm:pt-0 pt-0'} bg-gray-50`}>{children}</main>
-      </div>
-    </div>
 
-    {/* Footer */}
-    <footer ref={footerRef} className="relative z-40 bg-amazon-teal">
-      
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 sm:py-6">
-        {/* Main grid — stacks on mobile, 3-col on sm+ */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-12 gap-5 sm:gap-6 pb-4 sm:pb-5 border-b border-white/20">
-
-          {/* Brand */}
-          <div className="sm:col-span-1 lg:col-span-5 flex flex-col gap-3">
-            <img src="/gs_logo_lynnwood.png" alt="The Goddard School" className="h-7 w-auto object-contain brightness-0 invert opacity-90 self-start" />
-            <p className="text-xs text-white/70 leading-relaxed max-w-xs hidden sm:block">
-              Nurturing children through play-based learning and quality early childhood education.
-            </p>
-            <div className="flex items-center gap-2">
-              {schoolPhone && (
-                <a href={`tel:${schoolPhone}`} aria-label="Call us"
-                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                  <Phone className="h-3.5 w-3.5" />
-                </a>
-              )}
-              {schoolEmail && (
-                <a href={`mailto:${schoolEmail}`} aria-label="Email us"
-                  className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                  <Mail className="h-3.5 w-3.5" />
-                </a>
-              )}
-              <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" aria-label="Website"
-                className="w-7 h-7 rounded-md border border-white/30 bg-white/10 hover:bg-white hover:border-white flex items-center justify-center text-white hover:text-amazon-teal transition-all duration-200">
-                <Globe className="h-3.5 w-3.5" />
-              </a>
-            </div>
-          </div>
-
-          {/* Contact */}
-          <div className="sm:col-span-1 lg:col-span-4 flex flex-col gap-2.5">
-            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Contact</p>
-            <ul className="flex flex-col gap-1.5 sm:gap-2">
-              {schoolPhone && (
-                <li>
-                  <a href={`tel:${schoolPhone}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                    <Phone className="h-3 w-3 text-white/60 shrink-0" />
-                    {schoolPhone}
-                  </a>
-                </li>
-              )}
-              {schoolEmail && (
-                <li>
-                  <a href={`mailto:${schoolEmail}`} className="flex items-center gap-2 text-xs text-white/80 hover:text-white transition-colors">
-                    <Mail className="h-3 w-3 text-white/60 shrink-0" />
-                    <span className="truncate">{schoolEmail}</span>
-                  </a>
-                </li>
-              )}
-              {schoolAddress && (
-                <li className="flex items-start gap-2 text-xs text-white/80">
-                  <MapPin className="h-3 w-3 text-white/60 shrink-0 mt-0.5" />
-                  <span>{schoolAddress}</span>
-                </li>
-              )}
-            </ul>
-          </div>
-
-          {/* Resources */}
-          <div className="sm:col-span-1 lg:col-span-3 flex flex-col gap-2.5">
-            <p className="text-[10px] font-semibold text-white/50 uppercase tracking-[0.2em]">Resources</p>
-            <ul className="flex flex-col gap-1.5 sm:gap-2">
-              {
-                !isSuperAdmin && (
+            {/* ── Resources ── */}
+            <div className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
+              <ul className="space-y-2.5">
+                {!isSuperAdmin && (
+                  <>
+                    <li>
+                      <button onClick={() => setShowHelpModal(true)}
+                        className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                        <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="font-medium">Help Center</span>
+                      </button>
+                    </li>
+                    <li>
+                      <button onClick={() => setShowGuideModal(true)}
+                        className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                        <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                        <span className="font-medium">Admin Guide</span>
+                      </button>
+                    </li>
+                  </>
+                )}
+                {isSuperAdmin && (
                   <li>
-                    <button onClick={() => setShowHelpModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
-                      Help Center
+                    <button onClick={() => setShowSuperGuideModal(true)}
+                      className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                      <ShieldCheck className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                      <span className="font-medium">SuperAdmin Guide</span>
                     </button>
                   </li>
-                )
-              }
-              {!isSuperAdmin && (
+                )}
                 <li>
-                  <button onClick={() => setShowGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
-                    Admin Guide
-                  </button>
+                  <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
+                    <Globe className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium">Goddard School</span>
+                  </a>
                 </li>
-              )}
+              </ul>
+            </div>
+            </div>
 
-              {isSuperAdmin && (
-                <li>
-                  <button onClick={() => setShowSuperGuideModal(true)} className="text-xs text-white/80 hover:text-white transition-colors text-left">
-                    SuperAdmin Guide
-                  </button>
-                </li>
-              )}
+            {/* ── Bottom bar ── */}
+            <div className="border-t border-white/10">
+              <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+                <p className="text-xs text-slate-400 text-center sm:text-left">
+                  © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                    {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            </div>
+      </footer>
 
+      {/* ── Modals ── */}
+      <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><ShieldCheck className="h-5 w-5 text-amber-500" /> SuperAdmin Guide</DialogTitle>
+            <DialogDescription>SuperAdmin-exclusive features, roles, and responsibilities</DialogDescription>
+          </DialogHeader>
+          <SuperAdminGuideContent />
+        </DialogContent>
+      </Dialog>
 
-              <li>
-                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer" className="text-xs text-white/80 hover:text-white transition-colors">
-                  Goddard School
-                </a>
-              </li>
-            </ul>
-          </div>
+      <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
+        <DialogContent className="w-[95vw] max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-blue-600" /> Help Center</DialogTitle>
+            <DialogDescription>Find answers to common admin questions</DialogDescription>
+          </DialogHeader>
+          <HelpCenterContent role="admin" />
+        </DialogContent>
+      </Dialog>
 
-        </div>
+      <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
+        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-blue-600" /> Admin Guide</DialogTitle>
+            <DialogDescription>Everything you need to manage your school portal</DialogDescription>
+          </DialogHeader>
+          <AdminGuideContent />
+        </DialogContent>
+      </Dialog>
 
-        {/* Bottom bar */}
-        <div className="pt-3 sm:pt-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <p className="text-[10px] sm:text-xs text-white/50 text-center sm:text-left">© {new Date().getFullYear()} {schoolName}. All rights reserved.</p>
-          <div className="flex items-center gap-2 px-2.5 py-1 rounded-full border border-white/20 bg-white/10">
-            <span className="w-1.5 h-1.5 rounded-full bg-amazon-orange" />
-            <span className="text-[10px] font-semibold tracking-[0.18em] text-white/60 uppercase">
-              {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-            </span>
-          </div>
-        </div>
-      </div>
-    </footer>
-
-    {/* SuperAdmin Guide Modal */}
-    <Dialog open={showSuperGuideModal} onOpenChange={setShowSuperGuideModal}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-amazon-orange" />
-            SuperAdmin Guide
-          </DialogTitle>
-          <DialogDescription>SuperAdmin-exclusive features, roles, and responsibilities</DialogDescription>
-        </DialogHeader>
-        <SuperAdminGuideContent />
-      </DialogContent>
-    </Dialog>
-
-    {/* Help Center Modal */}
-    <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-amazon-teal" />
-            Help Center
-          </DialogTitle>
-          <DialogDescription>Find answers to common admin questions</DialogDescription>
-        </DialogHeader>
-        <HelpCenterContent role="admin" />
-      </DialogContent>
-    </Dialog>
-
-    {/* Admin Guide Modal */}
-    <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <BookOpen className="h-5 w-5 text-amazon-teal" />
-            Admin Guide
-          </DialogTitle>
-          <DialogDescription>Everything you need to manage your school portal</DialogDescription>
-        </DialogHeader>
-        <AdminGuideContent isSuperAdmin={isSuperAdmin} />
-      </DialogContent>
-    </Dialog>
-
-    {/* Logout Confirmation Modal */}
-    <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
-      <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
-        <DialogHeader>
-          <DialogTitle>Confirm Logout</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to logout? You will need to sign in again to access the admin portal.
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut}>
-            Cancel
-          </Button>
-          <AsyncButton variant="destructive" onClick={handleLogout}>
-            Logout
-          </AsyncButton>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  </div>;
+      <Dialog open={showLogoutModal} onOpenChange={setShowLogoutModal}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl" preventClose>
+          <DialogHeader>
+            <DialogTitle>Sign out?</DialogTitle>
+            <DialogDescription>You'll need to sign in again to access the admin portal.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowLogoutModal(false)} disabled={isLoggingOut} className="rounded-xl">Cancel</Button>
+            <AsyncButton variant="destructive" onClick={handleLogout} className="rounded-xl">Sign out</AsyncButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }
 
-const guidesections = [
-  {
-    id: 'dashboard',
-    icon: <LayoutDashboard className="h-5 w-5 text-amazon-teal" />,
-    title: 'Dashboard',
-    description: 'The admin dashboard gives you a high-level overview of your school.',
-    steps: [
-      'View total students, classrooms, and form completion rates at a glance.',
-      'Monitor class-wise enrollment progress with the metrics chart.',
-      'Use the quick-action cards to navigate to any section instantly.',
-    ],
-  },
-  {
-    id: 'students',
-    icon: <GraduationCap className="h-5 w-5 text-amazon-teal" />,
-    title: 'Student Management',
-    description: 'Manage all enrolled students, their forms, and classroom assignments.',
-    steps: [
-      'Search and filter students by name, classroom, status, or year.',
-      'Click the ⋯ actions menu on any row to Manage Forms, Transfer Class, or Download All Forms.',
-      'Use the checkbox column to select multiple students for bulk class transfers.',
-      "Click a student's name to view their full parent details page.",
-      "Toggle a student's Active / Archived status by clicking the status pill.",
-    ],
-  },
-  {
-    id: 'classrooms',
-    icon: <School className="h-5 w-5 text-amazon-teal" />,
-    title: 'Classroom Management',
-    description: 'Create and manage classrooms, assign forms, and track enrollment.',
-    steps: [
-      'Create a new classroom using the "Add Classroom" button.',
-      'Click a classroom name to view its students and assigned forms.',
-      'Assign form templates to a classroom so all students receive them automatically.',
-      'Rename or delete classrooms from the actions menu.',
-    ],
-  },
-  {
-    id: 'forms',
-    icon: <FileText className="h-5 w-5 text-amazon-teal" />,
-    title: 'Forms Management',
-    description: 'Create, edit, and assign form templates to students or classrooms.',
-    steps: [
-      'Add a new form template with a name, Fillout form ID, and optional due date.',
-      'Assign a form to all students in the school or to a specific classroom.',
-      'Edit or delete existing form templates from the forms list.',
-      'View individual form submissions via the View action.',
-    ],
-  },
-  {
-    id: 'due-forms',
-    icon: <Calendar className="h-5 w-5 text-amazon-teal" />,
-    title: 'Due Forms Tracking',
-    description: 'Monitor form completion status and send reminders to parents.',
-    steps: [
-      'Filter by status: Pending, Pending Approval, Overdue, or Completed.',
-      'Use the Remind button to send an email reminder to a parent for a specific form.',
-      'Use the bulk Remind dropdown to send reminders to all Pending or Overdue forms at once.',
-      'Export the current view as CSV or PDF using the Export button.',
-      'Status meanings: Pending = not started, Pending Approval = submitted by parent, Overdue = past due date, Completed = admin approved.',
-    ],
-  },
-  {
-    id: 'parents',
-    icon: <Users className="h-5 w-5 text-amazon-teal" />,
-    title: 'Parent Management',
-    description: 'Invite, manage, and communicate with parents.',
-    steps: [
-      'Invite a new parent using the "Invite Parent" button — this sends them a signup email.',
-      "Click a parent's name to view their full profile, children, and form statuses.",
-      "Resend confirmation emails to parents who haven't verified their account.",
-      'Deactivate or reactivate parent accounts from the actions menu.',
-    ],
-  },
-  {
-    id: 'downloads',
-    icon: <Download className="h-5 w-5 text-amazon-teal" />,
-    title: 'Downloading Forms',
-    description: 'Download individual or all forms for a student.',
-    steps: [
-      'To download a single approved form: go to Student Management → ⋯ menu → the form card shows Download (↓) and Print icons.',
-      'To download all forms for a student at once: Student Management → ⋯ menu → "Download All Forms" — this downloads a ZIP file.',
-      'In the parent dashboard, the "Download All" button in Forms & Documents also downloads a ZIP of all approved forms.',
-    ],
-  },
+// ── Inline guide data ─────────────────────────────────────────────────────────
+const guideSections = [
+  { id: 'dashboard', icon: <Home className="h-4 w-4 text-blue-600" />, title: 'Dashboard', description: 'High-level overview of your school.', steps: ['View totals for students, classrooms, and forms.', 'Monitor class-wise enrollment progress.', 'Use quick-action cards to navigate instantly.'] },
+  { id: 'students', icon: <GraduationCap className="h-4 w-4 text-blue-600" />, title: 'Student Management', description: 'Manage students, forms, and classroom assignments.', steps: ['Search and filter by name, classroom, status, or year.', 'Use the ⋯ menu to Manage Forms, Transfer Class, or Download All Forms.', 'Checkbox-select multiple students for bulk transfers.', 'Toggle Active / Archived status from the status pill.'] },
+  { id: 'classrooms', icon: <School className="h-4 w-4 text-blue-600" />, title: 'Classroom Management', description: 'Create and manage classrooms.', steps: ['Create a new classroom using "Add Classroom".', 'Click a classroom to view its students and forms.', 'Assign form templates so all students receive them automatically.'] },
+  { id: 'forms', icon: <FileText className="h-4 w-4 text-blue-600" />, title: 'Forms Management', description: 'Create and assign form templates.', steps: ['Add a template with a name, Fillout ID, and optional due date.', 'Assign to the whole school or a specific classroom.', 'Edit or delete templates from the forms list.'] },
+  { id: 'due-forms', icon: <Calendar className="h-4 w-4 text-blue-600" />, title: 'Due Forms Tracking', description: 'Monitor form completion and send reminders.', steps: ['Filter by Pending, Pending Approval, Overdue, or Completed.', 'Use Remind to email a parent for a specific form.', 'Bulk Remind sends to all Pending or Overdue at once.', 'Export the view as CSV or PDF.'] },
+  { id: 'parents', icon: <Users className="h-4 w-4 text-blue-600" />, title: 'Parent Management', description: 'Invite and manage parent accounts.', steps: ['Invite with "Invite Parent" — sends a signup email.', 'Click a name to view full profile and form statuses.', 'Resend confirmation emails from the actions menu.'] },
+  { id: 'downloads', icon: <Download className="h-4 w-4 text-blue-600" />, title: 'Downloading Forms', description: 'Download individual or all forms.', steps: ['Single form: Student Management → ⋯ → download icon.', 'All forms: Student Management → ⋯ → "Download All Forms" (ZIP).'] },
 ];
 
 const statusGuide = [
-  { icon: <CheckCircle className="h-4 w-4 text-green-600" />, label: 'Completed – Admin Approved', desc: 'Form reviewed and approved by admin.' },
-  { icon: <Clock className="h-4 w-4 text-blue-600" />, label: 'Pending Approval', desc: 'Parent submitted the form, awaiting admin review.' },
-  { icon: <Clock className="h-4 w-4 text-yellow-600" />, label: 'Pending', desc: 'Form assigned but not yet started by parent.' },
-  { icon: <AlertTriangle className="h-4 w-4 text-red-600" />, label: 'Overdue', desc: 'Form not completed past its due date.' },
-  { icon: <Eye className="h-4 w-4 text-gray-500" />, label: 'Draft', desc: 'Form started but not submitted.' },
+  { icon: <CheckCircle className="h-4 w-4 text-emerald-600" />, label: 'Approved', desc: 'Reviewed and approved by admin.' },
+  { icon: <Clock className="h-4 w-4 text-blue-600" />, label: 'Pending Approval', desc: 'Parent submitted, awaiting review.' },
+  { icon: <Clock className="h-4 w-4 text-amber-500" />, label: 'Pending', desc: 'Assigned but not started by parent.' },
+  { icon: <AlertTriangle className="h-4 w-4 text-red-500" />, label: 'Overdue', desc: 'Not completed past due date.' },
+  { icon: <Eye className="h-4 w-4 text-slate-400" />, label: 'Draft', desc: 'Started but not submitted.' },
 ];
 
-function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
+function AdminGuideContent() {
   const { schoolPhone, schoolEmail } = useUserContext();
   return (
-    <div className="space-y-4 py-1 px-1 sm:px-0">
+    <div className="space-y-4 py-1">
       {/* Quick nav */}
-      <div className="flex flex-wrap gap-1.5 sm:gap-2">
-        {guidesections.map(s => (
-          <a
-            key={s.id}
-            href={`#guide-${s.id}`}
-            className="flex items-center gap-1.5 text-xs px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-amazon-teal/10 text-amazon-teal hover:bg-amazon-teal/20 hover:shadow-sm transition-all duration-200"
-          >
-            {s.icon}
-            <span className="hidden sm:inline">{s.title}</span>
-            <span className="sm:hidden">{s.title.split(' ')[0]}</span>
+      <div className="flex flex-wrap gap-1.5">
+        {guideSections.map(s => (
+          <a key={s.id} href={`#guide-${s.id}`}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors font-medium">
+            {s.icon}<span>{s.title.split(' ')[0]}</span>
           </a>
         ))}
       </div>
 
       {/* Status legend */}
-      <Card className="glass-card">
-        <CardHeader className="pb-2 px-3 sm:px-6">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-            <Settings className="h-4 w-4 text-amazon-teal" />
-            Form Status Reference
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-0 px-3 sm:px-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Settings className="h-4 w-4 text-blue-600" />Form Status Reference</CardTitle></CardHeader>
+        <CardContent className="pt-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {statusGuide.map(s => (
-              <div key={s.label} className="flex items-start gap-2.5 p-2.5 sm:p-3 rounded-lg bg-gray-50">
+              <div key={s.label} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
                 <span className="mt-0.5 flex-shrink-0">{s.icon}</span>
-                <div>
-                  <p className="text-xs sm:text-sm font-medium text-foreground">{s.label}</p>
-                  <p className="text-xs text-muted-foreground">{s.desc}</p>
-                </div>
+                <div><p className="text-xs font-semibold text-slate-800">{s.label}</p><p className="text-xs text-slate-500">{s.desc}</p></div>
               </div>
             ))}
           </div>
@@ -558,23 +572,18 @@ function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
       </Card>
 
       {/* Sections */}
-      {guidesections.map(section => (
-        <Card key={section.id} id={`guide-${section.id}`} className="glass-card scroll-mt-4">
-          <CardHeader className="pb-2 px-3 sm:px-6">
-            <CardTitle className="text-sm sm:text-base flex items-center gap-2">
-              {section.icon}
-              {section.title}
-            </CardTitle>
-            <p className="text-xs sm:text-sm text-muted-foreground">{section.description}</p>
+      {guideSections.map(section => (
+        <Card key={section.id} id={`guide-${section.id}`} className="scroll-mt-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">{section.icon}{section.title}</CardTitle>
+            <p className="text-xs text-slate-500">{section.description}</p>
           </CardHeader>
-          <CardContent className="pt-0 px-3 sm:px-6">
+          <CardContent className="pt-0">
             <ul className="space-y-2">
               {section.steps.map((step, i) => (
-                <li key={i} className="flex items-start gap-2.5 sm:gap-3">
-                  <span className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-amazon-teal/10 text-amazon-teal text-xs font-semibold">
-                    {i + 1}
-                  </span>
-                  <span className="text-xs sm:text-sm text-foreground">{step}</span>
+                <li key={i} className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-50 text-blue-700 text-xs font-bold flex items-center justify-center mt-0.5">{i + 1}</span>
+                  <span className="text-xs text-slate-700">{step}</span>
                 </li>
               ))}
             </ul>
@@ -582,22 +591,18 @@ function AdminGuideContent({ isSuperAdmin }: { isSuperAdmin: boolean }) {
         </Card>
       ))}
 
-      {/* Contact support */}
-      <Card className="glass-card border-amazon-teal/30 bg-amazon-teal/5">
-        <CardContent className="p-3 sm:p-4 flex items-start gap-3">
-          <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-amazon-teal flex-shrink-0 mt-0.5" />
+      {(schoolEmail || schoolPhone) && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-blue-50 border border-blue-100">
+          <Mail className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs sm:text-sm font-medium text-foreground">Need more help?</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {schoolEmail && <>Contact support at{' '}
-                <a href={`mailto:${schoolEmail}`} className="text-amazon-teal hover:underline break-all">
-                  {schoolEmail}
-                </a>{' '}</>}
-              {schoolPhone && <>or call <a href={`tel:${schoolPhone}`} className="text-amazon-teal hover:underline">{schoolPhone}</a>.</>}
+            <p className="text-xs font-semibold text-slate-800">Need more help?</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {schoolEmail && <><a href={`mailto:${schoolEmail}`} className="text-blue-600 hover:underline">{schoolEmail}</a>{' '}</>}
+              {schoolPhone && <>or <a href={`tel:${schoolPhone}`} className="text-blue-600 hover:underline">{schoolPhone}</a></>}
             </p>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }

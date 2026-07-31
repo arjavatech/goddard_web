@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download, Edit } from 'lucide-react';
+import { Search, GraduationCap, School, Users, FileText, CheckCircle, Clock, AlertCircle, Filter, X, UserPlus, Settings, MoreHorizontal, ChevronDown, Download, Edit, LayoutGrid, List } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
-import { Progress } from '../../components/ui/progress';
 import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -22,7 +22,6 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
-import { PageLoader } from '../../components/ui/page-loader';
 
 type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
@@ -90,6 +89,17 @@ export function StudentManagement() {
     return 'Draft';
   };
   const [loading, setLoading] = useState(true);
+  const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
+  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('studentViewMode', mode); };
+  useEffect(() => {
+    const handleResize = () => { 
+      setWindowWidth(window.innerWidth);
+      if (window.innerWidth < 768) setViewMode('card'); 
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [formFilter, setFormFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
@@ -187,36 +197,64 @@ export function StudentManagement() {
         <button
           type="button"
           onClick={() => setIsOpen(!isOpen)}
-          className="flex h-10 sm:h-11 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          className="flex min-h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all gap-2"
         >
-          <span className="truncate">
-            {value.length === 0 ? placeholder : `${value.length} selected`}
-          </span>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <div className="flex flex-wrap gap-1 flex-1">
+            {value.length === 0 ? (
+              <span className="text-slate-400 font-semibold">{placeholder}</span>
+            ) : (
+              value.map(v => (
+                <span
+                  key={v}
+                  className="inline-flex items-center gap-1 bg-[#EFF5FB] text-[#0F2D52] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#0F2D52]/10"
+                >
+                  {v}
+                  <span
+                    role="button"
+                    onClick={e => { e.stopPropagation(); handleMultiSelectChange(v, value, onValueChange); }}
+                    className="hover:text-red-500 transition-colors cursor-pointer leading-none"
+                  >×</span>
+                </span>
+              ))
+            )}
+          </div>
+          <ChevronDown className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
         </button>
         {isOpen && (
-          <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover text-popover-foreground shadow-md">
-            <div className="p-1 max-h-60 overflow-y-auto">
-              {options.map((option) => (
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-white shadow-xl overflow-hidden">
+            <div className="p-1.5 max-h-52 overflow-y-auto space-y-0.5">
+              {options.length > 0 && (
                 <div
-                  key={option}
-                  className="relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
-                  onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors border-b border-slate-100 mb-0.5 ${
+                    value.length === options.length ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                  }`}
+                  onClick={() => onValueChange(value.length === options.length ? [] : [...options])}
                 >
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      checked={value.includes(option)}
-                      onChange={() => { /* noop */ }}
-                      className="pointer-events-none"
-                    />
+                  <span>Select All</span>
+                  {value.length === options.length && (
+                    <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                  )}
+                </div>
+              )}
+              {options.map((option) => {
+                const selected = value.includes(option);
+                return (
+                  <div
+                    key={option}
+                    className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${
+                      selected ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'
+                    }`}
+                    onClick={() => handleMultiSelectChange(option, value, onValueChange)}
+                  >
                     <span>{option}</span>
+                    {selected && (
+                      <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               {options.length === 0 && (
-                <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                  No options available
-                </div>
+                <div className="px-3 py-2 text-xs text-slate-400 font-semibold">No options available</div>
               )}
             </div>
           </div>
@@ -233,10 +271,7 @@ export function StudentManagement() {
         setStudents([]);
         return;
       }
-      const [enrollmentData, classrooms] = await Promise.all([
-        fetchStudentEnrollments(schoolId),
-        fetchClassrooms(schoolId)
-      ]);
+      const enrollmentData = await fetchStudentEnrollments(schoolId);
       
       const enrollments = enrollmentData.enrollments || [];
       if (!enrollments || enrollments.length === 0) {
@@ -290,10 +325,8 @@ export function StudentManagement() {
         // Calculate progress based on completed forms
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-        const classroomName = enrollment.class_name;
-        // Find the classroom ID by matching the name
-        const classroom = classrooms.find(c => c.name === classroomName);
-        const classroomId = classroom?.id || 'unassigned';
+        const classroomName = enrollment.class_name || 'Unassigned';
+        const classroomId = classroomName;
 
         const parentEmail = enrollment.primary_email || 'parent@example.com';
         const parentName = `${enrollment.parent_first_name || 'Unknown'} ${enrollment.parent_last_name || 'Parent'}`;
@@ -322,7 +355,7 @@ export function StudentManagement() {
           totalForms: total,
           classroom: {
             id: classroomId,
-            name: classroomName || 'Unassigned'
+            name: classroomName
           },
           parent: {
             id: parentId,
@@ -341,10 +374,16 @@ export function StudentManagement() {
         setStudents(mappedStudents);
       }
       
-      // Set available classrooms
-      const classroomsList = classrooms.map(classroom => ({
-        id: classroom.id,
-        name: classroom.name
+      // Set available classrooms from unique class names in enrollments
+      const uniqueClassNames = new Set<string>();
+      enrollments.forEach((enrollment: EnrollmentData) => {
+        if (enrollment.class_name && enrollment.class_name.trim() !== '') {
+          uniqueClassNames.add(enrollment.class_name);
+        }
+      });
+      const classroomsList = Array.from(uniqueClassNames).map(name => ({
+        id: name,
+        name: name
       }));
       setAvailableClassrooms(classroomsList);
     } catch (error) {
@@ -358,16 +397,7 @@ export function StudentManagement() {
     loadStudentData(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // Extract all unique form names from students
-  const allFormNames = useMemo(() => {
-    const formNamesSet = new Set<string>();
-    students.forEach(student => {
-      student.assignedForms.forEach(form => {
-        formNamesSet.add(form.name);
-      });
-    });
-    return Array.from(formNamesSet).sort();
-  }, [students]);
+
 
   // Extract all unique classroom names from students
   const allClassrooms = useMemo(() => {
@@ -446,30 +476,30 @@ export function StudentManagement() {
     }),
   [filteredStudents, sortBy, sortOrder]);
 
+  const calculatedItemsPerPage = useMemo(() => {
+    if (viewMode !== 'card') return 10;
+    // Mobile view (<768px) is handled internally by usePagination.
+    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
+    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
+    if (windowWidth >= 768 && windowWidth < 1024) {
+      return 10;
+    }
+    return 9;
+  }, [viewMode, windowWidth]);
+
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedStudents,
     itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredAndSortedStudents });
+  } = usePagination({ data: filteredAndSortedStudents, itemsPerPage: calculatedItemsPerPage });
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
     return Math.round(complete / students.length * 100);
   }, [students]);
-  const getStatusBadgeVariant = (status: EnrollmentStatus): 'success' | 'secondary' | 'outline' | 'default' => {
-    switch (status) {
-      case 'Completed-AdminApproved':
-        return 'success';
-      case 'Completed-Pending Approval':
-        return 'secondary';
-      case 'Draft':
-        return 'outline';
-      default:
-        return 'default';
-    }
-  };
+
   const toggleFilters = () => setShowFilters(prev => !prev);
 
   const activeFilterCount = useMemo(() => {
@@ -545,77 +575,162 @@ export function StudentManagement() {
   const exportToPDF = () => printAsPDF('Student Directory Export', studentExportHeaders, getStudentExportRows());
 
   if (loading) {
-    return <PageLoader message="Loading student data..." Layout={AdminLayout} />;
-  }
-  return <AdminLayout>
-      <div className="container mx-auto px-0 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6 lg:space-y-8 min-h-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-          <div className='px-3'>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
-              Student Management
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Manage student enrollments and track progress
-            </p>
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading student data...</p>
           </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 bg-white p-4 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Student Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">Manage student enrollments and track registration progress</p>
+          </div>
+        </div>
 
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          <div className="h-full">
+            <StatCard 
+              label="Total Students" 
+              value={students.length} 
+              icon={GraduationCap} 
+              iconBgClass="bg-[#EFF5FB]" 
+              iconColorClass="text-[#0F2D52]" 
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            />
+          </div>
+          <div className="h-full">
+            <StatCard
+              label="Completion Rate"
+              value={
+                <div className="flex items-center gap-3">
+                  <div className="relative w-12 h-12 flex-shrink-0">
+                    <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
+                      <circle cx="24" cy="24" r="20" fill="none" stroke="#e2e8f0" strokeWidth="4" />
+                      <circle
+                        cx="24" cy="24" r="20" fill="none"
+                        stroke="#10b981" strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeDasharray={`${2 * Math.PI * 20}`}
+                        strokeDashoffset={`${2 * Math.PI * 20 * (1 - completionRate / 100)}`}
+                        className="transition-all duration-500"
+                      />
+                    </svg>
+                    <span className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold text-emerald-600">{completionRate}%</span>
+                  </div>
+                  <span className="text-2xl font-extrabold text-slate-900 tracking-tight tabular-nums leading-none">
+                    {completionRate}%
+                  </span>
+                </div>
+              }
+              icon={Users}
+              iconBgClass="bg-emerald-50"
+              iconColorClass="text-emerald-600"
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
+            />
+          </div>
+          <div className="h-full">
+            <StatCard
+              label="Forms Pending"
+              value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
+              icon={AlertCircle}
+              iconBgClass="bg-amber-50"
+              iconColorClass="text-amber-600"
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
+            />
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard label="Total Students" value={students.length} icon={GraduationCap} iconBgClass="bg-amazon-teal/10" iconColorClass="text-amazon-teal" />
-          <StatCard
-            label="Completion Rate"
-            value={<>{completionRate}%<div className="w-16 sm:w-20 lg:w-24 mt-2"><Progress value={completionRate} className="h-2" /></div></>}
-            icon={Users}
-            iconBgClass="bg-green-100"
-            iconColorClass="text-green-600"
-          />
-          <StatCard
-            label="Forms Pending"
-            value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
-            icon={AlertCircle}
-            iconBgClass="bg-amber-100"
-            iconColorClass="text-amber-600"
-            className="sm:col-span-2 lg:col-span-1"
-          />
-        </div>
-        <Card className="glass-card">
+
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
           <CardContent className="p-0">
-            <div className="p-4 sm:p-5 lg:p-6 border-b bg-muted/20">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-                <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  {filteredAndSortedStudents.length} of {students.length} students
-                  {classroomFilter.length > 0 && (
-                    <span className="ml-2 text-amazon-teal">• {classroomFilter.length} classroom{classroomFilter.length !== 1 ? 's' : ''}</span>
-                  )}
+            <div className="p-4 sm:p-6 border-b border-slate-50 bg-slate-50/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 sm:mb-6">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
+                  <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">
+                    {filteredAndSortedStudents.length} of {students.length} students
+                    {classroomFilter.length > 0 && (
+                      <span className="ml-2 text-amazon-teal">• {classroomFilter.length} classroom{classroomFilter.length !== 1 ? 's' : ''}</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Segmented View Switcher */}
+                <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 self-start sm:self-auto shadow-xs">
+                  <button
+                    type="button"
+                    onClick={() => handleViewModeChange('table')}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                      viewMode === 'table'
+                        ? 'bg-white text-[#0F2D52] shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <List className="h-3.5 w-3.5" />
+                    <span>Table View</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleViewModeChange('card')}
+                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all ${
+                      viewMode === 'card'
+                        ? 'bg-white text-[#0F2D52] shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <LayoutGrid className="h-3.5 w-3.5" />
+                    <span>Card View</span>
+                  </button>
                 </div>
               </div>
               
-              {/* Search Bar */}
-              <div className="flex flex-col gap-2 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input 
-                    placeholder="Search students..." 
-                    className="pl-10 h-9 sm:h-10 bg-background text-sm" 
-                    value={searchQuery} 
-                    onChange={e => setSearchQuery(e.target.value)} 
-                  />
-                </div>
-                <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+              <div className="flex flex-col gap-3 mb-4">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1 min-w-0">
+                    <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
+                    <Input 
+                      placeholder="Search students..." 
+                      className="pl-10 pr-4 h-9 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400" 
+                      value={searchQuery} 
+                      onChange={e => setSearchQuery(e.target.value)} 
+                    />
+                    {searchQuery && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md"
+                        onClick={() => setSearchQuery('')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
+
                   <Button
                     variant="outline"
                     onClick={toggleFilters}
                     size="sm"
-                    className="h-9 sm:h-10 relative flex-shrink-0"
+                    className="h-9 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 flex-shrink-0"
                   >
-                    {showFilters ? (
-                      <><X className="h-4 w-4 mr-1 sm:mr-2" /><span className="hidden xs:inline">Hide </span>Filters</>
-                    ) : (
-                      <><Filter className="h-4 w-4 mr-1 sm:mr-2" />Filters</>
-                    )}
+                    {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                    <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
                     {!showFilters && activeFilterCount > 0 && (
-                      <span className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-teal-600 text-[11px] font-semibold text-white">
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
                         {activeFilterCount}
                       </span>
                     )}
@@ -632,16 +747,14 @@ export function StudentManagement() {
                   {selectedStudentsForBulkAction.length > 0 && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
-                          <Download className="h-4 w-4 sm:mr-2" />
-                          <span className="hidden sm:inline">Export Selected ({selectedStudentsForBulkAction.length})</span>
-                          <span className="sm:hidden">({selectedStudentsForBulkAction.length})</span>
+                        <Button size="sm" className="h-9 rounded-xl bg-[#EFF5FB] text-[#0F2D52] border border-blue-50 hover:bg-blue-50 font-bold text-xs px-3 flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-1.5 text-[#0F2D52]" />
+                          <span className="hidden sm:inline">Export ({selectedStudentsForBulkAction.length})</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                          const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
                             s.classroom.name, s.parent.name, s.parent.email,
@@ -649,16 +762,10 @@ export function StudentManagement() {
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
-                          downloadCSV(
-                            `selected_students_export_${new Date().toISOString().split('T')[0]}.csv`,
-                            headers, rows
-                          );
-                        }}>
-                          Export as CSV
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
+                          downloadCSV(`selected_students_export_${new Date().toISOString().split('T')[0]}.csv`, studentExportHeaders, rows);
+                        }}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={() => {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                          const headers = studentExportHeaders;
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
                             s.classroom.name, s.parent.name, s.parent.email,
@@ -666,10 +773,8 @@ export function StudentManagement() {
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
-                          printAsPDF('Selected Students Export', headers, rows);
-                        }}>
-                          Export as PDF
-                        </DropdownMenuItem>
+                          printAsPDF('Selected Students Export', studentExportHeaders, rows);
+                        }}>Export as PDF</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
@@ -679,54 +784,48 @@ export function StudentManagement() {
                       onClick={() => {
                         setSelectedStudentsForTransfer(selectedStudentsForBulkAction);
                         const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
-                        if (selectedStudentObjects.length > 0) {
-                          setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
-                        }
+                        if (selectedStudentObjects.length > 0) setBulkTransferFromGrade(selectedStudentObjects[0].classroom.id);
                         setIsBulkTransferDialogOpen(true);
                       }}
                       size="sm"
-                      className="bg-amazon-orange hover:bg-amazon-orange/90 h-9 sm:h-10 flex-shrink-0"
+                      className="bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl h-9 font-bold text-xs px-3 flex-shrink-0"
                     >
-                      <GraduationCap className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Transfer Selected ({selectedStudentsForBulkAction.length})</span>
-                      <span className="sm:hidden">Transfer ({selectedStudentsForBulkAction.length})</span>
+                      <GraduationCap className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Transfer Selected</span>
                     </Button>
                   )}
 
                   {filteredAndSortedStudents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="h-9 sm:h-10 bg-amazon-teal hover:bg-amazon-teal/90 text-white flex-shrink-0">
-                          <Download className="h-4 w-4 sm:mr-2" />
+                        <Button size="sm" className="h-9 bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 rounded-xl font-bold text-xs px-3 flex-shrink-0">
+                          <Download className="h-4 w-4 sm:mr-1.5" />
                           <span className="hidden sm:inline">Export All</span>
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
-                        <DropdownMenuItem onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuItem className="cursor-pointer" onClick={exportToCSV}>Export as CSV</DropdownMenuItem>
+                        <DropdownMenuItem className="cursor-pointer" onClick={exportToPDF}>Export as PDF</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   ) : (
-                    <div title="No records to export">
-                      <Button size="sm" className="h-9 sm:h-10 flex-shrink-0" disabled>
-                        <Download className="h-4 w-4 sm:mr-2" />
-                        <span className="hidden sm:inline">Export All</span>
-                      </Button>
-                    </div>
+                    <Button size="sm" className="h-9 rounded-xl font-bold text-xs px-3 flex-shrink-0" disabled>
+                      <Download className="h-4 w-4 sm:mr-1.5" />
+                      <span className="hidden sm:inline">Export All</span>
+                    </Button>
                   )}
                 </div>
               </div>
-
               {/* Filters */}
               {showFilters && (
-                <div className="p-3 sm:p-4 bg-background rounded-lg border space-y-3">
+                <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 space-y-4">
                   {activeFilterCount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
                         {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
                       </span>
-                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-10 sm:h-11">
-                        <X className="h-4 w-4 mr-2" />
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                        <X className="h-3.5 w-3.5 mr-1" />
                         Clear All
                       </Button>
                     </div>
@@ -781,410 +880,378 @@ export function StudentManagement() {
                 </div>
               )}
             </div>
-
-            {/* Table View (md+) */}
-            <DataTable
-              className="hidden md:block relative z-0"
-              loading={loading}
-              loadingMessage="Loading students..."
-              emptyMessage="No students match the current filters."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredAndSortedStudents.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              columns={[
-                { 
-                  header: (
-                    <Checkbox
-                      checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                        } else {
-                          setSelectedStudentsForBulkAction([]);
-                        }
-                      }}
-                    />
-                  ), 
-                  className: 'text-center w-[5%]' 
-                },
-                { header: 'Student', className: 'w-[22%]' },
-                { header: 'Classroom', className: 'w-[14%]' },
-                { header: 'Parent', className: 'w-[16%]' },
-                { header: 'Status', className: 'text-center w-[14%]' },
-                { header: 'Child Status', className: 'text-center w-[10%]' },
-                { header: 'Actions', className: 'text-center w-[12%]' },
-                { header: 'Progress', className: 'text-right w-[12%]' },
-              ]}
-              rows={paginatedStudents.map((student, index) => (
-                <tr key={student.id || `row-${index}`} className="border-b border-gray-100">
-                  <td className="py-3 px-2 text-center">
-                    <Checkbox
-                      checked={selectedStudentsForBulkAction.includes(student.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                        } else {
-                          setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                        }
-                      }}
-                    />
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="flex items-center">
-                      <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-2" />
-                      <div className="min-w-0">
-                        <Link 
-                          to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`} 
-                          state={{ fromStudents: true }}
-                          className="font-medium text-foreground hover:text-amazon-teal transition-colors hover:underline block truncate relative z-10"
-                        >
-                          {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                        </Link>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="py-3 px-2">
-                    <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-amazon-teal hover:text-amazon-teal/80 transition-colors group">
-                      <School className="h-4 w-4 mr-1 group-hover:scale-110 transition-transform flex-shrink-0" />
-                      <span className="font-medium group-hover:underline truncate">{student.classroom.name}</span>
-                    </Link>
-                  </td>
-                  <td className="py-3 px-2">
-                    <div className="min-w-0 space-y-2">
+            {/* Conditional Rendering of View */}
+            {viewMode === 'card' ? (
+              <MobileCardList
+                className="p-5"
+                loading={loading}
+                loadingMessage="Loading students..."
+                emptyMessage="No students found matching your search criteria."
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredAndSortedStudents.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                cards={filteredAndSortedStudents.length > 0 ? paginatedStudents.map((student, index) => {
+                  const apiFormStatus = student.formStatus || 'incomplete';
+                  return (
+                    <Card key={student.id || `student-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
                       <div>
-                        <Link
-                          to={`/admin/parents/${student.parent.id}`}
-                          state={{ fromStudents: true }}
-                          className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate"
-                        >
-                          {student.parent.name}
-                        </Link>
-                        <div className="text-xs text-gray-500 truncate">{student.parent.email}</div>
-                      </div>
-                      {student.secondaryParent && (
-                        <div className="border-t pt-2">
-                          <Link
-                            to={`/admin/parents/${student.secondaryParent.id}`}
-                            state={{ fromStudents: true }}
-                            className="text-amazon-teal hover:text-amazon-teal/80 font-medium hover:underline transition-colors block truncate text-sm"
-                          >
-                            {student.secondaryParent.name}
-                          </Link>
-                          <div className="text-xs text-gray-500 truncate">{student.secondaryParent.email}</div>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    {(() => {
-                      const apiFormStatus = student.formStatus || 'incomplete';
-                      const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
-                      const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
-                      const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3 mr-1" /> : <Clock className="h-3 w-3 mr-1" />;
-                      return (
-                        <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-xs px-2 py-1">
-                          {statusIcon}
-                          <span className="truncate">{displayStatus}</span>
-                        </Badge>
-                      );
-                    })()}
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <button
-                      onClick={() => {
-                        setSelectedStudent(student);
-                        setNewStatus(student.childStatus);
-                        setIsStatusDialogOpen(true);
-                      }}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-                        student.childStatus === 'active'
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                      <Edit className="h-3 w-3 opacity-70" />
-                    </button>
-                  </td>
-                  <td className="py-3 px-2 text-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedStudentForForms(student);
-                          loadFormsIfNeeded();
-                          setIsStudentFormDialogOpen(true);
-                        }}>
-                          <Settings className="h-4 w-4 mr-2" />
-                          Manage Forms
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => {
-                          setSelectedStudentForTransfer(student);
-                          setNewClassroomId('');
-                          setIsTransferDialogOpen(true);
-                        }}>
-                          <School className="h-4 w-4 mr-2" />
-                          Transfer Class
-                        </DropdownMenuItem>
-                        {student.enrollmentId && (
-                          <DropdownMenuItem
-                            disabled={downloadingEnrollmentId === student.enrollmentId}
-                            onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                          >
-                            {downloadingEnrollmentId === student.enrollmentId
-                              ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
-                              : <Download className="h-4 w-4 mr-2" />}
-                            Download All Forms
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                  <td className="py-3 px-3">
-                    <div className="text-right">
-                      <div className="text-xs text-gray-600 mb-1">{student.formsCompleted}/{student.totalForms}</div>
-                      <div className="flex items-center justify-end space-x-1">
-                        <div className="w-16 h-2 bg-gray-100 rounded-full overflow-hidden flex">
-                          {student.totalForms > 0 && student.formsApproved > 0 && (
-                            <div
-                              className="h-full bg-green-500 transition-all"
-                              style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                        {/* Header row */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <Checkbox
+                              checked={selectedStudentsForBulkAction.includes(student.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                                } else {
+                                  setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                                }
+                              }}
+                              className="flex-shrink-0"
                             />
-                          )}
-                          {student.totalForms > 0 && student.formsInProgress > 0 && (
-                            <div
-                              className="h-full bg-amber-400 transition-all"
-                              style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
-                            />
-                          )}
+                            <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="flex-shrink-0 bg-[#04488c] text-white font-extrabold w-10 h-10 rounded-full" />
+                            <div className="min-w-0 flex-1">
+                              <Link
+                                to={`/admin/parents/${student.parent.id}?childId=${student.id}`}
+                                state={{ fromStudents: true, selectedChildId: student.id }}
+                                className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
+                              >
+                                {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+                              </Link>
+                              <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{student.classroom.name}</p>
+                            </div>
+                          </div>
+                          
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                                <MoreHorizontal className="h-3.5 w-3.5" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
+                                <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                              </DropdownMenuItem>
+                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
+                                <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
+                              </DropdownMenuItem>
+                              {student.enrollmentId && (
+                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
+                                  <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
-                        <span className="text-xs font-semibold text-foreground min-w-[28px]">{student.enrollmentProgress}%</span>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            />
 
-            {/* Mobile Card View */}
-            <MobileCardList
-              className="md:hidden p-3 space-y-3"
-              loading={loading}
-              loadingMessage="Loading students..."
-              emptyMessage="No students found matching your search criteria."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={setCurrentPage}
-              gridClassName="space-y-3"
-              cards={[
-                <div key="select-all" className="flex items-center gap-2 pb-2 border-b">
-                  <Checkbox
-                    checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                    onCheckedChange={(checked) => {
-                      if (checked) {
-                        setSelectedStudentsForBulkAction(paginatedStudents.map(s => s.id));
-                      } else {
-                        setSelectedStudentsForBulkAction([]);
-                      }
-                    }}
-                  />
-                  <span className="text-sm font-medium">Select All</span>
-                </div>,
-                ...paginatedStudents.map((student, index) => (
-                  <div key={student.id || `card-${index}`} className="border rounded-lg p-3 sm:p-4 bg-card space-y-2 sm:space-y-3">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Checkbox
-                          checked={selectedStudentsForBulkAction.includes(student.id)}
-                          onCheckedChange={(checked) => {
-                            if (checked) {
-                              setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                            } else {
-                              setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                            }
-                          }}
-                          className="flex-shrink-0"
-                        />
-                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
-                        <div className="min-w-0 flex-1">
-                          <Link
-                            to={`/admin/parents/${student.parent.id}?student=${encodeURIComponent(student.firstName + ' ' + student.lastName)}`}
-                            state={{ fromStudents: true }}
-                            className="font-medium text-sm text-amazon-teal hover:underline block truncate"
+                        <div className="my-3 border-t border-slate-50" />
+
+                        {/* Status row */}
+                        <div className="py-2 flex items-center justify-between">
+                          <Badge variant={apiFormStatus === 'complete' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
+                            {apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                            {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
+                          </Badge>
+                          <button
+                            onClick={() => {
+                              setSelectedStudent(student);
+                              setNewStatus(student.childStatus);
+                              setIsStatusDialogOpen(true);
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all border ${
+                              student.childStatus === 'active'
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
+                            }`}
                           >
+                            <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+                            <Edit className="h-3 w-3 opacity-80" />
+                          </button>
+                        </div>
+
+                        <div className="my-3 border-t border-slate-50" />
+
+                        {/* Parents */}
+                        <div className="py-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Parents</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
+                              <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                              <Link to={`/admin/parents/${student.parent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                                {student.parent.name}
+                              </Link>
+                            </div>
+                            {student.secondaryParent && (
+                              <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
+                                <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                                <Link to={`/admin/parents/${student.secondaryParent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                                  {student.secondaryParent.name}
+                                </Link>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="my-3 border-t border-slate-50" />
+
+                        {/* Progress */}
+                        <div className="py-2 space-y-2">
+                          <div className="flex items-center justify-between text-xs font-semibold">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Forms Progress</span>
+                            <span className="text-[#0F2D52] font-bold text-xs">{student.formsCompleted}/{student.totalForms} ({student.enrollmentProgress}%)</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                            {student.formsApproved > 0 && (
+                              <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
+                            )}
+                            {student.formsInProgress > 0 && (
+                              <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  );
+                }) : []}
+              />
+            ) : (
+              <DataTable
+                className="relative z-0"
+                loading={loading}
+                loadingMessage="Loading students..."
+                emptyMessage="No students match the current filters."
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredAndSortedStudents.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+                columns={[
+                  { 
+                    header: (
+                      <Checkbox
+                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStudentsForBulkAction(filteredAndSortedStudents.map(s => s.id));
+                          } else {
+                            setSelectedStudentsForBulkAction([]);
+                          }
+                        }}
+                      />
+                    ), 
+                    className: 'text-center w-[5%]' 
+                  },
+                  { header: 'Student', className: 'w-[22%]' },
+                  { header: 'Classroom', className: 'w-[14%]' },
+                  { header: 'Parent', className: 'w-[16%]' },
+                  { header: 'Status', className: 'text-center w-[14%]' },
+                  { header: 'Child Status', className: 'text-center w-[10%]' },
+                  { header: 'Actions', className: 'text-center w-[12%]' },
+                  { header: 'Progress', className: 'text-right w-[12%]' },
+                ]}
+                rows={paginatedStudents.map((student, index) => (
+                  <tr key={student.id || `row-${index}`} className={`border-b border-slate-50 transition-all duration-150 ease-in-out ${selectedStudentsForBulkAction.includes(student.id) ? 'bg-[#EFF5FB] hover:bg-[#e6f0f9]' : 'hover:bg-[#F8FAFC]'}`}>
+                    <td className="py-3 px-2 text-center">
+                      <Checkbox
+                        checked={selectedStudentsForBulkAction.includes(student.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                          } else {
+                            setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                          }
+                        }}
+                        className="flex-shrink-0"
+                      />
+                    </td>
+                    <td className="py-4 px-3 font-semibold text-slate-900 text-sm">
+                      <div className="flex items-center">
+                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-3 bg-[#044ba0] text-white font-bold" />
+                        <div className="min-w-0">
+                          <Link to={`/admin/parents/${student.parent.id}?childId=${student.id}`} state={{ fromStudents: true, selectedChildId: student.id }} className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm">
                             {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
                           </Link>
-                          <p className="text-xs text-muted-foreground truncate">{student.classroom.name}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="py-4 px-2">
+                      <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors group text-sm">
+                        <School className="h-4 w-4 mr-1.5 text-slate-400 group-hover:text-[#0F2D52] transition-colors flex-shrink-0" />
+                        <span className="group-hover:underline truncate">{student.classroom.name}</span>
+                      </Link>
+                    </td>
+                    <td className="py-4 px-2">
+                      <div className="min-w-0 space-y-1.5">
+                        <div>
+                          <Link to={`/admin/parents/${student.parent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-sm">
+                            {student.parent.name}
+                          </Link>
+                          <div className="text-xs text-slate-400 font-medium truncate mt-0.5">{student.parent.email}</div>
+                        </div>
+                        {student.secondaryParent && (
+                          <div className="border-t border-slate-100 pt-1.5">
+                            <Link to={`/admin/parents/${student.secondaryParent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-xs">
+                              {student.secondaryParent.name}
+                            </Link>
+                            <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{student.secondaryParent.email}</div>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-4 px-2 text-center">
+                      {(() => {
+                        const apiFormStatus = student.formStatus || 'incomplete';
+                        const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
+                        const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
+                        const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <Clock className="h-3.5 w-3.5 mr-1" />;
+                        return (
+                          <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-[10px] rounded-full px-2.5 py-0.5 font-bold">
+                            {statusIcon}
+                            <span className="truncate">{displayStatus}</span>
+                          </Badge>
+                        );
+                      })()}
+                    </td>
+                    <td className="py-4 px-2 text-center">
                       <button
                         onClick={() => {
                           setSelectedStudent(student);
                           setNewStatus(student.childStatus);
                           setIsStatusDialogOpen(true);
                         }}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium flex-shrink-0 transition-all ${
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold transition-all border whitespace-nowrap ${
                           student.childStatus === 'active'
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
                         }`}
                       >
                         <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                        <Edit className="h-3 w-3 opacity-70" />
+                        <Edit className="h-3 w-3 opacity-80" />
                       </button>
-                    </div>
-
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Parent:</span>
-                        <Link
-                          to={`/admin/parents/${student.parent.id}`}
-                          state={{ fromStudents: true }}
-                          className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
-                        >
-                          {student.parent.name}
-                        </Link>
-                      </div>
-                      {student.secondaryParent && (
-                        <div className="flex items-center justify-between">
-                          <span className="text-muted-foreground">Secondary:</span>
-                          <Link
-                            to={`/admin/parents/${student.secondaryParent.id}`}
-                            state={{ fromStudents: true }}
-                            className="font-medium text-amazon-teal hover:underline truncate max-w-[60%] text-right"
-                          >
-                            {student.secondaryParent.name}
-                          </Link>
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Status:</span>
-                        <span className="font-medium truncate max-w-[60%] text-right">
-                          {(() => {
-                            if (formFilter.length > 0) {
-                              const selectedForm = student.assignedForms.find(form => formFilter.includes(form.name));
-                              if (selectedForm) {
-                                const normalizedStatus = normalizeFormStatus(selectedForm.status);
-                                const displayStatus = normalizedStatus === 'Approved' ? 'Completed - Admin Approved' : normalizedStatus === 'In Progress' ? 'Completed - Pending Approval' : normalizedStatus;
-                                const statusVariant = normalizedStatus === 'Approved' ? 'success' : normalizedStatus === 'In Progress' ? 'secondary' : 'outline';
-                                return <Badge variant={statusVariant as any} className="text-xs">{displayStatus}</Badge>;
-                              }
-                              return <span className="text-muted-foreground">N/A</span>;
-                            }
-                            return <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="text-xs">{student.enrollmentStatus}</Badge>;
-                          })()}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Forms:</span>
-                        <span className="font-medium">{student.formsCompleted}/{student.totalForms}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground">Progress:</span>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-12 h-1.5 bg-gray-100 rounded-full overflow-hidden flex">
+                    </td>
+                    <td className="py-3 px-2 text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedStudentForForms(student);
+                            loadFormsIfNeeded();
+                            setIsStudentFormDialogOpen(true);
+                          }}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Manage Forms
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedStudentForTransfer(student);
+                            setNewClassroomId('');
+                            setIsTransferDialogOpen(true);
+                          }}>
+                            <School className="h-4 w-4 mr-2" />
+                            Transfer Class
+                          </DropdownMenuItem>
+                          {student.enrollmentId && (
+                            <DropdownMenuItem
+                              disabled={downloadingEnrollmentId === student.enrollmentId}
+                              onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                            >
+                              {downloadingEnrollmentId === student.enrollmentId
+                                ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                                : <Download className="h-4 w-4 mr-2" />}
+                              Download All Forms
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                    <td className="py-4 px-3">
+                      <div className="text-right">
+                        <div className="text-xs text-slate-400 font-bold mb-1">{student.formsCompleted} / {student.totalForms}</div>
+                        <div className="flex items-center justify-end space-x-1.5">
+                          <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
                             {student.totalForms > 0 && student.formsApproved > 0 && (
-                              <div className="h-full bg-green-500 transition-all" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
+                              <div
+                                className="h-full bg-emerald-500 transition-all duration-300"
+                                style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                              />
                             )}
                             {student.totalForms > 0 && student.formsInProgress > 0 && (
-                              <div className="h-full bg-amber-400 transition-all" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
+                              <div
+                                className="h-full bg-amber-400 transition-all duration-300"
+                                style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                              />
                             )}
                           </div>
-                          <span className="font-medium">{student.enrollmentProgress}%</span>
+                          <span className="text-xs font-bold text-slate-700 min-w-[28px]">{student.enrollmentProgress}%</span>
                         </div>
                       </div>
-                    </div>
-
-                    <div className="pt-2 border-t space-y-2">
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}
-                        className="w-full h-7 text-xs"
-                      >
-                        <Settings className="h-3 w-3 mr-1" />
-                        Manage Forms
-                      </Button>
-                      <Button
-                        variant="outline" size="sm"
-                        onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}
-                        className="w-full h-7 text-xs"
-                      >
-                        <School className="h-3 w-3 mr-1" />
-                        Transfer Class
-                      </Button>
-                      {student.enrollmentId && (
-                        <Button
-                          variant="outline" size="sm"
-                          disabled={downloadingEnrollmentId === student.enrollmentId}
-                          onClick={() => handleDownloadAllForms(student.enrollmentId!)}
-                          className="w-full h-7 text-xs text-amazon-teal border-amazon-teal hover:bg-amazon-teal hover:text-white"
-                        >
-                          {downloadingEnrollmentId === student.enrollmentId
-                            ? <span className="h-3 w-3 mr-1 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
-                            : <Download className="h-3 w-3 mr-1" />}
-                          Download All Forms
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ]}
-            />
+                    </td>
+                  </tr>
+                ))}
+              />
+            )}
           </CardContent>
-        </Card>
-      </div>
+        </div>
+      </motion.div>
 
-      {/* Child Status Change Dialog */}
       <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Change Child Status</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Change Child Status</DialogTitle>
           </DialogHeader>
           <div className="py-4">
-            <p className="mb-4 text-sm text-muted-foreground">
+            <p className="mb-4 text-sm text-slate-500">
               Change status for <strong>{selectedStudent?.firstName} {selectedStudent?.lastName}</strong> to:
             </p>
             <Select value={newStatus} onValueChange={(v) => setNewStatus(v as 'active' | 'archive')}>
-              <SelectTrigger className="h-10 sm:h-11">
+              <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="archive">Archive</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsStatusDialogOpen(false)} disabled={isUpdatingStatus}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button
+              variant="outline"
+              onClick={() => setIsStatusDialogOpen(false)}
+              disabled={isUpdatingStatus}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+            >
               Cancel
             </Button>
-            <Button onClick={handleStatusChange} disabled={isUpdatingStatus} className="bg-amazon-teal hover:bg-amazon-teal/90">
+            <Button
+              onClick={handleStatusChange}
+              disabled={isUpdatingStatus}
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
+            >
               {isUpdatingStatus ? 'Updating...' : 'Confirm'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Assign Form Dialog */}
       <Dialog open={isAssignFormDialogOpen} onOpenChange={setIsAssignFormDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-lg">
           <DialogHeader>
-            <DialogTitle>Assign Form to Students</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to Students</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div>
-              <label className="block text-sm font-medium mb-2">Select Form</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Select Form</label>
               <Select value={selectedFormToAssign} onValueChange={setSelectedFormToAssign}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Choose a form to assign" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                   {availableForms.map(form => (
                     <SelectItem key={form.id} value={form.id}>
                       {form.name}
@@ -1195,24 +1262,24 @@ export function StudentManagement() {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">Search Students</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Search Students</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                   <Input
                     placeholder="Search by student name..."
                     value={assignDialogSearchTerm}
                     onChange={(e) => setAssignDialogSearchTerm(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500"
                   />
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">Filter by Classroom</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Filter by Classroom</label>
                 <Select value={assignDialogClassroomFilter} onValueChange={setAssignDialogClassroomFilter}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                     <SelectValue placeholder="All Classrooms" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     <SelectItem value="all">All Classrooms</SelectItem>
                     {allClassrooms.map(classroom => (
                       <SelectItem key={classroom} value={classroom}>
@@ -1224,25 +1291,25 @@ export function StudentManagement() {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                 Select Students ({selectedStudentsForForm.length} selected)
               </label>
-              <div className="border rounded-lg max-h-60 overflow-y-auto">
+              <div className="border border-slate-100 rounded-xl max-h-60 overflow-y-auto">
                 {filteredAndSortedStudents.filter(student => {
                   const matchesClassroom = assignDialogClassroomFilter === 'all' || student.classroom.name === assignDialogClassroomFilter;
                   const matchesSearch = assignDialogSearchTerm === '' || 
                     `${student.firstName} ${student.lastName}`.toLowerCase().includes(assignDialogSearchTerm.toLowerCase());
                   return matchesClassroom && matchesSearch;
                 }).map((student) => (
-                  <div key={student.id} className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-gray-50">
+                  <div key={student.id} className="flex items-center space-x-3 p-3 border-b border-slate-50 last:border-b-0 hover:bg-slate-50/50">
                     <Checkbox
                       checked={selectedStudentsForForm.includes(student.id)}
                       onCheckedChange={() => handleStudentSelectForForm(student.id)}
                     />
                     <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                     <div className="flex-1">
-                      <div className="font-medium">{student.firstName} {student.lastName}</div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="font-medium text-sm text-slate-900">{student.firstName} {student.lastName}</div>
+                      <div className="text-xs text-slate-400">
                         {student.classroom.name} • {student.parent.name}
                       </div>
                     </div>
@@ -1261,13 +1328,13 @@ export function StudentManagement() {
               </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsAssignFormDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
               onClick={handleAssignFormToStudents} 
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!selectedFormToAssign || selectedStudentsForForm.length === 0}
             >
               Assign Form ({selectedStudentsForForm.length} students)
@@ -1276,39 +1343,38 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Individual Student Form Assignment Dialog */}
       <Dialog open={isStudentFormDialogOpen} onOpenChange={(open) => {
         if (!open) {
           setIsStudentFormDialogOpen(false);
           setSelectedFormsToAdd([]);
         }
       }}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-hidden">
-          <DialogHeader className="pb-4 border-b">
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] md:overflow-hidden overflow-y-auto no-scrollbar rounded-2xl shadow-lg">
+          <DialogHeader className="pb-4 border-b border-slate-100">
             <div className="flex items-center space-x-3">
               <AvatarInitials initials={`${selectedStudentForForms?.firstName[0] ?? ''}${selectedStudentForForms?.lastName[0] ?? ''}`} size="lg" />
               <div>
-                <DialogTitle className="text-xl font-semibold">
+                <DialogTitle className="text-xl font-bold text-slate-900">
                   {selectedStudentForForms?.firstName} {selectedStudentForForms?.lastName}
                 </DialogTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-500">
                   {selectedStudentForForms?.classroom.name} • {selectedStudentForForms?.parent.name}
                 </p>
               </div>
             </div>
           </DialogHeader>
           
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6 overflow-y-auto max-h-[60vh]">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 py-6 md:overflow-y-auto md:max-h-[60vh]">
             {/* Currently Assigned Forms */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Assigned Forms</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Assigned Forms</h3>
                 <Badge variant="secondary" className="text-xs">
                   {selectedStudentForForms?.assignedForms?.length || 0} forms
                 </Badge>
               </div>
               
-              <div className="border rounded-lg max-h-80 overflow-y-auto">
+              <div className="border rounded-lg max-h-48 sm:max-h-80 overflow-y-auto">
                 {selectedStudentForForms?.assignedForms && selectedStudentForForms.assignedForms.length > 0 ? (
                   selectedStudentForForms.assignedForms.map((form, index) => {
                     const normalizedStatus = normalizeFormStatus(form.status);
@@ -1365,13 +1431,13 @@ export function StudentManagement() {
             {/* Add New Forms */}
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-foreground">Available Forms</h3>
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Available Forms</h3>
                 <Badge variant="outline" className="text-xs">
                   {selectedFormsToAdd.length} selected
                 </Badge>
               </div>
               
-              <div className="space-y-3 max-h-80 overflow-y-auto">
+              <div className="space-y-3 max-h-48 sm:max-h-80 overflow-y-auto">
                 {availableForms.filter(form => 
                   !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
                 ).length > 0 ? (
@@ -1431,20 +1497,21 @@ export function StudentManagement() {
             </div>
           </div>
           
-          <DialogFooter className="pt-4 border-t">
-            <div className="flex items-center justify-between w-full">
-              <div className="text-sm text-muted-foreground">
+          <DialogFooter className="pt-4 border-t border-slate-100">
+            <div className="flex flex-col sm:flex-row items-center justify-between w-full gap-3">
+              <div className="text-sm text-slate-500 text-center sm:text-left">
                 {selectedFormsToAdd.length > 0 && (
                   <span>{selectedFormsToAdd.length} form{selectedFormsToAdd.length !== 1 ? 's' : ''} selected</span>
                 )}
               </div>
-              <div className="flex space-x-3">
+              <div className="flex space-x-3 w-full sm:w-auto justify-center sm:justify-end">
                 <Button 
                   variant="outline" 
                   onClick={() => {
                     setIsStudentFormDialogOpen(false);
                     setSelectedFormsToAdd([]);
                   }}
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200 flex-1 sm:flex-none"
                 >
                   Cancel
                 </Button>
@@ -1475,7 +1542,7 @@ export function StudentManagement() {
                     }
 
                   }}
-                  className="bg-amazon-teal hover:bg-amazon-teal/90"
+                  className="h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold flex-1 sm:flex-none"
                   disabled={selectedFormsToAdd.length === 0}
                 >
                   <UserPlus className="h-4 w-4 mr-2" />
@@ -1487,22 +1554,21 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Class Transfer Dialog */}
       <Dialog open={isTransferDialogOpen} onOpenChange={setIsTransferDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md" preventClose>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Transfer Student to New Class</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Transfer Student to New Class</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="p-3 bg-gray-50 rounded-lg">
               <div className="font-medium">{selectedStudentForTransfer?.firstName} {selectedStudentForTransfer?.lastName}</div>
-              <div className="text-sm text-muted-foreground">Current: {selectedStudentForTransfer?.classroom.name}</div>
+              <div className="text-sm text-slate-500">Current: {selectedStudentForTransfer?.classroom.name}</div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium mb-2">New Classroom</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">New Classroom</label>
               <Select value={newClassroomId} onValueChange={setNewClassroomId}>
-                <SelectTrigger>
+                <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Select new classroom" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1519,8 +1585,8 @@ export function StudentManagement() {
             
 
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
+            <Button variant="outline" onClick={() => setIsTransferDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
@@ -1533,9 +1599,21 @@ export function StudentManagement() {
                     return;
                   }
                   
+                  // Resolve the classroom UUID dynamically
+                  let targetClassroomId = newClassroomId;
+                  try {
+                    const classrooms = await fetchClassrooms(schoolId || '');
+                    const matched = classrooms.find(c => c.name === newClassroomId || c.id === newClassroomId);
+                    if (matched) {
+                      targetClassroomId = matched.id;
+                    }
+                  } catch (err) {
+                    console.warn('Failed to resolve classroom UUID for transfer:', err);
+                  }
+                  
                   await promoteStudent(
                     selectedStudentForTransfer.enrollmentId,
-                    newClassroomId,
+                    targetClassroomId,
                     'Age progression to new class',
                     new Date().toISOString()
                   );
@@ -1550,7 +1628,7 @@ export function StudentManagement() {
                   setIsTransferring(false);
                 }
               }}
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!newClassroomId || isTransferring}
             >
               {isTransferring ? 'Transferring...' : 'Transfer Student'}
@@ -1559,21 +1637,20 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk Transfer Dialog */}
       <Dialog open={isBulkTransferDialogOpen} onOpenChange={setIsBulkTransferDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto" preventClose>
+        <DialogContent className="w-[95vw] max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl shadow-lg" preventClose>
           <DialogHeader>
-            <DialogTitle>Bulk Grade Transfer</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Bulk Grade Transfer</DialogTitle>
           </DialogHeader>
           <div className="space-y-6 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-2">From Grade/Class</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">From Grade/Class</label>
                 <Select value={bulkTransferFromGrade} onValueChange={setBulkTransferFromGrade} disabled={selectedStudentsForTransfer.length > 0}>
-                  <SelectTrigger className={selectedStudentsForTransfer.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}>
+                  <SelectTrigger className={`w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 ${selectedStudentsForTransfer.length > 0 ? 'opacity-50 cursor-not-allowed' : ''}`}>
                     <SelectValue placeholder="Select current grade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     {availableClassrooms.map(classroom => (
                       <SelectItem key={classroom.id} value={classroom.id}>
                         {classroom.name}
@@ -1583,12 +1660,12 @@ export function StudentManagement() {
                 </Select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2">To Grade/Class</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">To Grade/Class</label>
                 <Select value={bulkTransferToGrade} onValueChange={setBulkTransferToGrade}>
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full h-10 sm:h-11 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                     <SelectValue placeholder="Select target grade" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="rounded-xl border-slate-100 shadow-lg">
                     {availableClassrooms
                       .filter(classroom => classroom.id !== bulkTransferFromGrade)
                       .map(classroom => (
@@ -1603,10 +1680,10 @@ export function StudentManagement() {
             
             {bulkTransferFromGrade && (
               <div>
-                <label className="block text-sm font-medium mb-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
                   Select Students to Transfer ({selectedStudentsForTransfer.length} selected)
                 </label>
-                <div className="border rounded-lg max-h-80 overflow-y-auto">
+                <div className="border border-slate-100 rounded-xl max-h-80 overflow-y-auto">
                   {(selectedStudentsForTransfer.length > 0 
                     ? students.filter(student => selectedStudentsForTransfer.includes(student.id))
                     : students.filter(student => student.classroom.id === bulkTransferFromGrade)
@@ -1627,7 +1704,7 @@ export function StudentManagement() {
                       <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} />
                       <div className="flex-1">
                         <div className="font-medium">{student.firstName} {student.lastName}</div>
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-sm text-slate-500">
                           {student.parent.name} • Progress: {student.enrollmentProgress}%
                         </div>
                       </div>
@@ -1646,8 +1723,8 @@ export function StudentManagement() {
                   )}
                 </div>
                 
-                {selectedStudentsForTransfer.length === 0 && students.filter(student => student.classroom.id === bulkTransferFromGrade).length > 0 && (
-                  <div className="flex justify-between items-center mt-2">
+                 {selectedStudentsForTransfer.length === 0 && students.filter(student => student.classroom.id === bulkTransferFromGrade).length > 0 && (
+                  <div className="flex justify-between items-center mt-3">
                     <Button
                       variant="outline"
                       size="sm"
@@ -1657,6 +1734,7 @@ export function StudentManagement() {
                           .map(student => student.id);
                         setSelectedStudentsForTransfer(allStudentIds);
                       }}
+                      className="rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                     >
                       Select All
                     </Button>
@@ -1664,6 +1742,7 @@ export function StudentManagement() {
                       variant="outline"
                       size="sm"
                       onClick={() => setSelectedStudentsForTransfer([])}
+                      className="rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
                     >
                       Clear All
                     </Button>
@@ -1672,28 +1751,38 @@ export function StudentManagement() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
             <Button variant="outline" onClick={() => {
               setIsBulkTransferDialogOpen(false);
               setSelectedStudentsForTransfer([]);
               setBulkTransferFromGrade('');
               setBulkTransferToGrade('');
               setSelectedStudentsForBulkAction([]);
-            }}>
+            }} className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200">
               Cancel
             </Button>
             <Button 
               onClick={async () => {
                 if (!bulkTransferToGrade || selectedStudentsForTransfer.length === 0) return;
                 try {
-                  // const user = await fetchUserContext();
-                  
+                  // Resolve classroom UUID dynamically for bulk transfer
+                  let targetClassroomId = bulkTransferToGrade;
+                  try {
+                    const classrooms = await fetchClassrooms(schoolId || '');
+                    const matched = classrooms.find(c => c.name === bulkTransferToGrade || c.id === bulkTransferToGrade);
+                    if (matched) {
+                      targetClassroomId = matched.id;
+                    }
+                  } catch (err) {
+                    console.warn('Failed to resolve classroom UUID for bulk transfer:', err);
+                  }
+
                   // Prepare promotions array
                   const promotions = selectedStudentsForTransfer.map(studentId => {
                     const student = students.find(s => s.id === studentId);
                     return {
                       enrollment_id: student?.enrollmentId || '',
-                      to_classroom_id: bulkTransferToGrade,
+                      to_classroom_id: targetClassroomId,
                       reason: 'Bulk transfer to new class',
                       effective_date: new Date().toISOString()
                     };
@@ -1716,7 +1805,7 @@ export function StudentManagement() {
                   showToast('error', 'Error transferring students. Please try again.');
                 }
               }}
-              className="bg-amazon-teal hover:bg-amazon-teal/90"
+              className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200 font-semibold"
               disabled={!bulkTransferToGrade || selectedStudentsForTransfer.length === 0}
             >
               Transfer {selectedStudentsForTransfer.length} Students
@@ -1725,4 +1814,5 @@ export function StudentManagement() {
         </DialogContent>
       </Dialog>
     </AdminLayout>
+  );
 }

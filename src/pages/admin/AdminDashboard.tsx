@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
-import { School, FileText, Users, UserCheck, Plus, Mail } from 'lucide-react';
-import { Progress } from '../../components/ui/progress';
+import { School, FileText, Users, UserCheck, Plus, Mail, TrendingUp, CheckCircle, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { StatCard } from '../../components/ui/stat-card';
 import { AsyncButton } from '../../components/ui/async-button';
 import { PageLoader } from '../../components/ui/page-loader';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom, fetchParentDetails } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
@@ -39,13 +38,14 @@ type ProgressItem = {
 export function AdminDashboard() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [enrollmentProgress, setEnrollmentProgress] = useState<ProgressItem[]>([]);
+  const [isAnimated, setIsAnimated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formName, setFormName] = useState('');
   const [formLink, setFormLink] = useState('');
   const [formDueDate, setFormDueDate] = useState('');
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
@@ -64,7 +64,7 @@ export function AdminDashboard() {
   const [childClassroom, setChildClassroom] = useState('');
   const [classrooms, setClassrooms] = useState<{ id: string; name: string }[]>([]);
   const [classroomsLoaded, setClassroomsLoaded] = useState(false);
-  const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
+  const [inviteFormErrors, setInviteFormErrors] = useState<{ [key: string]: string }>({});
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
@@ -107,6 +107,15 @@ export function AdminDashboard() {
     loadDashboardData(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!loading) {
+      const timer = setTimeout(() => setIsAnimated(true), 80);
+      return () => clearTimeout(timer);
+    } else {
+      setIsAnimated(false);
+    }
+  }, [loading]);
 
   const validateForm = () => {
     const errors = validateAddFormFields({ formName, formLink, formDueDate });
@@ -162,7 +171,6 @@ export function AdminDashboard() {
 
     setIsAddingForm(true);
     try {
-    
       if (!schoolId) return;
 
       await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate);
@@ -197,11 +205,11 @@ export function AdminDashboard() {
   };
 
   const validateInviteForm = () => {
-    const errors: {[key: string]: string} = {};
+    const errors: { [key: string]: string } = {};
 
     const parentEmailError = validateEmail(parentEmail);
     if (parentEmailError) errors.parentEmail = parentEmailError;
-    
+
     if (!childFirstName.trim()) errors.childFirstName = 'Child first name is required';
     if (!childLastName.trim()) errors.childLastName = 'Child last name is required';
     if (!childGender) errors.childGender = 'Child gender is required';
@@ -210,7 +218,7 @@ export function AdminDashboard() {
     if (secondaryParentEmail.trim()) {
       const secondaryEmailError = validateEmail(secondaryParentEmail);
       if (secondaryEmailError) errors.secondaryParentEmail = secondaryEmailError;
-      
+
       if (!secondaryParentFirstName.trim()) {
         errors.secondaryParentFirstName = 'First name is required when email is provided';
       }
@@ -229,18 +237,16 @@ export function AdminDashboard() {
     try {
       if (!schoolId) return;
 
-      // Check if primary parent email already exists
       const existingParents = await fetchParentDetails(schoolId);
       const allParents = [...existingParents.activeParents, ...existingParents.inactiveParents];
-      
+
       const primaryEmailExists = allParents.some(p => p.email.toLowerCase() === parentEmail.toLowerCase());
       if (primaryEmailExists) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Primary parent email already exists');
         return;
       }
-      
-      // Check if secondary parent email already exists (if provided)
+
       if (secondaryParentEmail.trim()) {
         const secondaryEmailExists = allParents.some(p => p.email.toLowerCase() === secondaryParentEmail.toLowerCase());
         if (secondaryEmailExists) {
@@ -272,13 +278,11 @@ export function AdminDashboard() {
       await loadDashboardData(true);
     } catch (error: any) {
       console.error('Error inviting parent:', error);
-      
-      // Check for email bounce error
+
       if (error?.code === 'EMAIL_BOUNCE' || error?.status === 502) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: error.message }));
         showToast('error', error.message);
       }
-      // Check for conflict error (email already exists)
       else if (error?.code === 'CONFLICT' || error?.message?.includes('Email already exists')) {
         setInviteFormErrors(prev => ({ ...prev, parentEmail: 'Email already exists' }));
         showToast('error', 'Email already exists');
@@ -288,21 +292,21 @@ export function AdminDashboard() {
       } else {
         showToast('error', error?.message || 'Failed to send parent invitation. Please try again.');
       }
-    } 
+    }
   };
+
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
-    
+
     try {
-    
       if (!schoolId) throw new Error('School context not found');
-      
+
       await createClassroom(schoolId, newClassroomName.trim());
-      
+
       setIsAddClassroomDialogOpen(false);
       setNewClassroomName('');
       showToast('success', `Classroom "${newClassroomName.trim()}" created successfully`);
-      
+
       setClassroomsLoaded(false);
       await loadDashboardData(true);
     } catch (error) {
@@ -314,144 +318,481 @@ export function AdminDashboard() {
       if (
         typeof errorText === 'string' &&
         (errorText.includes('duplicate key value violates unique constraint') ||
-         errorText.toLowerCase().includes('already exists') ||
-         errorText.toLowerCase().includes('unique'))
+          errorText.toLowerCase().includes('already exists') ||
+          errorText.toLowerCase().includes('unique'))
       ) {
         showToast('error', 'Classroom name already exists');
       } else {
         showToast('error', 'Failed to create classroom. Please try again.');
       }
       throw error;
-    } 
+    }
+  };
+
+  const statItems = [
+    {
+      label: "Classrooms",
+      value: metrics?.totalClassrooms || 0,
+      icon: School,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      path: "/admin/classrooms"
+    },
+    {
+      label: "Active Students",
+      value: metrics?.totalActiveChildren || 0,
+      icon: UserCheck,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      path: "/admin/students"
+    },
+    {
+      label: "Active Forms",
+      value: metrics?.totalForms || 0,
+      icon: FileText,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#1a6fc4]",
+      path: "/admin/forms"
+    },
+    {
+      label: "Active Parents",
+      value: metrics?.totalActiveParents || 0,
+      icon: Users,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      path: "/admin/parents"
+    }
+  ];
+
+  const quickActions = [
+    {
+      title: "Invite Parent",
+      description: "Send portal access invitation to a parent and student.",
+      icon: Mail,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      btnText: "Send Invite",
+      onClick: () => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }
+    },
+    {
+      title: "Add Classroom",
+      description: "Create a new classroom group in the school.",
+      icon: School,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      btnText: "Add Classroom",
+      onClick: () => setIsAddClassroomDialogOpen(true)
+    },
+    {
+      title: "Add Form",
+      description: "Create and assign new form templates.",
+      icon: Plus,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#1a6fc4]",
+      btnText: "Add Form",
+      onClick: () => setIsAddDialogOpen(true)
+    }
+  ];
+
+  const totalCompleted = enrollmentProgress.reduce((sum, item) => sum + item.completed, 0);
+  const totalEnrollments = enrollmentProgress.reduce((sum, item) => sum + item.total, 0);
+  const totalPending = Math.max(0, totalEnrollments - totalCompleted);
+  const completionPercentage = totalEnrollments > 0 ? Math.round((totalCompleted / totalEnrollments) * 100) : 0;
+
+  const pieData = [
+    { name: 'Completed', value: totalCompleted, color: '#10b981' },
+    { name: 'Pending / Due', value: totalPending, color: '#E2E8F0' }
+  ];
+
+  const barData = enrollmentProgress.map(item => ({
+    name: item.classroom,
+    rate: item.total > 0 ? Math.round((item.completed / item.total) * 100) : 0,
+    completed: item.completed,
+    total: item.total
+  }));
+
+  const progressChartData = enrollmentProgress.map(item => ({
+    name: item.classroom,
+    completed: item.completed,
+    pending: Math.max(0, item.total - item.completed),
+    total: item.total,
+    rate: item.total > 0 ? Math.round((item.completed / item.total) * 100) : 0,
+  })).sort((a, b) => a.name.localeCompare(b.name));
+
+  const progressChartHeight = enrollmentProgress.length * 45 + 60;
+
+  interface TooltipPayload {
+    name?: string;
+    value?: number;
+    color?: string;
+    payload?: {
+      name?: string;
+      completed?: number;
+      pending?: number;
+      total?: number;
+      rate?: number;
+      color?: string;
+    };
+  }
+
+  interface CustomTooltipProps {
+    active?: boolean;
+    payload?: TooltipPayload[];
+  }
+
+  const CustomPieTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
+      return (
+        <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-lg text-xs font-semibold text-slate-800">
+          <p className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: payload[0].payload.color }} />
+            {payload[0].name}: <span className="font-extrabold text-[#0F2D52]">{payload[0].value} forms</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomBarTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3 rounded-xl border border-slate-100 shadow-lg text-xs text-slate-600">
+          <p className="font-bold text-slate-900 mb-1">{data.name}</p>
+          <p className="flex justify-between gap-4 font-semibold text-slate-700">
+            <span>Completion Rate:</span>
+            <span className="text-[#1a6fc4] font-extrabold">{data.rate}%</span>
+          </p>
+          <p className="flex justify-between gap-4 text-[11px] text-slate-400 mt-0.5">
+            <span>Forms:</span>
+            <span>{data.completed} / {data.total} completed</span>
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomProgressTooltip = ({ active, payload }: CustomTooltipProps) => {
+    if (active && payload && payload.length && payload[0].payload) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-white p-3.5 rounded-xl border border-slate-100 shadow-xl text-xs font-semibold text-slate-800">
+          <p className="font-extrabold text-slate-900 mb-1.5">{data.name}</p>
+          <div className="space-y-1.5 text-slate-600">
+            <p className="flex justify-between gap-6">
+              <span>Completed Forms:</span>
+              <span className="font-bold text-emerald-600">{data.completed}</span>
+            </p>
+            <p className="flex justify-between gap-6">
+              <span>Pending Forms:</span>
+              <span className="font-bold text-slate-400">{data.pending}</span>
+            </p>
+            <p className="flex justify-between gap-6 border-t border-slate-100 pt-1 mt-1 text-slate-800">
+              <span>Total Forms:</span>
+              <span className="font-bold text-slate-700">{data.total}</span>
+            </p>
+            <p className="flex justify-between gap-6 text-[11px] text-[#1a6fc4] font-extrabold mt-1">
+              <span>Completion Rate:</span>
+              <span>{data.rate}%</span>
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   if (loading) {
-    return <PageLoader message="Loading dashboard data..." Layout={AdminLayout} />;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-10 sm:mt-4 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading dashboard data...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-          Dashboard Overview
-        </h1>
-        {error && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-red-700">
-            {error}
+      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
+
+        {/* Page header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Dashboard Overview</h1>
+            <p className="text-sm text-slate-500 mt-0.5 font-medium">Monitor your school's enrollment at a glance</p>
           </div>
+        </div>
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
         )}
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-          <StatCard
-            label="Total Classrooms"
-            value={metrics?.totalClassrooms || 0}
-            icon={School}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/classrooms')}
-          />
-          <StatCard
-            label="Active Children"
-            value={metrics?.totalActiveChildren || 0}
-            icon={UserCheck}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/students')}
-          />
-          <StatCard
-            label="Active Forms"
-            value={metrics?.totalForms || 0}
-            icon={FileText}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/forms')}
-          />
-          <StatCard
-            label="Active Parents"
-            value={metrics?.totalActiveParents || 0}
-            icon={Users}
-            iconBgClass="bg-amazon-teal/10"
-            iconColorClass="text-amazon-teal"
-            className="hover:scale-[1.02] transition-all duration-200"
-            onClick={() => navigate('/admin/parents')}
-          />
-        </div>
 
-        {/* Quick Actions & Enrollment Progress Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 sm:gap-6">
-          <Card className="glass-card lg:col-span-3 order-2 lg:order-1">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-lg sm:text-xl">Enrollment Progress by Classroom</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="space-y-3 sm:space-y-4">
-                {enrollmentProgress.length === 0 ? (
-                  <div className="text-xs sm:text-sm text-muted-foreground text-center py-4">
-                    No enrollment data available yet.
+        {/* Stat cards */}
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: { opacity: 0 },
+            visible: {
+              opacity: 1,
+              transition: { staggerChildren: 0.05 }
+            }
+          }}
+          className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4"
+        >
+          {statItems.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <motion.div
+                key={idx}
+                variants={{
+                  hidden: { opacity: 0, y: 15 },
+                  visible: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 100 } }
+                }}
+                onClick={() => navigate(item.path)}
+                className="group glass-card p-3 sm:p-5 cursor-pointer border border-slate-100 hover:border-[#1a6fc4]/20 hover:shadow-lg transition-all duration-300 relative overflow-hidden"
+              >
+                <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-[#EFF5FB]/50 rounded-full blur-xl group-hover:bg-[#EFF5FB]/80 transition-all duration-300" />
+                <div className="flex items-start justify-between gap-2 sm:gap-3 relative z-10">
+                  <div className="space-y-1 sm:space-y-1.5 min-w-0">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">{item.label}</p>
+                    <p className="text-2xl font-extrabold text-[#0F2D52] tabular-nums tracking-tight leading-none">{item.value}</p>
                   </div>
-                ) : (
-                  enrollmentProgress.map((classroom, index) => (
-                    <div key={`${classroom.classroom}-${index}`}>
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="font-medium text-xs sm:text-sm truncate flex-1 mr-2">
-                          {classroom.classroom}
-                        </span>
-                        <span className="text-xs sm:text-sm text-amazon-teal font-medium flex-shrink-0">
-                          {classroom.total > 0 ? Math.round(classroom.completed / classroom.total * 100) : 0}%
-                        </span>
-                      </div>
-                      <Progress value={classroom.total > 0 ? classroom.completed / classroom.total * 100 : 0} className="h-2" />
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {classroom.completed} of {classroom.total} students marked complete
-                      </p>
+                  <div className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl ${item.iconBg} group-hover:scale-115 transition-all duration-300 flex-shrink-0 shadow-sm border border-white`}>
+                    <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${item.iconColor}`} />
+                  </div>
+                </div>
+              </motion.div>
+            );
+          })}
+        </motion.div>
+
+        {/* Quick Actions Grid */}
+        <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
+          <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+            {quickActions.map((action, idx) => {
+              const Icon = action.icon;
+              return (
+                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex flex-row md:flex-col xl:flex-row md:items-stretch xl:items-center justify-between group transition-all duration-300 gap-2 sm:gap-4">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                    <div className={`p-2 sm:p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
+                      <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${action.iconColor}`} />
                     </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Admin Actions */}
-          <Card className="glass-card lg:col-span-1 order-1 lg:order-2">
-            <CardHeader className="pb-3 sm:pb-4">
-              <CardTitle className="text-lg sm:text-xl">Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="grid grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => setIsAddDialogOpen(true)}
-                >
-                  <Plus className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Add Form</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => { loadClassroomsIfNeeded(); setIsInviteDialogOpen(true); }}
-                >
-                  <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Invite Parent</span>
-                </Button>
-                <Button
-                  variant="outline"
-                  className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 hover:bg-amazon-teal/5 hover:border-amazon-teal text-center"
-                  onClick={() => setIsAddClassroomDialogOpen(true)}
-                >
-                  <School className="h-5 w-5 sm:h-6 sm:w-6 text-amazon-teal" />
-                  <span className="text-xs font-medium">Add Classrooms</span>
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate hidden sm:block">{action.description}</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={action.onClick}
+                    variant="default"
+                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0 whitespace-nowrap md:w-full xl:w-auto md:mt-2.5 xl:mt-0"
+                  >
+                    {action.btnText}
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* Add Form Modal */}
+        {/* Visual Analytics Section */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+          {/* Donut Chart Card */}
+          <div className="glass-card p-4 sm:p-6 lg:col-span-1 flex flex-col justify-between relative overflow-hidden border border-slate-100">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <div className="p-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-100">
+                  <CheckCircle className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm font-bold text-[#0F2D52]">Enrollment Rate</h3>
+              </div>
+              <p className="text-xs text-slate-400">Total submitted and approved forms</p>
+            </div>
+            
+            <div className="h-48 relative flex items-center justify-center my-2">
+              <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={58}
+                    outerRadius={75}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {pieData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomPieTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute flex flex-col items-center justify-center">
+                <span className="text-[1.85rem] font-extrabold text-[#0F2D52] leading-none">{completionPercentage}%</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Completed</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4 text-center">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed</p>
+                <p className="text-lg font-bold text-emerald-600">{totalCompleted}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Pending</p>
+                <p className="text-lg font-bold text-slate-600">{totalPending}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bar Chart Card - desktop only */}
+          <div className="hidden sm:flex glass-card p-4 sm:p-6 lg:col-span-2 flex-col justify-between border border-slate-100 overflow-hidden">
+            <div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="p-1.5 rounded-lg bg-blue-50 text-[#1a6fc4] border border-blue-100">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-bold text-[#0F2D52]">Classroom Comparison</h3>
+                </div>
+                <span className="text-xs font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">{enrollmentProgress.length} classes active</span>
+              </div>
+              <p className="text-xs text-slate-400">Completion percentage by classroom</p>
+            </div>
+
+            <div className="h-64 my-4 overflow-x-auto">
+              {barData.length === 0 ? (
+                <div className="h-full flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
+              ) : (
+                <div style={{ minWidth: `${Math.max(barData.length * 80, 320)}px`, height: '100%' }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                    <BarChart data={barData} margin={{ top: 10, right: 16, left: -25, bottom: 56 }}>
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        tick={(props) => {
+                          const { x, y, payload } = props;
+                          const words = (payload.value as string).split(' ');
+                          const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
+                          const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
+                          return (
+                            <text x={x} y={(y as number) + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
+                              <tspan x={x} dy={0}>{line1}</tspan>
+                              {line2 && <tspan x={x} dy={13}>{line2}</tspan>}
+                            </text>
+                          );
+                        }}
+                      />
+                      <YAxis
+                        domain={[0, 100]}
+                        tickFormatter={(v) => `${v}%`}
+                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                        axisLine={false}
+                        tickLine={false}
+                      />
+                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(26, 111, 196, 0.04)', radius: 8 }} />
+                      <Bar dataKey="rate" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                        {barData.map((entry, index) => {
+                          const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 pt-3 border-t border-slate-50">
+              {[
+                { color: '#10b981', label: '100% Completed' },
+                { color: '#1a6fc4', label: 'On Track (≥60%)' },
+                { color: '#f59e0b', label: 'Needs Attention (<60%)' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mobile: Classroom Comparison as donut rings */}
+          <div className="sm:hidden glass-card p-4 border border-slate-100 overflow-hidden">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-blue-50 text-[#1a6fc4] border border-blue-100">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-[#0F2D52]">Classroom Comparison</h3>
+                  <p className="text-[10px] text-slate-400">Completion % by classroom</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-semibold text-slate-400 bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-full">{enrollmentProgress.length} classes</span>
+            </div>
+            {barData.length === 0 ? (
+              <div className="h-20 flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
+            ) : (
+              <div className="flex flex-col gap-3 py-1">
+                {barData.map((entry, i) => {
+                  const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
+                  const badgeClass = entry.rate === 100 ? 'text-emerald-600' : entry.rate >= 60 ? 'text-[#1a6fc4]' : 'text-amber-500';
+                  const donutData = [
+                    { value: entry.rate, color },
+                    { value: 100 - entry.rate, color: '#E2E8F0' }
+                  ];
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 flex-shrink-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+                          <PieChart>
+                            <Pie data={donutData} cx="50%" cy="50%" innerRadius={16} outerRadius={22} paddingAngle={2} dataKey="value" startAngle={90} endAngle={-270}>
+                              {donutData.map((d, idx) => <Cell key={idx} fill={d.color} />)}
+                            </Pie>
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className={`text-[9px] font-extrabold ${badgeClass}`}>{entry.rate}%</span>
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-bold text-slate-700 truncate">{entry.name}</p>
+                        <p className="text-[10px] text-slate-400">{entry.completed} / {entry.total} completed</p>
+                      </div>
+                      <span className={`text-[10px] font-extrabold flex-shrink-0 ${badgeClass}`}>{entry.rate}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-3 mt-1 border-t border-slate-50">
+              {[
+                { color: '#10b981', label: '100%' },
+                { color: '#1a6fc4', label: '≥60%' },
+                { color: '#f59e0b', label: '<60%' },
+              ].map(({ color, label }) => (
+                <div key={label} className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wide">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Existing Modals and Dialogs */}
         <AddFormModal
           isOpen={isAddDialogOpen}
           onClose={() => {
@@ -470,7 +811,6 @@ export function AdminDashboard() {
           isSubmitting={isAddingForm}
         />
 
-        {/* Invite Parent Dialog */}
         <InviteParentModal
           isOpen={isInviteDialogOpen}
           onClose={() => {
@@ -512,36 +852,41 @@ export function AdminDashboard() {
           isDialogClosing={isDialogClosing}
         />
 
-        {/* Add Classroom Dialog */}
         <Dialog open={isAddClassroomDialogOpen} onOpenChange={(open) => {
-            setIsAddClassroomDialogOpen(open);
+          setIsAddClassroomDialogOpen(open);
         }}>
           <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
             <DialogHeader>
-              <DialogTitle className="text-lg sm:text-xl">Add New Classroom</DialogTitle>
+              <DialogTitle>Add New Classroom</DialogTitle>
             </DialogHeader>
-            <div className="py-2 sm:py-3 md:py-4">
-              <label className="block text-sm font-medium mb-2">
+            <div className="py-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
                 Classroom Name
               </label>
               <Input
                 value={newClassroomName}
                 onChange={e => setNewClassroomName(e.target.value)}
-                placeholder="Enter classroom name"
-                className="w-full h-10 sm:h-11 text-sm sm:text-base"
+                placeholder="e.g. Toddlers A"
                 autoFocus
               />
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button variant="outline" onClick={() => setIsAddClassroomDialogOpen(false)} className="w-full sm:w-auto h-9 sm:h-10 text-sm">
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setIsAddClassroomDialogOpen(false)}
+              >
                 Cancel
               </Button>
-              <AsyncButton onClick={handleAddClassroom} className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto h-9 sm:h-10 text-sm" disabled={!newClassroomName.trim()}>
+              <Button
+                onClick={handleAddClassroom}
+                disabled={!newClassroomName.trim()}
+              >
                 Add Classroom
-              </AsyncButton>
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
       </div>
     </AdminLayout>
   );

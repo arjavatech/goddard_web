@@ -25,30 +25,34 @@ export function NotificationItem({ notification, onMarkRead, onClose }: Props) {
     <button
       type="button"
       onClick={handleClick}
-      className="flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+      className={`flex w-full items-start gap-3 px-5 py-3.5 text-left transition-all hover:bg-[#EFF5FB] focus:bg-[#EFF5FB] focus:outline-none ${
+        !notification.is_read ? 'bg-blue-50/40' : 'bg-white'
+      }`}
     >
       <div
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${meta.accentClass}`}
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${meta.accentClass}`}
         aria-hidden
       >
-        <Icon className="h-5 w-5" />
+        <Icon className="h-4 w-4" />
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-3">
-          <p className="flex-1 text-sm font-semibold text-slate-900">{notification.title}</p>
-          <span className="shrink-0 text-xs text-slate-500">
+        <div className="flex items-start gap-2">
+          <p className={`flex-1 text-xs leading-snug truncate ${
+            !notification.is_read ? 'font-bold text-slate-900' : 'font-semibold text-slate-700'
+          }`}>{notification.title}</p>
+          <span className="shrink-0 text-[10px] font-semibold text-slate-400">
             {formatNotificationTime(notification.created_at)}
           </span>
         </div>
-        <p className="mt-1 line-clamp-2 text-sm text-slate-600">{notification.body}</p>
+        <p className="mt-0.5 line-clamp-2 text-xs text-slate-500 font-medium">{notification.body}</p>
       </div>
 
-      <div className="ml-1 flex h-10 shrink-0 items-center">
+      <div className="ml-1 flex h-9 shrink-0 items-center">
         {!notification.is_read ? (
-          <span className="h-2.5 w-2.5 rounded-full bg-blue-500" aria-label="Unread" />
+          <span className="h-2 w-2 rounded-full bg-[#0F2D52]" aria-label="Unread" />
         ) : (
-          <span className="h-2.5 w-2.5 rounded-full bg-slate-200" aria-hidden />
+          <span className="h-2 w-2 rounded-full bg-slate-200" aria-hidden />
         )}
       </div>
     </button>

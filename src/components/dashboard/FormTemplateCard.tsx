@@ -43,7 +43,7 @@ export function FormTemplateCard({
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {template.formType && <div className="text-sm text-muted-foreground">
+        {template.formType && <div className="text-sm text-slate-500">
             Type: {template.formType}
           </div>}
         

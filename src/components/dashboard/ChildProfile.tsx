@@ -13,8 +13,8 @@ export function ChildProfile() {
           </div>
           <div className="flex-1">
             <h3 className="font-medium text-foreground">Emma Johnson</h3>
-            <p className="text-sm text-muted-foreground">Age: 4 years</p>
-            <p className="text-sm text-muted-foreground">DOB: 05/12/2019</p>
+            <p className="text-sm text-slate-500">Age: 4 years</p>
+            <p className="text-sm text-slate-500">DOB: 05/12/2019</p>
           </div>
           <a href="#" className="text-amazon-teal text-sm font-medium flex items-center hover:text-amazon-teal/80 transition-colors">
             View full profile <ChevronRight className="h-4 w-4 ml-1" />

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
@@ -10,7 +11,6 @@ import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 type FormStatus = NormalizedFormStatus;
 type ChildFormCard = {
   title: string;
@@ -37,6 +37,7 @@ type DashboardChild = {
   initials: string;
   age: string;
   dob: string;
+  rawDob: string | null;
   enrollmentProgress: number;
   formsCompleted: number;
   totalForms: number;
@@ -45,6 +46,7 @@ type DashboardChild = {
   forms: ChildFormCard[];
   childStatus: 'active' | 'archive';
   parentType?: string;
+  gender?: string;
   classroom: string;
   enrollmentId: string;
 };
@@ -91,7 +93,9 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
             if (!isNaN(date.getTime())) {
               return date.toLocaleDateString();
             }
-          } catch (e) {}
+          } catch (e) {
+            // Ignore invalid date strings
+          }
         }
         return '—';
       })(),
@@ -167,6 +171,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
       return age >= 0 ? `${age} years` : '—';
     })(),
     dob: formatDate(child.childDob) || '—',
+    rawDob: child.childDob || null,
     enrollmentProgress,
     formsCompleted: completedCount,
     totalForms,
@@ -175,6 +180,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     forms,
     childStatus: (child.childStatus || 'active') as 'active' | 'archive',
     parentType: child.parent_type || child.parentType || 'primary_parent',
+    gender: child.childGender,
     classroom: child.classroomName || '—',
     enrollmentId: child.enrollmentId || ''
   };
@@ -194,7 +200,7 @@ export function Dashboard() {
   
   useEffect(() => {
     // Wait for user data to be loaded
-    if (userLoading) {
+    if (userLoading || !userData) {
       return;
     }
 
@@ -213,7 +219,9 @@ export function Dashboard() {
     }
 
     let isMounted = true;
-    setLoading(true);
+    if (!parentData || children.length === 0) {
+      setLoading(true);
+    }
 
     // Fetch parent data
     fetchSingleParent(parentId, userData.schoolId)
@@ -221,7 +229,7 @@ export function Dashboard() {
         if (!isMounted) return;
 
         if (!parentData) {
-          throw new Error('Unable to fetch parent data.');
+          throw new Error('Access Restricted. This page is available only for parent users. Please log in using a parent account.');
         }
 
         // Store raw parent data for form viewing
@@ -278,7 +286,7 @@ export function Dashboard() {
     return () => {
       isMounted = false;
     };
-  }, [userData, userLoading, user?.id, refreshTrigger, yearFilter]);
+  }, [userData?.parentId, userData?.schoolId, userLoading, refreshTrigger, yearFilter]);
   useEffect(() => {
     if (children.length === 0) {
       setSelectedChildId(null);
@@ -316,29 +324,41 @@ export function Dashboard() {
   };
 
   // For FormsDocuments.onViewForm — form is already being opened by handleView; no action needed here
-  const handleFormViewed = (_form: any) => {};
+  const handleFormViewed = (_form: any) => {
+    // No action needed here
+  };
 
   // Handle form completion - refresh data to update form status
-  const handleFormCompleted = () => {
+  const handleFormCompleted = (forceFullRefresh?: boolean) => {
+    if (forceFullRefresh) {
+      setLoading(true);
+    }
     setRefreshTrigger(prev => prev + 1);
   };
-  return <div className="min-h-screen bg-background flex flex-col">
+  return <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
-      <main className="flex-1 container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
-        {error && <div className="mb-3 sm:mb-4 rounded-md border border-red-200 bg-red-50 px-3 sm:px-4 py-2 sm:py-3 text-sm text-red-700">
+      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+        {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
-        {loading ? <div className="py-8 sm:py-12 text-center text-muted-foreground">
-            Loading parent dashboard...
-          </div> : <>
-            <div className="mb-3 sm:mb-4 md:mb-6 space-y-3 sm:space-y-4">
-              <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
-              
+        {loading ? <div className="py-16 text-center text-muted-foreground text-sm flex items-center justify-center min-h-screen">
+            <div className="animate-pulse">
+              <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+              <p className="text-slate-500 text-sm font-semibold">Loading parent dashboard...</p>
             </div>
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-3 sm:gap-4 md:gap-6">
-                {/* order-1 mobile: EnrollmentProgress */}
-                <div className="order-1 lg:order-1 lg:col-span-2 xl:col-span-7 lg:row-span-2 space-y-3 sm:space-y-4 md:space-y-6">
-                  <div className="section-fade-in" style={{ animationDelay: '0.1s' }}>
+          </div> : <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-4"
+          >
+            <div className="mb-4 sm:mb-5">
+              <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
+            </div>
+            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-4 sm:gap-5">
+                {/* Left main column */}
+                <div className="order-1 lg:col-span-2 xl:col-span-7 space-y-4">
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
@@ -348,8 +368,13 @@ export function Dashboard() {
                       enrollmentId={selectedChild.enrollmentId}
                     />
                   </div>
+                  {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
+                  <div className="grid grid-cols-1  gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                    <ParentInfo parentData={parentData} />
+                    <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
+                  </div>
                   {selectedChild.childStatus !== 'archive' && (
-                    <div className="section-fade-in hidden lg:block" style={{ animationDelay: '0.3s' }} data-forms-section>
+                    <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }} data-forms-section>
                       <FormsDocuments
                         childSpecificForms={childSpecificForms}
                         familyForms={familyForms}
@@ -369,56 +394,32 @@ export function Dashboard() {
                         onYearFilterChange={setYearFilter}
                         enrollmentId={selectedChild.enrollmentId}
                         formOpenGuard={formOpenGuardRef}
+                        selectedChildDob={selectedChild.rawDob || undefined}
+                        selectedChildGender={selectedChild.gender}
+                        parentEmail={parentData?.email || userData?.email || ''}
                       />
                     </div>
                   )}
                 </div>
-                {/* order-2 mobile: ParentInfo + ChildrenOverview */}
-                <div className="order-2 lg:order-2 lg:col-span-1 xl:col-span-3 space-y-3 sm:space-y-4">
-                  <div className="section-fade-in" style={{ animationDelay: '0.2s' }}>
+                {/* Right sidebar — desktop only */}
+                <div className="order-2 hidden lg:block lg:col-span-1 xl:col-span-3 space-y-4">
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                   </div>
-                  <div className="section-fade-in" style={{ animationDelay: '0.25s' }}>
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.18s' }}>
                     <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
-                {/* order-3 mobile: Forms & Documents (hidden on lg+, shown in main col above) */}
-                {selectedChild.childStatus !== 'archive' && (
-                  <div className="order-3 lg:hidden" data-forms-section>
-                    <div className="section-fade-in" style={{ animationDelay: '0.3s' }}>
-                      <FormsDocuments
-                        childSpecificForms={childSpecificForms}
-                        familyForms={familyForms}
-                        rawFormData={parentData}
-                        selectedChildId={selectedChild.id}
-                        selectedChildName={selectedChild.name}
-                        childStatus={selectedChild.childStatus}
-                        onChildSelect={(childName) => {
-                          const child = children.find(c => c.name === childName);
-                          if (child) setSelectedChildId(child.id);
-                        }}
-                        onViewForm={handleFormViewed}
-                        formToOpen={formToOpen}
-                        onFormOpened={() => setFormToOpen(null)}
-                        onFormCompleted={handleFormCompleted}
-                        yearFilter={yearFilter}
-                        onYearFilterChange={setYearFilter}
-                        enrollmentId={selectedChild.enrollmentId}
-                        formOpenGuard={formOpenGuardRef}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div> : <div className="rounded-lg border border-dashed border-gray-200 bg-white/40 p-4 sm:p-6 md:p-8 text-center">
-                <div className="text-base sm:text-lg font-medium text-gray-900 mb-2">No enrolled children found</div>
-                <div className="text-sm text-muted-foreground mb-3 sm:mb-4">
+              </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
+                <div className="text-base sm:text-lg font-bold text-slate-900 mb-2">No enrolled children found</div>
+                <div className="text-sm text-slate-500 mb-4 max-w-md mx-auto">
                   We were unable to load any enrollment records for this parent account.
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-slate-400 font-medium">
                   If you believe this is an error, please contact your school administrator.
                 </div>
               </div>}
-          </>}
+          </motion.div>}
       </main>
       <Footer />
     </div>;
