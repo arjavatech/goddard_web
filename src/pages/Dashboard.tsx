@@ -46,6 +46,7 @@ type DashboardChild = {
   forms: ChildFormCard[];
   childStatus: 'active' | 'archive';
   parentType?: string;
+  gender?: string;
   classroom: string;
   enrollmentId: string;
 };
@@ -179,6 +180,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     forms,
     childStatus: (child.childStatus || 'active') as 'active' | 'archive',
     parentType: child.parent_type || child.parentType || 'primary_parent',
+    gender: child.childGender,
     classroom: child.classroomName || '—',
     enrollmentId: child.enrollmentId || ''
   };
@@ -393,6 +395,7 @@ export function Dashboard() {
                         enrollmentId={selectedChild.enrollmentId}
                         formOpenGuard={formOpenGuardRef}
                         selectedChildDob={selectedChild.rawDob || undefined}
+                        selectedChildGender={selectedChild.gender}
                         parentEmail={parentData?.email || userData?.email || ''}
                       />
                     </div>

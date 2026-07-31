@@ -130,6 +130,9 @@ export function FormView() {
     formData?.status === 'submitted';
   const isApproved = formData?.status === 'Approved' || formData?.status === 'approved';
   const childName = location.state?.childName;
+  const childDob = location.state?.childDob;
+  const childGender = location.state?.childGender;
+  const parentEmail = location.state?.parentEmail;
   const classDetails = location.state?.classDetails || 'Unassigned Class';
   const returnPath = location.state?.returnPath || '/admin/parents';
   const filloutFormUrl = location.state?.filloutFormUrl;
@@ -185,6 +188,26 @@ export function FormView() {
     // Append student_form_assignment_id if available and not already in URL
     if (url && studentFormAssignmentId && !url.includes('student_form_assignment_id')) {
       url += `${url.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
+    }
+
+    // Append child/parent params to all form URLs
+    if (url && url !== '#') {
+      const toYMD = (v: string | undefined | null): string | null => {
+        if (!v || v === '—') return null;
+        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+        const d = new Date(v);
+        return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+      };
+      const dob = toYMD(childDob);
+      const extras: Record<string, string> = {};
+      if (childName)   extras['child_name']   = childName;
+      if (dob)         extras['child_dob']    = dob;
+      if (childGender) extras['child_gender'] = childGender.charAt(0).toUpperCase() + childGender.slice(1).toLowerCase();
+      if (parentEmail) extras['parent_email'] = parentEmail;
+      const paramStr = Object.entries(extras)
+        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+        .join('&');
+      if (paramStr) url += `${url.includes('?') ? '&' : '?'}${paramStr}`;
     }
 
     return url;

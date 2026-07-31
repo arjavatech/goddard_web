@@ -191,6 +191,7 @@ interface FormsDocumentsProps {
   enrollmentId?: string; // For downloading all forms
   formOpenGuard?: MutableRefObject<boolean>; // Shared ref across instances — first to claim blocks the other
   selectedChildDob?: string; // DOB of the selected child
+  selectedChildGender?: string; // Gender of the selected child
   parentEmail?: string; // Parent email
 }
 export function FormsDocuments({
@@ -209,6 +210,7 @@ export function FormsDocuments({
   enrollmentId,
   formOpenGuard,
   selectedChildDob,
+  selectedChildGender,
   parentEmail,
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
@@ -514,6 +516,10 @@ export function FormsDocuments({
           // For non-approved forms, prioritize recent_edit_link (or fetched resume link) first
           if (effectiveEditLink && effectiveEditLink !== '#' && effectiveEditLink.trim() !== '') {
             formUrl = effectiveEditLink;
+            // Ensure student_form_assignment_id is present even on edit/resume links
+            if (idForPayload.raw && !formUrl.includes('student_form_assignment_id')) {
+              formUrl += `${formUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${idForPayload.raw}`;
+            }
           } else if (filloutFormId && filloutFormId !== '#' && filloutFormId.trim() !== '') {
             // Handle fillout form URL construction
             if (filloutFormId.startsWith('http')) {
@@ -574,12 +580,20 @@ export function FormsDocuments({
           }
         }
       }
-      // Prefill only for Fillout forms (not PDF viewer)
+      // Append child/parent params for all non-readonly form URLs
       if (!isReadOnly && formUrl && formUrl !== '#') {
+        const toYMD = (v: string | undefined | null): string | null => {
+          if (!v || v === '—') return null;
+          if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+          const d = new Date(v);
+          return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+        };
         const prefill: Record<string, string> = {};
-        if (form.childName) prefill['child_name'] = form.childName;
-        if (selectedChildDob) prefill['child_dob'] = selectedChildDob;
-        if (parentEmail) prefill['email'] = parentEmail;
+        const dob = toYMD(selectedChildDob);
+        if (form.childName)      prefill['child_name']   = form.childName;
+        if (dob)                 prefill['child_dob']    = dob;
+        if (selectedChildGender) prefill['child_gender'] = selectedChildGender.charAt(0).toUpperCase() + selectedChildGender.slice(1).toLowerCase();
+        if (parentEmail)         prefill['parent_email'] = parentEmail;
         const paramStr = Object.entries(prefill)
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
           .join('&');

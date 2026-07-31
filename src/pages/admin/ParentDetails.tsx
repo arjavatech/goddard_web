@@ -35,6 +35,7 @@ interface ChildInfo {
   firstName: string;
   lastName: string;
   dob: string;
+  gender?: string;
   classroom: {
     id: string;
     name: string;
@@ -222,6 +223,7 @@ export function ParentDetails() {
             firstName: firstName || 'Unknown',
             lastName: lastNameParts.join(' ') || 'Child',
             dob: child.childDob || '—',
+            gender: child.childGender,
             classroom: classroomInfo,
             forms: formsArray,
             enrollmentProgress: progress,
@@ -809,6 +811,9 @@ export function ParentDetails() {
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
+                                      childDob: child.dob,
+                                      childGender: child.gender,
+                                      parentEmail: parent.email,
                                       classDetails: child.classroom?.name || 'Unassigned',
                                       parentId: parent.id,
                                       returnPath: `/${schoolSlug || 'goddard'}/admin/parents/${parentId}`,

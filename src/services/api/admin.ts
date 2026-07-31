@@ -40,6 +40,7 @@ export type ParentDetail = {
     childId: string;
     childFullName: string;
     childDob?: string;
+    childGender?: string;
     childStatus?: string;
     classroomId?: string;
     classroomName?: string;
@@ -235,6 +236,7 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
         childId: child.child_id || child.childId || '',
         childFullName: child.child_full_name || child.childFullName || `${child.firstName || ''} ${child.lastName || ''}`.trim(),
         childDob: child.child_dob || child.childDob,
+        childGender: child.gender || child.child_gender,
         childStatus: child.child_status || child.childStatus || 'active',
         classroomId: child.classroom_id || child.classroomId,
         classroomName: child.classroom_name || child.classroomName,
@@ -341,6 +343,7 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
         childId: child.child_id || child.childId || '',
         childFullName: child.child_full_name || child.childFullName || `${child.firstName || ''} ${child.lastName || ''}`.trim(),
         childDob: child.child_dob || child.childDob,
+        childGender: child.gender || child.child_gender,
         childStatus: child.child_status || child.childStatus || 'active',
         classroomId: child.classroom_id || child.classroomId,
         classroomName: child.classroom_name || child.classroomName,
