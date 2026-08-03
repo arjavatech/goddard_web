@@ -2,7 +2,6 @@ import { useMemo, useState, useEffect, useRef, MutableRefObject } from 'react';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
 import { FileText, Download, Printer, Eye, ChevronLeft, AlertCircle, ChevronRight, CheckCircle, LayoutGrid, List } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
 import { StatusBadge } from './StatusBadge';
 import { Button } from '../ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
@@ -1008,22 +1007,7 @@ export function FormsDocuments({
           </div>
         </div>
 
-        <Card className="glass-card animate-fade-in">
-          <CardContent className="p-2 sm:p-3 md:p-6">
-            {/* {showThankYou && (
-              <div className="mb-4 bg-green-50 border border-green-200 text-green-800 rounded-lg p-4 flex items-center justify-between shadow-sm animate-fade-in-up">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-full bg-green-100 p-1.5">
-                    <CheckCircle className="h-5 w-5 text-green-600 animate-pulse" />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-semibold text-green-900">Form submitted successfully!</h4>
-                    <p className="text-xs text-green-700 mt-0.5">We've received your submission.</p>
-                  </div>
-                </div>
-              </div>
-            )} */}
-            <div className="relative">
+        <div className="relative">
               {isFrameLoading && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white rounded-md z-10">
                   <Loading message="Loading form..." size="sm" />
@@ -1099,7 +1083,7 @@ export function FormsDocuments({
                     <div
                       ref={iframeContainerRef}
                       style={{ contain: 'content' }}
-                      className="w-full rounded-xl overflow-hidden bg-white border border-slate-200/80 shadow-lg"
+                      className="w-full overflow-hidden"
                     >
                       <iframe
                         ref={embeddedResize.iframeRef}
@@ -1132,8 +1116,6 @@ export function FormsDocuments({
                 </div>
               )}
             </div>
-          </CardContent>
-        </Card>
       </div>
     );
   }

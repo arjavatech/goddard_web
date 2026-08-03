@@ -5,7 +5,6 @@ import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
 import { Footer } from '../components/layout/Footer';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
-import { ChildrenOverview } from '../components/dashboard/ChildrenOverview';
 import { ParentInfo } from '../components/dashboard/ParentInfo';
 import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
@@ -371,7 +370,6 @@ export function Dashboard() {
                   {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
                   <div className="grid grid-cols-1  gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
-                    <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                   {selectedChild.childStatus !== 'archive' && (
                     <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }} data-forms-section>
@@ -405,9 +403,6 @@ export function Dashboard() {
                 <div className="order-2 hidden lg:block lg:col-span-1 xl:col-span-3 space-y-4">
                   <div className="animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
-                  </div>
-                  <div className="animate-fade-in-up" style={{ animationDelay: '0.18s' }}>
-                    <ChildrenOverview children={children} selectedChildId={selectedChildId ?? selectedChild.id} onSelectChild={setSelectedChildId} />
                   </div>
                 </div>
               </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
