@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
@@ -311,27 +312,26 @@ export function Dashboard() {
     formOpenGuardRef.current = false;
   }, [formToOpen]);
 
-  // For EnrollmentProgress "Continue" button — sets formToOpen so FormsDocuments auto-opens it
+  // Refresh data when returning from form view page after a submission
+  const location = useLocation();
+  useEffect(() => {
+    if (location.state?.formCompleted) {
+      setRefreshTrigger(prev => prev + 1);
+      window.history.replaceState({}, '');
+    }
+  }, []);
+
+  // For EnrollmentProgress "Continue" button — sets formToOpen so FormsDocuments navigates to it
   const handleContinueForm = (form: any) => {
     setFormToOpen(form);
-    setTimeout(() => {
-      const formsSection = document.querySelector('[data-forms-section]');
-      if (formsSection) {
-        formsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-    }, 100);
   };
 
-  // For FormsDocuments.onViewForm — form is already being opened by handleView; no action needed here
-  const handleFormViewed = (_form: any) => {
-    // No action needed here
-  };
+  // For FormsDocuments.onViewForm — navigation is handled inside FormsDocuments
+  const handleFormViewed = (_form: any) => {};
 
   // Handle form completion - refresh data to update form status
   const handleFormCompleted = (forceFullRefresh?: boolean) => {
-    if (forceFullRefresh) {
-      setLoading(true);
-    }
+    if (forceFullRefresh) setLoading(true);
     setRefreshTrigger(prev => prev + 1);
   };
   return <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -354,10 +354,10 @@ export function Dashboard() {
             <div className="mb-4 sm:mb-5">
               <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
             </div>
-            {selectedChild ? <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-10 gap-4 sm:gap-5">
-                {/* Left main column */}
-                <div className="order-1 lg:col-span-2 xl:col-span-7 space-y-4">
-                  <div className="animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
+            {selectedChild ? <div className="space-y-4 sm:space-y-5">
+                {/* Top row: Enrollment progress (left) + Account info (right) */}
+                <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 sm:gap-5">
+                  <div className="lg:col-span-7 animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                     <EnrollmentProgress
                       childName={selectedChild.name}
                       forms={selectedChild.forms}
@@ -367,44 +367,38 @@ export function Dashboard() {
                       enrollmentId={selectedChild.enrollmentId}
                     />
                   </div>
-                  {/* Sidebar cards — shown inline on mobile, hidden on lg (shown in sidebar) */}
-                  <div className="grid grid-cols-1  gap-4 lg:hidden animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
-                    <ParentInfo parentData={parentData} />
-                  </div>
-                  {selectedChild.childStatus !== 'archive' && (
-                    <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }} data-forms-section>
-                      <FormsDocuments
-                        childSpecificForms={childSpecificForms}
-                        familyForms={familyForms}
-                        rawFormData={parentData}
-                        selectedChildId={selectedChild.id}
-                        selectedChildName={selectedChild.name}
-                        childStatus={selectedChild.childStatus}
-                        onChildSelect={(childName) => {
-                          const child = children.find(c => c.name === childName);
-                          if (child) setSelectedChildId(child.id);
-                        }}
-                        onViewForm={handleFormViewed}
-                        formToOpen={formToOpen}
-                        onFormOpened={() => setFormToOpen(null)}
-                        onFormCompleted={handleFormCompleted}
-                        yearFilter={yearFilter}
-                        onYearFilterChange={setYearFilter}
-                        enrollmentId={selectedChild.enrollmentId}
-                        formOpenGuard={formOpenGuardRef}
-                        selectedChildDob={selectedChild.rawDob || undefined}
-                        selectedChildGender={selectedChild.gender}
-                        parentEmail={parentData?.email || userData?.email || ''}
-                      />
-                    </div>
-                  )}
-                </div>
-                {/* Right sidebar — desktop only */}
-                <div className="order-2 hidden lg:block lg:col-span-1 xl:col-span-3 space-y-4">
-                  <div className="animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
+                  <div className="lg:col-span-3 animate-fade-in-up" style={{ animationDelay: '0.12s' }}>
                     <ParentInfo parentData={parentData} />
                   </div>
                 </div>
+                {/* Forms & Documents — full width */}
+                {selectedChild.childStatus !== 'archive' && (
+                  <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }} data-forms-section>
+                    <FormsDocuments
+                      childSpecificForms={childSpecificForms}
+                      familyForms={familyForms}
+                      rawFormData={parentData}
+                      selectedChildId={selectedChild.id}
+                      selectedChildName={selectedChild.name}
+                      childStatus={selectedChild.childStatus}
+                      onChildSelect={(childName) => {
+                        const child = children.find(c => c.name === childName);
+                        if (child) setSelectedChildId(child.id);
+                      }}
+                      onViewForm={handleFormViewed}
+                      formToOpen={formToOpen}
+                      onFormOpened={() => setFormToOpen(null)}
+                      onFormCompleted={handleFormCompleted}
+                      yearFilter={yearFilter}
+                      onYearFilterChange={setYearFilter}
+                      enrollmentId={selectedChild.enrollmentId}
+                      formOpenGuard={formOpenGuardRef}
+                      selectedChildDob={selectedChild.rawDob || undefined}
+                      selectedChildGender={selectedChild.gender}
+                      parentEmail={parentData?.email || userData?.email || ''}
+                    />
+                  </div>
+                )}
               </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
                 <div className="text-base sm:text-lg font-bold text-slate-900 mb-2">No enrolled children found</div>
                 <div className="text-sm text-slate-500 mb-4 max-w-md mx-auto">

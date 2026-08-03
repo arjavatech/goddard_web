@@ -25,6 +25,7 @@ import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
+import { ParentFormView } from './pages/ParentFormView';
 import { NotFound } from './pages/NotFound';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
@@ -78,6 +79,7 @@ export function AppRouter() {
                 </ProtectedRoute>} />
             <Route element={<SubdomainGuard />}>
               <Route path="/:schoolSlug/dashboard" element={<App />} />
+              <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
             </Route>
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />

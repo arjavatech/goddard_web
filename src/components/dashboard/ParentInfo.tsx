@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Card, CardContent } from '../ui/card';
 import { User, Mail, UserPlus } from 'lucide-react';
 
 interface ParentInfoProps {
@@ -64,14 +64,16 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
     : null;
 
   return (
-    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:border-[#1a6fc4]/20 hover:shadow-md hover:-translate-y-[3px] transition-all duration-300 relative self-start">
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-          <User className="w-4 h-4 text-[#0F2D52]" />
-          Account Information
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-0 pb-4 space-y-3">
+    <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:shadow-md transition-all duration-300 self-start">
+      {/* Gradient header — matches EnrollmentProgress & admin portal style */}
+      <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 py-3 flex items-center gap-2">
+        <div className="w-6 h-6 rounded-md bg-white/15 flex items-center justify-center flex-shrink-0">
+          <User className="w-3.5 h-3.5 text-white" />
+        </div>
+        <span className="text-[11px] font-bold uppercase tracking-widest text-white/90">Account Information</span>
+      </div>
+
+      <CardContent className="pt-4 pb-4 space-y-3">
         <ParentRow name={primaryName} email={parentData.email} isPrimary />
 
         {additionalName && parentData.additional_email && (
