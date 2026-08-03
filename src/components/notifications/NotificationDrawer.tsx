@@ -57,21 +57,26 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
           className="fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-white shadow-2xl outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right data-[state=open]:slide-in-from-right"
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-            <DialogPrimitive.Title className="text-base font-semibold text-slate-900">
-              Notifications
-            </DialogPrimitive.Title>
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4 bg-white">
+            <div>
+              <DialogPrimitive.Title className="text-base font-extrabold text-slate-900 tracking-tight">
+                Notifications
+              </DialogPrimitive.Title>
+              {unreadCount > 0 && (
+                <p className="text-xs text-slate-400 font-semibold mt-0.5">{unreadCount} unread</p>
+              )}
+            </div>
             <DialogPrimitive.Close
-              className="rounded-md p-1 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+              className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
               aria-label="Close notifications"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </DialogPrimitive.Close>
           </div>
 
           {/* Tabs + Mark all as read */}
-          <div className="flex items-center justify-between gap-2 border-b border-slate-200 px-4 py-2">
-            <div className="flex gap-1">
+          <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-5 py-3 bg-slate-50/50">
+            <div className="flex gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50">
               {TABS.map(tab => {
                 const active = filter === tab.key;
                 return (
@@ -79,15 +84,15 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
                     key={tab.key}
                     type="button"
                     onClick={() => setFilter(tab.key)}
-                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                    className={`rounded-lg px-3 py-1.5 text-[11px] font-bold transition-all ${
                       active
-                        ? 'bg-slate-900 text-white'
-                        : 'text-slate-600 hover:bg-slate-100'
+                        ? 'bg-white text-[#0F2D52] shadow-xs'
+                        : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
                     }`}
                   >
                     {tab.label}
                     {tab.key === 'unread' && unreadCount > 0 && (
-                      <span className="ml-1.5 text-xs">({unreadCount})</span>
+                      <span className="ml-1 text-[10px] font-extrabold">({unreadCount})</span>
                     )}
                   </button>
                 );
@@ -97,9 +102,9 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
               type="button"
               onClick={handleMarkAllRead}
               disabled={unreadCount === 0}
-              className="text-sm font-medium text-blue-600 hover:underline disabled:cursor-not-allowed disabled:text-slate-400 disabled:no-underline"
+              className="text-[11px] font-bold text-[#0F2D52] hover:underline disabled:cursor-not-allowed disabled:text-slate-300 disabled:no-underline transition-colors"
             >
-              Mark all as read
+              Mark all read
             </button>
           </div>
 
@@ -121,7 +126,7 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
                   if (sectionItems.length === 0) return null;
                   return (
                     <div key={section}>
-                      <div className="px-4 pt-3 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <div className="px-5 pt-4 pb-1.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
                         {section}
                       </div>
                       {sectionItems.map(item => (
@@ -146,13 +151,13 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
 
 function SkeletonList() {
   return (
-    <div className="space-y-2 px-4 py-3">
+    <div className="space-y-1 px-5 py-4">
       {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex animate-pulse items-start gap-3 py-2">
-          <div className="h-10 w-10 rounded-lg bg-slate-200" />
+        <div key={i} className="flex animate-pulse items-start gap-3 py-3">
+          <div className="h-9 w-9 rounded-xl bg-slate-100" />
           <div className="flex-1 space-y-2 pt-1">
-            <div className="h-3 w-3/4 rounded bg-slate-200" />
-            <div className="h-3 w-1/2 rounded bg-slate-200" />
+            <div className="h-2.5 w-3/4 rounded-full bg-slate-100" />
+            <div className="h-2.5 w-1/2 rounded-full bg-slate-100" />
           </div>
         </div>
       ))}
@@ -163,8 +168,11 @@ function SkeletonList() {
 function EmptyState({ title, body }: { title: string; body: string }) {
   return (
     <div className="flex h-full flex-col items-center justify-center px-8 py-16 text-center">
-      <p className="text-sm font-semibold text-slate-900">{title}</p>
-      <p className="mt-2 text-sm text-slate-500">{body}</p>
+      <div className="w-12 h-12 rounded-2xl bg-[#EFF5FB] flex items-center justify-center mb-4">
+        <span className="text-xl">🔔</span>
+      </div>
+      <p className="text-sm font-extrabold text-slate-800">{title}</p>
+      <p className="mt-1.5 text-xs font-semibold text-slate-400 max-w-[220px] leading-relaxed">{body}</p>
     </div>
   );
 }

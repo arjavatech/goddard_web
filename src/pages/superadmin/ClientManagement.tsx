@@ -71,13 +71,13 @@ export function ClientManagement() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto mt-16 sm:mt-18">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               Client Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage all school clients and their details
             </p>
           </div>
@@ -85,7 +85,7 @@ export function ClientManagement() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -100,7 +100,7 @@ export function ClientManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -117,7 +117,7 @@ export function ClientManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+          <Card className="glass-card hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -136,8 +136,8 @@ export function ClientManagement() {
           </Card>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="relative flex-1 max-w-md">
+        <div className="flex items-center">
+          <div className="relative flex-1 sm:max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search clients, emails, or schools..."
@@ -161,12 +161,12 @@ export function ClientManagement() {
               <Card key={client.id} className="glass-card">
                 <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-lg bg-amazon-teal/10 flex items-center justify-center">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-amazon-teal/10 flex items-center justify-center flex-shrink-0">
                         <Users className="w-5 h-5 text-amazon-teal" />
                       </div>
-                      <div>
-                        <CardTitle className="text-base sm:text-lg">{client.name}</CardTitle>
+                      <div className="min-w-0">
+                        <CardTitle className="text-base sm:text-lg truncate">{client.name}</CardTitle>
                         <div className="text-xs text-muted-foreground mt-1">
                           School: {client.schoolName}
                         </div>
@@ -218,19 +218,19 @@ export function ClientManagement() {
 
         {/* View Client Details Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
               <DialogTitle>Client Details</DialogTitle>
             </DialogHeader>
             {selectedClient && (
               <div className="space-y-6 py-4">
-                <div className="flex items-center space-x-4">
-                  <div className="w-16 h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:space-x-4">
+                  <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
                     {selectedClient.name.split(' ').map((n: string) => n[0]).join('')}
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{selectedClient.name}</h3>
-                    <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
+                    <p className="text-sm text-slate-500">{selectedClient.email}</p>
                     <Badge variant={selectedClient.status === 'Active' ? 'success' : 'warning'} className="mt-1">
                       {selectedClient.status}
                     </Badge>
@@ -245,14 +245,14 @@ export function ClientManagement() {
                         <Mail className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.email}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.email}</p>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">
                         <Phone className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Phone</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.phone}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.phone}</p>
                         </div>
                       </div>
                     </div>
@@ -265,23 +265,23 @@ export function ClientManagement() {
                         <Building className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">School Name</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolName}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolName}</p>
                         </div>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Subdomain</p>
-                        <p className="text-sm text-muted-foreground">{selectedClient.schoolSubdomain}</p>
+                        <p className="text-sm text-slate-500">{selectedClient.schoolSubdomain}</p>
                       </div>
                       {selectedClient.schoolSettings?.timezone && (
                         <div>
                           <p className="text-sm font-medium">Timezone</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolSettings.timezone}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolSettings.timezone}</p>
                         </div>
                       )}
                       {selectedClient.schoolSettings?.enrollment_capacity && (
                         <div>
                           <p className="text-sm font-medium">Enrollment Capacity</p>
-                          <p className="text-sm text-muted-foreground">{selectedClient.schoolSettings.enrollment_capacity}</p>
+                          <p className="text-sm text-slate-500">{selectedClient.schoolSettings.enrollment_capacity}</p>
                         </div>
                       )}
                     </div>

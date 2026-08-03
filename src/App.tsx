@@ -7,7 +7,7 @@ import { startBackgroundTokenRefresh, stopBackgroundTokenRefresh } from './servi
 // import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 export function App() {
-  const { userData, loading } = useUserContext();
+  const { userData, schoolSubdomain, loading } = useUserContext();
   const [shouldRedirect, setShouldRedirect] = useState<string | null>(null);
   
   // Start background token refresh on app load
@@ -26,19 +26,23 @@ export function App() {
   // useSessionTimeout();
 
   useEffect(() => {
-    if (!loading && userData) {
-      // Check user role and redirect accordingly
-      if (userData.role === 'Admin') {
-        setShouldRedirect('/admin');
-      } else if (userData.role === 'Parent') {
-        // Parent stays on the dashboard
-        setShouldRedirect(null);
+    if (!loading && userData && schoolSubdomain) {
+      const currentPath = window.location.pathname;
+      const expectedPath = userData.role === 'Admin'
+        ? `/${schoolSubdomain}/admin`
+        : `/${schoolSubdomain}/dashboard`;
+        
+      const isMismatch = (userData.role === 'Admin' && currentPath.endsWith('/admin') && !currentPath.startsWith(`/${schoolSubdomain}/`)) ||
+                         (userData.role === 'Parent' && currentPath.endsWith('/dashboard') && !currentPath.startsWith(`/${schoolSubdomain}/`));
+                         
+      if (currentPath === '/dashboard' || currentPath === '/admin' || currentPath === '/' || isMismatch) {
+        setShouldRedirect(expectedPath);
       }
     }
-  }, [userData, loading]);
+  }, [userData, loading, schoolSubdomain]);
 
   // Show loading while fetching user data
-  if (loading) {
+  if (loading || !userData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>

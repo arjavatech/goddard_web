@@ -47,12 +47,12 @@ export function UserManagement() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="space-y-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-between">
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             User Management
           </h1>
-          <Button className="bg-amazon-teal hover:bg-amazon-teal/90">
+          <Button className="bg-[#0891b2] hover:bg-[#0e7490]">
             <User className="w-4 h-4 mr-2" />
             Add User
           </Button>

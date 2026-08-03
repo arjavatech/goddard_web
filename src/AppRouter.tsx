@@ -1,8 +1,10 @@
-import { BrowserRouter, Routes, Route, Outlet } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Outlet, useLocation, Navigate } from 'react-router-dom';
 import { App } from './App';
 import SelectSchool from './SelectSchool';
 
-import { UserProvider } from './contexts/UserContext';
+import { UserProvider, useUserContext } from './contexts/UserContext';
+import { AuthProvider } from './services/auth/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
 import { AuthErrorBoundary } from './components/AuthErrorBoundary';
@@ -23,6 +25,7 @@ import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
+import { NotFound } from './pages/NotFound';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
 import { SchoolManagement } from './pages/superadmin/SchoolManagement';
@@ -32,18 +35,50 @@ import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagemen
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import ProtectedRoute from './routes/security/ProtectedRoute';
+import { SubdomainGuard } from './routes/security/SubdomainGuard';
+
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
+function NavigateToAdmin() {
+  const { schoolSubdomain, loading } = useUserContext();
+  const location = useLocation();
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F2D52]"></div>
+      </div>
+    );
+  }
+  
+  const targetPath = location.pathname.replace(/^\/admin/, `/${schoolSubdomain || 'goddard'}/admin`);
+  return <Navigate to={targetPath} replace state={location.state} />;
+}
 
 export function AppRouter() {
   return <AuthErrorBoundary>
-      <UserProvider>
-        <NotificationsProvider>
-        <ToastProvider>
-          <BrowserRouter>
+      <AuthProvider>
+        <UserProvider>
+          <NotificationsProvider>
+          <ToastProvider>
+            <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <ScrollToTop />
             <Routes>
-            <Route path="/" element={<SelectSchool />} />
+            <Route path="/" element={<Login />} />
             <Route path="/dashboard" element={<ProtectedRoute>
                   <App />
                 </ProtectedRoute>} />
+            <Route element={<SubdomainGuard />}>
+              <Route path="/:schoolSlug/dashboard" element={<App />} />
+            </Route>
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
                 </ProtectedRoute>} />
@@ -51,23 +86,30 @@ export function AppRouter() {
             <Route path="/signup" element={<Signup />} />
             <Route path="/set-password" element={<SetPassword />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
-            {/* Admin Routes (protected parent) */}
+            
+            {/* Fallback Admin Routes (redirecting to school-scoped paths) */}
             <Route element={<ProtectedRoute>
                   <Outlet />
                 </ProtectedRoute>}>
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/classrooms" element={<ClassroomManagement />} />
-              <Route path="/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
-              <Route path="/admin/forms" element={<FormsManagement />} />
-              <Route path="/admin/forms/due" element={<DueForms />} />
-              <Route path="/admin/forms/view/:formId" element={<FormView />} />
-              <Route path="/admin/form-assignments" element={<ClassroomFormAssignment />} />
-              <Route path="/admin/parents" element={<ParentManagement />} />
-              <Route path="/admin/parents/:parentId" element={<ParentDetails />} />
-              <Route path="/admin/students" element={<StudentManagement />} />
-              <Route path="/admin/admin-management" element={<AdminManagement />} />
-              <Route path="/admin/users" element={<UserManagement />} />
-              <Route path="/admin/help" element={<HelpCenter />} />
+              <Route path="/admin" element={<NavigateToAdmin />} />
+              <Route path="/admin/*" element={<NavigateToAdmin />} />
+            </Route>
+
+            {/* School-Scoped Admin Routes */}
+            <Route element={<SubdomainGuard />}>
+              <Route path="/:schoolSlug/admin" element={<AdminDashboard />} />
+              <Route path="/:schoolSlug/admin/classrooms" element={<ClassroomManagement />} />
+              <Route path="/:schoolSlug/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
+              <Route path="/:schoolSlug/admin/forms" element={<FormsManagement />} />
+              <Route path="/:schoolSlug/admin/forms/due" element={<DueForms />} />
+              <Route path="/:schoolSlug/admin/forms/view/:formId" element={<FormView />} />
+              <Route path="/:schoolSlug/admin/form-assignments" element={<ClassroomFormAssignment />} />
+              <Route path="/:schoolSlug/admin/parents" element={<ParentManagement />} />
+              <Route path="/:schoolSlug/admin/parents/:parentId" element={<ParentDetails />} />
+              <Route path="/:schoolSlug/admin/students" element={<StudentManagement />} />
+              <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
+              <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
+              <Route path="/:schoolSlug/admin/help" element={<HelpCenter />} />
             </Route>
 
             {/* SuperAdmin Routes */}
@@ -80,10 +122,14 @@ export function AppRouter() {
               <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
             </Route>
 
+            {/* 404 Catch-all */}
+            <Route path="*" element={<NotFound />} />
+
           </Routes>
-        </BrowserRouter>
-        </ToastProvider>
-        </NotificationsProvider>
-      </UserProvider>
+            </BrowserRouter>
+          </ToastProvider>
+          </NotificationsProvider>
+        </UserProvider>
+      </AuthProvider>
     </AuthErrorBoundary>;
 }

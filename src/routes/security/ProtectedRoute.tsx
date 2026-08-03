@@ -9,55 +9,50 @@ export function ProtectedRoute({
   children
 }: ProtectedRouteProps) {
   const location = useLocation();
-  const {
-    isAuthenticated,
-    isBypassed,
-    loading
-  } = useAuth();
-  const { userData, isReady } = useUserContext();
-  console.log('🛡️ ProtectedRoute check:', {
-    isAuthenticated,
-    isBypassed,
-    loading,
-    path: location.pathname,
-    role: userData?.role
-  });
-  if (isBypassed) {
-    console.log('🛡️ Access granted: Auth bypassed');
-    return children;
-  }
-  if (loading) {
-    console.log('🛡️ Loading auth state...');
-    return <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>;
-  }
-  // Wait for userData to be ready before checking role
-  if (!isReady) {
-    console.log('🛡️ Loading user data...');
-    return <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>;
-  }
-  // Allow superadmin routes without authentication
-  if (location.pathname.startsWith('/superadmin')) {
-    console.log('🛡️ Access granted: Superadmin route');
-    return children;
-  }
+  const { isAuthenticated, isBypassed, loading } = useAuth();
+  const { userData, isReady, error: userError } = useUserContext();
 
-  // Prevent non-superadmin from accessing admin-management page directly
-  if (location.pathname === '/admin/admin-management' && userData?.role?.toLowerCase() !== 'superadmin') {
-    console.log('🛡️ Access denied: Only superadmin can access admin-management, redirecting to /admin');
-    return <Navigate to="/admin" replace />;
+  if (isBypassed) return children;
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>;
   }
 
   if (!isAuthenticated) {
-    console.log('🛡️ Access denied: Not authenticated, redirecting to login');
-    return <Navigate to="/" state={{
-      from: location
-    }} replace />;
+    return <Navigate to="/" state={{ from: location }} replace />;
   }
-  console.log('🛡️ Access granted: User authenticated');
+
+  if (!isReady) {
+    if (userError) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-red-100 p-6 shadow-sm text-center">
+            <div className="text-red-500 font-bold mb-2">Failed to load user profile</div>
+            <p className="text-sm text-slate-500 mb-4">{userError}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-[#0F2D52] text-white rounded-xl text-xs font-bold hover:bg-[#1E4B83] transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
+
+  if (!isReady) {
+    return <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+      </div>;
+  }
+
+  if (location.pathname === '/admin/admin-management' && userData?.role?.toLowerCase() !== 'superadmin') {
+    return <Navigate to="/admin" replace />;
+  }
+
   return children;
 }
 export default ProtectedRoute;

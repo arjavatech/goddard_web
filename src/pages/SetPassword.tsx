@@ -291,7 +291,7 @@ export function SetPassword() {
             <p className="text-muted-foreground mb-6">
               Your password has been set successfully. You can now access your parent portal to manage your child's enrollment and view form assignments.
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Redirecting to login...
             </p>
           </CardContent>
@@ -333,7 +333,7 @@ export function SetPassword() {
           {loading && (
             <div className="mb-4 text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amazon-teal mx-auto mb-2"></div>
-              <p className="text-sm text-muted-foreground">Setting up your password...</p>
+              <p className="text-sm text-slate-500">Setting up your password...</p>
             </div>
           )}
 

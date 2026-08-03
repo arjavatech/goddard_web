@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer } from 'lucide-react';
+import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -15,7 +16,6 @@ import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../
 import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
-import { Loading } from '../../components/ui/loading';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -35,6 +35,7 @@ interface ChildInfo {
   firstName: string;
   lastName: string;
   dob: string;
+  gender?: string;
   classroom: {
     id: string;
     name: string;
@@ -98,8 +99,10 @@ const makeFriendlyName = (email: string) => {
 };
 export function ParentDetails() {
   const {
+    schoolSlug,
     parentId
   } = useParams<{
+    schoolSlug: string;
     parentId: string;
   }>();
   const location = useLocation();
@@ -107,6 +110,10 @@ export function ParentDetails() {
   const passedParentData = location.state?.parentData;
   const [parent, setParent] = useState<ParentDetailView | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [expandedChildren, setExpandedChildren] = useState<Record<string, boolean>>({});
+  const toggleChildExpand = (childId: string) => {
+    setExpandedChildren(prev => ({ ...prev, [childId]: !prev[childId] }));
+  };
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
@@ -216,6 +223,7 @@ export function ParentDetails() {
             firstName: firstName || 'Unknown',
             lastName: lastNameParts.join(' ') || 'Child',
             dob: child.childDob || '—',
+            gender: child.childGender,
             classroom: classroomInfo,
             forms: formsArray,
             enrollmentProgress: progress,
@@ -272,36 +280,23 @@ export function ParentDetails() {
         };
         setParent(finalParentData);
         if (processedChildren.length > 0) {
-          // Check if there's a selectedChildId in route state first
           const routeSelectedChildId = location.state?.selectedChildId;
+          let targetId = processedChildren[0].id;
 
           if (routeSelectedChildId) {
-            // Find child by ID from route state
-            const targetChild = processedChildren.find(child => child.id === routeSelectedChildId);
-            if (targetChild) {
-              setSelectedChildId(targetChild.id);
-            } else {
-              setSelectedChildId(processedChildren[0].id);
-            }
+            const found = processedChildren.find(child => child.id === routeSelectedChildId);
+            if (found) targetId = found.id;
           } else {
-            // Fallback to student query parameter
             const urlParams = new URLSearchParams(location.search);
-            const studentName = urlParams.get('student');
-
-            if (studentName) {
-              // Find child by matching name
-              const targetChild = processedChildren.find(child =>
-                `${child.firstName} ${child.lastName}` === decodeURIComponent(studentName)
-              );
-              if (targetChild) {
-                setSelectedChildId(targetChild.id);
-              } else {
-                setSelectedChildId(processedChildren[0].id);
-              }
-            } else {
-              setSelectedChildId(processedChildren[0].id);
+            const childIdFromUrl = urlParams.get('childId');
+            if (childIdFromUrl) {
+              const found = processedChildren.find(child => child.id === childIdFromUrl);
+              if (found) targetId = found.id;
             }
           }
+
+          setSelectedChildId(targetId);
+          setExpandedChildren({ [targetId]: true });
         }
       } catch (error) {
         if (isMounted) {
@@ -318,6 +313,7 @@ export function ParentDetails() {
       isMounted = false;
     };
   }, [parentId]);
+
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
   // Extract all available years from forms based on approved_on date
@@ -356,7 +352,7 @@ export function ParentDetails() {
     setIsReviewDialogOpen(true);
   };
 
-  const handleDownload = async (form: Form) => {
+  const handleDownload = async (form: Form, childName?: string) => {
     if (!form.recentPdfLink) return;
 
     setLoadingAction({ formId: form.id, action: 'download' });
@@ -372,7 +368,12 @@ export function ParentDetails() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${form.title.replace(/\s+/g, '_')}_${selectedChild?.firstName}_${selectedChild?.lastName}.pdf`;
+      
+      const formattedChildName = childName 
+        ? childName.replace(/\s+/g, '_') 
+        : `${selectedChild?.firstName || 'student'}_${selectedChild?.lastName || ''}`;
+        
+      link.download = `${form.title.replace(/\s+/g, '_')}_${formattedChildName}.pdf`;
 
       // Trigger download
       document.body.appendChild(link);
@@ -489,7 +490,16 @@ export function ParentDetails() {
     setIsReviewDialogOpen(false);
   };
   if (isLoading) {
-    return <AdminLayout><Loading message="Loading parent details..." /></AdminLayout>;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading parent details...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
   if (!parent) {
     return <AdminLayout>
@@ -523,388 +533,427 @@ export function ParentDetails() {
       </div>
     </AdminLayout>;
   }
-  return <AdminLayout>
-    <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center">
-          <Button
-            variant="outline"
-            size="icon"
-            className="mr-3 sm:mr-4 h-8 w-8 sm:h-10 sm:w-10"
-            onClick={() => {
-              // Check if user came from students page
-              const referrer = document.referrer;
-              if (referrer.includes('/admin/students') || location.state?.fromStudents) {
-                navigate('/admin/students');
-              } else {
-                navigate('/admin/parents');
-              }
-            }}
-          >
-            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
-          </Button>
-          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground">
-            Parent Details
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
-            <MailIcon className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-            <span className="truncate">{parent.email}</span>
-          </div>
-
-        </div>
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        <Card className="glass-card lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Guardian Profile</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center text-lg sm:text-2xl font-bold flex-shrink-0">
-                {parent.firstName.charAt(0)}
-                {parent.lastName.charAt(0)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <h2 className="text-lg sm:text-xl font-semibold truncate">
+  return (
+    <AdminLayout>
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
+      >
+        {/* Header Section */}
+        <div className="mt-12 sm:mt-10 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-xs">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 flex-shrink-0 bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 rounded-xl transition-all"
+                onClick={() => {
+                  if (location.state?.fromStudents) {
+                    navigate('/admin/students');
+                  } else {
+                    navigate('/admin/parents');
+                  }
+                }}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg sm:text-2xl font-extrabold text-slate-950 tracking-tight truncate">
                   {parent.firstName} {parent.lastName}
-                </h2>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs sm:text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Users className="h-3 w-3 sm:h-4 sm:w-4" />
-                    {parent.children.length} child
-                    {parent.children.length === 1 ? '' : 'ren'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
-                    Member since TBD
-                  </span>
+                </h1>
+                <div className="flex items-center gap-1.5 mt-0.5 sm:hidden">
+                  <MailIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-500 font-medium truncate">{parent.email}</span>
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {parent.children.map(child => <Card key={child.id} className={`border ${child.id === selectedChildId ? 'border-amazon-teal' : 'border-transparent'} hover:border-amazon-teal transition-colors cursor-pointer`} onClick={() => setSelectedChildId(child.id)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-semibold">
-                        {child.firstName} {child.lastName}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        Classroom: {child.classroom.name}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
-                        DOB: {child.dob}
-                      </div>
-                    </div>
-                    <Badge variant={child.forms.every(f => f.status === 'Approved') ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}>
-                      {child.enrollmentProgress}%
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>)}
+            <div className="hidden sm:flex items-center gap-2 bg-[#EFF5FB] px-4 py-2 rounded-xl border border-blue-50 text-xs font-bold text-[#0F2D52] flex-shrink-0 max-w-[280px]">
+              <MailIcon className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{parent.email}</span>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="glass-card">
-          <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            {(() => {
-              const primaryEmail = parent.primaryParentEmail;
-              const isPrimaryParent = parent.email === primaryEmail;
-              
-              return (
-                <>
-                  {/* Current Parent */}
-                  <div className="flex items-center gap-2">
-                    <MailIcon className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <div className="font-medium text-foreground">{parent.firstName} {parent.lastName}</div>
-                      <div>{parent.email}</div>
-                      <div className="text-xs text-muted-foreground">{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</div>
-                    </div>
-                  </div>
-
-                  {/* Additional Parent - only show if exists */}
-                  {parent.additionalParentEmail && (
-                    <div className="flex items-center gap-2">
-                      <MailIcon className="h-4 w-4 text-muted-foreground" />
-                      <div>
-                        {parent.additionalParentName && (
-                          <div className="font-medium text-foreground">{parent.additionalParentName}</div>
-                        )}
-                        <div>{parent.additionalParentEmail}</div>
-                        <div className="text-xs text-muted-foreground">{isPrimaryParent ? 'Secondary Parent' : 'Primary Parent'}</div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2">
-                    <School className="h-4 w-4" />
-                    {isPrimaryParent ? 'Primary Guardian' : 'Secondary Guardian'}
-                  </div>
-                </>
-              );
-            })()}
-          </CardContent>
-        </Card>
-      </div>
-      <Card className="glass-card">
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-            <CardTitle className="text-base sm:text-lg">Child Forms</CardTitle>
-            {availableYears.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Calendar className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />
-                <Select value={selectedYear} onValueChange={setSelectedYear}>
-                  <SelectTrigger className="w-[120px] sm:w-[150px] h-8 sm:h-10 text-xs sm:text-sm">
-                    <SelectValue placeholder="Filter by year" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Years</SelectItem>
-                    {availableYears.map(year => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue={selectedChild?.id ?? ''} value={selectedChild?.id ?? ''} onValueChange={value => setSelectedChildId(value)}>
-            <TabsList className="w-full justify-start overflow-x-auto h-auto p-1">
-              {parent.children.map(child => <TabsTrigger key={child.id} value={child.id} className="whitespace-nowrap text-xs sm:text-sm px-2 sm:px-3 py-1 sm:py-2">
-                <span className="sm:hidden">{child.firstName}</span>
-                <span className="hidden sm:inline">{child.firstName} {child.lastName}</span>
-              </TabsTrigger>)}
-            </TabsList>
-            {parent.children.map(child => {
-              // Filter forms by selected year based on approvedOn date
-              const filteredForms = selectedYear === 'all'
-                ? child.forms
-                : child.forms.filter(form => {
-                  // Show forms that have approvedOn date matching the selected year
-                  // Forms without approvedOn will also be shown (they appear in all year filters)
-                  if (!form.approvedOn) return true; // Show non-approved forms in all year filters
-
-                  try {
-                    const date = new Date(form.approvedOn);
-                    if (!isNaN(date.getTime())) {
-                      return date.getFullYear().toString() === selectedYear;
-                    }
-                  } catch (e) {
-                    // Try to extract year from string format (e.g., "2024-10-02T15:59:46.009750")
-                    const yearMatch = form.approvedOn.match(/\d{4}/);
-                    if (yearMatch) {
-                      return yearMatch[0] === selectedYear;
-                    }
-                  }
-                  return true; // If parsing fails, show the form
-                });
-
-              return <TabsContent key={child.id} value={child.id} className="mt-4 space-y-3">
-                {child.childStatus === 'archive' ? (
-                  <div className="border border-amber-200 rounded-lg p-8 bg-amber-50 text-center">
-                    <AlertCircle className="h-12 w-12 mx-auto text-amber-600 mb-4" />
-                    <h3 className="font-semibold text-amber-900 mb-2 text-lg">
-                      The student is Archived
-                    </h3>
-                    <p className="text-sm text-amber-700">
-                      Form viewing is disabled for archived students.
-                    </p>
-                  </div>
-                ) : filteredForms && filteredForms.length > 0 ? filteredForms.map(form => <div key={form.id} className="border border-gray-100 rounded-lg p-4 bg-white">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center">
-                        <FileText className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-amazon-teal flex-shrink-0" />
-                        <h3 className="font-medium text-sm sm:text-base truncate">{form.title}</h3>
-                      </div>
-                      <div className="mt-2">
-                        <StatusBadge status={form.status} />
-                      </div>
-                      <p className="text-xs sm:text-sm text-gray-600 mt-1">
-                        {form.description}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Last updated: {form.lastUpdated}
-                      </p>
-
-                      {(() => {
-                        if (!form.approvedOn) {
-                          return (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Approved on: —
-                            </p>
-                          );
-                        }
-
-                        try {
-                          const date = new Date(form.approvedOn);
-                          if (!isNaN(date.getTime())) {
-                            return (
-                              <p className="text-xs text-green-600 mt-1">
-                                Approved on: {date.toLocaleDateString()} at {date.toLocaleTimeString()}
-                              </p>
-                            );
-                          }
-                        } catch (e) {
-                          // Silently fail and show raw value
-                        }
-
-                        return (
-                          <p className="text-xs text-green-600 mt-1">
-                            Approved on: {form.approvedOn}
-                          </p>
-                        );
-                      })()}
-                    </div>
-                    <div className="flex flex-wrap gap-2 sm:flex-nowrap sm:space-x-2 sm:gap-0 flex-shrink-0">
-                      {form.status === 'Approved' && form.recentPdfLink && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 text-blue-600 border-blue-200 hover:bg-blue-50"
-                            onClick={() => handleDownload(form)}
-                            disabled={loadingAction?.formId === form.id}
-                            title="Download PDF"
-                          >
-                            {loadingAction?.formId === form.id && loadingAction?.action === 'download' ? (
-                              <span className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full" />
-                            ) : (
-                              <Download className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8 text-gray-600 border-gray-200 hover:bg-gray-50"
-                            onClick={() => handlePrint(form)}
-                            disabled={loadingAction?.formId === form.id}
-                            title="Print PDF"
-                          >
-                            {loadingAction?.formId === form.id && loadingAction?.action === 'print' ? (
-                              <span className="animate-spin h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full" />
-                            ) : (
-                              <Printer className="h-4 w-4" />
-                            )}
-                          </Button>
-                        </>
-                      )}
-                      <Link to={`/admin/forms/view/${form.id}`} state={{
-                        form,
-                        childId: selectedChild?.id,
-                        childName: `${selectedChild?.firstName} ${selectedChild?.lastName}`,
-                        classDetails: selectedChild?.classroom?.name || 'Unassigned',
-                        parentId: parent.id,
-                        returnPath: `/admin/parents/${parentId}`,
-                        filloutFormUrl: form.link,
-                        recentEditLink: form.recentEditLink,
-                        filloutFormId: form.filloutFormId,
-                        studentFormAssignmentId: form.studentFormAssignmentId,
-                        recentPdfLink: form.recentPdfLink
-                      }}>
-                        <Button variant="outline" size="sm" className="text-xs sm:text-sm">
-                          <Eye className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          <span className="hidden sm:inline">View Form</span>
-                          <span className="sm:hidden">View</span>
-                        </Button>
-                      </Link>
-                      {form.status === 'Submitted' && <>
-                        <Button variant="outline" size="sm" className="text-green-600 border-green-200 hover:bg-green-50 text-xs sm:text-sm" onClick={() => openReviewDialog(form, 'approve')}>
-                          <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          Approve
-                        </Button>
-                        <Button variant="outline" size="sm" className="text-amber-600 border-amber-200 hover:bg-amber-50 text-xs sm:text-sm" onClick={() => openReviewDialog(form, 'reject')}>
-                          <AlertCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
-                          Revise
-                        </Button>
-                      </>}
-                    </div>
-                  </div>
-                </div>) : <div className="border border-gray-100 rounded-lg p-8 bg-white text-center">
-                  <FileText className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-                  <h3 className="font-medium text-gray-900 mb-2">
-                    No Forms Available
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {selectedYear === 'all'
-                      ? `No enrollment forms have been assigned to ${child.firstName} ${child.lastName} yet.`
-                      : `No forms found for ${child.firstName} ${child.lastName} in ${selectedYear}.`
-                    }
-                  </p>
-                </div>}
-              </TabsContent>;
-            })}
-          </Tabs>
-        </CardContent>
-      </Card>
-    </div>
-    <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
-      <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
-        <DialogHeader>
-          <DialogTitle>
-            {formAction === 'approve' ? 'Approve Form' : 'Request Revision'}
-          </DialogTitle>
-        </DialogHeader>
-        <div className="py-4">
-          <div className="mb-4">
-            <p className="text-lg font-medium">{selectedForm?.title}</p>
-            <p className="text-sm text-gray-600">
-              {selectedForm?.description}
-            </p>
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium mb-2">
-              {formAction === 'approve' ? 'Approval Notes (Optional)' : 'Revision Notes'}
-              {formAction === 'reject' && <span className="text-red-500 ml-1">*</span>}
-            </label>
-            <Textarea value={reviewNotes} onChange={e => setReviewNotes(e.target.value)} placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} className={`w-full ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:border-red-500' : ''}`} rows={4} maxLength={500} />
-            <div className="flex justify-between mt-1">
-              <div>
-                {formAction === 'reject' && !reviewNotes.trim() && <p className="text-sm text-red-500">
-                  Revision notes are required
-                </p>}
-              </div>
-              <p className="text-xs text-gray-500">
-                {reviewNotes.length}/500
-              </p>
-            </div>
-          </div>
-          <div className={`p-3 rounded-md border ${formAction === 'approve' ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'}`}>
-            <p className="text-sm font-medium">
-              {formAction === 'approve' ? '✓ This will approve the form and notify the parent via email.' : '⚠ This will request revisions and notify the parent of required changes.'}
-            </p>
-            {formAction === 'approve' && <p className="text-xs text-gray-600 mt-1">
-              The parent will receive a confirmation email and can proceed
-              with enrollment.
-            </p>}
           </div>
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleFormReview} className={formAction === 'approve' ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'} disabled={formAction === 'reject' && !reviewNotes.trim() || isReviewing}>
-            {isReviewing ? <div className="flex items-center">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Processing...
-            </div> : formAction === 'approve' ? <>
-              <CheckCircle className="h-4 w-4 mr-2" /> Confirm Approval
-            </> : <>
-              <AlertCircle className="h-4 w-4 mr-2" /> Request Revision
-            </>}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
 
-  </AdminLayout>;
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Contact Information */}
+          <div className="lg:col-span-1 space-y-6">
+            <Card className="glass-card border border-slate-100 rounded-2xl shadow-sm bg-white h-fit">
+              <CardHeader className="pb-3 border-b border-slate-50">
+                <CardTitle className="text-sm font-bold text-slate-900">Contact Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-5">
+                {(() => {
+                  const primaryEmail = parent.primaryParentEmail;
+                  const isPrimaryParent = parent.email === primaryEmail;
+                  
+                  return (
+                    <div className="space-y-4">
+                      {/* Current Parent */}
+                      <div className="flex items-start gap-3 bg-slate-50/40 p-3 rounded-xl border border-slate-50">
+                        <MailIcon className="h-4 w-4 text-[#0F2D52] mt-0.5" />
+                        <div className="min-w-0 flex-1">
+                          <div className="font-bold text-slate-800 text-xs truncate">{parent.firstName} {parent.lastName}</div>
+                          <div className="text-xs text-slate-500 font-medium truncate mt-0.5">{parent.email}</div>
+                          <div className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 tracking-wider">{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</div>
+                        </div>
+                      </div>
+
+                      {/* Additional Parent - only show if exists */}
+                      {parent.additionalParentEmail && (
+                        <div className="flex items-start gap-3 bg-slate-50/40 p-3 rounded-xl border border-slate-50">
+                          <MailIcon className="h-4 w-4 text-[#0F2D52] mt-0.5" />
+                          <div className="min-w-0 flex-1">
+                            {parent.additionalParentName && (
+                              <div className="font-bold text-slate-800 text-xs truncate">{parent.additionalParentName}</div>
+                            )}
+                            <div className="text-xs text-slate-500 font-medium truncate mt-0.5">{parent.additionalParentEmail}</div>
+                            <div className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 tracking-wider">{isPrimaryParent ? 'Secondary Parent' : 'Primary Parent'}</div>
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 text-xs font-bold text-slate-500 px-1 pt-1">
+                        <School className="h-4 w-4 text-slate-400" />
+                        <span>{isPrimaryParent ? 'Primary Guardian' : 'Secondary Guardian'}</span>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Right Column: Children & Forms */}
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="glass-card border border-slate-100 rounded-2xl shadow-sm bg-white">
+              <CardHeader className="pb-3 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5">
+                <div>
+                  <CardTitle className="text-sm font-bold text-slate-900">Children & Forms</CardTitle>
+                  <p className="text-xs text-slate-450 font-semibold mt-0.5">
+                    {parent.children.length} children{parent.children.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+                {availableYears.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-slate-400" />
+                    <Select value={selectedYear} onValueChange={setSelectedYear}>
+                      <SelectTrigger className="w-[130px] sm:w-[160px] h-9 text-xs font-semibold rounded-xl border-slate-200 bg-white">
+                        <SelectValue placeholder="Filter by year" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <SelectItem value="all" className="cursor-pointer">All Years</SelectItem>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year.toString()} className="cursor-pointer">
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-4 pt-5 px-5">
+                {parent.children.map(child => {
+                  const isExpanded = !!expandedChildren[child.id];
+                  const childFilteredForms = selectedYear === 'all'
+                    ? child.forms
+                    : child.forms.filter(form => {
+                      if (!form.approvedOn) return true;
+                      try {
+                        const date = new Date(form.approvedOn);
+                        if (!isNaN(date.getTime())) {
+                          return date.getFullYear().toString() === selectedYear;
+                        }
+                      } catch (e) {
+                        const yearMatch = form.approvedOn.match(/\d{4}/);
+                        if (yearMatch) {
+                          return yearMatch[0] === selectedYear;
+                        }
+                      }
+                      return true;
+                    });
+
+                  return (
+                    <Card
+                      key={child.id}
+                      className={`border transition-all duration-200 shadow-xs rounded-xl overflow-hidden ${
+                        isExpanded
+                          ? 'border-[#0F2D52] ring-1 ring-[#0F2D52]/5 bg-[#EFF5FB]/5'
+                          : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50/50 bg-white'
+                      }`}
+                    >
+                      {/* Child Card Header */}
+                      <div
+                        onClick={() => toggleChildExpand(child.id)}
+                        className="p-4 flex items-center justify-between cursor-pointer select-none"
+                      >
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-sm flex-shrink-0 shadow-xs">
+                            {child.firstName.charAt(0)}{child.lastName.charAt(0)}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-extrabold text-sm text-slate-800 truncate">
+                              {child.firstName} {child.lastName}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-slate-400 font-semibold">
+                              <span>Class: {child.classroom.name}</span>
+                              <span className="h-1 w-1 rounded-full bg-slate-355" />
+                              <span>DOB: {child.dob}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Badge
+                            variant={child.forms.every(f => f.status === 'Approved') ? 'success' : child.enrollmentProgress > 0 ? 'secondary' : 'outline'}
+                            className="text-[10px] rounded-full px-2 py-0.5 font-bold whitespace-nowrap"
+                          >
+                            <span className="hidden sm:inline">{child.enrollmentProgress}% Completed</span>
+                            <span className="sm:hidden">{child.enrollmentProgress}%</span>
+                          </Badge>
+                          <div className="text-slate-400 hover:text-slate-600 transition-colors">
+                            {isExpanded ? (
+                              <ChevronUp className="h-4 w-4" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4" />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Expanded Section */}
+                      {isExpanded && (
+                        <div className="border-t border-slate-100 bg-white p-4 space-y-4">
+                          {child.childStatus === 'archive' ? (
+                            <div className="border border-amber-100 rounded-xl p-8 bg-amber-50/50 text-center">
+                              <AlertCircle className="h-10 w-10 mx-auto text-amber-500 mb-3" />
+                              <h3 className="font-bold text-amber-950 mb-1 text-base">
+                                The student is Archived
+                              </h3>
+                              <p className="text-xs text-amber-700 font-semibold">
+                                Form viewing is disabled for archived students.
+                              </p>
+                            </div>
+                          ) : childFilteredForms && childFilteredForms.length > 0 ? (
+                            childFilteredForms.map(form => (
+                              <div key={form.id} className="border border-slate-100 rounded-xl p-4 bg-slate-50/20 hover:bg-slate-50/40 hover:border-slate-200 transition-all">
+                                <div className="flex flex-col gap-3">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
+                                      <h3 className="font-bold text-sm text-slate-800 truncate">{form.title}</h3>
+                                    </div>
+                                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                                      <StatusBadge status={form.status} />
+                                      {form.approvedOn && (() => {
+                                        try {
+                                          const date = new Date(form.approvedOn);
+                                          if (!isNaN(date.getTime())) {
+                                            return (
+                                              <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                                Approved {date.toLocaleDateString()}
+                                              </span>
+                                            );
+                                          }
+                                        } catch (e) {
+                                          console.log('Error parsing approved date:', e);
+                                        }
+                                        return (
+                                          <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                            Approved {form.approvedOn}
+                                          </span>
+                                        );
+                                      })()}
+                                    </div>
+                                    <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
+                                      {form.description}
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 font-medium mt-2">
+                                      Last updated: {form.lastUpdated}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap gap-2 items-center">
+                                    {form.status === 'Approved' && form.recentPdfLink && (
+                                      <div className="flex gap-1.5">
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 text-[#0F2D52] border-slate-200 hover:bg-slate-50 rounded-lg"
+                                          onClick={() => handleDownload(form, `${child.firstName} ${child.lastName}`)}
+                                          disabled={loadingAction?.formId === form.id}
+                                          title="Download PDF"
+                                        >
+                                          {loadingAction?.formId === form.id && loadingAction?.action === 'download' ? (
+                                            <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                                          ) : (
+                                            <Download className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                        <Button
+                                          variant="outline"
+                                          size="icon"
+                                          className="h-8 w-8 text-slate-650 border-slate-200 hover:bg-slate-50 rounded-lg"
+                                          onClick={() => handlePrint(form)}
+                                          disabled={loadingAction?.formId === form.id}
+                                          title="Print PDF"
+                                        >
+                                          {loadingAction?.formId === form.id && loadingAction?.action === 'print' ? (
+                                            <span className="animate-spin h-3.5 w-3.5 border-2 border-slate-400 border-t-transparent rounded-full" />
+                                          ) : (
+                                            <Printer className="h-4 w-4" />
+                                          )}
+                                        </Button>
+                                      </div>
+                                    )}
+                                    <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                      form,
+                                      childId: child.id,
+                                      childName: `${child.firstName} ${child.lastName}`,
+                                      childDob: child.dob,
+                                      childGender: child.gender,
+                                      parentEmail: parent.email,
+                                      classDetails: child.classroom?.name || 'Unassigned',
+                                      parentId: parent.id,
+                                      returnPath: `/${schoolSlug || 'goddard'}/admin/parents/${parentId}`,
+                                      filloutFormUrl: form.link,
+                                      recentEditLink: form.recentEditLink,
+                                      filloutFormId: form.filloutFormId,
+                                      studentFormAssignmentId: form.studentFormAssignmentId,
+                                      recentPdfLink: form.recentPdfLink
+                                    }}>
+                                      <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
+                                        <Eye className="h-3.5 w-3.5 mr-1" />
+                                        <span>View Form</span>
+                                      </Button>
+                                    </Link>
+                                    {form.status === 'Submitted' && (
+                                      <div className="flex gap-1.5">
+                                        <Button variant="outline" size="sm" className="h-8 rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/50 text-xs font-bold" onClick={() => { setSelectedChildId(child.id); openReviewDialog(form, 'approve'); }}>
+                                          <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                          Approve
+                                        </Button>
+                                        <Button variant="outline" size="sm" className="h-8 rounded-lg text-amber-700 bg-amber-50 border border-amber-100 hover:bg-amber-100/50 text-xs font-bold" onClick={() => { setSelectedChildId(child.id); openReviewDialog(form, 'reject'); }}>
+                                          <AlertCircle className="h-3.5 w-3.5 mr-1" />
+                                          Revise
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="border border-slate-100 rounded-xl p-8 bg-slate-50/10 text-center shadow-xs">
+                              <FileText className="h-10 w-10 mx-auto text-slate-300 mb-3" />
+                              <h3 className="font-bold text-slate-800 mb-1 text-sm">
+                                No Forms Available
+                              </h3>
+                              <p className="text-xs text-slate-400 font-semibold max-w-xs mx-auto">
+                                {selectedYear === 'all'
+                                  ? `No enrollment forms have been assigned to ${child.firstName} ${child.lastName} yet.`
+                                  : `No forms found for ${child.firstName} ${child.lastName} in ${selectedYear}.`
+                                }
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Review Dialog */}
+      <Dialog open={isReviewDialogOpen} onOpenChange={setIsReviewDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {formAction === 'approve' ? 'Approve Form' : 'Request Revision'}
+            </DialogTitle>
+          </div>
+          <div className="p-6 space-y-4">
+            <div>
+              <p className="font-bold text-slate-800 text-sm">{selectedForm?.title}</p>
+              <p className="text-xs text-slate-400 font-semibold mt-1">
+                {selectedForm?.description}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+                {formAction === 'approve' ? 'Approval Notes (Optional)' : 'Revision Notes'}
+                {formAction === 'reject' && <span className="text-red-500 ml-1">*</span>}
+              </label>
+              <Textarea 
+                value={reviewNotes} 
+                onChange={e => setReviewNotes(e.target.value)} 
+                placeholder={formAction === 'approve' ? 'Add any notes about this approval (optional)' : 'Explain what needs to be revised'} 
+                className={`w-full rounded-xl border-slate-200 text-xs font-medium focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${formAction === 'reject' && !reviewNotes.trim() ? 'border-red-300 focus:ring-red-100/50 focus:border-red-400' : ''}`} 
+                rows={4} 
+                maxLength={500} 
+              />
+              <div className="flex justify-between items-center text-[10px]">
+                <div>
+                  {formAction === 'reject' && !reviewNotes.trim() && (
+                    <p className="text-red-500 font-bold">
+                      Revision notes are required
+                    </p>
+                  )}
+                </div>
+                <p className="text-slate-400 font-bold">
+                  {reviewNotes.length}/500
+                </p>
+              </div>
+            </div>
+            <div className={`p-3 rounded-xl border text-xs font-semibold ${formAction === 'approve' ? 'bg-emerald-50/50 border-emerald-100 text-emerald-800' : 'bg-amber-50/50 border-amber-100 text-amber-800'}`}>
+              <p className="font-bold">
+                {formAction === 'approve' ? '✓ This will approve the form and notify the parent via email.' : '⚠ This will request revisions and notify the parent of required changes.'}
+              </p>
+              {formAction === 'approve' && (
+                <p className="text-[10px] text-emerald-600 mt-1">
+                  The parent will receive a confirmation email and can proceed with enrollment.
+                </p>
+              )}
+            </div>
+          </div>
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button 
+              variant="outline" 
+              onClick={() => setIsReviewDialogOpen(false)}
+              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleFormReview} 
+              className={`h-10 rounded-xl text-xs font-bold px-4 text-white ${formAction === 'approve' ? 'bg-[#0F2D52] hover:bg-[#1E4B83]' : 'bg-amber-600 hover:bg-amber-700'}`} 
+              disabled={formAction === 'reject' && !reviewNotes.trim() || isReviewing}
+            >
+              {isReviewing ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                  <span>Processing...</span>
+                </div>
+              ) : formAction === 'approve' ? (
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle className="h-4 w-4" /> 
+                  <span>Confirm Approval</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <AlertCircle className="h-4 w-4" /> 
+                  <span>Request Revision</span>
+                </div>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
 }

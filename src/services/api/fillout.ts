@@ -95,6 +95,23 @@ export async function getFilloutUserContext(params: {
   }
 }
 
+/**
+ * Call once after login to pre-provision the Fillout user and cache the token.
+ * No-op if a valid cached token already exists.
+ */
+export async function prefilloutProvision(userCtx: {
+  parentId?: string | null;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}): Promise<void> {
+  const externalUserId = userCtx.parentId || userCtx.email?.trim().toLowerCase();
+  if (!externalUserId) return;
+  const email = userCtx.email?.trim().toLowerCase() || `${externalUserId}@goddard.parent`;
+  const name = [userCtx.firstName, userCtx.lastName].filter(Boolean).join(' ') || email;
+  await getFilloutUserContext({ externalUserId, email, name });
+}
+
 /** Append user_id + user_token to a Fillout form URL (no-op if ctx is null or already present). */
 export function appendFilloutUserParams(url: string, ctx: FilloutUserContext | null): string {
   if (!ctx || !url || url === '#' || url.includes('user_token=')) return url;

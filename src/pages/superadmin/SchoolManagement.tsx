@@ -28,7 +28,7 @@ export function SchoolManagement() {
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
   const [ageGroups, setAgeGroups] = useState(['infants', 'toddlers', 'preschool', 'pre-k']);
-  const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
+  const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const { showToast } = useToast();
   const navigate = useNavigate();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -45,7 +45,7 @@ export function SchoolManagement() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         console.log('API Response:', data);
@@ -171,17 +171,17 @@ export function SchoolManagement() {
 
   const handleAddSchool = async () => {
     if (!schoolName.trim() || !subdomain.trim() || !adminName.trim() || !adminEmail.trim()) return;
-    
+
     const emailError = validateEmail(adminEmail);
     if (emailError) {
-      setFormErrors({adminEmail: emailError});
+      setFormErrors({ adminEmail: emailError });
       return;
     }
-    
+
     try {
       const [firstName, ...lastNameParts] = adminName.trim().split(' ');
       const lastName = lastNameParts.join(' ') || 'Admin';
-      
+
       const requestBody = {
         school: {
           name: schoolName.trim(),
@@ -199,7 +199,7 @@ export function SchoolManagement() {
           phone_number: adminPhone.trim() || "+1234567890"
         }
       };
-      
+
       const response = await fetch(`${apiBaseUrl}/schools/with-owner`, {
         method: 'POST',
         headers: {
@@ -208,11 +208,11 @@ export function SchoolManagement() {
         },
         body: JSON.stringify(requestBody)
       });
-      
+
       if (response.ok) {
         // Send admin invite via Supabase
         try {
-          const { data, error } = await supabase.auth.admin.inviteUserByEmail(adminEmail.trim());
+          const { data, error } = await supabase!.auth.admin.inviteUserByEmail(adminEmail.trim());
           if (error) {
             console.error('Error inviting admin:', error);
             showToast('error', 'School created but failed to send admin invite');
@@ -223,7 +223,7 @@ export function SchoolManagement() {
           console.error('Error sending invite:', inviteError);
           showToast('error', 'School created but failed to send admin invite');
         }
-        
+
         // Refetch schools data instead of manually updating state
         await fetchSchools();
       } else {
@@ -233,7 +233,7 @@ export function SchoolManagement() {
       console.error('Error creating school:', error);
       showToast('error', 'Error creating school');
     }
-    
+
     // Reset form and close dialog
     setIsAddDialogOpen(false);
     setSchoolName('');
@@ -259,9 +259,9 @@ export function SchoolManagement() {
 
   const handleUpdateSchool = () => {
     if (!selectedSchool || !schoolName.trim() || !schoolLocation.trim() || !adminName.trim() || !adminEmail.trim()) return;
-    
-    setSchools(schools.map(school => 
-      school.id === selectedSchool.id 
+
+    setSchools(schools.map(school =>
+      school.id === selectedSchool.id
         ? { ...school, name: schoolName.trim(), location: schoolLocation.trim(), admin: adminName.trim(), adminEmail: adminEmail.trim() }
         : school
     ));
@@ -281,7 +281,7 @@ export function SchoolManagement() {
 
   const handleDeleteSchool = async () => {
     if (!schoolToDelete) return;
-    
+
     try {
       const response = await fetch(`${apiBaseUrl}/schools/${schoolToDelete.id}`, {
         method: 'DELETE',
@@ -290,7 +290,7 @@ export function SchoolManagement() {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         showToast('success', 'School deleted successfully');
         await fetchSchools();
@@ -301,25 +301,25 @@ export function SchoolManagement() {
       console.error('Error deleting school:', error);
       showToast('error', 'Error deleting school');
     }
-    
+
     setIsDeleteDialogOpen(false);
     setSchoolToDelete(null);
   };
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-3 sm:px-4 lg:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+      <div className="space-y-6 max-w-7xl mx-auto mt-16 sm:mt-18">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 mt-16 sm:mt-4">
           <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground mb-1 sm:mb-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
               School Management
             </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
+            <p className="text-sm text-slate-500">
               Manage all Goddard Schools and their administrators
             </p>
           </div>
-          <Button 
-            className="bg-amazon-teal hover:bg-amazon-teal/90 w-full sm:w-auto" 
+          <Button
+            className="bg-[#0891b2] hover:bg-[#0e7490] text-white w-full sm:w-auto"
             size="sm"
             onClick={() => setIsAddDialogOpen(true)}
           >
@@ -330,7 +330,7 @@ export function SchoolManagement() {
 
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -345,7 +345,7 @@ export function SchoolManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow">
+          <Card className="glass-card hover:shadow-md transition-shadow">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -362,7 +362,7 @@ export function SchoolManagement() {
               </div>
             </CardContent>
           </Card>
-          <Card className="glass-card hover:shadow-lg transition-shadow sm:col-span-2 lg:col-span-1">
+          <Card className="glass-card hover:shadow-md transition-shadow sm:col-span-2 lg:col-span-1">
             <CardContent className="p-4 sm:p-5 lg:p-6">
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
@@ -380,7 +380,7 @@ export function SchoolManagement() {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="relative flex-1 max-w-md">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               placeholder="Search schools, locations, or admins..."
@@ -404,17 +404,17 @@ export function SchoolManagement() {
               <Card key={school.id} className="glass-card">
                 <CardHeader className="pb-3 sm:pb-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 rounded-lg bg-amazon-teal/10 flex items-center justify-center">
+                    <div className="flex items-center space-x-3 min-w-0">
+                      <div className="w-10 h-10 rounded-lg bg-amazon-teal/10 flex items-center justify-center flex-shrink-0">
                         <School className="w-5 h-5 text-amazon-teal" />
                       </div>
-                      <div>
-                        <CardTitle className="text-base sm:text-lg">{school.name}</CardTitle>
-                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground">
-                          <MapPin className="w-3 h-3 mr-1" />
-                          {school.subdomain}
+                      <div className="min-w-0">
+                        <CardTitle className="text-base sm:text-lg truncate">{school.name}</CardTitle>
+                        <div className="flex items-center text-xs sm:text-sm text-muted-foreground truncate">
+                          <MapPin className="w-3 h-3 mr-1 flex-shrink-0" />
+                          <span className="truncate">{school.subdomain}</span>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-1">
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
                           Admin: {school.admin}
                         </div>
                       </div>
@@ -440,14 +440,14 @@ export function SchoolManagement() {
                 </CardHeader>
                 <CardContent className="pt-0 space-y-3 sm:space-y-4">
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Status</span>
-                      <Badge variant={school.status === 'active' ? 'success' : 'warning'}>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-muted-foreground shrink-0">Status</span>
+                      <Badge variant={school.status === 'active' ? 'success' : 'warning'} className="text-xs">
                         {school.status}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">Capacity</span>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs text-muted-foreground shrink-0">Capacity</span>
                       <span className="text-xs font-medium">{school.capacity}</span>
                     </div>
                   </div>
@@ -505,7 +505,7 @@ export function SchoolManagement() {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Subdomain</label>
@@ -517,8 +517,8 @@ export function SchoolManagement() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Timezone</label>
-                  <select 
-                    value={timezone} 
+                  <select
+                    value={timezone}
                     onChange={(e) => setTimezone(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
@@ -529,7 +529,7 @@ export function SchoolManagement() {
                   </select>
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Enrollment Capacity</label>
                 <Input
@@ -539,7 +539,7 @@ export function SchoolManagement() {
                   placeholder="Enter capacity"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium mb-2">Age Groups</label>
                 <div className="grid grid-cols-2 gap-2">
@@ -562,7 +562,7 @@ export function SchoolManagement() {
                   ))}
                 </div>
               </div>
-              
+
               <div className="border-t pt-4">
                 <h3 className="text-lg font-medium mb-3">Admin Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -594,11 +594,11 @@ export function SchoolManagement() {
                 </div>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button 
-                onClick={handleAddSchool} 
-                className="bg-amazon-teal hover:bg-amazon-teal/90"
+              <Button
+                onClick={handleAddSchool}
+                className="bg-[#0891b2] hover:bg-[#0e7490] text-white"
                 disabled={!schoolName.trim() || !subdomain.trim() || !adminName.trim() || !adminEmail.trim() || !!formErrors.adminEmail}
               >
                 Add School
@@ -647,9 +647,9 @@ export function SchoolManagement() {
                 />
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateSchool} className="bg-amazon-teal hover:bg-amazon-teal/90">
+              <Button onClick={handleUpdateSchool} className="bg-[#0891b2] hover:bg-[#0e7490]">
                 Update School
               </Button>
             </DialogFooter>
@@ -681,10 +681,10 @@ export function SchoolManagement() {
                 </ul>
               </div>
             </div>
-            <DialogFooter>
+            <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
               <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 onClick={handleDeleteSchool}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
