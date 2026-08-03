@@ -125,17 +125,13 @@ export function SubdomainGuard() {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  if (userData?.role?.toLowerCase() === 'superadmin') {
-    return <Navigate to="/superadmin-arjava" replace />;
-  }
-
   if (schoolSlug !== schoolSubdomain) {
     return <SchoolNotFound />;
   }
 
   // Check if trying to access admin routes without admin role
   const isAdminRoute = location.pathname.includes('/admin');
-  if (isAdminRoute && userData?.role?.toLowerCase() !== 'admin') {
+  if (isAdminRoute && userData?.role?.toLowerCase() !== 'admin' && userData?.role?.toLowerCase() !== 'superadmin') {
     return <Navigate to={`/${schoolSubdomain}/dashboard`} replace />;
   }
 
