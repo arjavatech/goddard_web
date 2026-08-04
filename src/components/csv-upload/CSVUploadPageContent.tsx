@@ -68,9 +68,27 @@ export function CSVUploadPageContent() {
         result?.successful || []
       );
 
+      // Deduplicate failed records by rowNumber and merge errors
+      const rawFailed = [...(result?.failed || []), ...processResult.failed];
+      const failedMap = new Map<number, any>();
+      rawFailed.forEach(record => {
+        if (failedMap.has(record.rowNumber)) {
+          const existing = failedMap.get(record.rowNumber);
+          existing.validation.errors = {
+            ...existing.validation.errors,
+            ...record.validation.errors
+          };
+          existing.data = { ...existing.data, ...record.data };
+        } else {
+          // deep clone to avoid mutating the original reference
+          failedMap.set(record.rowNumber, JSON.parse(JSON.stringify(record)));
+        }
+      });
+      const deduplicatedFailed = Array.from(failedMap.values()).sort((a, b) => a.rowNumber - b.rowNumber);
+
       const mergedResult: CSVProcessingResult = {
         successful: [...(result?.successful || []), ...processResult.successful],
-        failed: [...(result?.failed || []), ...processResult.failed],
+        failed: deduplicatedFailed,
         skipped: (result?.skipped || 0) + processResult.skipped,
         totalRecords: (result?.totalRecords || 0) + processResult.totalRecords,
         processingTimeMs: (result?.processingTimeMs || 0) + processResult.processingTimeMs,

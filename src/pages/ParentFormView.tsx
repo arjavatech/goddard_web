@@ -176,14 +176,14 @@ export function ParentFormView() {
   if (!viewUrl) return null;
 
   return (
-    <div className="min-h-screen bg-white flex flex-col">
+    <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 flex">
+      <main className="flex-1 flex min-h-0 relative">
 
         {/* ── Mobile drawer backdrop ── */}
         {hasSidebar && drawerOpen && (
           <div
-            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            className="absolute inset-0 z-40 bg-black/40 lg:hidden backdrop-blur-sm"
             onClick={() => setDrawerOpen(false)}
           />
         )}
@@ -191,11 +191,11 @@ export function ParentFormView() {
         {/* ── Sidebar ── */}
         {hasSidebar && (
           <aside className={`
-            fixed top-0 left-0 h-full z-50 flex flex-col w-72 shadow-2xl
+            absolute top-0 left-0 h-full z-50 flex flex-col w-72 shadow-2xl
             transition-transform duration-300
             ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
-            lg:sticky lg:top-0 lg:h-screen lg:overflow-y-auto lg:translate-x-0 lg:shadow-none lg:w-60 xl:w-64 lg:shrink-0
-            bg-[#0F2D52]
+            lg:static lg:h-full lg:overflow-y-auto lg:translate-x-0 lg:shadow-none lg:w-64 lg:shrink-0
+            bg-[#0F2D52] border-r border-[#1a3a60]
           `}>
             {/* Header */}
             <div className="px-4 py-4 flex items-center justify-between border-b border-white/10">
@@ -240,7 +240,7 @@ export function ParentFormView() {
             </div>
 
             {/* Forms list */}
-            <nav className="flex-1 overflow-y-auto py-2">
+            <nav className="flex-1 overflow-y-auto no-scrollbar py-2">
               {siblingForms!.map((f, idx) => {
                 const isCurrent = decodeURIComponent(currentFormId ?? '') === f.formId;
                 return (
@@ -273,65 +273,67 @@ export function ParentFormView() {
               })}
             </nav>
 
-            {/* Back to dashboard */}
-            <div className="px-4 py-3 border-t border-white/10">
-              <button
-                onClick={handleBack}
-                className="w-full flex items-center gap-2 text-[11px] font-semibold text-white/50 hover:text-white transition-colors"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-                Back to Dashboard
-              </button>
-            </div>
           </aside>
         )}
 
         {/* ── Main form area ── */}
-        <div className="flex-1 min-w-0 bg-white">
-          {/* Title bar — sticky while page scrolls */}
-          <div className="sticky top-0 z-10 flex items-center gap-2 px-4 py-3 bg-white border-b border-slate-100">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="shrink-0 h-8 w-8 lg:hidden text-slate-500 hover:text-[#0F2D52]"
-              onClick={handleBack}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            {hasSidebar && (
+        <div className="flex-1 flex flex-col min-w-0 bg-white relative">
+          {/* Title bar — sticky header */}
+          <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
+            
+            {/* Left side: Back to Dashboard */}
+            <div className="flex-1 flex items-center justify-start min-w-0">
               <Button
                 variant="ghost"
-                size="sm"
-                className="lg:hidden h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
-                onClick={() => setDrawerOpen(true)}
+                size="icon"
+                className="shrink-0 h-8 w-8 lg:hidden text-slate-500 hover:text-[#0F2D52] mr-1"
+                onClick={handleBack}
               >
-                <LayoutList className="h-3.5 w-3.5" />
-                Forms
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-            )}
-            <div className="flex-1 min-w-0 flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
+              {hasSidebar && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
+                  onClick={() => setDrawerOpen(true)}
+                >
+                  <LayoutList className="h-3.5 w-3.5" />
+                  Forms
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 h-8 px-3 gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors hidden lg:flex border-slate-200"
+                onClick={handleBack}
+              >
+                <ChevronLeft className="h-3.5 w-3.5" />
+                Back to Dashboard
+              </Button>
+            </div>
+
+            {/* Center: Form Name */}
+            <div className="flex-1 flex items-center justify-center min-w-0 px-2">
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate max-w-full text-center">
                 {title}
               </h2>
               {isReadOnly && (
-                <span className="shrink-0 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
+                <span className="shrink-0 ml-2 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full hidden sm:inline-flex">
                   Read-only
                 </span>
               )}
             </div>
-            {childName && (
-              <span className="shrink-0 text-[11px] bg-slate-100 px-2.5 py-1 rounded-full text-slate-600 font-medium hidden sm:block">
-                {childName}
-              </span>
-            )}
-          </div>
 
-          {/* Thank-you banner */}
-          {showThankYou && (
-            <div className="mx-4 mt-3 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700 font-medium text-center">
-              Form submitted successfully! Redirecting back…
+            {/* Right side: Child Name */}
+            <div className="flex-1 flex items-center justify-end min-w-0">
+              {childName && (
+                <span className="shrink-0 text-[11px] bg-slate-100 px-3 py-1.5 rounded-full text-slate-700 font-semibold truncate max-w-[150px] sm:max-w-[200px]">
+                  {childName}
+                </span>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Form viewer — natural height, page scrolls */}
           <div className="relative min-h-[480px]">

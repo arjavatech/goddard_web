@@ -769,7 +769,7 @@ export function FormsDocuments({
                       <TabsTrigger
                         key={child.childId}
                         value={child.childId}
-                        className="h-8 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600 whitespace-nowrap shadow-none transition-all data-[state=active]:bg-[#0F2D52] data-[state=active]:text-white data-[state=active]:border-[#0F2D52] data-[state=active]:shadow-sm hover:border-[#0F2D52]/40 hover:text-[#0F2D52] data-[state=active]:hover:text-white"
+                        className="h-8 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600 whitespace-nowrap shadow-none transition-all data-[state=active]:bg-[#0F2D52] data-[state=active]:hover:bg-[#0F2D52]/90 data-[state=active]:text-white data-[state=active]:border-[#0F2D52] data-[state=active]:shadow-sm hover:border-[#0F2D52]/40 data-[state=inactive]:hover:text-[#0F2D52] data-[state=active]:hover:text-white"
                       >
                         <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
                         <span className="hidden sm:inline">{child.childName}</span>
