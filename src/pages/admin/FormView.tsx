@@ -200,8 +200,8 @@ export function FormView() {
       };
       const dob = toYMD(childDob);
       const extras: Record<string, string> = {};
-      if (childName)   extras['child_name']   = childName;
-      if (dob)         extras['child_dob']    = dob;
+      if (childName) extras['child_name'] = childName;
+      if (dob) extras['child_dob'] = dob;
       if (childGender) extras['child_gender'] = childGender.charAt(0).toUpperCase() + childGender.slice(1).toLowerCase();
       if (parentEmail) extras['parent_email'] = parentEmail;
       const paramStr = Object.entries(extras)
@@ -435,8 +435,8 @@ export function FormView() {
                     <ChevronRight className="h-3 w-3" />
                   </Button>
                 </div>
-                <div 
-                  ref={containerRef} 
+                <div
+                  ref={containerRef}
                   className="relative flex-1 flex justify-center items-start overflow-y-auto bg-slate-50/40 p-2 sm:p-4"
                 >
                   {isFrameLoading && (
@@ -482,7 +482,13 @@ export function FormView() {
                       src={selectedUrl}
                       style={{
                         width: '100%',
-                        height: `${embeddedResize.height ?? (embeddedResize.isDynamic ? 320 : formHeight)}px`,
+                        height: embeddedResize.isDynamic
+                          // Arjava forms report cumulative height of ALL pages, causing massive
+                          // blank space. Cap at viewport height so only the current page shows;
+                          // scrolling="auto" lets the form builder navigate pages internally.
+                          ? `${Math.min(embeddedResize.height ?? 320, typeof window !== 'undefined' ? window.innerHeight - 120 : 700)}px`
+                          // Fillout forms: use postMessage height so the page scrolls naturally.
+                          : `${formHeight}px`,
                         border: 'none',
                         display: 'block',
                         opacity: isFrameLoading ? 0 : 1,
@@ -491,7 +497,7 @@ export function FormView() {
                         scrollMargin: 0,
                         overflow: 'hidden',
                       }}
-                      scrolling={embeddedResize.isDynamic ? 'no' : 'auto'}
+                      scrolling="auto"
                       title={formData.title}
                       allow="fullscreen"
                       onLoad={() => {
