@@ -86,11 +86,13 @@ export function CSVUploadPageContent() {
       });
       const deduplicatedFailed = Array.from(failedMap.values()).sort((a, b) => a.rowNumber - b.rowNumber);
 
+      const mergedSuccessful = [...(result?.successful || []), ...processResult.successful];
+
       const mergedResult: CSVProcessingResult = {
-        successful: [...(result?.successful || []), ...processResult.successful],
+        successful: mergedSuccessful,
         failed: deduplicatedFailed,
         skipped: (result?.skipped || 0) + processResult.skipped,
-        totalRecords: (result?.totalRecords || 0) + processResult.totalRecords,
+        totalRecords: mergedSuccessful.length + deduplicatedFailed.length,
         processingTimeMs: (result?.processingTimeMs || 0) + processResult.processingTimeMs,
       };
 
