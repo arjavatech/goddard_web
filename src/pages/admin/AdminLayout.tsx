@@ -62,6 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
       ],
     },
     {
@@ -291,12 +292,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                         {initials}
                       </div>
-                      <span className={cn(
-                        "hidden sm:block text-sm font-semibold max-w-[100px] truncate transition-colors duration-300",
-                        isSidebarOpen ? "text-slate-200" : "text-slate-700"
-                      )}>
-                        {userData?.firstName}
-                      </span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
