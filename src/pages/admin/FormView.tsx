@@ -98,7 +98,11 @@ export function FormView() {
           data.data?.size;
 
         if (typeof h === 'number' && h > 0) {
-          setFormHeight(Math.ceil(h));
+          setFormHeight(prev => {
+            const newHeight = Math.ceil(h);
+            if (Math.abs(prev - newHeight) < 50) return prev;
+            return newHeight;
+          });
         }
       } catch { /* Ignore non-resize messages from the embedded form. */ }
     };
@@ -407,7 +411,12 @@ export function FormView() {
             )}
           </div>
           {/* Form container with dynamic height */}
-          <div className="mt-6">
+          <div className="mt-6 relative min-h-[480px]">
+            {isFrameLoading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white z-10 rounded-xl">
+                <Loading message="Loading..." size="md" />
+              </div>
+            )}
             {isApproved && recentPdfLink ? (
               <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
@@ -439,11 +448,6 @@ export function FormView() {
                   ref={containerRef}
                   className="relative flex-1 flex justify-center items-start overflow-y-auto bg-slate-50/40 p-2 sm:p-4"
                 >
-                  {isFrameLoading && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                      <Loading message="Loading PDF..." size="md" />
-                    </div>
-                  )}
                   <Document
                     file={recentPdfLink}
                     onLoadSuccess={onDocumentLoadSuccess}
@@ -463,49 +467,39 @@ export function FormView() {
             ) : (() => {
               if (selectedUrl && selectedUrl !== '#') {
                 return (
-                  <div
-                    ref={iframeContainerRef}
-                    className="w-full rounded-xl overflow-hidden bg-white border border-slate-200/80 shadow-lg"
-                    style={{
-                      // contain:'content' prevents scrollIntoView() inside the
-                      // cross-origin iframe from propagating to the parent window.
-                      contain: 'content',
-                    }}
-                  >
-                    {isFrameLoading && (
-                      <div className="flex items-center justify-center bg-white rounded-xl py-20">
-                        <Loading message="Loading form..." size="md" />
-                      </div>
-                    )}
-                    <iframe
-                      ref={embeddedResize.iframeRef}
-                      src={selectedUrl}
-                      style={{
-                        width: '100%',
-                        height: embeddedResize.isDynamic
-                          // Arjava forms report cumulative height of ALL pages, causing massive
-                          // blank space. Cap at viewport height so only the current page shows;
-                          // scrolling="auto" lets the form builder navigate pages internally.
-                          ? `${Math.min(embeddedResize.height ?? 320, typeof window !== 'undefined' ? window.innerHeight - 120 : 700)}px`
-                          // Fillout forms: use postMessage height so the page scrolls naturally.
-                          : `${formHeight}px`,
-                        border: 'none',
-                        display: 'block',
-                        opacity: isFrameLoading ? 0 : 1,
-                        transition: 'opacity 0.3s ease-in-out',
-                        overscrollBehavior: 'contain',
-                        scrollMargin: 0,
-                        overflow: 'hidden',
-                      }}
-                      scrolling="auto"
-                      title={formData.title}
-                      allow="fullscreen"
-                      onLoad={() => {
-                        embeddedResize.handleLoad();
-                        setIsFrameLoading(false);
-                      }}
-                    />
-                  </div>
+                  <>
+                    <style>{`
+                      @media (max-width: 640px) {
+                        .ndfHFb-c4YZDc-q77wGc,
+                        .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb { display: none !important; }
+                      }
+                    `}</style>
+                    <div ref={iframeContainerRef} className="w-full">
+                      <iframe
+                        ref={embeddedResize.iframeRef}
+                        src={selectedUrl}
+                        style={{
+                          width: '100%',
+                          height: embeddedResize.isDynamic
+                            // Arjava forms: use the dynamic height reported by the embed.
+                            ? `${embeddedResize.height ?? 800}px`
+                            // Fillout forms: use postMessage height.
+                            : `${formHeight}px`,
+                          border: 'none',
+                          display: 'block',
+                          opacity: isFrameLoading ? 0 : 1,
+                          transition: 'opacity 0.3s ease-in-out',
+                        }}
+                        scrolling="auto"
+                        title={formData.title}
+                        allow="fullscreen"
+                        onLoad={() => {
+                          embeddedResize.handleLoad();
+                          setIsFrameLoading(false);
+                        }}
+                      />
+                    </div>
+                  </>
                 );
               }
               return (
