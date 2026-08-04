@@ -26,7 +26,7 @@ export function useSessionTimeout() {
 
     // Set logout timeout
     timeoutRef.current = setTimeout(() => {
-      console.log('Session expired due to inactivity');
+      // console.log('Session expired due to inactivity');
       signOut();
     }, SESSION_TIMEOUT);
   };

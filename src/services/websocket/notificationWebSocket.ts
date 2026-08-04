@@ -53,7 +53,7 @@ class NotificationWebSocket {
   }
 
   private handleOpen(): void {
-    console.log('[WebSocket] Connected');
+    // console.log('[WebSocket] Connected');
     this.isConnecting = false;
     this.reconnectAttempts = 0;
     this.reconnectDelay = 1000;
@@ -85,7 +85,7 @@ class NotificationWebSocket {
   }
 
   private handleClose(): void {
-    console.log('[WebSocket] Disconnected');
+    // console.log('[WebSocket] Disconnected');
     this.stopHeartbeat();
     this.isConnecting = false;
     this.scheduleReconnect();
@@ -99,7 +99,7 @@ class NotificationWebSocket {
 
     this.reconnectAttempts++;
     const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1), 30000);
-    console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    // console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
 
     setTimeout(() => {
       void this.connect();

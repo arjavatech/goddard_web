@@ -44,7 +44,7 @@ export function SetPassword() {
       // Set up auth state change listener to catch any session transitions
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (!isMounted) return;
-        console.log('Auth state change in SetPassword:', event, session?.user?.email);
+        // console.log('Auth state change in SetPassword:', event, session?.user?.email);
         if (session) {
           setSessionReady(true);
           setError('');
@@ -57,14 +57,14 @@ export function SetPassword() {
         const { data: existingSession, error: sessionCheckError } = await supabase.auth.getSession();
 
         if (!sessionCheckError && existingSession?.session) {
-          console.log('Existing session found, reusing session for user:', existingSession.session.user?.email);
+          // console.log('Existing session found, reusing session for user:', existingSession.session.user?.email);
           if (isMounted) {
             setSessionReady(true);
             return;
           }
         }
       } catch (err) {
-        console.log('No existing session, will check URL parameters');
+        // console.log('No existing session, will check URL parameters');
       }
 
       // SECOND: Try to parse tokens or code from both hash and search query params
@@ -96,11 +96,11 @@ export function SetPassword() {
       // If we have an authorization code (PKCE flow), exchange it for a session
       if (code) {
         try {
-          console.log('Exchanging authorization code for session...');
+          // console.log('Exchanging authorization code for session...');
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
           if (data?.session) {
-            console.log('Session established via code exchange for user:', data.session.user?.email);
+            // console.log('Session established via code exchange for user:', data.session.user?.email);
             if (isMounted) {
               setSessionReady(true);
             }
@@ -133,7 +133,7 @@ export function SetPassword() {
               // Fallback check
               const { data: fallbackSession } = await supabase.auth.getSession();
               if (fallbackSession?.session) {
-                console.log('Token was already used, but valid session exists. Continuing...');
+                // console.log('Token was already used, but valid session exists. Continuing...');
                 if (isMounted) {
                   setSessionReady(true);
                 }
@@ -156,7 +156,7 @@ export function SetPassword() {
             return;
           }
 
-          console.log('Session established successfully via tokens for user:', data.session.user?.email);
+          // console.log('Session established successfully via tokens for user:', data.session.user?.email);
           if (isMounted) {
             setSessionReady(true);
           }

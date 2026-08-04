@@ -142,7 +142,7 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
       method: 'GET',
       url: `/classrooms?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    console.log('Raw classrooms response:', data);
+    // console.log('Raw classrooms response:', data);
     const classroomsArray = data.classrooms || data;
     if (!Array.isArray(classroomsArray)) {
       console.warn('Classrooms response is not an array:', classroomsArray);
@@ -213,12 +213,12 @@ export async function fetchClassEnrollmentStats(schoolId: string): Promise<Class
 
 export async function fetchParentDetails(schoolId: string): Promise<{ activeParents: ParentDetail[], inactiveParents: ParentDetail[] }> {
   try {
-    console.log('Fetching parent details for school ID:', schoolId);
+    // console.log('Fetching parent details for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
       url: `/parent/details?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    console.log('Raw parent details response:', data);
+    // console.log('Raw parent details response:', data);
     if (typeof data === 'string') {
       console.warn('API returned string for parent details:', data);
       return { activeParents: [], inactiveParents: [] };
@@ -268,14 +268,14 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
     if (data.active_parents !== undefined || data.inactive_parents !== undefined) {
       const activeParents = Array.isArray(data.active_parents) ? data.active_parents.map(mapParentData) : [];
       const inactiveParents = Array.isArray(data.inactive_parents) ? data.inactive_parents.map(mapParentData) : [];
-      console.log('Processed parent details (new format):', { activeParents, inactiveParents });
+      // console.log('Processed parent details (new format):', { activeParents, inactiveParents });
       return { activeParents, inactiveParents };
     }
 
     // Fallback for old format (simple array)
     if (Array.isArray(data)) {
       const activeParents = data.map(mapParentData);
-      console.log('Processed parent details (legacy format):', { activeParents, inactiveParents: [] });
+      // console.log('Processed parent details (legacy format):', { activeParents, inactiveParents: [] });
       return { activeParents, inactiveParents: [] };
     }
 
@@ -374,12 +374,12 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
 }
 export async function fetchSchoolEnrollments(schoolId: string): Promise<SchoolEnrollment[]> {
   try {
-    console.log('Fetching enrollments for school ID:', schoolId);
+    // console.log('Fetching enrollments for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
       url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    console.log('Raw enrollments response:', data);
+    // console.log('Raw enrollments response:', data);
     if (typeof data === 'string') {
       console.warn('API returned string for school enrollments:', data);
       return [];
@@ -446,8 +446,8 @@ export async function renameClassroom(classroomId: string, newName: string, scho
   }, z.object({}));
 }
 export async function deleteClassroom(classroomId: string, schoolId: string): Promise<void> {
-  console.log(classroomId);
-  console.log(schoolId);
+  // console.log(classroomId);
+  // console.log(schoolId);
   await authedFetch({
     method: 'DELETE',
     url: `/classrooms?classroom_id=${classroomId}&school_id=${schoolId}`
@@ -708,12 +708,12 @@ export type ChildEnrollment = {
 };
 export async function fetchChildrenForms(schoolId: string): Promise<ChildEnrollment[]> {
   try {
-    console.log('Fetching children forms for school ID:', schoolId);
+    // console.log('Fetching children forms for school ID:', schoolId);
     const data = await authedFetch({
       method: 'GET',
       url: `/enrollments?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    console.log('Raw children forms response:', data);
+    // console.log('Raw children forms response:', data);
     if (typeof data === 'string') {
       console.warn('API returned string for children forms:', data);
       return [];
@@ -858,13 +858,13 @@ export async function fetchClassBasedEnrollments(
   classId: string
 ): Promise<ClassBasedEnrollment[]> {
   try {
-    console.log('Fetching class-based enrollments for school:', schoolId, 'class:', classId);
+    // console.log('Fetching class-based enrollments for school:', schoolId, 'class:', classId);
     const data = await authedFetch({
       method: 'GET',
       url: `/class-based-enrollments?school_id=${encodeURIComponent(schoolId)}&class_id=${encodeURIComponent(classId)}`
     }, z.any());
 
-    console.log('Raw class-based enrollments response:', data);
+    // console.log('Raw class-based enrollments response:', data);
 
     if (typeof data === 'string') {
       console.warn('API returned string for class-based enrollments:', data);
@@ -1178,18 +1178,18 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
   const cleanFormId = form.formId?.startsWith('form_') ? form.formId.substring(5) : form.formId;
   const formTemplate = formTemplates.find(t => t.id === cleanFormId);
 
-  console.log('calculateFormDueDate:', {
-    originalFormId: form.formId,
-    cleanFormId,
-    foundTemplate: formTemplate,
-    templateDueDate: formTemplate?.due_date,
-    assignedAt: form.assigned_at
-  });
+  // console.log('calculateFormDueDate:', {
+  //   originalFormId: form.formId,
+  //   cleanFormId,
+  //   foundTemplate: formTemplate,
+  //   templateDueDate: formTemplate?.due_date,
+  //   assignedAt: form.assigned_at
+  // });
 
   if (formTemplate?.due_date) {
     const dueDate = new Date(formTemplate.due_date);
     if (!isNaN(dueDate.getTime())) {
-      console.log('Using template due date:', dueDate.toLocaleDateString('en-US'));
+      // console.log('Using template due date:', dueDate.toLocaleDateString('en-US'));
       return dueDate.toLocaleDateString('en-US');
     }
   }
@@ -1203,13 +1203,13 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
       if (!isNaN(assigned.getTime())) {
         const due = new Date(assigned);
         due.setDate(due.getDate() + 30);
-        console.log('Using calculated due date:', due.toLocaleDateString('en-US'));
+        // console.log('Using calculated due date:', due.toLocaleDateString('en-US'));
         return due.toLocaleDateString('en-US');
       }
     }
   }
 
-  console.log('No due date found');
+  // console.log('No due date found');
   return null;
 }
 
