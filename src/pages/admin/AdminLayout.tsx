@@ -241,7 +241,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Top header */}
           {userData?.role && (
             <header className={cn(
-              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
+              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-2 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
               isSidebarOpen ? "bg-[#0F2D52] border-[#1a3a60]" : "bg-white border-slate-200"
             )}>
               {/* Left col — hamburger (mobile only), flex-1 to balance right col */}
@@ -460,7 +460,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Bottom bar ── */}
-            <div className="border-t border-white/10">
+            <div className="border-t border-white/10 mt-3">
               <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
                 <p className="text-xs text-slate-400 text-center sm:text-left">
                   © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
