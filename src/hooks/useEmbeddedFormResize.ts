@@ -56,7 +56,13 @@ export function useEmbeddedFormResize(formUrl: string | null | undefined) {
       if (typeof data.height !== 'number' || data.height < 1 || data.height > MAX_EMBED_HEIGHT) return;
 
       window.clearInterval(retryId);
-      setHeight(Math.ceil(data.height));
+      setHeight(prev => {
+        const newHeight = Math.ceil(data.height);
+        // Arjava forms often have a bug where they continuously report slightly larger heights 
+        // (e.g., +20px padding) in a loop if not capped. We use a 50px delta to block this aggressive loop.
+        if (prev !== null && Math.abs(prev - newHeight) < 50) return prev;
+        return newHeight;
+      });
     };
 
     window.addEventListener('message', handleMessage);

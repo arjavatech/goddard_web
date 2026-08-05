@@ -62,6 +62,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
       ],
     },
     {
@@ -241,7 +242,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Top header */}
           {userData?.role && (
             <header className={cn(
-              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-4 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
+              "fixed top-0 right-0 left-0 lg:left-60 z-40 h-16 px-2 lg:px-6 flex items-center border-b shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-colors duration-300",
               isSidebarOpen ? "bg-[#0F2D52] border-[#1a3a60]" : "bg-white border-slate-200"
             )}>
               {/* Left col — hamburger (mobile only), flex-1 to balance right col */}
@@ -291,12 +292,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm flex-shrink-0">
                         {initials}
                       </div>
-                      <span className={cn(
-                        "hidden sm:block text-sm font-semibold max-w-[100px] truncate transition-colors duration-300",
-                        isSidebarOpen ? "text-slate-200" : "text-slate-700"
-                      )}>
-                        {userData?.firstName}
-                      </span>
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
@@ -460,7 +455,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Bottom bar ── */}
-            <div className="border-t border-white/10">
+            <div className="border-t border-white/10 mt-3">
               <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
                 <p className="text-xs text-slate-400 text-center sm:text-left">
                   © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.

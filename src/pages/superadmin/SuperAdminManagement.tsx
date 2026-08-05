@@ -248,7 +248,7 @@ export function SuperAdminManagement() {
             </Button>
             <Button 
               onClick={() => {
-                console.log('Adding admin:', newAdmin);
+                // console.log('Adding admin:', newAdmin);
                 setIsAddDialogOpen(false);
                 setNewAdmin({ name: '', email: '', school: '' });
               }}

@@ -758,7 +758,7 @@ export function ParentDetails() {
                                             );
                                           }
                                         } catch (e) {
-                                          console.log('Error parsing approved date:', e);
+                                          // console.log('Error parsing approved date:', e);
                                         }
                                         return (
                                           <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">

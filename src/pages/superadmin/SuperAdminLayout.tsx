@@ -46,6 +46,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         { icon: <LayoutDashboard className="w-[18px] h-[18px]" />, label: 'Dashboard', path: '/superadmin-arjava' },
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Schools', path: '/superadmin-arjava/schools' },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Clients', path: '/superadmin-arjava/clients' },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: '/superadmin-arjava/csv-upload' },
       ],
     },
     {
@@ -185,9 +186,6 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                     <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
                       {initials}
                     </div>
-                    <span className="hidden sm:block text-sm font-semibold text-slate-700 max-w-[100px] truncate">
-                      {userData?.firstName}
-                    </span>
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">

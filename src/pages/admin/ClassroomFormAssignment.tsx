@@ -231,7 +231,7 @@ export function ClassroomFormAssignment() {
       setFormToDelete(null);
 
     } catch (error) {
-      console.log('Failed to delete form override:', error);
+      // console.log('Failed to delete form override:', error);
 
       // Close modal after showing error
       setTimeout(() => {

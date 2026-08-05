@@ -11,7 +11,6 @@ import { Pagination, MobilePagination } from '../../components/ui/pagination';
 import { InviteParentModal } from '../../components/admin/InviteParentModal';
 import { usePagination } from '../../hooks/usePagination';
 import { fetchClassrooms, fetchClassEnrollmentStats, fetchClassBasedEnrollments, inviteParent, type ClassBasedEnrollment } from '../../services/api/admin';
-import { Loading } from '../../components/ui/loading';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { useToast } from '../../contexts/ToastContext';
 interface Form {
@@ -350,7 +349,16 @@ export function ClassroomDetails() {
   };
 
   if (loading) {
-    return <AdminLayout><Loading message="Loading classroom details..." /></AdminLayout>;
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+          <div className="text-center animate-pulse">
+            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
+            <p className="text-slate-500 text-sm font-semibold">Loading classroom details...</p>
+          </div>
+        </div>
+      </AdminLayout>
+    );
   }
 
   if (error) {

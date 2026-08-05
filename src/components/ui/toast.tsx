@@ -25,7 +25,7 @@ export function Toast({ type, title, message, onClose, index, id }: ToastProps) 
       style={{ animationDelay: `${index * 100}ms` }}
     >
       <div className={cn(
-        "glass-card flex items-start gap-3 p-4 rounded-lg shadow-lg border max-w-sm transition-all duration-300",
+        "glass-card flex items-start gap-3 p-4 rounded-lg shadow-lg border w-full transition-all duration-300",
         type === 'success' 
           ? "bg-gradient-to-r from-green-50 to-emerald-50 border-amazon-teal/20 text-green-800" 
           : "bg-gradient-to-r from-red-50 to-orange-50 border-amazon-orange/20 text-red-800"

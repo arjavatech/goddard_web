@@ -25,6 +25,8 @@ import { DueForms } from './pages/admin/DueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
+import { ParentFormView } from './pages/ParentFormView';
+import { CSVUploadPage as AdminCSVUploadPage } from './pages/admin/CSVUploadPage';
 import { NotFound } from './pages/NotFound';
 // SuperAdmin pages
 import { SuperAdminDashboard } from './pages/superadmin/SuperAdminDashboard';
@@ -34,6 +36,7 @@ import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagemen
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
+import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSVUploadPage';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 import { SubdomainGuard } from './routes/security/SubdomainGuard';
 
@@ -78,6 +81,7 @@ export function AppRouter() {
                 </ProtectedRoute>} />
             <Route element={<SubdomainGuard />}>
               <Route path="/:schoolSlug/dashboard" element={<App />} />
+              <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
             </Route>
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
@@ -109,6 +113,7 @@ export function AppRouter() {
               <Route path="/:schoolSlug/admin/students" element={<StudentManagement />} />
               <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
               <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
+              <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
               <Route path="/:schoolSlug/admin/help" element={<HelpCenter />} />
             </Route>
 
@@ -119,6 +124,7 @@ export function AppRouter() {
               <Route path="/superadmin-arjava" element={<SuperAdminDashboard />} />
               <Route path="/superadmin-arjava/schools" element={<SchoolManagement />} />
               <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
+              <Route path="/superadmin-arjava/csv-upload" element={<SuperAdminCSVUploadPage />} />
               <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
             </Route>
 

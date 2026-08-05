@@ -58,7 +58,7 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
       throw new Error('School ID is required to fetch enrollment children');
     }
     
-    console.log('Fetching enrollment children for school ID:', schoolId, 'parent ID:', parentId);
+    // console.log('Fetching enrollment children for school ID:', schoolId, 'parent ID:', parentId);
     
     // Try multiple endpoints to get parent's children
     const endpoints = [
@@ -73,17 +73,17 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
     
     for (const url of endpoints) {
       try {
-        console.log('🔄 Trying API endpoint:', url);
+        // console.log('🔄 Trying API endpoint:', url);
         data = await authedFetch({
           method: 'GET',
           url: url!
         }, z.any());
-        console.log('✅ Success with endpoint:', url);
-        console.log('📊 Response data:', data);
+        // console.log('✅ Success with endpoint:', url);
+        // console.log('📊 Response data:', data);
         break;
       } catch (error) {
-        console.log('❌ Failed with endpoint:', url);
-        console.log('📋 Error details:', error);
+        // console.log('❌ Failed with endpoint:', url);
+        // console.log('📋 Error details:', error);
         lastError = error;
         continue;
       }
@@ -94,10 +94,10 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
       throw lastError || new Error('All API endpoints failed');
     }
     
-    console.log('📊 Raw enrollment children response:', JSON.stringify(data, null, 2));
-    console.log('🔍 Response type:', typeof data);
-    console.log('📜 Is array:', Array.isArray(data));
-    console.log('📈 Data keys:', data && typeof data === 'object' ? Object.keys(data) : 'N/A');
+    // console.log('📊 Raw enrollment children response:', JSON.stringify(data, null, 2));
+    // console.log('🔍 Response type:', typeof data);
+    // console.log('📜 Is array:', Array.isArray(data));
+    // console.log('📈 Data keys:', data && typeof data === 'object' ? Object.keys(data) : 'N/A');
 
     // Handle various response formats
     let children: any[] = [];
@@ -118,11 +118,11 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
     for (const child of children) {
       if (!child || typeof child !== 'object') continue;
       
-      console.log('Raw child data:', child);
+      // console.log('Raw child data:', child);
       
       const parseResult = enrollmentChildSchema.safeParse(child);
       if (!parseResult.success) {
-        console.warn('Schema validation failed, but continuing with raw data:', parseResult.error);
+        // console.warn('Schema validation failed, but continuing with raw data:', parseResult.error);
         // Continue with raw data if schema fails
       }
       
@@ -143,20 +143,20 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
       const className = validChild.classroom_name || validChild.class_name || validChild.classroom;
       const formStatus = validChild.form_status || validChild.formStatus || validChild.status;
       
-      console.log('Processing child:', {
-        childId,
-        fullName,
-        firstName,
-        lastName,
-        dob,
-        className,
-        formStatus,
-        forms: validChild.forms
-      });
+      // console.log('Processing child:', {
+      //   childId,
+      //   fullName,
+      //   firstName,
+      //   lastName,
+      //   dob,
+      //   className,
+      //   formStatus,
+      //   forms: validChild.forms
+      // });
       
       // Skip if no valid child ID or name
       if (!childId || (!firstName && !fullName)) {
-        console.warn('Skipping child with missing ID or name:', validChild);
+        // console.warn('Skipping child with missing ID or name:', validChild);
         continue;
       }
       const formsObject: Record<string, string> = {};
@@ -181,11 +181,11 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
         additionalParentEmail: validChild.additional_parent_email ?? null
       });
     }
-    console.log('Processed children count:', processedChildren.length);
+    // console.log('Processed children count:', processedChildren.length);
     
     // If no children found and we used parent endpoint, try fallback to school endpoint
     if (processedChildren.length === 0 && parentId) {
-      console.log('No children found with parent endpoint, trying school endpoint as fallback...');
+      // console.log('No children found with parent endpoint, trying school endpoint as fallback...');
       return fetchEnrollmentChildren(schoolId); // Recursive call without parentId
     }
     
@@ -202,7 +202,7 @@ export async function fetchEnrollmentChildren(schoolId: string, parentId?: strin
 
     // If we were trying parent endpoint and it failed, try school endpoint
     if (parentId && error instanceof Error && (error as any).status === 404) {
-      console.log('Parent endpoint failed, trying school endpoint as fallback...');
+      // console.log('Parent endpoint failed, trying school endpoint as fallback...');
       try {
         return fetchEnrollmentChildren(schoolId); // Recursive call without parentId
       } catch (fallbackError) {
@@ -224,7 +224,7 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
       method: 'GET',
       url: `/form-templates?school_id=${encodeURIComponent(schoolId)}`
     }, z.any());
-    console.log('Raw form templates response:', data);
+    // console.log('Raw form templates response:', data);
 
     // Handle various response formats
     let templates: any[] = [];
