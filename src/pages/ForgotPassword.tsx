@@ -5,7 +5,6 @@ import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useToast } from '../contexts/ToastContext';
 import { httpFetch } from '../services/api/http';
-import { supabase } from '../services/auth/authClient';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -22,18 +21,6 @@ export function ForgotPassword() {
     setEmailError('');
     setIsLoading(true);
     try {
-      // Check if user exists via Supabase before sending reset email
-      if (supabase) {
-        const { data, error } = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: { shouldCreateUser: false }
-        });
-        if (error && (error.message.toLowerCase().includes('not found') || error.message.toLowerCase().includes('no user') || error.status === 422 || error.status === 404)) {
-          setEmailError('No account found with this email address.');
-          setIsLoading(false);
-          return;
-        }
-      }
       await httpFetch({ method: 'POST', url: '/auth/forgot-password', body: { email: email.trim() } });
       setIsEmailSent(true);
       showToast('success', 'Password reset email sent successfully');
