@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AdminLayout } from './AdminLayout';
+import { AdminLayout } from '../admin/AdminLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, X, LayoutGrid, List } from 'lucide-react';
@@ -228,18 +228,22 @@ export function EmployeeFormsManagement() {
   return (
     <AdminLayout>
       <div className="container mx-auto px-4 py-8 max-w-7xl animate-fade-in mt-6">
-        
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Employee Forms Management</h1>
-            <p className="text-sm text-slate-500 mt-1">Manage and assign forms to employees.</p>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Employee Forms Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
+              Manage and assign forms to employees.
+            </p>
           </div>
-          <Button 
-            className="bg-[#0F2D52] hover:bg-[#1c477c] text-white" 
+          <div>
+             <Button 
+             className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2" 
+            size="sm" 
             onClick={() => setIsAddDialogOpen(true)}
           >
             <Plus className="w-4 h-4 mr-2" /> Add New Form
           </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v as any); setCurrentPage(1); }} className="w-full">

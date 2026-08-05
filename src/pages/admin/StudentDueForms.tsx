@@ -417,7 +417,7 @@ export function DueForms() {
         
         if (total_failed > 0) {
           const failedEmailsList = failed_emails.filter((email: string) => email).join(', ');
-          showToast('warning', `${message}. Failed emails: ${failedEmailsList}`);
+          showToast('error', `${message}. Failed emails: ${failedEmailsList}`);
         } else {
           showToast('success', message);
         }
@@ -518,7 +518,7 @@ export function DueForms() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">              Due Forms Tracking
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">             Student Due Forms Tracking
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
               Monitor form completion status and send reminders to parents

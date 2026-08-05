@@ -21,7 +21,7 @@ import { ClassroomFormAssignment } from './pages/admin/ClassroomFormAssignment';
 import { ParentManagement } from './pages/admin/ParentManagement';
 import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
-import { DueForms } from './pages/admin/DueForms';
+import { DueForms } from './pages/admin/StudentDueForms';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
@@ -35,15 +35,17 @@ import { UserManagement } from './pages/superadmin/UserManagement';
 import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
+import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSVUploadPage';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 import { SubdomainGuard } from './routes/security/SubdomainGuard';
 
 // Employee pages
-import { EmployeeManagement } from './pages/admin/EmployeeManagement';
-import { EmployeeDetails } from './pages/admin/EmployeeDetails';
-import { EmployeeFormsManagement } from './pages/admin/EmployeeFormsManagement';
+import { EmployeeManagement } from './pages/employee/EmployeeManagement';
+import { EmployeeDetails } from './pages/employee/EmployeeDetails';
+import { EmployeeFormsManagement } from './pages/employee/EmployeeFormsManagement';
+import { EmployeeDueForms } from './pages/employee/EmployeeDueForms';
 import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 
@@ -89,9 +91,11 @@ export function AppRouter() {
             <Route element={<SubdomainGuard />}>
               <Route path="/:schoolSlug/dashboard" element={<App />} />
               <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
-              <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
               <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
             </Route>
+            {/* Dev-accessible employee dashboard (no auth guard) */}
+            <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
+            <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
                 </ProtectedRoute>} />
@@ -123,7 +127,9 @@ export function AppRouter() {
               <Route path="/:schoolSlug/admin/employees" element={<EmployeeManagement />} />
               <Route path="/:schoolSlug/admin/employees/:employeeId" element={<EmployeeDetails />} />
               <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
+              <Route path="/:schoolSlug/admin/employee-forms/due" element={<EmployeeDueForms />} />
               <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
+              <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
               <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
               <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
               <Route path="/:schoolSlug/admin/help" element={<HelpCenter />} />
@@ -138,6 +144,7 @@ export function AppRouter() {
               <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
               <Route path="/superadmin-arjava/csv-upload" element={<SuperAdminCSVUploadPage />} />
               <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
+              
             </Route>
 
             {/* 404 Catch-all */}

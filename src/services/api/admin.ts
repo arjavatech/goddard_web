@@ -1305,3 +1305,115 @@ export async function getFormResumeLink(assignmentId: string): Promise<string | 
     return null;
   }
 }
+
+
+// ─── Super Admin User Management ──────────────────────────────────────────────
+
+export type SuperAdminUser = {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+  is_verified: boolean;
+};
+
+export async function fetchSuperAdminUsers(): Promise<SuperAdminUser[]> {
+  try {
+    const data = await authedFetch({
+      method: 'GET',
+      url: '/users/superadmin'
+    }, z.object({
+      success: z.boolean(),
+      count: z.number(),
+      data: z.array(z.object({
+        id: z.string(),
+        email: z.string(),
+        first_name: z.string(),
+        last_name: z.string(),
+        role: z.string(),
+        is_verified: z.boolean()
+      }))
+    }));
+    return data.data;
+  } catch (error) {
+    console.error('fetchSuperAdminUsers error:', error);
+    throw error;
+  }
+}
+
+export async function inviteSuperAdmin(
+  email: string,
+  firstName: string,
+  lastName: string,
+  phoneNumber?: string
+): Promise<void> {
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/auth/invite-superadmin',
+      body: {
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        phone_number: phoneNumber || null
+      }
+    }, z.object({}).passthrough());
+  } catch (error: any) {
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
+    }
+    throw error;
+  }
+}
+
+export async function resendSuperAdminInvite(userId: string): Promise<void> {
+  try {
+    await authedFetch({
+      method: 'POST',
+      url: '/auth/superadmin-resend-invite',
+      body: {
+        user_id: userId
+      }
+    }, z.any());
+  } catch (error: any) {
+    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
+      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
+      (bounceError as any).code = 'EMAIL_BOUNCE';
+      (bounceError as any).status = error?.status;
+      throw bounceError;
+    }
+    throw error;
+  }
+}
+
+export async function updateSuperAdmin(
+  userId: string,
+  firstName: string,
+  lastName: string,
+  phoneNumber?: string
+): Promise<void> {
+  await authedFetch({
+    method: 'PUT',
+    url: '/users/superadmin',
+    body: {
+      user_id: userId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phoneNumber || null
+    }
+  }, z.object({}).passthrough());
+}
+
+export async function deleteSuperAdmin(userId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: '/users/superadmin',
+    body: {
+      user_id: userId
+    }
+  }, z.object({}).passthrough());
+}

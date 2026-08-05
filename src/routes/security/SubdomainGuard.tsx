@@ -125,15 +125,43 @@ export function SubdomainGuard() {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
+  // userData not yet hydrated for this session — wait
+  if (isAuthenticated && !userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
+      </div>
+    );
+  }
+
   if (schoolSlug !== schoolSubdomain) {
     return <SchoolNotFound />;
   }
 
+  const role = userData?.role?.toLowerCase();
+
   // Check if trying to access admin routes without admin role
   const isAdminRoute = location.pathname.includes('/admin');
-  if (isAdminRoute && userData?.role?.toLowerCase() !== 'admin' && userData?.role?.toLowerCase() !== 'superadmin') {
+  if (isAdminRoute && role !== 'admin' && role !== 'superadmin') {
     return <Navigate to={`/${schoolSubdomain}/dashboard`} replace />;
   }
+
+  // Check if trying to access employee routes without employee role
+  // Use exact segment match to avoid false positives like /admin/employees
+  const pathSegments = location.pathname.split('/');
+  const isEmployeeRoute = pathSegments.includes('employee');
+  if (isEmployeeRoute && !isAdminRoute && role !== 'employee') {
+    const fallback = (role === 'admin' || role === 'superadmin')
+      ? `/${schoolSubdomain}/admin`
+      : `/${schoolSubdomain}/dashboard`;
+    return <Navigate to={fallback} replace />;
+  }
+
+  // Prevent employee users from accessing parent dashboard
+  const isParentDashboard = location.pathname === `/${schoolSubdomain}/dashboard`;
+  // if (isParentDashboard && role === 'employee') {
+  //   return <Navigate to={`/${schoolSubdomain}/employee/dashboard`} replace />;
+  // }
 
   return <Outlet />;
 }

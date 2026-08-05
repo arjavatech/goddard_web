@@ -100,6 +100,12 @@ export const EmployeeService = {
     return assignments.filter(a => a.employeeId === employeeId);
   },
 
+  async fetchSchoolFormAssignments(schoolId: string): Promise<EmployeeFormAssignment[]> {
+    await new Promise(resolve => setTimeout(resolve, 300));
+    const assignments = getStoredAssignments();
+    return assignments.filter(a => a.schoolId === schoolId);
+  },
+
   async assignFormToEmployee(employeeId: string, formId: string, schoolId: string, assignedBy: string): Promise<EmployeeFormAssignment> {
     await new Promise(resolve => setTimeout(resolve, 300));
     const assignments = getStoredAssignments();

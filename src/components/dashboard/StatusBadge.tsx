@@ -4,7 +4,7 @@ import { CheckCircle2, Clock, AlertCircle, FileEdit, FileText } from 'lucide-rea
 import type { VariantProps } from 'class-variance-authority';
 import { cn } from '../../lib/utils';
 
-type Status = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
+type Status = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft' | 'Assigned' | 'Rejected';
 
 interface StatusBadgeProps {
   status: Status;
@@ -12,11 +12,13 @@ interface StatusBadgeProps {
 }
 
 const CONFIG: Record<Status, { variant: NonNullable<VariantProps<typeof badgeVariants>['variant']>; icon: React.ReactNode; label: string }> = {
-  Approved:        { variant: 'success',  icon: <CheckCircle2 className="w-3 h-3" />, label: 'Approved' },
-  Submitted:       { variant: 'warning',  icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
-  'In Progress':   { variant: 'warning',  icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
-  'Needs Revision':{ variant: 'warning',  icon: <AlertCircle className="w-3 h-3" />,  label: 'Needs Revision' },
-  Draft:           { variant: 'secondary',icon: <FileText className="w-3 h-3" />,     label: 'Draft' },
+  Approved:        { variant: 'success',   icon: <CheckCircle2 className="w-3 h-3" />, label: 'Approved' },
+  Submitted:       { variant: 'warning',   icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  'In Progress':   { variant: 'warning',   icon: <Clock className="w-3 h-3" />,        label: 'Pending Approval' },
+  'Needs Revision':{ variant: 'warning',   icon: <AlertCircle className="w-3 h-3" />,  label: 'Needs Revision' },
+  Draft:           { variant: 'secondary', icon: <FileText className="w-3 h-3" />,     label: 'Draft' },
+  Assigned:        { variant: 'secondary', icon: <FileEdit className="w-3 h-3" />,     label: 'Assigned' },
+  Rejected:        { variant: 'destructive',icon: <AlertCircle className="w-3 h-3" />, label: 'Rejected' },
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {

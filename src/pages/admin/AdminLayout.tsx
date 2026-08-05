@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog,
+  Eye, ShieldCheck, Settings, UserCog, Shield
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -57,16 +57,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     if (normalizedItemPath === '/admin') return currentPath === '/admin';
     if (isFromStudents && normalizedItemPath === '/admin/students') return true;
     if (isFromStudents && normalizedItemPath === '/admin/parents') return false;
-    
+
     if (normalizedItemPath === '/admin/forms') {
       if (isEmployeeFormView) return false;
       return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due');
     }
-    
+
     if (normalizedItemPath === '/admin/employee-forms') {
-      return currentPath === '/admin/employee-forms' || isEmployeeFormView;
+      if (isEmployeeFormView || currentPath === '/admin/employee-forms/due') return false;
+      return currentPath === '/admin/employee-forms';
     }
-    
+
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
@@ -80,22 +81,36 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
+        // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
       ],
     },
     {
-      label: 'Enrollment',
+      label: 'Student Enrollment',
       items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Due Forms', path: `${schoolPrefix}/admin/forms/due` },
+      ],
+    },
+
+    {
+      label: 'Employee Enrollment',
+      items: [
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: `${schoolPrefix}/admin/forms/due` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Due Forms', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: [
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+      ],
+
+    }] : []),
+    ...(isSuperAdmin ? [{
+      label: 'Super Administration',
+      items: [
+        { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
       ],
     }] : []),
   ];
@@ -349,8 +364,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* ── Footer (outside main flex) ── */}
       <footer className="w-full bg-[#1a3a5c]">
-            {/* Main body */}
-            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
+        {/* Main body */}
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
             {/* ── Brand column ── */}
@@ -456,23 +471,23 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 </li>
               </ul>
             </div>
-            </div>
+          </div>
 
-            {/* ── Bottom bar ── */}
-            <div className="border-t border-white/10 mt-3">
-              <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
-                <p className="text-xs text-slate-400 text-center sm:text-left">
-                  © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
-                </p>
-                <div className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-                    {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
-                  </span>
-                </div>
+          {/* ── Bottom bar ── */}
+          <div className="border-t border-white/10 mt-3">
+            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+              <p className="text-xs text-slate-400 text-center sm:text-left">
+                © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
+              </p>
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+                  {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                </span>
               </div>
             </div>
-            </div>
+          </div>
+        </div>
       </footer>
 
       {/* ── Modals ── */}

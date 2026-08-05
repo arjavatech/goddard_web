@@ -290,16 +290,15 @@ export function AdminManagement() {
       <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
         
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Admin Management
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5 font-medium">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Admin Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
               Manage system administrator accounts and access
             </p>
           </div>
-          <Button 
+          <div>
+             <Button 
             className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2" 
             size="sm" 
             onClick={() => {
@@ -310,6 +309,7 @@ export function AdminManagement() {
             <Plus className="w-4 h-4 mr-1" />
             Invite Admin
           </Button>
+          </div>
         </div>
 
         {loadError && (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AdminLayout } from './AdminLayout';
+import { AdminLayout } from '../admin/AdminLayout';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
@@ -26,10 +26,10 @@ export function EmployeeManagement() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  
+
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
-  
+
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
   const [empLastName, setEmpLastName] = useState('');
@@ -38,24 +38,24 @@ export function EmployeeManagement() {
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
-  
+
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  
+
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('employeeMgmtViewMode') as 'card' | 'table') || 'table');
-  
-  const handleViewModeChange = (mode: 'card' | 'table') => { 
-    setViewMode(mode); 
-    localStorage.setItem('employeeMgmtViewMode', mode); 
+
+  const handleViewModeChange = (mode: 'card' | 'table') => {
+    setViewMode(mode);
+    localStorage.setItem('employeeMgmtViewMode', mode);
   };
-  
+
   useEffect(() => {
     const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
@@ -136,11 +136,11 @@ export function EmployeeManagement() {
         joinedOn: empJoinedOn,
         schoolId: userData.schoolId,
       });
-      
+
       showToast('success', 'Employee invited successfully');
       setIsAddDialogOpen(false);
       resetForm();
-      
+
       const data = await EmployeeService.fetchEmployees(userData.schoolId);
       setEmployees(data);
     } catch (err: any) {
@@ -178,7 +178,7 @@ export function EmployeeManagement() {
         employeeType: empType,
         joinedOn: empJoinedOn,
       });
-      
+
       setEmployees(employees.map(e => e.id === selectedEmployee.id ? updated : e));
       showToast('success', 'Employee updated successfully');
       setIsEditDialogOpen(false);
@@ -238,27 +238,28 @@ export function EmployeeManagement() {
   return (
     <AdminLayout>
       <div className="container mx-auto px-2 sm:px-4 py-0 sm:pt-6 max-w-7xl space-y-6 pb-12">
-        
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Employee Management
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5 font-medium">
-              Manage system employees and access
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Employee Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
+              Manage and assign forms to employees.
             </p>
           </div>
-          <Button 
-            className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2" 
-            size="sm" 
-            onClick={() => {
-              resetForm();
-              setIsAddDialogOpen(true);
-            }}
-          >
-            <Plus className="w-4 h-4 mr-1" />
-            Invite Employee
-          </Button>
+          <div>
+            <Button
+              className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2"
+              size="sm"
+              onClick={() => {
+                resetForm();
+                setIsAddDialogOpen(true);
+              }}
+            >
+              <Plus className="w-4 h-4 mr-1" />
+              Invite Employee
+            </Button>
+          </div>
         </div>
 
         {loadError && (
@@ -271,21 +272,21 @@ export function EmployeeManagement() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
-          <StatCard 
-            label="Total Employees" 
-            value={totalEmployees} 
-            icon={Users} 
-            iconBgClass="bg-[#EFF5FB]" 
-            iconColorClass="text-[#0F2D52]" 
-            className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+          <StatCard
+            label="Total Employees"
+            value={totalEmployees}
+            icon={Users}
+            iconBgClass="bg-[#EFF5FB]"
+            iconColorClass="text-[#0F2D52]"
+            className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
           />
-          <StatCard 
-            label="Active Employees" 
-            value={activeEmployees} 
-            icon={UserCheck} 
-            iconBgClass="bg-emerald-50" 
-            iconColorClass="text-emerald-600" 
-            className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+          <StatCard
+            label="Active Employees"
+            value={activeEmployees}
+            icon={UserCheck}
+            iconBgClass="bg-emerald-50"
+            iconColorClass="text-emerald-600"
+            className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
           />
         </div>
 
@@ -298,14 +299,13 @@ export function EmployeeManagement() {
                   Showing {filteredEmployees.length} of {totalEmployees} employee{totalEmployees === 1 ? '' : 's'}
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
                 <button
                   type="button"
                   onClick={() => handleViewModeChange('table')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
-                    viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
-                  }`}
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                    }`}
                 >
                   <List className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Table View</span>
@@ -313,16 +313,15 @@ export function EmployeeManagement() {
                 <button
                   type="button"
                   onClick={() => handleViewModeChange('card')}
-                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
-                    viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
-                  }`}
+                  className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                    }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline">Card View</span>
                 </button>
               </div>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="relative flex-1">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchTerm ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
@@ -338,7 +337,7 @@ export function EmployeeManagement() {
                   </button>
                 )}
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <div className="relative w-full sm:w-44">
                   <select
@@ -357,7 +356,7 @@ export function EmployeeManagement() {
               </div>
             </div>
           </div>
-          
+
           {viewMode === 'card' ? (
             <MobileCardList
               className="p-4"
@@ -516,14 +515,14 @@ export function EmployeeManagement() {
                 <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                {/* <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Type</label>
                   <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
                     <option value="Full Time">Full Time</option>
                     <option value="Part Time">Part Time</option>
                     <option value="Contractor">Contractor</option>
                   </select>
-                </div>
+                </div> */}
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Joined On</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
@@ -598,7 +597,7 @@ export function EmployeeManagement() {
 
         {/* Deactivate Confirm */}
         <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => !open && setIsDeleteDialogOpen(false)}>
-          <DialogContent className="max-w-md p-6">
+          <DialogContent className="w-[95vw] max-w-md p-6">
             <DialogHeader>
               <DialogTitle>Deactivate Employee</DialogTitle>
             </DialogHeader>
