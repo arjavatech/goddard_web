@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -23,6 +23,14 @@ export function Login() {
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
+
+  useEffect(() => {
+    if (localStorage.getItem('session_invalidated') === 'true') {
+      showToast('error', 'Your account has been logged out because it was signed in from another device.', 'Session Ended');
+      localStorage.removeItem('session_invalidated');
+    }
+  }, [showToast]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const err = validateEmail(formData.email);

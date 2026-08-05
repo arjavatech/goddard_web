@@ -26,6 +26,7 @@ export function Header() {
   const handleLogout = () => {
     localStorage.clear();
     sessionStorage.clear();
+    sessionStorage.setItem('explicit_logout', 'true');
     signOut().catch(err => console.error('Logout error:', err));
     window.location.href = '/';
   };
@@ -148,10 +149,6 @@ export function Header() {
                   <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-sm shadow-sm flex-shrink-0">
                     {initials}
                   </div>
-                  <span className="text-sm font-medium text-slate-700 max-w-[140px] truncate">
-                    {displayName}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">

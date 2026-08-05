@@ -48,7 +48,7 @@ export function SchoolManagement() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('API Response:', data);
+        // console.log('API Response:', data);
         const mappedSchools = data.map((item: any) => ({
           id: item.school.id,
           name: item.school.name,

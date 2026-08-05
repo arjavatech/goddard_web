@@ -547,7 +547,7 @@ export function StudentManagement() {
   const handleAssignFormToStudents = () => {
     if (!selectedFormToAssign || selectedStudentsForForm.length === 0) return;
     
-    console.log('Assigning form', selectedFormToAssign, 'to students', selectedStudentsForForm);
+    // console.log('Assigning form', selectedFormToAssign, 'to students', selectedStudentsForForm);
     
     setIsAssignFormDialogOpen(false);
     setSelectedStudentsForForm([]);

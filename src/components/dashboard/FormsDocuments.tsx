@@ -288,16 +288,16 @@ export function FormsDocuments({
         const rawChild = rawFormData?.children?.find((c: any) => c.childId === child.childId);
         return child.forms.map((form, formIndex) => {
           // Find the exact matching form in rawData by form_id or form_name
-          console.log('Matching form for:', form.title, 'formId:', form.formId);
-          console.log('Raw child data:', rawChild);
-          console.log('Available raw forms (full):', rawChild?.forms);
+          // console.log('Matching form for:', form.title, 'formId:', form.formId);
+          // console.log('Raw child data:', rawChild);
+          // console.log('Available raw forms (full):', rawChild?.forms);
           const matchingRawForm = rawChild?.forms?.find((rawForm: any) => {
             return rawForm.formId === form.formId ||
               rawForm.formName === form.title ||
               rawForm.formName === form.description;
           });
 
-          console.log('Final matching result:', matchingRawForm);
+          // console.log('Final matching result:', matchingRawForm);
           const rawData = matchingRawForm || null;
           const studentFormAssignmentId =
             extractStudentFormAssignmentId(rawData?.student_form_assignment_id) ||
@@ -325,29 +325,29 @@ export function FormsDocuments({
     isOpeningRef.current = true;
     try {
       setOpenError(null);
-      console.log('handleView called with form:', form);
-      console.log('Form ID:', form.formId || form._key);
-      console.log('Child ID form opening:', form.childId);
-      console.log('Selected Child ID:', selectedChildId);
-      console.log('Form data:', form);
-      console.log('Active Tab:', activeTab);
+      // console.log('handleView called with form:', form);
+      // console.log('Form ID:', form.formId || form._key);
+      // console.log('Child ID form opening:', form.childId);
+      // console.log('Selected Child ID:', selectedChildId);
+      // console.log('Form data:', form);
+      // console.log('Active Tab:', activeTab);
       // Skip validation for forms from Continue button
       if (form.fromContinueButton) {
-        console.log('✓ Form from Continue button - bypassing child ID validation');
+        // console.log('✓ Form from Continue button - bypassing child ID validation');
       } else {
         // Ensure we're using the correct child's data
         if (form.childId && form.childId !== activeTab && form.childId !== selectedChildId) {
-          console.warn('Form child ID does not match selected child ID - blocking form open');
+          // console.warn('Form child ID does not match selected child ID - blocking form open');
           return;
         }
-        console.log('✓ Child ID validation passed - opening form for correct child');
+        // console.log('✓ Child ID validation passed - opening form for correct child');
       }
 
       let formUrl = '#';
 
       // Extract all possible URL sources from rawData and form object
       const rawData = form.rawData || {};
-      console.log('Raw data for form:', form);
+      // console.log('Raw data for form:', form);
       const recentEditLink = rawData.recent_edit_link || rawData.recentEditLink || form.recentEditLink;
       const recentPdfLink = rawData.recent_pdf_link || rawData.recentPdfLink || form.recentPdfLink;
       const filloutFormId = rawData.fillout_form_id || rawData.filloutFormId || form.filloutFormId;
@@ -363,16 +363,16 @@ export function FormsDocuments({
         null;
       const formId = rawData.formId || form.formId;
       const idForPayload = coerceStudentFormAssignmentIdForPayload(studentFormAssignmentId);
-      console.log('Form data for URL construction:', {
-        status: form.status,
-        recentEditLink,
-        recentPdfLink,
-        filloutFormId,
-        studentFormAssignmentId,
-        studentFormAssignmentIdNumber: idForPayload.asNumber,
-        formId,
-        rawData
-      });
+      // console.log('Form data for URL construction:', {
+      //   status: form.status,
+      //   recentEditLink,
+      //   recentPdfLink,
+      //   filloutFormId,
+      //   studentFormAssignmentId,
+      //   studentFormAssignmentIdNumber: idForPayload.asNumber,
+      //   formId,
+      //   rawData
+      // });
 
       const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
 
@@ -459,7 +459,7 @@ export function FormsDocuments({
             if (invalidFormIds.includes(defaultFormId.toLowerCase())) {
               defaultFormId = 'parent_handbook';
             }
-            console.log('Default form ID used:', defaultFormId)
+            // console.log('Default form ID used:', defaultFormId)
             formUrl = `https://goddard.fillout.com/${defaultFormId}?student_form_assignment_id=${idForPayload.raw}`;
           }
 
@@ -516,13 +516,13 @@ export function FormsDocuments({
           .join('&');
         if (paramStr) formUrl += `${formUrl.includes('?') ? '&' : '?'}${paramStr}`;
       }
-      console.log('Final form URL:', formUrl);
-      console.log('[Fillout] READY payload (frontend):', {
-        student_form_assignment_id: idForPayload.asNumber ?? idForPayload.raw,
-        student_form_assignment_id_raw: idForPayload.raw,
-        student_form_assignment_id_number: idForPayload.asNumber,
-        viewUrl: formUrl
-      });
+      // console.log('Final form URL:', formUrl);
+      // console.log('[Fillout] READY payload (frontend):', {
+      //   student_form_assignment_id: idForPayload.asNumber ?? idForPayload.raw,
+      //   student_form_assignment_id_raw: idForPayload.raw,
+      //   student_form_assignment_id_number: idForPayload.asNumber,
+      //   viewUrl: formUrl
+      // });
 
       const tabForms = getFormsForTab(form.childId || activeTab);
       const completedCount = tabForms.filter((f: any) =>
@@ -571,7 +571,7 @@ export function FormsDocuments({
     if (formOpenGuard) formOpenGuard.current = true;
     processedFormToOpenRef.current = key;
 
-    console.log('Auto-opening form:', formToOpen);
+    // console.log('Auto-opening form:', formToOpen);
     // If it's from Continue button, directly open it
     if (formToOpen.fromContinueButton) {
       handleView(formToOpen);
@@ -769,7 +769,7 @@ export function FormsDocuments({
                       <TabsTrigger
                         key={child.childId}
                         value={child.childId}
-                        className="h-8 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600 whitespace-nowrap shadow-none transition-all data-[state=active]:bg-[#0F2D52] data-[state=active]:text-white data-[state=active]:border-[#0F2D52] data-[state=active]:shadow-sm hover:border-[#0F2D52]/40 hover:text-[#0F2D52] data-[state=active]:hover:text-white"
+                        className="h-8 px-3 text-xs font-semibold rounded-xl border border-slate-200 bg-white text-slate-600 whitespace-nowrap shadow-none transition-all data-[state=active]:bg-[#0F2D52] data-[state=active]:hover:bg-[#0F2D52]/90 data-[state=active]:text-white data-[state=active]:border-[#0F2D52] data-[state=active]:shadow-sm hover:border-[#0F2D52]/40 data-[state=inactive]:hover:text-[#0F2D52] data-[state=active]:hover:text-white"
                       >
                         <span className="sm:hidden">{child.childName.split(' ')[0]}</span>
                         <span className="hidden sm:inline">{child.childName}</span>

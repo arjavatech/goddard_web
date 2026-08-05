@@ -126,12 +126,12 @@ export function ParentManagement() {
   const schoolId = localStorage.getItem('schoolId') ?? '';
 
   const mapParentDetails = useCallback((detail: any): Parent => {
-    console.log('Mapping parent detail:', {
-      parentId: detail.parentId,
-      parent_id: detail.parent_id,
-      email: detail.email,
-      originalDetail: detail
-    });
+    // console.log('Mapping parent detail:', {
+    //   parentId: detail.parentId,
+    //   parent_id: detail.parent_id,
+    //   email: detail.email,
+    //   originalDetail: detail
+    // });
 
     const parentId = detail.parentId || detail.parent_id || '';
     if (!parentId) {
@@ -167,7 +167,7 @@ export function ParentManagement() {
       signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
     } satisfies Parent;
 
-    console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
+    // console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
     return mappedParent;
   }, []);
 
@@ -187,7 +187,7 @@ export function ParentManagement() {
         // Map active parents
         if (parentDetailsResponse.activeParents.length > 0) {
           const mappedActiveParents = parentDetailsResponse.activeParents.map(mapParentDetails);
-          console.log('Mapped active parents:', mappedActiveParents.map(p => ({ id: p.id, email: p.email, originalParentId: parentDetailsResponse.activeParents.find((orig: any) => orig.email === p.email)?.parentId })));
+          // console.log('Mapped active parents:', mappedActiveParents.map(p => ({ id: p.id, email: p.email, originalParentId: parentDetailsResponse.activeParents.find((orig: any) => orig.email === p.email)?.parentId })));
           setParents(mappedActiveParents);
         }
 
@@ -437,8 +437,8 @@ export function ParentManagement() {
     setAddChildFormErrors({});
   };
   const handleResendConfirmation = async (parentId: string, parentEmail: string) => {
-    console.log('Resending confirmation for parentId:', parentId);
-    console.log('Parent email:', parentEmail);
+    // console.log('Resending confirmation for parentId:', parentId);
+    // console.log('Parent email:', parentEmail);
     
     // Validate parent ID format - should be a valid UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -448,7 +448,7 @@ export function ParentManagement() {
       return;
     }
     
-    console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
+    // console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
     setResendingParentId(parentId);
     try {
       await resendParentConfirmation(parentId);

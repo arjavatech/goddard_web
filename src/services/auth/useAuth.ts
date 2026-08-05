@@ -80,6 +80,11 @@ function useAuthState(): UseAuth {
       setUser(session?.user ?? null);
       setLoading(false);
       if (event === 'SIGNED_OUT') {
+        const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
+        if (!isExplicit && previousToken) {
+          localStorage.setItem('session_invalidated', 'true');
+        }
+        sessionStorage.removeItem('explicit_logout');
         setAuthGeneration(generation => generation + 1);
       } else if (
         (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
