@@ -56,7 +56,9 @@ export function validateCSVRow(row: CSVRow, _availableClassrooms: { id: string; 
   // Child Validation
   if (!childFirstName) errors['Child First Name'] = 'Child first name is required';
   if (!childLastName) errors['Child Last Name'] = 'Child last name is required';
-  if (!['male', 'female'].includes(childGender)) errors['Child Gender'] = 'Child gender is required (male/female)';
+  if (childGender && !['male', 'female', 'other'].includes(childGender)) {
+    errors['Child Gender'] = 'Child gender must be male, female, or other';
+  }
 
   if (childDob) {
     // Basic date validation for DD-MM-YYYY or YYYY-MM-DD
