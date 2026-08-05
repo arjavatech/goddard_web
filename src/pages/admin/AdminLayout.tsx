@@ -51,6 +51,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const isFromStudents = location.state?.fromStudents === true;
+  const isEmployeeFormView = currentPath.startsWith('/admin/forms/view') && !!location.state?.employeeId;
+
+  const isNavItemActive = (normalizedItemPath: string) => {
+    if (normalizedItemPath === '/admin') return currentPath === '/admin';
+    if (isFromStudents && normalizedItemPath === '/admin/students') return true;
+    if (isFromStudents && normalizedItemPath === '/admin/parents') return false;
+    
+    if (normalizedItemPath === '/admin/forms') {
+      if (isEmployeeFormView) return false;
+      return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due');
+    }
+    
+    if (normalizedItemPath === '/admin/employee-forms') {
+      return currentPath === '/admin/employee-forms' || isEmployeeFormView;
+    }
+    
+    return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
+  };
 
   const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
 
@@ -62,6 +80,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
       ],
     },
@@ -69,6 +88,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Enrollment',
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Due Forms', path: `${schoolPrefix}/admin/forms/due` },
       ],
     },
@@ -124,15 +144,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
                     const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = normalizedItemPath === '/admin'
-                      ? currentPath === '/admin'
-                      : isFromStudents && normalizedItemPath === '/admin/students'
-                      ? true
-                      : isFromStudents && normalizedItemPath === '/admin/parents'
-                      ? false
-                      : normalizedItemPath === '/admin/forms'
-                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
-                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
+                    const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
                         className={cn(
@@ -189,15 +201,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                 <div className="space-y-0.5">
                   {group.items.map((item, i) => {
                     const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = normalizedItemPath === '/admin'
-                      ? currentPath === '/admin'
-                      : isFromStudents && normalizedItemPath === '/admin/students'
-                      ? true
-                      : isFromStudents && normalizedItemPath === '/admin/parents'
-                      ? false
-                      : normalizedItemPath === '/admin/forms'
-                      ? currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due')
-                      : currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
+                    const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path}
                         className={cn(

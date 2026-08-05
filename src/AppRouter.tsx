@@ -40,6 +40,13 @@ import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSV
 import ProtectedRoute from './routes/security/ProtectedRoute';
 import { SubdomainGuard } from './routes/security/SubdomainGuard';
 
+// Employee pages
+import { EmployeeManagement } from './pages/admin/EmployeeManagement';
+import { EmployeeDetails } from './pages/admin/EmployeeDetails';
+import { EmployeeFormsManagement } from './pages/admin/EmployeeFormsManagement';
+import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
+import { EmployeeFormView } from './pages/employee/EmployeeFormView';
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -82,6 +89,8 @@ export function AppRouter() {
             <Route element={<SubdomainGuard />}>
               <Route path="/:schoolSlug/dashboard" element={<App />} />
               <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
+              <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
+              <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
             </Route>
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
@@ -111,6 +120,9 @@ export function AppRouter() {
               <Route path="/:schoolSlug/admin/parents" element={<ParentManagement />} />
               <Route path="/:schoolSlug/admin/parents/:parentId" element={<ParentDetails />} />
               <Route path="/:schoolSlug/admin/students" element={<StudentManagement />} />
+              <Route path="/:schoolSlug/admin/employees" element={<EmployeeManagement />} />
+              <Route path="/:schoolSlug/admin/employees/:employeeId" element={<EmployeeDetails />} />
+              <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
               <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
               <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
               <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
