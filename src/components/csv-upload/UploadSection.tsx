@@ -86,12 +86,12 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
     const headers = [
       'Parent First Name', 'Parent Last Name', 'Parent Email', 'Parent Phone Number',
       'Secondary Parent First Name', 'Secondary Parent Last Name', 'Secondary Parent Email', 'Secondary Parent Phone Number',
-      'Child First Name', 'Child Last Name', 'Child DOB', 'Child Gender', 'Classroom'
+      'Child First Name', 'Child Last Name', 'Child DOB', 'Child Gender', 'Classroom', 'Primary Parent Address'
     ];
     const sampleRow = [
       'John', 'Doe', 'john.doe@example.com', '555-0100',
       'Jane', 'Doe', 'jane.doe@example.com', '555-0101',
-      'Jimmy', 'Doe', '25-12-2019', 'male', 'Preschool 1'
+      'Jimmy', 'Doe', '25-12-2019', 'male', 'Preschool 1', '123 Main St'
     ];
     
     const csvContent = headers.join(',') + '\n' + sampleRow.join(',');
