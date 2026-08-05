@@ -1,5 +1,5 @@
-import React, { useCallback, useState, useRef, useEffect } from 'react';
-import { UploadCloud, FileType, AlertCircle, X, Download } from 'lucide-react';
+import React, { useCallback, useState, useRef } from 'react';
+import { UploadCloud, AlertCircle, Download } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Progress } from '../ui/progress';
 
@@ -7,26 +7,14 @@ interface UploadSectionProps {
   onFileUpload: (file: File) => void;
   isProcessing: boolean;
   progress: number;
-  onReset: () => void;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-export function UploadSection({ onFileUpload, isProcessing, progress, onReset }: UploadSectionProps) {
+export function UploadSection({ onFileUpload, isProcessing, progress }: UploadSectionProps) {
   const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    // When processing finishes, reset the selected file so the dropzone is ready for a new upload
-    if (!isProcessing && selectedFile) {
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }
-  }, [isProcessing]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -40,8 +28,7 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
 
   const validateAndProcessFile = (file: File) => {
     setError(null);
-    onReset();
-    
+
     if (file.type !== 'text/csv' && !file.name.endsWith('.csv')) {
       setError('Invalid file type. Please upload a .csv file.');
       return;
@@ -57,29 +44,26 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
       return;
     }
 
-    setSelectedFile(file);
     onFileUpload(file);
+    // Reset the input so the same file can be re-uploaded if needed
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       validateAndProcessFile(e.dataTransfer.files[0]);
     }
-  }, [onFileUpload, onReset]);
+  }, [onFileUpload]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
       validateAndProcessFile(e.target.files[0]);
     }
-    // Clear input value to allow selecting the same file again if needed
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleDownloadSample = () => {
@@ -93,7 +77,7 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
       'Jane', 'Doe', 'jane.doe@example.com', '555-0101',
       'Jimmy', 'Doe', '25-12-2019', 'male', 'Preschool 1', '123 Main St'
     ];
-    
+
     const csvContent = headers.join(',') + '\n' + sampleRow.join(',');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -104,15 +88,6 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-  };
-
-  const clearSelection = () => {
-    setSelectedFile(null);
-    setError(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    onReset();
   };
 
   return (
@@ -135,7 +110,18 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
         </div>
       )}
 
-      {!isProcessing && !selectedFile && (
+      {isProcessing ? (
+        <div className="border border-slate-200 rounded-xl p-6 bg-slate-50">
+          <div className="flex flex-col items-center text-center">
+            <div className="w-10 h-10 border-4 border-slate-200 border-t-[#1a6fc4] rounded-full animate-spin mb-4" />
+            <h3 className="text-sm font-bold text-slate-900 mb-2">Processing CSV File...</h3>
+            <div className="w-full max-w-md">
+              <Progress value={progress} className="h-2 mb-2" />
+              <p className="text-xs font-semibold text-slate-500">{Math.round(progress)}% complete</p>
+            </div>
+          </div>
+        </div>
+      ) : (
         <div
           className={`border-2 border-dashed rounded-2xl p-10 text-center transition-colors cursor-pointer
             ${dragActive ? 'border-[#1a6fc4] bg-blue-50/50' : 'border-slate-200 hover:border-[#1a6fc4]/50 hover:bg-slate-50'}`}
@@ -143,7 +129,7 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
           onDragLeave={handleDrag}
           onDragOver={handleDrag}
           onDrop={handleDrop}
-          onClick={() => document.getElementById('csv-file-upload')?.click()}
+          onClick={() => fileInputRef.current?.click()}
         >
           <input
             ref={fileInputRef}
@@ -158,36 +144,6 @@ export function UploadSection({ onFileUpload, isProcessing, progress, onReset }:
           </div>
           <p className="text-sm font-semibold text-slate-900 mb-1">Click to upload or drag and drop</p>
           <p className="text-xs text-slate-500">CSV files only (max. 5MB)</p>
-        </div>
-      )}
-
-      {selectedFile && !isProcessing && (
-        <div className="border border-slate-200 rounded-xl p-4 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white rounded-lg border border-slate-200 shadow-sm">
-              <FileType className="w-6 h-6 text-[#1a6fc4]" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-slate-900 truncate max-w-[300px]">{selectedFile.name}</p>
-              <p className="text-xs text-slate-500">{(selectedFile.size / 1024).toFixed(1)} KB</p>
-            </div>
-          </div>
-          <button onClick={clearSelection} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-      )}
-
-      {isProcessing && (
-        <div className="border border-slate-200 rounded-xl p-6 bg-slate-50">
-          <div className="flex flex-col items-center text-center">
-            <div className="w-10 h-10 border-4 border-slate-200 border-t-[#1a6fc4] rounded-full animate-spin mb-4" />
-            <h3 className="text-sm font-bold text-slate-900 mb-2">Processing CSV File...</h3>
-            <div className="w-full max-w-md">
-              <Progress value={progress} className="h-2 mb-2" />
-              <p className="text-xs font-semibold text-slate-500">{Math.round(progress)}% complete</p>
-            </div>
-          </div>
         </div>
       )}
     </div>
