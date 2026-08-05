@@ -186,7 +186,7 @@ export function EmployeeDashboard() {
                         <p className="text-xs text-slate-500 truncate">{userData?.email || '—'}</p>
                       </div>
                     </div>
-                    <div className="space-y-2.5 border-t border-slate-50 pt-3">
+                    {/* <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
                         { label: 'Role', value: 'Employee' },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
@@ -197,7 +197,7 @@ export function EmployeeDashboard() {
                           <span className="text-[11px] font-bold text-slate-700">{value}</span>
                         </div>
                       ))}
-                    </div>
+                    </div> */}
                   </CardContent>
                 </Card>
               </div>
