@@ -168,9 +168,7 @@ export function EmployeeManagement() {
   const handleUpdateEmployee = async () => {
     if (!selectedEmployee || !isFormValid) return;
     try {
-      const updated = await EmployeeService.updateEmployee(selectedEmployee.id, {
-        firstName: empFirstName.trim(),
-        lastName: empLastName.trim(),
+      const updated = await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
         phone: empPhone.trim(),
         address: empAddress.trim(),
         employeeType: empType,
@@ -199,7 +197,7 @@ export function EmployeeManagement() {
   const confirmDeleteEmployee = async () => {
     if (!employeeToDelete) return;
     try {
-      await EmployeeService.updateEmployee(employeeToDelete.id, { status: 'inactive' });
+      await EmployeeService.deactivateEmployee(employeeToDelete.id, userData?.schoolId ?? '');
       setEmployees(employees.map(e => e.id === employeeToDelete.id ? { ...e, status: 'inactive' as const } : e));
       showToast('success', 'Employee marked as inactive');
       setIsDeleteDialogOpen(false);

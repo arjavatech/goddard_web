@@ -1,6 +1,10 @@
+import { authedFetch, z } from './common';
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 export type Employee = {
   id: string;
+  userId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -10,155 +14,353 @@ export type Employee = {
   joinedOn: string;
   schoolId: string;
   status: 'active' | 'inactive';
+  isVerified?: boolean;
+};
+
+export type EmployeeFormTemplate = {
+  id: string;
+  schoolId: string;
+  formName: string;
+  formType?: string;
+  filloutFormId?: string;
+  dueDate?: string;
+  status?: string;
+  isRequired?: boolean;
+  displayOrder?: number;
 };
 
 export type EmployeeFormAssignment = {
   id: string;
   employeeId: string;
+  /** Alias for employee_form_template_id — kept for backward compatibility with existing screens. */
   formId: string;
-  status: 'Assigned' | 'Submitted' | 'Approved' | 'Rejected';
-  assignedBy: string;
-  assignedOn: string;
-  submittedOn?: string;
-  reviewedBy?: string;
-  reviewedOn?: string;
+  userId: string;
   schoolId: string;
+  assignmentSource?: string;
+  status?: string;
+  isRequired?: boolean;
+  assignedBy?: string;
+  assignedOn?: string;
+  approvedBy?: string;
+  approvedOn?: string;
+  notes?: string;
+  recentEditLink?: string;
+  recentPdfLink?: string;
+  // Joined from employee_form_templates:
+  formName?: string;
+  filloutFormId?: string;
+  dueDate?: string;
+  // Joined from users:
+  employeeFirstName?: string;
+  employeeLastName?: string;
 };
 
-// --- Repository Layer (localStorage mock) ---
-const EMPLOYEES_KEY = 'goddard_employees';
-const ASSIGNMENTS_KEY = 'goddard_employee_assignments';
+// ─── Mappers ─────────────────────────────────────────────────────────────────
 
-function getStoredEmployees(): Employee[] {
-  const data = localStorage.getItem(EMPLOYEES_KEY);
-  return data ? JSON.parse(data) : [];
+function mapEmployee(raw: any): Employee {
+  return {
+    id: raw.id ?? '',
+    userId: raw.user_id ?? '',
+    firstName: raw.first_name ?? '',
+    lastName: raw.last_name ?? '',
+    email: raw.email ?? '',
+    phone: raw.phone ?? '',
+    address: raw.address ?? '',
+    employeeType: raw.employee_type ?? '',
+    joinedOn: raw.joined_on ?? '',
+    schoolId: raw.school_id ?? '',
+    status: raw.is_active !== false ? 'active' : 'inactive',
+    isVerified: raw.is_verified ?? undefined,
+  };
 }
 
-function saveEmployees(employees: Employee[]) {
-  localStorage.setItem(EMPLOYEES_KEY, JSON.stringify(employees));
+function mapFormTemplate(raw: any): EmployeeFormTemplate {
+  return {
+    id: raw.id ?? '',
+    schoolId: raw.school_id ?? '',
+    formName: raw.form_name ?? '',
+    formType: raw.form_type ?? undefined,
+    filloutFormId: raw.fillout_form_id ?? undefined,
+    dueDate: raw.due_date ?? undefined,
+    status: raw.status ?? undefined,
+    isRequired: raw.is_required ?? undefined,
+    displayOrder: raw.display_order ?? undefined,
+  };
 }
 
-function getStoredAssignments(): EmployeeFormAssignment[] {
-  const data = localStorage.getItem(ASSIGNMENTS_KEY);
-  return data ? JSON.parse(data) : [];
+function mapAssignment(raw: any): EmployeeFormAssignment {
+  return {
+    id: raw.id ?? '',
+    employeeId: raw.employee_id ?? '',
+    formId: raw.employee_form_template_id ?? '',
+    userId: raw.user_id ?? '',
+    schoolId: raw.school_id ?? '',
+    assignmentSource: raw.assignment_source ?? undefined,
+    status: raw.status ?? undefined,
+    isRequired: raw.is_required ?? undefined,
+    assignedBy: raw.assigned_by ?? undefined,
+    assignedOn: raw.assigned_at ?? undefined,
+    approvedBy: raw.approved_by ?? undefined,
+    approvedOn: raw.approved_on ?? undefined,
+    notes: raw.notes ?? undefined,
+    recentEditLink: raw.recent_edit_link ?? undefined,
+    recentPdfLink: raw.recent_pdf_link ?? undefined,
+    formName: raw.form_name ?? undefined,
+    filloutFormId: raw.fillout_form_id ?? undefined,
+    dueDate: raw.due_date ?? undefined,
+    employeeFirstName: raw.employee_first_name ?? undefined,
+    employeeLastName: raw.employee_last_name ?? undefined,
+  };
 }
 
-function saveAssignments(assignments: EmployeeFormAssignment[]) {
-  localStorage.setItem(ASSIGNMENTS_KEY, JSON.stringify(assignments));
-}
-
-// --- Service Layer ---
+// ─── Service ─────────────────────────────────────────────────────────────────
 
 export const EmployeeService = {
+  // ── Employee CRUD ────────────────────────────────────────────────────────
+
   async fetchEmployees(schoolId: string): Promise<Employee[]> {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const employees = getStoredEmployees();
-    return employees.filter(e => e.schoolId === schoolId);
+    const data = await authedFetch(
+      { method: 'GET', url: `/employees?school_id=${schoolId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapEmployee);
   },
 
-  async fetchEmployeeDetails(id: string): Promise<Employee | null> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const employees = getStoredEmployees();
-    return employees.find(e => e.id === id) || null;
+  async fetchCurrentEmployee(schoolId: string): Promise<Employee> {
+    const data = await authedFetch(
+      { method: 'GET', url: `/employees/me?school_id=${schoolId}` },
+      z.any(),
+    );
+    return mapEmployee(data);
   },
 
-  async inviteEmployee(employeeData: Omit<Employee, 'id' | 'status'>): Promise<Employee> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const employees = getStoredEmployees();
-    
-    // Check if email already exists
-    if (employees.some(e => e.email === employeeData.email)) {
-      throw new Error('An employee with this email already exists.');
+  async fetchEmployeeDetails(id: string, schoolId: string): Promise<Employee | null> {
+    try {
+      const data = await authedFetch(
+        { method: 'GET', url: `/employees/${id}?school_id=${schoolId}` },
+        z.any(),
+      );
+      return mapEmployee(data);
+    } catch (err: any) {
+      if (err?.message?.includes('404') || err?.message?.toLowerCase().includes('not found')) {
+        return null;
+      }
+      throw err;
     }
+  },
 
-    const newEmployee: Employee = {
-      ...employeeData,
-      id: crypto.randomUUID(),
-      status: 'active',
+  async inviteEmployee(employeeData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string;
+    address?: string;
+    employeeType?: string;
+    joinedOn?: string;
+    schoolId: string;
+  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string }> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/employees/invite',
+        body: {
+          school_id: employeeData.schoolId,
+          first_name: employeeData.firstName,
+          last_name: employeeData.lastName,
+          email: employeeData.email,
+          phone: employeeData.phone,
+          address: employeeData.address,
+          employee_type: employeeData.employeeType,
+          joined_on: employeeData.joinedOn,
+        },
+      },
+      z.any(),
+    );
+    return {
+      employeeId: data.employee_id,
+      userId: data.user_id,
+      inviteId: data.invite_id,
+      emailSent: data.email_sent,
+      message: data.message,
     };
-
-    employees.push(newEmployee);
-    saveEmployees(employees);
-    return newEmployee;
   },
 
-  async updateEmployee(id: string, updates: Partial<Employee>): Promise<Employee> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const employees = getStoredEmployees();
-    const index = employees.findIndex(e => e.id === id);
-    if (index === -1) throw new Error('Employee not found');
-    
-    employees[index] = { ...employees[index], ...updates };
-    saveEmployees(employees);
-    return employees[index];
+  async updateEmployee(
+    id: string,
+    schoolId: string,
+    updates: { phone?: string; address?: string; employeeType?: string; joinedOn?: string },
+  ): Promise<Employee> {
+    const data = await authedFetch(
+      {
+        method: 'PATCH',
+        url: `/employees/${id}?school_id=${schoolId}`,
+        body: {
+          phone: updates.phone,
+          address: updates.address,
+          employee_type: updates.employeeType,
+          joined_on: updates.joinedOn,
+        },
+      },
+      z.any(),
+    );
+    return mapEmployee(data);
   },
+
+  async deactivateEmployee(id: string, schoolId: string): Promise<void> {
+    await authedFetch(
+      { method: 'DELETE', url: `/employees/${id}?school_id=${schoolId}` },
+      z.any(),
+    );
+  },
+
+  // ── Employee Form Templates ───────────────────────────────────────────────
+
+  async fetchEmployeeFormTemplates(schoolId: string): Promise<EmployeeFormTemplate[]> {
+    const data = await authedFetch(
+      { method: 'GET', url: `/employee-form-templates?school_id=${schoolId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapFormTemplate);
+  },
+
+  async createEmployeeFormTemplate(req: {
+    schoolId: string;
+    formName: string;
+    formType?: string;
+    filloutFormId?: string;
+    dueDate?: string;
+    status?: string;
+    isRequired?: boolean;
+    displayOrder?: number;
+  }): Promise<EmployeeFormTemplate> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/employee-form-templates',
+        body: {
+          school_id: req.schoolId,
+          form_name: req.formName,
+          form_type: req.formType,
+          fillout_form_id: req.filloutFormId,
+          due_date: req.dueDate || undefined,
+          status: req.status,
+          is_required: req.isRequired,
+          display_order: req.displayOrder,
+        },
+      },
+      z.any(),
+    );
+    return mapFormTemplate(data);
+  },
+
+  async updateEmployeeFormTemplate(req: {
+    id: string;
+    schoolId: string;
+    formName: string;
+    formType?: string;
+    filloutFormId?: string;
+    dueDate?: string;
+    status?: string;
+    isRequired?: boolean;
+    displayOrder?: number;
+  }): Promise<EmployeeFormTemplate> {
+    const data = await authedFetch(
+      {
+        method: 'PUT',
+        url: '/employee-form-templates',
+        body: {
+          id: req.id,
+          school_id: req.schoolId,
+          form_name: req.formName,
+          form_type: req.formType,
+          fillout_form_id: req.filloutFormId,
+          due_date: req.dueDate || undefined,
+          status: req.status,
+          is_required: req.isRequired,
+          display_order: req.displayOrder,
+        },
+      },
+      z.any(),
+    );
+    return mapFormTemplate(data);
+  },
+
+  async deleteEmployeeFormTemplate(formId: string, schoolId: string): Promise<void> {
+    await authedFetch(
+      { method: 'DELETE', url: `/employee-form-templates?form_id=${formId}&school_id=${schoolId}` },
+      z.any(),
+    );
+  },
+
+  // ── Employee Form Assignments ─────────────────────────────────────────────
 
   async fetchEmployeeFormAssignments(employeeId: string): Promise<EmployeeFormAssignment[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const assignments = getStoredAssignments();
-    return assignments.filter(a => a.employeeId === employeeId);
+    const data = await authedFetch(
+      { method: 'GET', url: `/employee-form-assignments?employee_id=${employeeId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapAssignment);
   },
 
   async fetchSchoolFormAssignments(schoolId: string): Promise<EmployeeFormAssignment[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const assignments = getStoredAssignments();
-    return assignments.filter(a => a.schoolId === schoolId);
+    const data = await authedFetch(
+      { method: 'GET', url: `/employee-form-assignments?school_id=${schoolId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapAssignment);
   },
 
-  async assignFormToEmployee(employeeId: string, formId: string, schoolId: string, assignedBy: string): Promise<EmployeeFormAssignment> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const assignments = getStoredAssignments();
-    
-    // Prevent duplicate assignments
-    if (assignments.some(a => a.employeeId === employeeId && a.formId === formId)) {
-      throw new Error('This form is already assigned to the employee.');
-    }
-
-    const newAssignment: EmployeeFormAssignment = {
-      id: crypto.randomUUID(),
-      employeeId,
-      formId,
-      status: 'Assigned',
-      assignedBy,
-      assignedOn: new Date().toISOString(),
-      schoolId,
-    };
-
-    assignments.push(newAssignment);
-    saveAssignments(assignments);
-    return newAssignment;
+  async assignFormToEmployee(
+    employeeId: string,
+    formTemplateId: string,
+    schoolId: string,
+    _assignedBy?: string,
+  ): Promise<EmployeeFormAssignment> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/employee-form-assignments',
+        body: {
+          employee_id: employeeId,
+          employee_form_template_id: formTemplateId,
+          school_id: schoolId,
+        },
+      },
+      z.any(),
+    );
+    return mapAssignment(data);
   },
 
-  async submitEmployeeForm(assignmentId: string, formData: any): Promise<EmployeeFormAssignment> {
-    await new Promise(resolve => setTimeout(resolve, 400));
-    const assignments = getStoredAssignments();
-    const index = assignments.findIndex(a => a.id === assignmentId);
-    if (index === -1) throw new Error('Assignment not found');
-    
-    // In a real app, formData would be saved to a forms submissions table
-    // Here we just update the assignment status
-    assignments[index].status = 'Submitted';
-    assignments[index].submittedOn = new Date().toISOString();
-    
-    // Mock save form data to localStorage
-    localStorage.setItem(`form_submission_${assignmentId}`, JSON.stringify(formData));
-
-    saveAssignments(assignments);
-    return assignments[index];
+  async reviewEmployeeForm(
+    assignmentId: string,
+    schoolId: string,
+    status: string,
+    notes?: string,
+  ): Promise<EmployeeFormAssignment> {
+    const data = await authedFetch(
+      {
+        method: 'PUT',
+        url: '/employee-form-assignments/review',
+        body: {
+          assignment_id: assignmentId,
+          school_id: schoolId,
+          status,
+          notes,
+        },
+      },
+      z.any(),
+    );
+    return mapAssignment(data);
   },
 
-  async reviewEmployeeForm(assignmentId: string, status: 'Approved' | 'Rejected', reviewerName: string): Promise<EmployeeFormAssignment> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    const assignments = getStoredAssignments();
-    const index = assignments.findIndex(a => a.id === assignmentId);
-    if (index === -1) throw new Error('Assignment not found');
-    
-    assignments[index].status = status;
-    assignments[index].reviewedBy = reviewerName;
-    assignments[index].reviewedOn = new Date().toISOString();
+  async deleteEmployeeFormAssignment(assignmentId: string, schoolId: string): Promise<void> {
+    await authedFetch(
+      { method: 'DELETE', url: `/employee-form-assignments?assignment_id=${assignmentId}&school_id=${schoolId}` },
+      z.any(),
+    );
+  },
 
-    saveAssignments(assignments);
-    return assignments[index];
-  }
+  async submitEmployeeForm(_assignmentId: string, _formData: any): Promise<EmployeeFormAssignment> {
+    throw new Error('Form submission is handled by Fillout directly via webhook.');
+  },
 };

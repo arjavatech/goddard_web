@@ -10,6 +10,7 @@ import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment, getFormResumeLink } from '../../services/api/admin';
+import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { Document, Page, pdfjs } from 'react-pdf';
@@ -144,6 +145,8 @@ export function FormView() {
   // const filloutFormId = location.state?.filloutFormId;
   const studentFormAssignmentId = location.state?.studentFormAssignmentId;
   const recentPdfLink = location.state?.recentPdfLink;
+  const isEmployeeForm = location.state?.isEmployeeForm as boolean | undefined;
+  const schoolId = location.state?.schoolId as string | undefined;
 
   const usesResumeLink = (() => {
     const link = recentEditLink || filloutFormId || filloutFormUrl;
@@ -189,8 +192,8 @@ export function FormView() {
       }
     }
 
-    // Append student_form_assignment_id if available and not already in URL
-    if (url && studentFormAssignmentId && !url.includes('student_form_assignment_id')) {
+    // Append student_form_assignment_id if available and not already in URL (skip for employee forms)
+    if (url && studentFormAssignmentId && !url.includes('student_form_assignment_id') && !isEmployeeForm) {
       url += `${url.includes('?') ? '&' : '?'}student_form_assignment_id=${studentFormAssignmentId}`;
     }
 
@@ -236,12 +239,11 @@ export function FormView() {
 
     setIsApproving(true);
     try {
-      await reviewStudentFormAssignment(
-        studentFormAssignmentId,
-        'approved',
-        notes,
-        user.id
-      );
+      if (isEmployeeForm && schoolId) {
+        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Approved', notes);
+      } else {
+        await reviewStudentFormAssignment(studentFormAssignmentId, 'approved', notes, user.id);
+      }
 
       showToast('success', 'Form approved successfully');
 
@@ -276,12 +278,11 @@ export function FormView() {
 
     setIsRejecting(true);
     try {
-      await reviewStudentFormAssignment(
-        studentFormAssignmentId,
-        'rejected',
-        notes,
-        user.id
-      );
+      if (isEmployeeForm && schoolId) {
+        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Rejected', notes);
+      } else {
+        await reviewStudentFormAssignment(studentFormAssignmentId, 'rejected', notes, user.id);
+      }
 
       showToast('success', 'Form rejected with notes');
 

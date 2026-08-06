@@ -17,7 +17,8 @@ import { usePageSize } from '../../hooks/usePageSize';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
-import { fetchFormTemplates } from '../../services/api/dashboard';
+import { normalizeFormStatus } from '../../lib/formStatus';
+import { Link } from 'react-router-dom';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
 
@@ -25,6 +26,7 @@ interface LocalDueForm {
   id: string;
   formId: string;
   formName: string;
+  employeeId: string;
   employeeName: string;
   employeeType: string;
   employeeEmail: string;
@@ -58,7 +60,7 @@ export function EmployeeDueForms() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'card');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('empDueFormsViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('empDueForms', 10);
   useEffect(() => {
@@ -71,7 +73,7 @@ export function EmployeeDueForms() {
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
-  const { userData } = useUserContext();
+  const { userData, schoolSubdomain } = useUserContext();
 
   const schoolId = userData?.schoolId;
 
@@ -176,55 +178,47 @@ export function EmployeeDueForms() {
         setLoading(true);
         if (!schoolId) return;
 
-        const [employees, templates, assignments] = await Promise.all([
+        const [employees, assignments] = await Promise.all([
           EmployeeService.fetchEmployees(schoolId).catch(() => [] as Employee[]),
-          fetchFormTemplates(schoolId).catch(() => []),
           EmployeeService.fetchSchoolFormAssignments(schoolId).catch(() => [] as EmployeeFormAssignment[])
         ]);
 
         if (!isMounted) return;
 
         const employeeMap = new Map(employees.map(e => [e.id, e]));
-        const templateMap = new Map(templates.map((t: any) => [String(t.id), t]));
         const today = new Date();
         const mappedForms: LocalDueForm[] = [];
 
         assignments.forEach(assignment => {
           const employee = employeeMap.get(assignment.employeeId);
           if (!employee) return;
-          const template = templateMap.get(assignment.formId);
-          const formName = template?.formName || 'Employee Form';
-          const dueDate = template?.due_date || null;
+          const formName = assignment.formName || 'Employee Form';
+          const dueDate = assignment.dueDate || null;
 
-          let status: DueFormStatus = 'pending';
-          if (assignment.status === 'Approved') {
-            status = 'completed';
-          } else if (assignment.status === 'Submitted') {
+          const ns = normalizeFormStatus(assignment.status);
+          if (ns === 'Approved') return; // completed, skip
+
+          let status: DueFormStatus;
+          if (ns === 'Submitted') {
             status = 'submitted';
-          } else if (assignment.status === 'Rejected') {
+          } else if (ns === 'Needs Revision' || ns === 'In Progress') {
             status = 'in_progress';
           } else {
             const due = parseDueDate(dueDate);
-            if (due && due < today) {
-              status = 'overdue';
-            }
-          }
-
-          // Skip completed and submitted forms
-          if (status === 'completed' || status === 'submitted') {
-            return;
+            status = (due && due < today) ? 'overdue' : 'pending';
           }
 
           mappedForms.push({
             id: assignment.id,
             formId: assignment.formId,
             formName,
+            employeeId: assignment.employeeId,
             employeeName: `${employee.firstName} ${employee.lastName}`,
             employeeType: employee.employeeType || 'Employee',
             employeeEmail: employee.email,
             dueDate,
             status,
-            assignedDate: assignment.assignedOn
+            assignedDate: assignment.assignedOn ?? ''
           });
         });
 
@@ -381,7 +375,7 @@ export function EmployeeDueForms() {
         due_date: form.dueDate || ''
       }));
 
-      const response = await fetch(`${apiBaseUrl}/emails/bulk-form-reminders`, {
+      const response = await fetch(`${apiBaseUrl}/emails/bulk-employee-form-reminders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -436,6 +430,8 @@ export function EmployeeDueForms() {
         return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />Needs Attention</Badge>;
       case 'pending':
         return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+      case 'submitted':
+        return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending Approval</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
@@ -655,7 +651,7 @@ export function EmployeeDueForms() {
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
-                      options={['pending', 'in_progress', 'overdue']}
+                      options={['pending', 'submitted', 'in_progress', 'overdue']}
                       placeholder="Select statuses"
                       label="Status"
                     />
@@ -867,7 +863,14 @@ export function EmployeeDueForms() {
                             </div>
                           </div>
 
-                          <div className="pt-3 border-t border-slate-100">
+                          <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                            {form.status === 'submitted' && (
+                              <Link to={`/${schoolSubdomain}/admin/employees/${form.employeeId}`} className="w-full">
+                                <Button size="sm" className="w-full h-9 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 transition-all duration-200">
+                                  Review Form
+                                </Button>
+                              </Link>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -956,20 +959,29 @@ export function EmployeeDueForms() {
                                 {getStatusBadge(form.status)}
                               </td>
                               <td className="py-4 px-6 text-right">
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleSendReminder([form.id])}
-                                  disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
-                                  className="h-8 px-3 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 border border-[#0F2D52] hover:text-white transition-all duration-200 font-bold"
-                                >
-                                  {remindingFormIds.has(form.id) ? (
-                                    <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                                  ) : (
-                                    <Mail className="h-3.5 w-3.5 mr-1" />
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {form.status === 'submitted' && (
+                                    <Link to={`/${schoolSubdomain}/admin/employees/${form.employeeId}`}>
+                                      <Button size="sm" className="h-8 px-3 text-xs rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 transition-all duration-200 font-bold">
+                                        Review
+                                      </Button>
+                                    </Link>
                                   )}
-                                  <span>{remindingFormIds.has(form.id) ? 'Sending...' : 'Remind'}</span>
-                                </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSendReminder([form.id])}
+                                    disabled={form.status === 'completed' || remindingFormIds.has(form.id)}
+                                    className="h-8 px-3 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 border border-[#0F2D52] hover:text-white transition-all duration-200 font-bold"
+                                  >
+                                    {remindingFormIds.has(form.id) ? (
+                                      <div className="h-3 w-3 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                      <Mail className="h-3.5 w-3.5 mr-1" />
+                                    )}
+                                    <span>{remindingFormIds.has(form.id) ? 'Sending...' : 'Remind'}</span>
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           ))}
