@@ -612,10 +612,10 @@ export function ParentDetails() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-500 px-1 pt-1">
+                      {/* <div className="flex items-center gap-2 text-xs font-bold text-slate-500 px-1 pt-1">
                         <School className="h-4 w-4 text-slate-400" />
-                        <span>{isPrimaryParent ? 'Primary Guardian' : 'Secondary Guardian'}</span>
-                      </div>
+                        <span>{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</span>
+                      </div> */}
                     </div>
                   );
                 })()}
