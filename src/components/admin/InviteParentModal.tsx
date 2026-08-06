@@ -255,7 +255,7 @@ export function InviteParentModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+            className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200"
           >
             Cancel
           </Button>

@@ -433,15 +433,6 @@ export function AdminDashboard() {
       btnText: "Add Form",
       onClick: () => setIsAddDialogOpen(true)
     },
-    {
-      title: "Invite Employee",
-      description: "Add a new employee to the school portal.",
-      icon: UserCheck,
-      iconBg: "bg-[#EFF5FB]",
-      iconColor: "text-[#0F2D52]",
-      btnText: "Invite Employee",
-      onClick: () => { resetEmployeeForm(); setIsInviteEmployeeDialogOpen(true); }
-    }
   ];
 
   const totalCompleted = enrollmentProgress.reduce((sum, item) => sum + item.completed, 0);
@@ -626,7 +617,7 @@ export function AdminDashboard() {
         {/* Quick Actions Grid */}
         <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
@@ -988,6 +979,7 @@ export function AdminDashboard() {
               <Button
                 onClick={handleAddClassroom}
                 disabled={!newClassroomName.trim()}
+                className="bg-[#0F2D52] hover:bg-[#1558a0] text-white"
               >
                 Add Classroom
               </Button>

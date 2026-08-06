@@ -504,44 +504,43 @@ export function ClassroomManagement() {
 
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
-          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
-            <DialogTitle className="text-lg font-bold text-slate-900">Add New Classroom</DialogTitle>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+          <DialogHeader>
+            <DialogTitle>Add New Classroom</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-2">
+              Classroom Name
+            </label>
+            <Input
+              value={newClassroomName}
+              onChange={e => {
+                setNewClassroomName(e.target.value);
+                if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+              }}
+              placeholder="Enter classroom name"
+              className={`${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+              autoFocus
+            />
+            {classroomErrors.newClassroomName && (
+              <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
+            )}
           </div>
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">Classroom Name</label>
-              <Input
-                value={newClassroomName}
-                onChange={e => {
-                  setNewClassroomName(e.target.value);
-                  if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
-                }}
-                placeholder="Enter classroom name"
-                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
-                autoFocus
-              />
-              {classroomErrors.newClassroomName && (
-                <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleAddClassroom}
-              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all"
+              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1558a0] text-white transition-all"
               disabled={!newClassroomName.trim()}
             >
               Add Classroom
             </AsyncButton>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

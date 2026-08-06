@@ -54,7 +54,7 @@ export function AddFormModal({
         </DialogHeader>
         <div className="py-2 sm:py-3 space-y-3 sm:space-y-4">
           <div>
-            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Form Name</label>
+            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">Form Name</label>
             <Input
               value={formName}
               onChange={e => {
@@ -69,7 +69,7 @@ export function AddFormModal({
           </div>
 
           <div>
-            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Form Link</label>
+            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">Form Link</label>
             <Input
               value={formLink}
               onChange={e => {
@@ -84,7 +84,7 @@ export function AddFormModal({
 
           {setFormStatus !== undefined && (
             <div>
-              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Form Status</label>
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">Form Status</label>
               <Select value={formStatus} onValueChange={(value) => setFormStatus(value as 'active' | 'inactive' | 'school_default')}>
                 <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500">
                   <SelectValue placeholder="Select status" />
@@ -99,7 +99,7 @@ export function AddFormModal({
           )}
 
           <div>
-            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">Due Date</label>
+            <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate mb-1.5">Due Date</label>
             <Input
               type="date"
               value={formDueDate}
@@ -118,7 +118,7 @@ export function AddFormModal({
           <Button
             variant="outline"
             onClick={onClose}
-            className="w-full sm:w-auto h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+            className="w-full sm:w-auto h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200"
           >
             Cancel
           </Button>
