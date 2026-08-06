@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip } from 'recharts';
 
 import { fetchDashboardMetrics, createFormTemplate, inviteParent, fetchClassrooms, createClassroom, fetchParentDetails } from '../../services/api/admin';
+import { EmployeeService } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
 import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
@@ -68,6 +69,17 @@ export function AdminDashboard() {
   const [isDialogClosing, setIsDialogClosing] = useState(false);
   const [isAddClassroomDialogOpen, setIsAddClassroomDialogOpen] = useState(false);
   const [newClassroomName, setNewClassroomName] = useState('');
+  // Employee invite state
+  const [isInviteEmployeeDialogOpen, setIsInviteEmployeeDialogOpen] = useState(false);
+  const [empFirstName, setEmpFirstName] = useState('');
+  const [empLastName, setEmpLastName] = useState('');
+  const [empEmail, setEmpEmail] = useState('');
+  const [empPhone, setEmpPhone] = useState('');
+  const [empAddress, setEmpAddress] = useState('');
+  const [empType, setEmpType] = useState('Full Time');
+  const [empJoinedOn, setEmpJoinedOn] = useState('');
+  const [empEmailError, setEmpEmailError] = useState('');
+  const [isInvitingEmployee, setIsInvitingEmployee] = useState(false);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -295,6 +307,35 @@ export function AdminDashboard() {
     }
   };
 
+  const resetEmployeeForm = () => {
+    setEmpFirstName(''); setEmpLastName(''); setEmpEmail('');
+    setEmpPhone(''); setEmpAddress(''); setEmpType('Full Time');
+    setEmpJoinedOn(''); setEmpEmailError('');
+  };
+
+  const handleInviteEmployee = async () => {
+    if (!schoolId) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(empEmail)) { setEmpEmailError('Please enter a valid email address'); return; }
+    setIsInvitingEmployee(true);
+    try {
+      await EmployeeService.inviteEmployee({
+        firstName: empFirstName.trim(), lastName: empLastName.trim(),
+        email: empEmail.trim(), phone: empPhone.trim(),
+        address: empAddress.trim(), employeeType: empType,
+        joinedOn: empJoinedOn, schoolId,
+      });
+      showToast('success', 'Employee invited successfully');
+      setIsInviteEmployeeDialogOpen(false);
+      resetEmployeeForm();
+    } catch (err: any) {
+      if (err.message?.includes('already exists')) setEmpEmailError('Email already exists');
+      else showToast('error', err.message || 'Failed to invite employee');
+    } finally {
+      setIsInvitingEmployee(false);
+    }
+  };
+
   const handleAddClassroom = async () => {
     if (!newClassroomName.trim()) return;
 
@@ -391,6 +432,15 @@ export function AdminDashboard() {
       iconColor: "text-[#1a6fc4]",
       btnText: "Add Form",
       onClick: () => setIsAddDialogOpen(true)
+    },
+    {
+      title: "Invite Employee",
+      description: "Add a new employee to the school portal.",
+      icon: UserCheck,
+      iconBg: "bg-[#EFF5FB]",
+      iconColor: "text-[#0F2D52]",
+      btnText: "Invite Employee",
+      onClick: () => { resetEmployeeForm(); setIsInviteEmployeeDialogOpen(true); }
     }
   ];
 
@@ -576,24 +626,24 @@ export function AdminDashboard() {
         {/* Quick Actions Grid */}
         <div className="space-y-3 animate-fade-in-up" style={{ animationDelay: '50ms' }}>
           <h3 className="text-[10px] font-bold uppercase tracking-[0.08em] text-slate-400 px-0.5">Quick Actions</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             {quickActions.map((action, idx) => {
               const Icon = action.icon;
               return (
-                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex flex-row md:flex-col xl:flex-row md:items-stretch xl:items-center justify-between group transition-all duration-300 gap-2 sm:gap-4">
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                <div key={idx} className="glass-card p-3 sm:p-4 hover:border-[#1a6fc4]/20 hover:shadow-md border border-slate-100 flex flex-col gap-3 group transition-all duration-300">
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                     <div className={`p-2 sm:p-2.5 rounded-xl ${action.iconBg} flex-shrink-0 transition-all duration-300 group-hover:scale-110 shadow-sm border border-white`}>
                       <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${action.iconColor}`} />
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-slate-800 leading-snug">{action.title}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed truncate hidden sm:block">{action.description}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed line-clamp-2 hidden sm:block">{action.description}</p>
                     </div>
                   </div>
                   <Button
                     onClick={action.onClick}
                     variant="default"
-                    className="h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold flex-shrink-0 whitespace-nowrap md:w-full xl:w-auto md:mt-2.5 xl:mt-0"
+                    className="w-full h-7 sm:h-8 px-2 text-[10px] sm:text-[11px] rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-95 shadow-sm border-none font-bold whitespace-nowrap"
                   >
                     {action.btnText}
                   </Button>
@@ -793,6 +843,64 @@ export function AdminDashboard() {
         </div>
 
         {/* Existing Modals and Dialogs */}
+        {/* Invite Employee Dialog */}
+        <Dialog open={isInviteEmployeeDialogOpen} onOpenChange={(open) => { if (!open) { setIsInviteEmployeeDialogOpen(false); resetEmployeeForm(); } }}>
+          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6" preventClose>
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-lg font-bold text-slate-900">Invite New Employee</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">First Name</label>
+                  <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="h-10 rounded-xl" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Last Name</label>
+                  <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="h-10 rounded-xl" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Email</label>
+                <Input type="email" value={empEmail} onChange={(e) => { setEmpEmail(e.target.value); setEmpEmailError(''); }} placeholder="Email" className={`h-10 rounded-xl ${empEmailError ? 'border-red-400' : ''}`} />
+                {empEmailError && <p className="text-red-500 text-xs mt-1">{empEmailError}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
+                <Input value={empPhone} onChange={(e) => setEmpPhone(e.target.value)} placeholder="Phone" className="h-10 rounded-xl" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>
+                <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="h-10 rounded-xl" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Type</label>
+                  <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
+                    <option value="Full Time">Full Time</option>
+                    <option value="Part Time">Part Time</option>
+                    <option value="Contractor">Contractor</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Joined On</label>
+                  <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="h-10 rounded-xl" />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={() => { setIsInviteEmployeeDialogOpen(false); resetEmployeeForm(); }}>Cancel</Button>
+              <Button
+                onClick={handleInviteEmployee}
+                disabled={isInvitingEmployee || !empFirstName.trim() || !empLastName.trim() || !empEmail.trim() || !empJoinedOn}
+                className="bg-[#0F2D52] hover:bg-[#1c477c] text-white"
+              >
+                {isInvitingEmployee ? 'Sending...' : 'Send Invite'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         <AddFormModal
           isOpen={isAddDialogOpen}
           onClose={() => {

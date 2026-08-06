@@ -12,8 +12,8 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
-import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
+import { fetchParentDetails } from '../../services/api/admin';
+import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
@@ -167,12 +167,8 @@ export function ParentDetails() {
           }
           return;
         }
-        const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(schoolId).catch(() => []), fetchClassrooms(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchEnrollmentChildren(schoolId).catch(() => [])]);
+        const [templates] = await Promise.all([fetchFormTemplates(schoolId).catch(() => [])]);
         if (!isMounted) return;
-        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
-          id: cls.id,
-          name: cls.name
-        }]));
         // Process children directly from parent record which has forms data
         const processedChildren = parentRecord.children?.map((child: any) => {
           let formsArray: Form[] = [];
@@ -213,7 +209,7 @@ export function ParentDetails() {
           }
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
           const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
-          const classroomInfo = classroomByName.get((child.classroomName ?? 'Unassigned').toLowerCase()) ?? {
+          const classroomInfo = {
             id: child.classroomId ?? 'Unassigned',
             name: child.classroomName ?? 'Unassigned'
           };
@@ -565,13 +561,13 @@ export function ParentDetails() {
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5 sm:hidden">
                   <MailIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span className="text-xs text-slate-500 font-medium truncate">{parent.email}</span>
+                  <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-500 font-medium`}>{parent.email}</div></div>
                 </div>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-2 bg-[#EFF5FB] px-4 py-2 rounded-xl border border-blue-50 text-xs font-bold text-[#0F2D52] flex-shrink-0 max-w-[280px]">
               <MailIcon className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="truncate">{parent.email}</span>
+              <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap `}>{parent.email}</div></div>
             </div>
           </div>
         </div>
@@ -595,7 +591,7 @@ export function ParentDetails() {
                         <MailIcon className="h-4 w-4 text-[#0F2D52] mt-0.5" />
                         <div className="min-w-0 flex-1">
                           <div className="font-bold text-slate-800 text-xs truncate">{parent.firstName} {parent.lastName}</div>
-                          <div className="text-xs text-slate-500 font-medium truncate mt-0.5">{parent.email}</div>
+                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-500 font-medium mt-0.5`}>{parent.email}</div></div>
                           <div className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 tracking-wider">{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</div>
                         </div>
                       </div>

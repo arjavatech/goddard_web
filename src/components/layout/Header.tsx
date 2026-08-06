@@ -17,11 +17,18 @@ export function Header() {
 
   const initials = userData?.firstName && userData?.lastName
     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
-    : 'P';
+    : 'U';
 
   const displayName = userData?.firstName && userData?.lastName
     ? `${userData.firstName} ${userData.lastName}`
-    : 'Parent User';
+    : userData?.email || 'User';
+
+  const roleLabel = (() => {
+    const role = userData?.role?.toLowerCase();
+    if (role === 'employee') return 'Employee';
+    if (role === 'admin') return 'Admin';
+    return 'Parent';
+  })();
 
   const handleLogout = () => {
     localStorage.clear();
@@ -63,7 +70,7 @@ export function Header() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                        <p className="text-xs text-slate-400">Parent</p>
+                        <p className="text-xs text-slate-400">{roleLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -104,7 +111,7 @@ export function Header() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                        <p className="text-xs text-slate-400">Parent</p>
+                        <p className="text-xs text-slate-400">{roleLabel}</p>
                       </div>
                     </div>
                   </div>
@@ -159,7 +166,7 @@ export function Header() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                      <p className="text-xs text-slate-400">Parent</p>
+                      <p className="text-xs text-slate-400">{roleLabel}</p>
                     </div>
                   </div>
                 </div>
@@ -184,7 +191,7 @@ export function Header() {
           <DialogHeader>
             <DialogTitle>Sign out?</DialogTitle>
             <DialogDescription>
-              You'll need to sign in again to access your parent dashboard.
+              You'll need to sign in again to access your {roleLabel.toLowerCase()} dashboard.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-1">

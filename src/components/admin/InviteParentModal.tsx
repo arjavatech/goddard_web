@@ -5,6 +5,7 @@ import { Input } from '../ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { AsyncButton } from '../ui/async-button';
 import { ValidatedEmailInput } from '../ui/validated-email-input';
+import { PhoneInput, validatePhoneNumber } from '../ui/phone-input';
 import { Mail, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
 
 interface InviteParentModalProps {
@@ -139,12 +140,20 @@ export function InviteParentModal({
               />
               <div>
                 <label className="block text-sm font-medium mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
+                <PhoneInput
                   value={parentPhoneNumber}
-                  onChange={e => setParentPhoneNumber(e.target.value.replace(/[^0-9+\-\s()]/g, ''))}
-                  placeholder="Enter phone number"
+                  onChange={val => {
+                    setParentPhoneNumber(val);
+                    if (inviteFormErrors.parentPhoneNumber) setInviteFormErrors(prev => ({ ...prev, parentPhoneNumber: '' }));
+                  }}
+                  onBlur={() => {
+                    if (!validatePhoneNumber(parentPhoneNumber)) {
+                      setInviteFormErrors(prev => ({ ...prev, parentPhoneNumber: 'Please enter a valid phone number' }));
+                    }
+                  }}
+                  error={!!inviteFormErrors.parentPhoneNumber}
                 />
+                {inviteFormErrors.parentPhoneNumber && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.parentPhoneNumber}</p>}
               </div>
             </div>
           </div>
@@ -253,7 +262,7 @@ export function InviteParentModal({
             onClick={onInvite}
             className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200"
             disabled={(() => {
-              const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim();
+              const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim() && validatePhoneNumber(parentPhoneNumber);
               const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;
               if (!primaryParentValid || !childValid) return true;
               const hasSecondaryParentData =
@@ -262,7 +271,7 @@ export function InviteParentModal({
                 secondaryParentEmail.trim() ||
                 secondaryParentPhoneNumber.trim();
               if (hasSecondaryParentData) {
-                return !(secondaryParentFirstName.trim() && secondaryParentLastName.trim() && secondaryParentEmail.trim());
+                return !(secondaryParentFirstName.trim() && secondaryParentLastName.trim() && secondaryParentEmail.trim() && validatePhoneNumber(secondaryParentPhoneNumber));
               }
               return false;
             })()}
@@ -396,17 +405,23 @@ function SecondaryParentSection({
             />
             <div>
               <label className="block text-sm font-medium mb-1.5">Phone Number (Optional)</label>
-              <Input
-                type="tel"
+              <PhoneInput
                 value={secondaryParentPhoneNumber}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9+\-\s()]/g, '');
+                onChange={val => {
                   setSecondaryParentPhoneNumber(val);
                   if (!val.trim() && !secondaryParentFirstName.trim() && !secondaryParentLastName.trim())
                     setInviteFormErrors(prev => ({ ...prev, secondaryParentEmail: '' }));
+                  if (inviteFormErrors.secondaryParentPhoneNumber)
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentPhoneNumber: '' }));
                 }}
-                placeholder="Enter phone number"
+                onBlur={() => {
+                  if (!validatePhoneNumber(secondaryParentPhoneNumber)) {
+                    setInviteFormErrors(prev => ({ ...prev, secondaryParentPhoneNumber: 'Please enter a valid phone number' }));
+                  }
+                }}
+                error={!!inviteFormErrors.secondaryParentPhoneNumber}
               />
+              {inviteFormErrors.secondaryParentPhoneNumber && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentPhoneNumber}</p>}
             </div>
           </div>
         </div>

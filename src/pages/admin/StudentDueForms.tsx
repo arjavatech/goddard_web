@@ -12,7 +12,9 @@ import { DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { PageLoader } from '../../components/ui/page-loader';
 import { StatCard } from '../../components/ui/stat-card';
 import { downloadCSV, printAsPDF } from '../../lib/export';
@@ -33,6 +35,7 @@ export function DueForms() {
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
+  const [itemsPerPage, setItemsPerPage] = usePageSize('studentDueForms', 10);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
@@ -314,24 +317,14 @@ export function DueForms() {
     setFilteredForms(sorted);
   }, [filteredFormsData, sortBy, sortOrder]);
 
-  const calculatedItemsPerPage = useMemo(() => {
-    if (viewMode !== 'card') return 10;
-    // Mobile view (<768px) is handled internally by usePagination.
-    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
-    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
-    if (windowWidth >= 768 && windowWidth < 1024) {
-      return 10;
-    }
-    return 9;
-  }, [viewMode, windowWidth]);
+
 
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedForms,
-    itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredForms, itemsPerPage: calculatedItemsPerPage });
+  } = usePagination({ data: filteredForms, itemsPerPage });
 
   const dueFormsExportHeaders = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
   
@@ -417,7 +410,7 @@ export function DueForms() {
         
         if (total_failed > 0) {
           const failedEmailsList = failed_emails.filter((email: string) => email).join(', ');
-          showToast('warning', `${message}. Failed emails: ${failedEmailsList}`);
+          showToast('error', `${message}. Failed emails: ${failedEmailsList}`);
         } else {
           showToast('success', message);
         }
@@ -518,7 +511,7 @@ export function DueForms() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">              Due Forms Tracking
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">             Student Due Forms Tracking
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
               Monitor form completion status and send reminders to parents
@@ -836,9 +829,18 @@ export function DueForms() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
+            </CardHeader>
+            <div className="flex justify-end items-center px-4 py-3 border-b border-slate-50 bg-slate-50/20">
+              <div className="flex items-center gap-2">
+                <PageSizeSelector
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={setItemsPerPage}
+                  options={[10, 25, 50, 100]}
+                />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            <CardContent className="p-0">
             {filteredForms.length > 0 ? (
               <>
                 {/* Conditional Rendering of Views */}
@@ -926,6 +928,7 @@ export function DueForms() {
                       totalPages={totalPages}
                       totalItems={filteredForms.length}
                       itemsPerPage={itemsPerPage}
+                      onPageSizeChange={setItemsPerPage}
                       onPageChange={setCurrentPage}
                     />
                   </div>
@@ -1022,6 +1025,7 @@ export function DueForms() {
                         totalPages={totalPages}
                         totalItems={filteredForms.length}
                         itemsPerPage={itemsPerPage}
+                        onPageSizeChange={setItemsPerPage}
                         onPageChange={setCurrentPage}
                         className="flex"
                       />

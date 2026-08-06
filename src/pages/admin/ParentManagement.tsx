@@ -13,8 +13,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Link } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { usePagination } from '../../hooks/usePagination';
-import { DataTable } from '../../components/ui/data-table';
-import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { usePageSize } from '../../hooks/usePageSize';
+import { DataGrid, ColumnDef } from '../../components/ui/data-grid';
+
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
@@ -109,6 +110,8 @@ export function ParentManagement() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('parentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('parentViewMode', mode); };
+  const [itemsPerPage, setItemsPerPage] = usePageSize('parent', 10);
+  
   useEffect(() => {
     const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
     window.addEventListener('resize', handleResize);
@@ -246,9 +249,164 @@ export function ParentManagement() {
     currentPage,
     totalPages,
     paginatedData: paginatedParents,
-    itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: sortedParents, itemsPerPage: viewMode === 'card' ? 9 : 10 });
+  } = usePagination({ data: sortedParents, itemsPerPage });
+
+  const parentColumns = useMemo<ColumnDef<Parent>[]>(() => [
+    {
+      id: 'name',
+      header: 'Parent Name',
+      className: 'w-1/4 pl-6',
+      hideInCardBody: true,
+      cell: (parent) => (
+        <div className="flex items-center gap-3">
+          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="bg-[#044ba0] text-white font-bold" />
+          <div className="min-w-0">
+            {parent.signupStatus === 'Signed' ? (
+              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-[#0F2D52] hover:underline text-sm block truncate">
+                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+              </Link>
+            ) : (
+              <span className="font-bold text-slate-400 cursor-not-allowed text-sm block truncate">
+                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
+              </span>
+            )}
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'contact',
+      header: 'Email & Contact',
+      className: 'w-auto',
+      hideInCardBody: true,
+      cell: (parent) => (
+        <div className="text-xs font-semibold text-slate-600">
+          <div className="whitespace-nowrap font-medium text-slate-900">{parent.email}</div>
+          <div className="text-slate-400 mt-0.5">{(parent as any).phoneNumber || 'No phone number'}</div>
+        </div>
+      )
+    },
+    {
+      id: 'children',
+      header: 'Linked Children',
+      className: 'w-1/3',
+      hideInCardBody: true,
+      cell: (parent) => (
+        <>
+          {parent.children.length === 0 ? (
+            <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
+          ) : (
+            <div className="flex flex-wrap gap-2 py-1 max-w-sm">
+              {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                <div 
+                  key={child.id} 
+                  className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
+                >
+                  <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
+                  <Link
+                    to={`/admin/parents/${parent.id}`}
+                    state={{ parentData: parent, selectedChildId: child.id }}
+                    className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
+                  >
+                    {child.firstName} {child.lastName}
+                  </Link>
+                  <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
+                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
+                    {child.classroom.name}
+                  </span>
+                </div>
+              ))}
+              {parent.children.length > 2 && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    toggleParentExpanded(parent.id);
+                  }}
+                  className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
+                >
+                  {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      className: 'w-1/8 text-center',
+      hideInCardBody: true,
+      cell: (parent) => (
+        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="inline-flex items-center justify-center text-[11px] sm:text-xs font-bold rounded-full px-3 py-1 whitespace-nowrap min-w-[100px]">
+          {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
+          {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
+          {parent.signupStatus}
+        </Badge>
+      )
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      className: 'w-1/8 text-right pr-6',
+      hideInCardBody: true,
+      cell: (parent) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
+              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
+                <Eye className="h-4 w-4 mr-2 text-slate-400" />
+                View Details
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
+              onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
+            >
+              <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
+              Add Child
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
+              onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
+            >
+              {resendingParentId === parent.id ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />Sending...</>
+              ) : (
+                <><RefreshCw className="h-4 w-4 mr-2 text-slate-400" />Resend</>
+              )}
+            </DropdownMenuItem>
+            {activeTab === 'active' ? (
+              <DropdownMenuItem
+                className="text-red-600 focus:text-red-650 cursor-pointer font-semibold"
+                disabled={parent.signupStatus === 'Not Signed'}
+                onClick={() => setParentToDeactivate(parent)}
+              >
+                <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
+                disabled={parent.signupStatus === 'Not Signed'}
+                onClick={() => setParentToActivate(parent)}
+              >
+                <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+  ], [activeTab, expandedParents, resendingParentId]);
+
 
 
   const [inviteFormErrors, setInviteFormErrors] = useState<{[key: string]: string}>({});
@@ -825,253 +983,128 @@ export function ParentManagement() {
               </div>
             </div>
 
-            {/* Conditional Rendering of Views */}
-            {viewMode === 'card' ? (
-              <MobileCardList
-                className="p-5"
-                loading={loading}
-                loadingMessage="Loading parents..."
-                emptyMessage="No parents found matching your search criteria."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={setCurrentPage}
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                cards={sortedParents.length > 0 ? paginatedParents.map((parent, index) => (
-                  <Card key={parent.id || `parent-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
-                    <div>
-                      {/* Header row */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                          <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#0b5298] text-white font-extrabold w-10 h-10 rounded-full" />
-                          <div className="min-w-0 flex-1">
-                            {parent.signupStatus === 'Signed' ? (
-                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
-                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                              </Link>
-                            ) : (
-                              <span className="font-bold text-sm text-slate-400 block truncate leading-tight">
-                                {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
-                              </span>
-                            )}
-                            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{parent.email}</p>
-                          </div>
-                        </div>
-                        
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
-                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
-                                <Eye className="h-4 w-4 mr-2 text-slate-400" />View Details
-                              </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'} onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}>
-                              <UserCircle className="h-4 w-4 mr-2 text-slate-400" />Add Child
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'} onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}>
-                              <RefreshCw className={`h-4 w-4 mr-2 text-slate-400 ${resendingParentId === parent.id ? 'animate-spin' : ''}`} />
-                              {resendingParentId === parent.id ? 'Sending...' : 'Resend Invitation'}
-                            </DropdownMenuItem>
-                            {activeTab === 'active' ? (
-                              <DropdownMenuItem className="text-red-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToDeactivate(parent)}>
-                                <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem className="text-emerald-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToActivate(parent)}>
-                                <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div> {/* Close header row */}
-
-                      <div className="my-3 border-t border-slate-50" />
-
-                      {/* Status row */}
-                      <div className="py-2 flex items-center justify-between">
-                        <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
-                          {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                          {parent.signupStatus}
-                        </Badge>
-                        <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
-                      </div>
-
-                      <div className="my-3 border-t border-slate-50" />
-
-                      {/* Children */}
-                      <div className="py-2">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Children ({parent.children.length})</p>
-                        {parent.children.length === 0 ? (
-                          <p className="text-xs text-slate-400 italic">No children linked yet</p>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                              <div key={child.id} className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
-                                <GraduationCap className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                                <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent, selectedChildId: child.id }} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[90px]">
-                                  {child.firstName} {child.lastName}
-                                </Link>
-                                <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400">{child.classroom.name}</span>
-                              </div>
-                            ))}
-                            {parent.children.length > 2 && (
-                              <button onClick={(e) => { e.preventDefault(); toggleParentExpanded(parent.id); }} className="inline-flex items-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all">
-                                {expandedParents[parent.id] ? 'Less' : `+${parent.children.length - 2}`}
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                )) : []}
-              />
-            ) : (
-              <DataTable
-                className="relative z-0"
-                loading={loading}
-                loadingMessage="Loading parents..."
-                emptyMessage="No parents found matching your search criteria."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={sortedParents.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                columns={[
-                  { header: 'Parent Name', className: 'w-1/4 pl-6' },
-                  { header: 'Email & Contact', className: 'w-1/4' },
-                  { header: 'Linked Children', className: 'w-1/3' },
-                  { header: 'Status', className: 'w-1/8 text-center' },
-                  { header: 'Actions', className: 'w-1/8 text-right pr-6' },
-                ]}
-                rows={sortedParents.length > 0 ? paginatedParents.map(parent => (
-                  <tr key={parent.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
-                    <td className="py-4 px-4 pl-6 font-semibold text-slate-900 text-sm">
-                      <div className="flex items-center gap-3">
-                        <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="bg-[#044ba0] text-white font-bold" />
-                        <div className="min-w-0">
+            {/* Data Grid */}
+            <DataGrid
+              data={paginatedParents}
+              columns={parentColumns}
+              viewMode={viewMode}
+              loading={loading}
+              loadingMessage="Loading parents..."
+              emptyMessage="No parents found matching your search criteria."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={sortedParents.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setItemsPerPage}
+              tableLayout="auto"
+              gridClassName="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              renderCard={(parent, dynamicColumns) => (
+                <Card key={parent.id} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
+                  <div>
+                    {/* Header row */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <AvatarInitials initials={`${parent.firstName[0]}${parent.lastName[0]}`} className="flex-shrink-0 bg-[#0b5298] text-white font-extrabold w-10 h-10 rounded-full" />
+                        <div className="flex-1 overflow-hidden" style={{ minWidth: 'min-content' }}>
                           {parent.signupStatus === 'Signed' ? (
-                            <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-[#0F2D52] hover:underline text-sm block truncate">
+                            <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
                               {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                             </Link>
                           ) : (
-                            <span className="font-bold text-slate-400 cursor-not-allowed text-sm block truncate">
+                            <span className="font-bold text-sm text-slate-400 block truncate leading-tight">
                               {parent.firstName.charAt(0).toUpperCase() + parent.firstName.slice(1)} {parent.lastName.charAt(0).toUpperCase() + parent.lastName.slice(1)}
                             </span>
                           )}
+                          <div className="whitespace-nowrap text-[11px] text-slate-400 font-medium mt-0.5 inline-block">{parent.email}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="py-4 px-4 text-xs font-semibold text-slate-600">
-                      <div className="font-medium text-slate-900">{parent.email}</div>
-                      <div className="text-slate-400 mt-0.5">{(parent as any).phoneNumber || 'No phone number'}</div>
-                    </td>
-                    <td className="py-4 px-4">
-                      {parent.children.length === 0 ? (
-                        <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-2 py-1 max-w-sm">
-                          {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                            <div 
-                              key={child.id} 
-                              className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
-                            >
-                              <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
-                              <Link
-                                to={`/admin/parents/${parent.id}`}
-                                state={{ parentData: parent, selectedChildId: child.id }}
-                                className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
-                              >
-                                {child.firstName} {child.lastName}
-                              </Link>
-                              <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
-                              <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
-                                {child.classroom.name}
-                              </span>
-                            </div>
-                          ))}
-                          {parent.children.length > 2 && (
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                toggleParentExpanded(parent.id);
-                              }}
-                              className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
-                            >
-                              {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="py-4 px-4 text-center">
-                      <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="inline-flex items-center justify-center text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                        {parent.signupStatus === 'Signed' && <CheckCircle className="h-3 w-3 mr-1" />}
-                        {parent.signupStatus === 'Not Signed' && <XCircle className="h-3 w-3 mr-1" />}
-                        {parent.signupStatus}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4 text-right pr-6">
+                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
-                            <MoreHorizontal className="h-4 w-4" />
+                          <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                            <MoreHorizontal className="h-3.5 w-3.5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                        <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
                           <DropdownMenuItem asChild disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}>
                             <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent }} className="cursor-pointer">
-                              <Eye className="h-4 w-4 mr-2 text-slate-400" />
-                              View Details
+                              <Eye className="h-4 w-4 mr-2 text-slate-400" />View Details
                             </Link>
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'}
-                            onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}
-                          >
-                            <UserCircle className="h-4 w-4 mr-2 text-slate-400" />
-                            Add Child
+                          <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Not Signed' || activeTab === 'deactivated'} onClick={() => { setSelectedParent(parent); loadClassroomsIfNeeded(); setIsAddChildDialogOpen(true); }}>
+                            <UserCircle className="h-4 w-4 mr-2 text-slate-400" />Add Child
                           </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="cursor-pointer"
-                            disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'}
-                            onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}
-                          >
-                            {resendingParentId === parent.id ? (
-                              <><RefreshCw className="h-4 w-4 mr-2 animate-spin text-slate-400" />Sending...</>
-                            ) : (
-                              <><RefreshCw className="h-4 w-4 mr-2 text-slate-400" />Resend</>
-                            )}
+                          <DropdownMenuItem className="cursor-pointer" disabled={parent.signupStatus === 'Signed' || resendingParentId === parent.id || activeTab === 'deactivated'} onClick={(e) => { e.preventDefault(); handleResendConfirmation(parent.id, parent.email); }}>
+                            <RefreshCw className={`h-4 w-4 mr-2 text-slate-400 ${resendingParentId === parent.id ? 'animate-spin' : ''}`} />
+                            {resendingParentId === parent.id ? 'Sending...' : 'Resend Invitation'}
                           </DropdownMenuItem>
                           {activeTab === 'active' ? (
-                            <DropdownMenuItem
-                              className="text-red-600 focus:text-red-650 cursor-pointer font-semibold"
-                              disabled={parent.signupStatus === 'Not Signed'}
-                              onClick={() => setParentToDeactivate(parent)}
-                            >
+                            <DropdownMenuItem className="text-red-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToDeactivate(parent)}>
                               <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
                             </DropdownMenuItem>
                           ) : (
-                            <DropdownMenuItem
-                              className="text-emerald-600 focus:text-emerald-600 cursor-pointer font-semibold"
-                              disabled={parent.signupStatus === 'Not Signed'}
-                              onClick={() => setParentToActivate(parent)}
-                            >
+                            <DropdownMenuItem className="text-emerald-600 cursor-pointer font-semibold" disabled={parent.signupStatus === 'Not Signed'} onClick={() => setParentToActivate(parent)}>
                               <UserCheck className="h-4 w-4 mr-2 text-emerald-500" />Activate
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </td>
-                  </tr>
-                )) : []}
-              />
-            )}
+                    </div> {/* Close header row */}
+
+                    <div className="my-3 border-t border-slate-50" />
+
+                    {/* Status row */}
+                    <div className="py-2 flex items-center justify-between">
+                      <Badge variant={getSignupStatusBadge(parent.signupStatus)} className="text-[11px] sm:text-xs font-bold rounded-full px-3 py-1 flex items-center gap-1.5 whitespace-nowrap">
+                        {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
+                        {parent.signupStatus}
+                      </Badge>
+                      <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
+                    </div>
+
+                    <div className="my-3 border-t border-slate-50" />
+
+                    {/* Children */}
+                    <div className="py-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Children ({parent.children.length})</p>
+                      {parent.children.length === 0 ? (
+                        <p className="text-xs text-slate-400 italic">No children linked yet</p>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
+                            <div key={child.id} className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
+                              <GraduationCap className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                              <Link to={`/admin/parents/${parent.id}`} state={{ parentData: parent, selectedChildId: child.id }} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[90px]">
+                                {child.firstName} {child.lastName}
+                              </Link>
+                              <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-400">{child.classroom.name}</span>
+                            </div>
+                          ))}
+                          {parent.children.length > 2 && (
+                            <button onClick={(e) => { e.preventDefault(); toggleParentExpanded(parent.id); }} className="inline-flex items-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2 py-0.5 text-[10px] font-bold text-slate-600 transition-all">
+                              {expandedParents[parent.id] ? 'Less' : `+${parent.children.length - 2}`}
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Dynamic Columns */}
+                    {dynamicColumns.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-slate-50 space-y-2">
+                        {dynamicColumns.map(col => (
+                          <div key={col.id} className="flex flex-col">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{col.header}</span>
+                            <div className="text-sm">{col.cell(parent)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              )}
+            />
           </CardContent>
         </div>
       </motion.div>

@@ -102,7 +102,7 @@ export function UserManagement() {
                         <h3 className="font-medium text-foreground text-sm sm:text-base truncate">{user.name}</h3>
                         {getRoleIcon(user.role)}
                       </div>
-                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{user.email}</p>
+                      <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs sm:text-sm text-muted-foreground`}>{user.email}</div></div>
                       <p className="text-xs text-muted-foreground">{user.school} • Last login: {user.lastLogin}</p>
                     </div>
                   </div>
