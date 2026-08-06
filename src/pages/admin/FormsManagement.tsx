@@ -56,13 +56,9 @@ export function FormsManagement() {
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('formsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('formsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('formsViewMode', mode); };
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);

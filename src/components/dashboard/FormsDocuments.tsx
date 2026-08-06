@@ -214,17 +214,12 @@ export function FormsDocuments({
   const processedFormToOpenRef = useRef<string | null>(null);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(
-    window.innerWidth < 640 ? 'card' : (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
+    (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
   );
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
-    if (window.innerWidth >= 640) localStorage.setItem('parentFormsViewMode', mode);
+    localStorage.setItem('parentFormsViewMode', mode);
   };
-  useEffect(() => {
-    const onResize = () => { if (window.innerWidth < 640) setViewMode('card'); };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
   const handleDownloadAll = async () => {
     if (!enrollmentId) return;
     setIsDownloadingAll(true);

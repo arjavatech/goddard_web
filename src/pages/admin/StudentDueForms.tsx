@@ -33,13 +33,12 @@ export function DueForms() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('studentDueForms', 10);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) setViewMode('card'); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

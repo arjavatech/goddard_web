@@ -62,7 +62,7 @@ export function EmployeeFormsManagement() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
   const [itemsPerPage, setItemsPerPage] = usePageSize('empForm', 10);
   
   const { showToast } = useToast();
@@ -74,11 +74,7 @@ export function EmployeeFormsManagement() {
     localStorage.setItem('empFormsViewMode', mode); 
   };
 
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
 
   const fetchForms = async (showLoader = true) => {
     if (!schoolId) return;

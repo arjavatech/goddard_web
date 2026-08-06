@@ -28,12 +28,8 @@ const getAvatarColorClass = (name: string) => {
 
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : 'table');
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

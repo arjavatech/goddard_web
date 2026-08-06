@@ -72,10 +72,8 @@ export function SuperAdminManagement() {
   const [resendingAdminId, setResendingAdminId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<SuperAdminUser[]>([]);
 
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() =>
-    window.innerWidth < 768
-      ? 'card'
-      : (localStorage.getItem('superAdminMgmtViewMode') as 'card' | 'table') || 'table'
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(
+    () => (localStorage.getItem('superAdminMgmtViewMode') as 'card' | 'table') || 'table'
   );
 
   const handleViewModeChange = (mode: 'card' | 'table') => {
@@ -83,13 +81,7 @@ export function SuperAdminManagement() {
     localStorage.setItem('superAdminMgmtViewMode', mode);
   };
 
-  React.useEffect(() => {
-    const handleResize = () => {
-      if (window.innerWidth < 768) setViewMode('card');
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
 
   const { showToast } = useToast();
 
