@@ -1195,8 +1195,8 @@ export function ParentManagement() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                Date of Birth (Optional)
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
+                Date of Birth
               </label>
               <Input 
                 type="date" 
