@@ -16,6 +16,7 @@ import { EmployeeService, type Employee } from '../../services/api/employee';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
 import { useUserContext } from '../../contexts/UserContext';
 
@@ -62,6 +63,7 @@ export function EmployeeFormsManagement() {
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
+  const [itemsPerPage, setItemsPerPage] = usePageSize('empForm', 10);
   
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -120,11 +122,10 @@ export function EmployeeFormsManagement() {
     currentPage,
     totalPages,
     paginatedData: paginatedForms,
-    itemsPerPage,
     setCurrentPage
   } = usePagination({ 
     data: filteredForms,
-    itemsPerPage: viewMode === 'card' ? 9 : 10,
+    itemsPerPage,
     mobileItemsPerPage: 5
   });
 
@@ -289,6 +290,9 @@ export function EmployeeFormsManagement() {
             currentPage={currentPage}
             totalPages={totalPages}
             onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onPageSizeChange={setItemsPerPage}
+            totalItems={filteredForms.length}
             gridClassName="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
             cards={paginatedForms.map(form => (
               <Card key={form.id} className="p-5 flex flex-col justify-between">
@@ -319,7 +323,12 @@ export function EmployeeFormsManagement() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <Badge variant={getStatusBadgeVariant(form.status)}>{getStatusDisplay(form.status)}</Badge>
+                  <div className="flex items-center justify-between mt-2 border-t border-slate-100 pt-3">
+                    <Badge variant={getStatusBadgeVariant(form.status)}>{getStatusDisplay(form.status)}</Badge>
+                    <div className="text-xs text-slate-500">
+                      Due: <span className="font-semibold text-slate-700">{form.dueDate || '-'}</span>
+                    </div>
+                  </div>
                 </div>
               </Card>
             ))}
@@ -333,6 +342,7 @@ export function EmployeeFormsManagement() {
               totalPages={totalPages}
               totalItems={filteredForms.length}
               itemsPerPage={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
                 { header: 'Form Name', className: 'w-1/3' },

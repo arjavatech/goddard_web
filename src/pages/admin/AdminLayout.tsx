@@ -186,7 +186,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <p className="text-[11px] text-slate-500 truncate mt-0.5">{userData?.email}</p>
+                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-500 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
@@ -243,7 +243,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-400 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => setShowLogoutModal(true)}
@@ -319,7 +319,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
-                          <p className="text-xs text-slate-400 truncate">{userData?.email}</p>
+                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400`}>{userData?.email}</div></div>
                           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
                         </div>
                       </div>

@@ -588,9 +588,7 @@ export function ClassroomDetails() {
                               </td>
                               <td className="py-3 px-4">
                                 <span className="text-gray-600">{student.parent.name}</span>
-                                <div className="text-xs text-gray-500">
-                                  {student.parent.email}
-                                </div>
+                                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-gray-500`}>{student.parent.email}</div></div>
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
@@ -696,9 +694,7 @@ export function ClassroomDetails() {
                                 </div>
                               </div>
                               
-                              <div className="text-xs text-gray-500 pt-1">
-                                {student.parent.email}
-                              </div>
+                              <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-gray-500 pt-1`}>{student.parent.email}</div></div>
                             </div>
                           </CardContent>
                         </Card>
@@ -803,9 +799,7 @@ export function ClassroomDetails() {
                               </td>
                               <td className="py-3 px-4">
                                 <span className="text-gray-600">{student.parent.name}</span>
-                                <div className="text-xs text-gray-500">
-                                  {student.parent.email}
-                                </div>
+                                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-gray-500`}>{student.parent.email}</div></div>
                               </td>
                               <td className="py-3 px-4 text-center">
                                 <Badge variant={getStatusBadgeVariant(student.enrollmentStatus)} className="flex items-center w-fit mx-auto">
@@ -911,9 +905,7 @@ export function ClassroomDetails() {
                                 </div>
                               </div>
                               
-                              <div className="text-xs text-gray-500 pt-1">
-                                {student.parent.email}
-                              </div>
+                              <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-gray-500 pt-1`}>{student.parent.email}</div></div>
                             </div>
                           </CardContent>
                         </Card>

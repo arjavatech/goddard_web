@@ -3,6 +3,8 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { Card } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -21,7 +23,7 @@ export function EmployeeManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = usePageSize('employee', 8);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -366,6 +368,9 @@ export function EmployeeManagement() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
+              totalItems={filteredEmployees.length}
               gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               cards={paginatedEmployees.map((emp) => {
                 const initials = `${emp.firstName?.[0] || ''}${emp.lastName?.[0] || ''}`.toUpperCase();
@@ -379,7 +384,7 @@ export function EmployeeManagement() {
                             <span className="text-sm font-bold text-slate-800 block truncate">
                               {emp.firstName} {emp.lastName}
                             </span>
-                            <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{emp.email}</p>
+                            <div className="whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5">{emp.email}</div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -422,9 +427,11 @@ export function EmployeeManagement() {
               totalPages={totalPages}
               totalItems={filteredEmployees.length}
               itemsPerPage={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
+              tableLayout="auto"
               columns={[
-                { header: 'Employee', className: 'w-2/5' },
+                { header: 'Employee', className: 'w-auto min-w-[200px]' },
                 { header: 'Type', className: 'w-1/5' },
                 { header: 'Status', className: 'w-1/5' },
                 { header: 'Actions', className: 'w-1/5' },
@@ -438,7 +445,7 @@ export function EmployeeManagement() {
                         <AvatarInitials initials={initials} className="bg-[#0151a0] text-white font-semibold" />
                         <div className="min-w-0">
                           <span className="text-sm font-bold text-slate-900 block truncate">{emp.firstName} {emp.lastName}</span>
-                          <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{emp.email}</p>
+                          <div className="whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5">{emp.email}</div>
                         </div>
                       </div>
                     </td>

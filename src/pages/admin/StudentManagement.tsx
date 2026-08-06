@@ -11,13 +11,14 @@ import { Link } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { normalizeFormStatus } from '../../lib/formStatus';
-import { DataTable } from '../../components/ui/data-table';
-import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { DataGrid, ColumnDef } from '../../components/ui/data-grid';
+
 import { Checkbox } from '../../components/ui/checkbox';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
@@ -92,6 +93,8 @@ export function StudentManagement() {
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('studentViewMode', mode); };
+  const [itemsPerPage, setItemsPerPage] = usePageSize('student', 10);
+  
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
@@ -476,24 +479,213 @@ export function StudentManagement() {
     }),
   [filteredStudents, sortBy, sortOrder]);
 
-  const calculatedItemsPerPage = useMemo(() => {
-    if (viewMode !== 'card') return 10;
-    // Mobile view (<768px) is handled internally by usePagination.
-    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
-    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
-    if (windowWidth >= 768 && windowWidth < 1024) {
-      return 10;
-    }
-    return 9;
-  }, [viewMode, windowWidth]);
+
 
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedStudents,
-    itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredAndSortedStudents, itemsPerPage: calculatedItemsPerPage });
+  } = usePagination({ data: filteredAndSortedStudents, itemsPerPage });
+
+  const studentColumns = useMemo<ColumnDef<Student>[]>(() => [
+    {
+      id: 'select',
+      header: (
+        <Checkbox
+          checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
+          onCheckedChange={(checked) => {
+            if (checked) {
+              setSelectedStudentsForBulkAction(filteredAndSortedStudents.map(s => s.id));
+            } else {
+              setSelectedStudentsForBulkAction([]);
+            }
+          }}
+        />
+      ),
+      className: 'text-center w-[5%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <Checkbox
+          checked={selectedStudentsForBulkAction.includes(student.id)}
+          onCheckedChange={(checked) => {
+            if (checked) {
+              setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+            } else {
+              setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+            }
+          }}
+          className="flex-shrink-0"
+        />
+      )
+    },
+    {
+      id: 'student',
+      header: 'Student',
+      className: 'w-[22%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <div className="flex items-center">
+          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-3 bg-[#044ba0] text-white font-bold" />
+          <div className="min-w-0">
+            <Link to={`/admin/parents/${student.parent.id}?childId=${student.id}`} state={{ fromStudents: true, selectedChildId: student.id }} className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm">
+              {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+            </Link>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'classroom',
+      header: 'Classroom',
+      className: 'w-[14%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors group text-sm">
+          <School className="h-4 w-4 mr-1.5 text-slate-400 group-hover:text-[#0F2D52] transition-colors flex-shrink-0" />
+          <span className="group-hover:underline truncate">{student.classroom.name}</span>
+        </Link>
+      )
+    },
+    {
+      id: 'parent',
+      header: 'Parent',
+      className: 'w-auto',
+      hideInCardBody: true,
+      cell: (student) => (
+        <div className="min-w-0 space-y-1.5">
+          <div>
+            <Link to={`/admin/parents/${student.parent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-sm">
+              {student.parent.name}
+            </Link>
+            <div className="whitespace-nowrap text-xs text-slate-400 font-medium mt-0.5">{student.parent.email}</div>
+          </div>
+          {student.secondaryParent && (
+            <div className="border-t border-slate-100 pt-1.5">
+              <Link to={`/admin/parents/${student.secondaryParent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-xs">
+                {student.secondaryParent.name}
+              </Link>
+              <div className="whitespace-nowrap text-[10px] text-slate-400 font-medium mt-0.5">{student.secondaryParent.email}</div>
+            </div>
+          )}
+        </div>
+      )
+    },
+    {
+      id: 'status',
+      header: 'Status',
+      className: 'text-center w-[14%]',
+      hideInCardBody: true,
+      cell: (student) => {
+        const apiFormStatus = student.formStatus || 'incomplete';
+        const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
+        const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
+        const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <Clock className="h-3.5 w-3.5 mr-1" />;
+        return (
+          <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-[10px] rounded-full px-2.5 py-0.5 font-bold">
+            {statusIcon}
+            <span className="truncate">{displayStatus}</span>
+          </Badge>
+        );
+      }
+    },
+    {
+      id: 'child_status',
+      header: 'Child Status',
+      className: 'text-center w-[10%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <button
+          onClick={() => {
+            setSelectedStudent(student);
+            setNewStatus(student.childStatus);
+            setIsStatusDialogOpen(true);
+          }}
+          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold transition-all border whitespace-nowrap ${
+            student.childStatus === 'active'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
+          }`}
+        >
+          <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+          <Edit className="h-3 w-3 opacity-80" />
+        </button>
+      )
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      className: 'text-center w-[12%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => {
+              setSelectedStudentForForms(student);
+              loadFormsIfNeeded();
+              setIsStudentFormDialogOpen(true);
+            }}>
+              <Settings className="h-4 w-4 mr-2" />
+              Manage Forms
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
+              setSelectedStudentForTransfer(student);
+              setNewClassroomId('');
+              setIsTransferDialogOpen(true);
+            }}>
+              <School className="h-4 w-4 mr-2" />
+              Transfer Class
+            </DropdownMenuItem>
+            {student.enrollmentId && (
+              <DropdownMenuItem
+                disabled={downloadingEnrollmentId === student.enrollmentId}
+                onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+              >
+                {downloadingEnrollmentId === student.enrollmentId
+                  ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                  : <Download className="h-4 w-4 mr-2" />}
+                Download All Forms
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    },
+    {
+      id: 'progress',
+      header: 'Progress',
+      className: 'text-right w-[12%]',
+      hideInCardBody: true,
+      cell: (student) => (
+        <div className="text-right flex flex-col items-end">
+          <div className="text-xs text-slate-400 font-bold mb-1">{student.formsCompleted} / {student.totalForms}</div>
+          <div className="flex items-center justify-end space-x-1.5 w-full max-w-[80px]">
+            <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+              {student.totalForms > 0 && student.formsApproved > 0 && (
+                <div
+                  className="h-full bg-emerald-500 transition-all duration-300"
+                  style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
+                />
+              )}
+              {student.totalForms > 0 && student.formsInProgress > 0 && (
+                <div
+                  className="h-full bg-amber-400 transition-all duration-300"
+                  style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
+                />
+              )}
+            </div>
+            <div className="text-[10px] font-extrabold text-[#0F2D52] w-6">{student.enrollmentProgress}%</div>
+          </div>
+        </div>
+      )
+    }
+  ], [selectedStudentsForBulkAction, filteredAndSortedStudents, paginatedStudents, downloadingEnrollmentId]);
+
   const completionRate = useMemo(() => {
     if (students.length === 0) return 0;
     const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
@@ -880,322 +1072,160 @@ export function StudentManagement() {
                 </div>
               )}
             </div>
-            {/* Conditional Rendering of View */}
-            {viewMode === 'card' ? (
-              <MobileCardList
-                className="p-5"
-                loading={loading}
-                loadingMessage="Loading students..."
-                emptyMessage="No students found matching your search criteria."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={filteredAndSortedStudents.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                cards={filteredAndSortedStudents.length > 0 ? paginatedStudents.map((student, index) => {
-                  const apiFormStatus = student.formStatus || 'incomplete';
-                  return (
-                    <Card key={student.id || `student-card-${index}`} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
-                      <div>
-                        {/* Header row */}
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <Checkbox
-                              checked={selectedStudentsForBulkAction.includes(student.id)}
-                              onCheckedChange={(checked) => {
-                                if (checked) {
-                                  setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                                } else {
-                                  setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                                }
-                              }}
-                              className="flex-shrink-0"
-                            />
-                            <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="flex-shrink-0 bg-[#04488c] text-white font-extrabold w-10 h-10 rounded-full" />
-                            <div className="min-w-0 flex-1">
-                              <Link
-                                to={`/admin/parents/${student.parent.id}?childId=${student.id}`}
-                                state={{ fromStudents: true, selectedChildId: student.id }}
-                                className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
-                              >
-                                {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                              </Link>
-                              <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{student.classroom.name}</p>
-                            </div>
-                          </div>
-                          
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
-                                <MoreHorizontal className="h-3.5 w-3.5" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
-                                <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
-                                <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
-                              </DropdownMenuItem>
-                              {student.enrollmentId && (
-                                <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
-                                  <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-
-                        <div className="my-3 border-t border-slate-50" />
-
-                        {/* Status row */}
-                        <div className="py-2 flex items-center justify-between">
-                          <Badge variant={apiFormStatus === 'complete' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
-                            {apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                            {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
-                          </Badge>
-                          <button
-                            onClick={() => {
-                              setSelectedStudent(student);
-                              setNewStatus(student.childStatus);
-                              setIsStatusDialogOpen(true);
+            {/* Data Grid */}
+            <DataGrid
+              data={paginatedStudents}
+              columns={studentColumns}
+              viewMode={viewMode}
+              loading={loading}
+              loadingMessage="Loading students..."
+              emptyMessage="No students match the current filters."
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredAndSortedStudents.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={setItemsPerPage}
+              tableLayout="auto"
+              gridClassName="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              renderCard={(student, dynamicColumns) => {
+                const apiFormStatus = student.formStatus || 'incomplete';
+                return (
+                  <Card key={student.id} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between space-y-4">
+                    <div>
+                      {/* Header row */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          <Checkbox
+                            checked={selectedStudentsForBulkAction.includes(student.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
+                              } else {
+                                setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
+                              }
                             }}
-                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all border ${
-                              student.childStatus === 'active'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
-                                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
-                            }`}
-                          >
-                            <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                            <Edit className="h-3 w-3 opacity-80" />
-                          </button>
-                        </div>
-
-                        <div className="my-3 border-t border-slate-50" />
-
-                        {/* Parents */}
-                        <div className="py-2">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Parents</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
-                              <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                              <Link to={`/admin/parents/${student.parent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
-                                {student.parent.name}
-                              </Link>
-                            </div>
-                            {student.secondaryParent && (
-                              <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group">
-                                <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                                <Link to={`/admin/parents/${student.secondaryParent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
-                                  {student.secondaryParent.name}
-                                </Link>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="my-3 border-t border-slate-50" />
-
-                        {/* Progress */}
-                        <div className="py-2 space-y-2">
-                          <div className="flex items-center justify-between text-xs font-semibold">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Forms Progress</span>
-                            <span className="text-[#0F2D52] font-bold text-xs">{student.formsCompleted}/{student.totalForms} ({student.enrollmentProgress}%)</span>
-                          </div>
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
-                            {student.formsApproved > 0 && (
-                              <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
-                            )}
-                            {student.formsInProgress > 0 && (
-                              <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  );
-                }) : []}
-              />
-            ) : (
-              <DataTable
-                className="relative z-0"
-                loading={loading}
-                loadingMessage="Loading students..."
-                emptyMessage="No students match the current filters."
-                currentPage={currentPage}
-                totalPages={totalPages}
-                totalItems={filteredAndSortedStudents.length}
-                itemsPerPage={itemsPerPage}
-                onPageChange={setCurrentPage}
-                columns={[
-                  { 
-                    header: (
-                      <Checkbox
-                        checked={selectedStudentsForBulkAction.length === paginatedStudents.length && paginatedStudents.length > 0}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudentsForBulkAction(filteredAndSortedStudents.map(s => s.id));
-                          } else {
-                            setSelectedStudentsForBulkAction([]);
-                          }
-                        }}
-                      />
-                    ), 
-                    className: 'text-center w-[5%]' 
-                  },
-                  { header: 'Student', className: 'w-[22%]' },
-                  { header: 'Classroom', className: 'w-[14%]' },
-                  { header: 'Parent', className: 'w-[16%]' },
-                  { header: 'Status', className: 'text-center w-[14%]' },
-                  { header: 'Child Status', className: 'text-center w-[10%]' },
-                  { header: 'Actions', className: 'text-center w-[12%]' },
-                  { header: 'Progress', className: 'text-right w-[12%]' },
-                ]}
-                rows={paginatedStudents.map((student, index) => (
-                  <tr key={student.id || `row-${index}`} className={`border-b border-slate-50 transition-all duration-150 ease-in-out ${selectedStudentsForBulkAction.includes(student.id) ? 'bg-[#EFF5FB] hover:bg-[#e6f0f9]' : 'hover:bg-[#F8FAFC]'}`}>
-                    <td className="py-3 px-2 text-center">
-                      <Checkbox
-                        checked={selectedStudentsForBulkAction.includes(student.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedStudentsForBulkAction(prev => [...prev, student.id]);
-                          } else {
-                            setSelectedStudentsForBulkAction(prev => prev.filter(id => id !== student.id));
-                          }
-                        }}
-                        className="flex-shrink-0"
-                      />
-                    </td>
-                    <td className="py-4 px-3 font-semibold text-slate-900 text-sm">
-                      <div className="flex items-center">
-                        <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="mr-3 bg-[#044ba0] text-white font-bold" />
-                        <div className="min-w-0">
-                          <Link to={`/admin/parents/${student.parent.id}?childId=${student.id}`} state={{ fromStudents: true, selectedChildId: student.id }} className="font-bold text-slate-900 hover:text-[#0F2D52] hover:underline transition-colors block truncate text-sm">
-                            {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
-                          </Link>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-4 px-2">
-                      <Link to={`/admin/classrooms/${student.classroom.id}`} className="flex items-center text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors group text-sm">
-                        <School className="h-4 w-4 mr-1.5 text-slate-400 group-hover:text-[#0F2D52] transition-colors flex-shrink-0" />
-                        <span className="group-hover:underline truncate">{student.classroom.name}</span>
-                      </Link>
-                    </td>
-                    <td className="py-4 px-2">
-                      <div className="min-w-0 space-y-1.5">
-                        <div>
-                          <Link to={`/admin/parents/${student.parent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-sm">
-                            {student.parent.name}
-                          </Link>
-                          <div className="text-xs text-slate-400 font-medium truncate mt-0.5">{student.parent.email}</div>
-                        </div>
-                        {student.secondaryParent && (
-                          <div className="border-t border-slate-100 pt-1.5">
-                            <Link to={`/admin/parents/${student.secondaryParent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-xs">
-                              {student.secondaryParent.name}
-                            </Link>
-                            <div className="text-[10px] text-slate-400 font-medium truncate mt-0.5">{student.secondaryParent.email}</div>
-                          </div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="py-4 px-2 text-center">
-                      {(() => {
-                        const apiFormStatus = student.formStatus || 'incomplete';
-                        const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
-                        const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
-                        const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <Clock className="h-3.5 w-3.5 mr-1" />;
-                        return (
-                          <Badge variant={statusVariant as any} className="flex items-center justify-center w-fit mx-auto text-[10px] rounded-full px-2.5 py-0.5 font-bold">
-                            {statusIcon}
-                            <span className="truncate">{displayStatus}</span>
-                          </Badge>
-                        );
-                      })()}
-                    </td>
-                    <td className="py-4 px-2 text-center">
-                      <button
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setNewStatus(student.childStatus);
-                          setIsStatusDialogOpen(true);
-                        }}
-                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold transition-all border whitespace-nowrap ${
-                          student.childStatus === 'active'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
-                            : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
-                        }`}
-                      >
-                        <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
-                        <Edit className="h-3 w-3 opacity-80" />
-                      </button>
-                    </td>
-                    <td className="py-3 px-2 text-center">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedStudentForForms(student);
-                            loadFormsIfNeeded();
-                            setIsStudentFormDialogOpen(true);
-                          }}>
-                            <Settings className="h-4 w-4 mr-2" />
-                            Manage Forms
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedStudentForTransfer(student);
-                            setNewClassroomId('');
-                            setIsTransferDialogOpen(true);
-                          }}>
-                            <School className="h-4 w-4 mr-2" />
-                            Transfer Class
-                          </DropdownMenuItem>
-                          {student.enrollmentId && (
-                            <DropdownMenuItem
-                              disabled={downloadingEnrollmentId === student.enrollmentId}
-                              onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                            className="flex-shrink-0"
+                          />
+                          <AvatarInitials initials={`${student.firstName[0]}${student.lastName[0]}`} className="flex-shrink-0 bg-[#04488c] text-white font-extrabold w-10 h-10 rounded-full" />
+                          <div className="min-w-0 flex-1">
+                            <Link
+                              to={`/admin/parents/${student.parent.id}?childId=${student.id}`}
+                              state={{ fromStudents: true, selectedChildId: student.id }}
+                              className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight"
                             >
-                              {downloadingEnrollmentId === student.enrollmentId
-                                ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
-                                : <Download className="h-4 w-4 mr-2" />}
-                              Download All Forms
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                    <td className="py-4 px-3">
-                      <div className="text-right">
-                        <div className="text-xs text-slate-400 font-bold mb-1">{student.formsCompleted} / {student.totalForms}</div>
-                        <div className="flex items-center justify-end space-x-1.5">
-                          <div className="w-20 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
-                            {student.totalForms > 0 && student.formsApproved > 0 && (
-                              <div
-                                className="h-full bg-emerald-500 transition-all duration-300"
-                                style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }}
-                              />
-                            )}
-                            {student.totalForms > 0 && student.formsInProgress > 0 && (
-                              <div
-                                className="h-full bg-amber-400 transition-all duration-300"
-                                style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }}
-                              />
-                            )}
+                              {student.firstName.charAt(0).toUpperCase() + student.firstName.slice(1)} {student.lastName.charAt(0).toUpperCase() + student.lastName.slice(1)}
+                            </Link>
+                            <p className="text-[11px] text-slate-400 font-medium truncate mt-0.5">{student.classroom.name}</p>
                           </div>
-                          <span className="text-xs font-bold text-slate-700 min-w-[28px]">{student.enrollmentProgress}%</span>
+                        </div>
+                        
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                              <MoreHorizontal className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForForms(student); loadFormsIfNeeded(); setIsStudentFormDialogOpen(true); }}>
+                              <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => { setSelectedStudentForTransfer(student); setNewClassroomId(''); setIsTransferDialogOpen(true); }}>
+                              <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
+                            </DropdownMenuItem>
+                            {student.enrollmentId && (
+                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
+                                <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      <div className="my-3 border-t border-slate-50" />
+
+                      {/* Status row */}
+                      <div className="py-2 flex items-center justify-between">
+                        <Badge variant={apiFormStatus === 'complete' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 flex items-center gap-1">
+                          {apiFormStatus === 'complete' ? <CheckCircle className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                          {apiFormStatus === 'complete' ? 'Complete' : 'Incomplete'}
+                        </Badge>
+                        <button
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setNewStatus(student.childStatus);
+                            setIsStatusDialogOpen(true);
+                          }}
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all border ${
+                            student.childStatus === 'active'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100/50'
+                              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100/50'
+                          }`}
+                        >
+                          <span>{student.childStatus === 'active' ? 'Active' : 'Archived'}</span>
+                          <Edit className="h-3 w-3 opacity-80" />
+                        </button>
+                      </div>
+
+                      <div className="my-3 border-t border-slate-50" />
+
+                      {/* Parents */}
+                      <div className="py-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Parents</p>
+                        <div className="flex flex-col gap-1.5" style={{ minWidth: 'min-content' }}>
+                          <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group w-fit max-w-full">
+                            <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                            <Link to={`/admin/parents/${student.parent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                              {student.parent.name}
+                            </Link>
+                            <div className="whitespace-nowrap text-[10px] text-slate-400 ml-1">{student.parent.email}</div>
+                          </div>
+                          {student.secondaryParent && (
+                            <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group w-fit max-w-full">
+                              <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                              <Link to={`/admin/parents/${student.secondaryParent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                                {student.secondaryParent.name}
+                              </Link>
+                              <div className="whitespace-nowrap text-[10px] text-slate-400 ml-1">{student.secondaryParent.email}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              />
-            )}
+
+                      <div className="my-3 border-t border-slate-50" />
+
+                      {/* Progress */}
+                      <div className="py-2 space-y-2">
+                        <div className="flex items-center justify-between text-xs font-semibold">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Forms Progress</span>
+                          <span className="text-[#0F2D52] font-bold text-xs">{student.formsCompleted}/{student.totalForms} ({student.enrollmentProgress}%)</span>
+                        </div>
+                        <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                          {student.formsApproved > 0 && (
+                            <div className="h-full bg-emerald-500 transition-all duration-300" style={{ width: `${(student.formsApproved / student.totalForms) * 100}%` }} />
+                          )}
+                          {student.formsInProgress > 0 && (
+                            <div className="h-full bg-amber-400 transition-all duration-300" style={{ width: `${(student.formsInProgress / student.totalForms) * 100}%` }} />
+                          )}
+                        </div>
+                      </div>
+                      
+                      {/* Dynamic Columns */}
+                      {dynamicColumns.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-50 space-y-2">
+                          {dynamicColumns.map(col => (
+                            <div key={col.id} className="flex flex-col">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{col.header}</span>
+                              <div className="text-sm">{col.cell(student)}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                );
+              }}
+            />
           </CardContent>
         </div>
       </motion.div>

@@ -199,7 +199,7 @@ export function ClientManagement() {
                   <div className="p-2 sm:p-3 bg-gray-50 rounded-lg space-y-2">
                     <div className="flex items-center space-x-2">
                       <Mail className="w-3 h-3 text-muted-foreground" />
-                      <div className="text-xs text-muted-foreground truncate">{client.email}</div>
+                      <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-muted-foreground`}>{client.email}</div></div>
                     </div>
                     <div className="flex items-center space-x-2">
                       <Phone className="w-3 h-3 text-muted-foreground" />
@@ -230,7 +230,7 @@ export function ClientManagement() {
                   </div>
                   <div>
                     <h3 className="text-xl font-semibold">{selectedClient.name}</h3>
-                    <p className="text-sm text-slate-500">{selectedClient.email}</p>
+                    <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-sm text-slate-500`}>{selectedClient.email}</div></div>
                     <Badge variant={selectedClient.status === 'Active' ? 'success' : 'warning'} className="mt-1">
                       {selectedClient.status}
                     </Badge>
@@ -245,7 +245,7 @@ export function ClientManagement() {
                         <Mail className="w-4 h-4 text-muted-foreground" />
                         <div>
                           <p className="text-sm font-medium">Email</p>
-                          <p className="text-sm text-slate-500">{selectedClient.email}</p>
+                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-sm text-slate-500`}>{selectedClient.email}</div></div>
                         </div>
                       </div>
                       <div className="flex items-center space-x-3">

@@ -11,7 +11,9 @@ import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDow
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
@@ -58,6 +60,7 @@ export function EmployeeDueForms() {
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('empDueFormsViewMode', mode); };
+  const [itemsPerPage, setItemsPerPage] = usePageSize('empDueForms', 10);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
@@ -312,21 +315,14 @@ export function EmployeeDueForms() {
     setFilteredForms(sorted);
   }, [filteredFormsData, sortBy, sortOrder]);
 
-  const calculatedItemsPerPage = useMemo(() => {
-    if (viewMode !== 'card') return 10;
-    if (windowWidth >= 768 && windowWidth < 1024) {
-      return 10;
-    }
-    return 9;
-  }, [viewMode, windowWidth]);
+
 
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedForms,
-    itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredForms, itemsPerPage: calculatedItemsPerPage });
+  } = usePagination({ data: filteredForms, itemsPerPage });
 
   const dueFormsExportHeaders = ['Form', 'Employee', 'Role', 'Email', 'Due Date', 'Status'];
   
@@ -808,9 +804,18 @@ export function EmployeeDueForms() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
+            </CardHeader>
+            <div className="flex justify-end items-center px-4 py-3 border-b border-slate-50 bg-slate-50/20">
+              <div className="flex items-center gap-2">
+                <PageSizeSelector
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={setItemsPerPage}
+                  options={[10, 25, 50, 100]}
+                />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            <CardContent className="p-0">
             {filteredForms.length > 0 ? (
               <>
                 {/* Conditional Rendering of Views */}
@@ -847,7 +852,7 @@ export function EmployeeDueForms() {
                             <div className="space-y-1.5 text-xs pt-3 border-t border-slate-100">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-slate-400 font-semibold">Email:</span>
-                                <span className="font-bold text-slate-700 truncate max-w-[60%] text-right">{form.employeeEmail}</span>
+                                <div className="whitespace-nowrap font-bold text-slate-700 text-right">{form.employeeEmail}</div>
                               </div>
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-slate-400 font-semibold">Due:</span>
@@ -892,6 +897,7 @@ export function EmployeeDueForms() {
                       totalPages={totalPages}
                       totalItems={filteredForms.length}
                       itemsPerPage={itemsPerPage}
+                      onPageSizeChange={setItemsPerPage}
                       onPageChange={setCurrentPage}
                     />
                   </div>
@@ -908,13 +914,13 @@ export function EmployeeDueForms() {
                                 onCheckedChange={handleSelectAll}
                               />
                             </th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Form</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell">Employee</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Role</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Email</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell">Due Date</th>
-                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Status</th>
-                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Actions</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[20%]">Form</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell w-[15%]">Employee</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[12%]">Role</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[23%]">Email</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell w-[10%]">Due Date</th>
+                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Status</th>
+                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -929,9 +935,6 @@ export function EmployeeDueForms() {
                               <td className="py-4 px-3 max-w-xs">
                                 <div className="font-bold text-slate-900 text-sm truncate">{form.formName}</div>
                                 <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.employeeName}</div>
-                                <div className="text-xs font-semibold text-slate-400 truncate md:hidden">
-                                  {form.employeeEmail}
-                                </div>
                                 <div className="text-xs font-semibold text-slate-400 truncate lg:hidden sm:hidden">
                                   {formatDate(form.dueDate)}
                                 </div>
@@ -943,7 +946,7 @@ export function EmployeeDueForms() {
                                 <div className="truncate">{form.employeeType}</div>
                               </td>
                               <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
-                                <div className="font-bold text-slate-800 truncate">{form.employeeEmail}</div>
+                                <div className="whitespace-nowrap font-bold text-slate-800">{form.employeeEmail}</div>
                               </td>
                               <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
                                 <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>
@@ -981,6 +984,7 @@ export function EmployeeDueForms() {
                         totalPages={totalPages}
                         totalItems={filteredForms.length}
                         itemsPerPage={itemsPerPage}
+                        onPageSizeChange={setItemsPerPage}
                         onPageChange={setCurrentPage}
                         className="flex"
                       />

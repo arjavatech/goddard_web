@@ -206,13 +206,13 @@ export function EmployeeDetails() {
                 </h1>
                 <div className="flex items-center gap-1.5 mt-0.5 sm:hidden">
                   <MailIcon className="h-3 w-3 text-slate-400 flex-shrink-0" />
-                  <span className="text-xs text-slate-500 font-medium truncate">{employee.email}</span>
+                  <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-500 font-medium`}>{employee.email}</div></div>
                 </div>
               </div>
             </div>
             <div className="hidden sm:flex items-center gap-2 bg-[#EFF5FB] px-4 py-2 rounded-xl border border-blue-50 text-xs font-bold text-[#0F2D52] flex-shrink-0 max-w-[280px]">
               <MailIcon className="h-3.5 w-3.5 flex-shrink-0" />
-              <span className="truncate">{employee.email}</span>
+              <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap `}>{employee.email}</div></div>
             </div>
           </div>
         </div>
