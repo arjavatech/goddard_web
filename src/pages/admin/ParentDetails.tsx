@@ -16,6 +16,7 @@ import { fetchParentDetails } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+import { useUserContext } from '../../contexts/UserContext';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -124,7 +125,8 @@ export function ParentDetails() {
   const [loadingAction, setLoadingAction] = useState<{ formId: string, action: 'download' | 'print' } | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const { showToast } = useToast();
-
+  const { userData } = useUserContext();
+  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
 
   const schoolId = localStorage.getItem('schoolId');
   useEffect(() => {
@@ -803,7 +805,7 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    {form.status !== 'Approved' && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                    {(form.status !== 'Approved' || isAdminOrSuperAdmin) && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
