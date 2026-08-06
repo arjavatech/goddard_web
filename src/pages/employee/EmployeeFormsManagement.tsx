@@ -10,8 +10,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchFormTemplates } from '../../services/api/dashboard';
-import { createFormTemplate, updateFormTemplate } from '../../services/api/admin';
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
@@ -81,16 +79,16 @@ export function EmployeeFormsManagement() {
     try {
       if (showLoader) setLoading(true);
       const [templates, emps] = await Promise.all([
-        fetchFormTemplates(schoolId).catch(() => []),
+        EmployeeService.fetchEmployeeFormTemplates(schoolId).catch(() => []),
         EmployeeService.fetchEmployees(schoolId).catch(() => [])
       ]);
-      
-      const mappedForms: Form[] = templates.map((template: any) => ({
+
+      const mappedForms: Form[] = templates.map((template) => ({
         id: template.id,
         name: template.formName,
-        link: template.filloutFormUrl ?? '#',
+        link: template.filloutFormId ?? '#',
         status: mapStatus(template.status),
-        dueDate: template.due_date || ''
+        dueDate: template.dueDate || ''
       }));
       setForms(mappedForms);
       setEmployees(emps.filter(e => e.status === 'active'));
@@ -137,7 +135,13 @@ export function EmployeeFormsManagement() {
     try {
       if (!schoolId) return;
       setIsAddingForm(true);
-      await createFormTemplate(formName, formLink, schoolId, formDueDate, formStatus);
+      await EmployeeService.createEmployeeFormTemplate({
+        schoolId,
+        formName,
+        filloutFormId: formLink || undefined,
+        dueDate: formDueDate || undefined,
+        status: formStatus,
+      });
       showToast('success', 'Form created successfully');
       setIsAddDialogOpen(false);
       setFormName('');
@@ -156,7 +160,14 @@ export function EmployeeFormsManagement() {
   const handleEditForm = async () => {
     if (!selectedForm || !formName.trim() || !schoolId) return;
     try {
-      await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), schoolId, formStatus, formDueDate);
+      await EmployeeService.updateEmployeeFormTemplate({
+        id: selectedForm.id,
+        schoolId,
+        formName: formName.trim(),
+        filloutFormId: formLink.trim() || undefined,
+        status: formStatus,
+        dueDate: formDueDate || undefined,
+      });
       showToast('success', 'Form updated successfully');
       setIsEditDialogOpen(false);
       await fetchForms(true);

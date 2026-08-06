@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
-import { fetchFormTemplates } from '../../services/api/dashboard';
-import { COMPLETION_STATUSES } from '../../lib/formStatus';
+import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Calendar } from 'lucide-react';
 
@@ -34,6 +33,7 @@ export function EmployeeDetails() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [loadingAction, setLoadingAction] = useState<{ formId: string, action: 'download' | 'print' } | null>(null);
+  const [reviewNotes, setReviewNotes] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -42,10 +42,9 @@ export function EmployeeDetails() {
         setIsLoading(true);
         if (!userData?.schoolId || !employeeId) return;
 
-        const [empData, rawAssignments, templates] = await Promise.all([
-          EmployeeService.fetchEmployeeDetails(employeeId),
+        const [empData, rawAssignments] = await Promise.all([
+          EmployeeService.fetchEmployeeDetails(employeeId, userData.schoolId),
           EmployeeService.fetchEmployeeFormAssignments(employeeId),
-          fetchFormTemplates(userData.schoolId).catch(() => [])
         ]);
 
         if (!isMounted) return;
@@ -57,14 +56,11 @@ export function EmployeeDetails() {
 
         setEmployee(empData);
 
-        const enrichedAssignments = rawAssignments.map(assignment => {
-          const template = templates.find((t: any) => t.id === assignment.formId);
-          return {
-            ...assignment,
-            formTitle: template?.formName || 'Unknown Form',
-            formDescription: template?.formType || 'Employee Form'
-          };
-        });
+        const enrichedAssignments = rawAssignments.map(assignment => ({
+          ...assignment,
+          formTitle: assignment.formName || 'Unknown Form',
+          formDescription: assignment.dueDate ? `Due: ${assignment.dueDate}` : 'Employee Form',
+        }));
 
         setAssignments(enrichedAssignments);
       } catch (error) {
@@ -84,15 +80,17 @@ export function EmployeeDetails() {
     try {
       const status = formAction === 'approve' ? 'Approved' : 'Rejected';
       const updated = await EmployeeService.reviewEmployeeForm(
-        selectedForm.id, 
-        status, 
-        `${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'
+        selectedForm.id,
+        selectedForm.schoolId,
+        status,
+        reviewNotes || undefined,
       );
-      
+
       setAssignments(prev => prev.map(a => a.id === selectedForm.id ? { ...a, ...updated } : a));
       showToast('success', `Form ${status.toLowerCase()} successfully`);
       setIsReviewDialogOpen(false);
       setSelectedForm(null);
+      setReviewNotes('');
     } catch (error) {
       showToast('error', 'Failed to review form');
     } finally {
@@ -141,9 +139,29 @@ export function EmployeeDetails() {
 
   const progress = useMemo(() => {
     if (assignments.length === 0) return 0;
-    const completed = assignments.filter(f => f.status === 'Approved').length;
+    const completed = assignments.filter(f => normalizeFormStatus(f.status) === 'Approved').length;
     return Math.round((completed / assignments.length) * 100);
   }, [assignments]);
+
+  const handleDownloadForm = async (form: EmployeeFormAssignment & { formTitle: string }) => {
+    if (!form.recentPdfLink) return;
+    const res = await fetch(form.recentPdfLink);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url; el.download = `${form.formTitle}.pdf`;
+    document.body.appendChild(el); el.click(); el.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrintForm = async (form: EmployeeFormAssignment & { formTitle: string }) => {
+    if (!form.recentPdfLink) return;
+    const res = await fetch(form.recentPdfLink);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url);
+    w?.addEventListener('load', () => { w.print(); URL.revokeObjectURL(url); });
+  };
 
   const openReviewDialog = (form: any, action: 'approve' | 'reject') => {
     setSelectedForm(form);
@@ -325,9 +343,9 @@ export function EmployeeDetails() {
                               <h3 className="font-bold text-sm text-slate-800 truncate">{form.formTitle}</h3>
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <StatusBadge status={form.status} />
+                              <StatusBadge status={normalizeFormStatus(form.status)} />
                               <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
-                                Assigned {new Date(form.assignedOn).toLocaleDateString()}
+                                Assigned {form.assignedOn ? new Date(form.assignedOn).toLocaleDateString() : '—'}
                               </span>
                             </div>
                             <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
@@ -337,13 +355,30 @@ export function EmployeeDetails() {
                           
                           {/* Actions */}
                           <div className="flex flex-wrap gap-2 items-start sm:justify-end">
+                            {normalizeFormStatus(form.status) === 'Approved' && form.recentPdfLink && (
+                              <>
+                                <Button variant="outline" size="sm"
+                                  className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                  onClick={() => handleDownloadForm(form)}>
+                                  <Download className="h-3.5 w-3.5 mr-1" /> PDF
+                                </Button>
+                                <Button variant="outline" size="sm"
+                                  className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                  onClick={() => handlePrintForm(form)}>
+                                  <Printer className="h-3.5 w-3.5 mr-1" /> Print
+                                </Button>
+                              </>
+                            )}
                             <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.formId}`} state={{
                               form,
                               employeeId: employee.id,
                               employeeName: `${employee.firstName} ${employee.lastName}`,
                               returnPath: `/${schoolSlug || 'goddard'}/admin/employees/${employee.id}`,
-                              filloutFormId: form.formId,
-                              employeeFormAssignmentId: form.id,
+                              recentEditLink: form.recentEditLink,
+                              filloutFormId: form.filloutFormId,
+                              studentFormAssignmentId: form.id,
+                              schoolId: form.schoolId,
+                              isEmployeeForm: true,
                             }}>
                               <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
                                 <Eye className="h-3.5 w-3.5 mr-1" />
@@ -351,7 +386,7 @@ export function EmployeeDetails() {
                               </Button>
                             </Link>
 
-                            {form.status === 'Submitted' && (
+                            {normalizeFormStatus(form.status) === 'Submitted' && (
                               <div className="flex gap-2">
                                 <Button 
                                   size="sm" 
@@ -394,8 +429,17 @@ export function EmployeeDetails() {
                 {formAction === 'approve' ? 'Approve' : 'Reject'} Form
               </DialogTitle>
             </DialogHeader>
-            <div className="py-4 text-sm text-slate-600">
-              Are you sure you want to {formAction === 'approve' ? 'approve' : 'reject'} this form submission?
+            <div className="py-4 space-y-3">
+              <p className="text-sm text-slate-600">
+                Are you sure you want to {formAction === 'approve' ? 'approve' : 'reject'} this form submission?
+              </p>
+              <textarea
+                className="w-full text-sm border border-slate-200 rounded-xl p-3 resize-none focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20"
+                rows={3}
+                placeholder={formAction === 'approve' ? 'Optional notes...' : 'Reason for rejection (optional)...'}
+                value={reviewNotes}
+                onChange={e => setReviewNotes(e.target.value)}
+              />
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsReviewDialogOpen(false)}>Cancel</Button>

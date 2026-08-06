@@ -3,17 +3,19 @@ import { motion } from 'framer-motion';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/card';
-import { FileText, Clock, CheckCircle, AlertCircle, User } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
-import { fetchFormTemplates } from '../../services/api/dashboard';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
+import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
+import { cn } from '../../lib/utils';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
   formDescription: string;
+  normalizedStatus: NormalizedFormStatus;
 };
 
 export function EmployeeDashboard() {
@@ -22,41 +24,34 @@ export function EmployeeDashboard() {
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  const employeeId = userData?.parentId ?? '';
-
-  const MOCK_ASSIGNMENTS: EnrichedAssignment[] = [
-    { id: 'mock-1', formId: 'f1', employeeId: 'emp-1', schoolId: 's1', status: 'Assigned', assignedBy: 'admin', assignedOn: new Date().toISOString(), formTitle: 'Employee Handbook Acknowledgement', formDescription: 'HR Documentation' },
-    { id: 'mock-2', formId: 'f2', employeeId: 'emp-1', schoolId: 's1', status: 'Submitted', assignedBy: 'admin', assignedOn: new Date(Date.now() - 86400000 * 2).toISOString(), formTitle: 'Background Check Consent', formDescription: 'Compliance Form' },
-    { id: 'mock-3', formId: 'f3', employeeId: 'emp-1', schoolId: 's1', status: 'Approved', assignedBy: 'admin', assignedOn: new Date(Date.now() - 86400000 * 5).toISOString(), formTitle: 'Emergency Contact Form', formDescription: 'Required documentation' },
-    { id: 'mock-4', formId: 'f4', employeeId: 'emp-1', schoolId: 's1', status: 'Rejected', assignedBy: 'admin', assignedOn: new Date(Date.now() - 86400000 * 1).toISOString(), formTitle: 'Health & Safety Training', formDescription: 'Training Acknowledgement' },
-  ];
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(
+    (localStorage.getItem('empDashFormsViewMode') as 'card' | 'table') || 'card'
+  );
+  const handleViewModeChange = (mode: 'card' | 'table') => {
+    setViewMode(mode);
+    localStorage.setItem('empDashFormsViewMode', mode);
+  };
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        if (!userData?.schoolId) {
-          if (isMounted) { setAssignments(MOCK_ASSIGNMENTS); setLoading(false); }
-          return;
-        }
+        if (!userData?.schoolId) return;
         setLoading(true);
 
-        const [rawAssignments, templates] = await Promise.all([
-          EmployeeService.fetchEmployeeFormAssignments(employeeId),
-          fetchFormTemplates(userData.schoolId).catch(() => [])
-        ]);
-
+        // First resolve the current user's employee record to get their employee UUID.
+        const employee = await EmployeeService.fetchCurrentEmployee(userData.schoolId);
         if (!isMounted) return;
 
-        const enriched = rawAssignments.map(assignment => {
-          const template = templates.find((t: any) => t.id === assignment.formId);
-          return {
-            ...assignment,
-            formTitle: template?.formName || 'Employee Form',
-            formDescription: template?.formType || 'Required documentation'
-          };
-        });
+        const rawAssignments = await EmployeeService.fetchEmployeeFormAssignments(employee.id);
+        if (!isMounted) return;
+
+        const enriched = rawAssignments.map(assignment => ({
+          ...assignment,
+          formTitle: assignment.formName || 'Employee Form',
+          formDescription: assignment.dueDate ? `Due: ${assignment.dueDate}` : 'Required documentation',
+          normalizedStatus: normalizeFormStatus(assignment.status),
+        }));
 
         setAssignments(enriched);
       } catch (err) {
@@ -66,7 +61,7 @@ export function EmployeeDashboard() {
       }
     })();
     return () => { isMounted = false; };
-  }, [userData?.schoolId, employeeId]);
+  }, [userData?.schoolId]);
 
   const handleOpenForm = (assignment: EnrichedAssignment) => {
     navigate(`/${schoolSubdomain}/employee/form/${assignment.id}`, {
@@ -75,9 +70,29 @@ export function EmployeeDashboard() {
   };
 
   const totalForms = assignments.length;
-  const completedForms = assignments.filter(a => a.status === 'Approved' || a.status === 'Submitted').length;
-  const pendingForms = assignments.filter(a => a.status === 'Assigned' || a.status === 'Rejected').length;
+  const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved').length;
+  const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved').length;
   const progress = totalForms > 0 ? Math.round((completedForms / totalForms) * 100) : 0;
+
+  const handleDownload = async (a: EnrichedAssignment) => {
+    if (!a.recentPdfLink) return;
+    const res = await fetch(a.recentPdfLink);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url; el.download = `${a.formTitle}.pdf`;
+    document.body.appendChild(el); el.click(); el.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const handlePrint = async (a: EnrichedAssignment) => {
+    if (!a.recentPdfLink) return;
+    const res = await fetch(a.recentPdfLink);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const w = window.open(url);
+    w?.addEventListener('load', () => { w.print(); URL.revokeObjectURL(url); });
+  };
 
   const employeeName = userData
     ? [userData.firstName, userData.lastName].filter(Boolean).join(' ') || userData.email || 'Employee'
@@ -205,62 +220,200 @@ export function EmployeeDashboard() {
 
             {/* Assigned Forms */}
             <div className="animate-fade-in-up" style={{ animationDelay: '0.22s' }}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Assigned Forms</h3>
-                {totalForms > 0 && (
-                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                    {totalForms} form{totalForms !== 1 ? 's' : ''}
-                  </span>
-                )}
+              {/* Section header — matches parent FormsDocuments gradient header */}
+              <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden mb-4">
+                <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                      <FileText className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Employee</p>
+                      <h2 className="text-sm font-bold text-white leading-tight">Assigned Forms</h2>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {totalForms > 0 && (
+                      <span className="text-[10px] font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
+                        {totalForms} form{totalForms !== 1 ? 's' : ''}
+                      </span>
+                    )}
+                    <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => handleViewModeChange('card')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
+                      >
+                        <LayoutGrid className="h-3 w-3" />
+                        <span className="hidden sm:inline">Card</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleViewModeChange('table')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
+                      >
+                        <List className="h-3 w-3" />
+                        <span className="hidden sm:inline">Table</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {assignments.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
+                <div className="rounded-xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
                   <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <FileText className="w-7 h-7 text-slate-300" />
                   </div>
                   <div className="text-base font-bold text-slate-900 mb-1">No forms assigned</div>
                   <div className="text-sm text-slate-500">You're all caught up!</div>
                 </div>
+              ) : viewMode === 'table' ? (
+                <div className="rounded-2xl border border-slate-100 bg-white overflow-x-auto shadow-sm">
+                  <table className="w-full min-w-[320px] text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/60">
+                        <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] w-[45%]">Form</th>
+                        <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] hidden sm:table-cell">Assigned</th>
+                        <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] hidden sm:table-cell">Due</th>
+                        <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px]">Status</th>
+                        <th className="text-right px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[10px] w-[80px]"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {assignments.map((assignment) => {
+                        const ns = assignment.normalizedStatus;
+                        const isApproved = ns === 'Approved';
+                        return (
+                          <tr
+                            key={assignment.id}
+                            className="border-b border-slate-50 last:border-0 hover:bg-slate-50/60 cursor-pointer transition-colors"
+                            onClick={() => handleOpenForm(assignment)}
+                          >
+                            <td className="px-3 py-2.5">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                                  <FileText className="h-3 w-3 text-white" />
+                                </div>
+                                <span className="font-semibold text-slate-900 text-[11px] sm:text-xs line-clamp-2 leading-tight">{assignment.formTitle}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-2.5 text-slate-500 text-[11px] hidden sm:table-cell whitespace-nowrap">
+                              {assignment.assignedOn ? new Date(assignment.assignedOn).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-3 py-2.5 text-slate-500 text-[11px] hidden sm:table-cell whitespace-nowrap">
+                              {assignment.dueDate || '—'}
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <StatusBadge status={ns} className="text-[10px] px-1.5 py-0.5 gap-0.5 mt-0" />
+                            </td>
+                            <td className="px-3 py-2.5">
+                              <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
+                                {!isApproved && (
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={() => handleOpenForm(assignment)} title="Open Form">
+                                    <Eye className="h-3 w-3" />
+                                  </Button>
+                                )}
+                                {isApproved && assignment.recentPdfLink && (
+                                  <>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={() => handleDownload(assignment)} title="Download PDF">
+                                      <Download className="h-3 w-3" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={() => handlePrint(assignment)} title="Print">
+                                      <Printer className="h-3 w-3" />
+                                    </Button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <div className="grid gap-3">
-                  {assignments.map((assignment, idx) => (
-                    <motion.div
-                      key={assignment.id}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, delay: idx * 0.04 }}
-                    >
-                      <Card className="border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 bg-white rounded-2xl">
-                        <CardContent className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-                            <div className="w-11 h-11 rounded-xl bg-[#EFF5FB] flex items-center justify-center flex-shrink-0">
-                              <FileText className="w-5 h-5 text-[#0F2D52]" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  {assignments.map((assignment, idx) => {
+                    const ns = assignment.normalizedStatus;
+                    const isApproved = ns === 'Approved';
+                    return (
+                      <motion.div
+                        key={assignment.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.25, delay: idx * 0.04 }}
+                      >
+                        <div
+                          className={cn(
+                            "rounded-2xl border border-slate-100 bg-white flex flex-col hover:border-slate-200 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200 cursor-pointer"
+                          )}
+                          onClick={() => handleOpenForm(assignment)}
+                        >
+                          {/* Card body */}
+                          <div className="p-4 flex items-start gap-3 flex-1">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                              <FileText className="h-4 w-4 text-white" />
                             </div>
-                            <div className="min-w-0">
-                              <h4 className="font-bold text-slate-900 text-sm truncate">{assignment.formTitle}</h4>
-                              <p className="text-xs text-slate-500 mt-0.5 line-clamp-1">{assignment.formDescription}</p>
-                              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                                <StatusBadge status={assignment.status} />
-                                <span className="flex items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                                  <Clock className="w-3 h-3 mr-1" />
-                                  {new Date(assignment.assignedOn).toLocaleDateString()}
-                                </span>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{assignment.formTitle}</p>
+                              <div className="mt-1.5">
+                                <StatusBadge status={ns} />
                               </div>
                             </div>
                           </div>
-                          <div className="w-full sm:w-auto flex-shrink-0">
-                            <Button
-                              className="w-full sm:w-auto bg-[#0F2D52] hover:bg-[#1c477c] text-white font-semibold rounded-xl text-sm h-9 px-4"
-                              onClick={() => handleOpenForm(assignment)}
-                            >
-                              {assignment.status === 'Assigned' || assignment.status === 'Rejected' ? 'Fill Form' : 'View Form'}
-                            </Button>
+                          {/* Divider */}
+                          <div className="mx-4 border-t border-slate-50" />
+                          {/* Footer */}
+                          <div className="px-4 py-3 flex items-center justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[11px] text-slate-400 font-medium truncate">
+                                Assigned: {assignment.assignedOn ? new Date(assignment.assignedOn).toLocaleDateString() : '—'}
+                              </p>
+                              {assignment.dueDate && (
+                                <p className="text-[11px] text-slate-400 font-medium truncate">Due: {assignment.dueDate}</p>
+                              )}
+                            </div>
+                            <div className="flex gap-1 flex-shrink-0" onClick={e => e.stopPropagation()}>
+                              {isApproved && assignment.recentPdfLink && (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                    onClick={() => handleDownload(assignment)}
+                                    title="Download PDF"
+                                  >
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                    onClick={() => handlePrint(assignment)}
+                                    title="Print PDF"
+                                  >
+                                    <Printer className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
+                              )}
+                              {!isApproved && (
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                  onClick={() => handleOpenForm(assignment)}
+                                  title="Open Form"
+                                >
+                                  <Eye className="h-3.5 w-3.5" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </div>
               )}
             </div>

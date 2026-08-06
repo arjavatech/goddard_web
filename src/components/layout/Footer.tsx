@@ -8,7 +8,7 @@ import { useUserContext } from '../../contexts/UserContext';
 export function Footer() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
-  const { schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
+  const { schoolName, schoolPhone, schoolEmail, schoolAddress, userData } = useUserContext();
 
   return (
     <footer className="w-full bg-[#1a3a5c]">
@@ -96,7 +96,9 @@ export function Footer() {
           </p>
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">Parent Portal</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+              {userData?.role === 'Employee' ? 'Employee Portal' : 'Parent Portal'}
+            </span>
           </div>
         </div>
       </div>
