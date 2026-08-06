@@ -23,7 +23,7 @@ export function AlertModal({
 }: AlertModalProps) {
   return (
     <Dialog open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[95vw] sm:max-w-md">
         <DialogHeader className="text-center">
           <div className="flex justify-center mb-4">
             {type === 'success' ? (

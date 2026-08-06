@@ -13,8 +13,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchClassEnrollmentStats, renameClassroom, deleteClassroom, createClassroom, type Classroom } from '../../services/api/admin';
 import { usePagination } from '../../hooks/usePagination';
-import { DataTable } from '../../components/ui/data-table';
-import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { usePageSize } from '../../hooks/usePageSize';
+import { DataGrid, ColumnDef } from '../../components/ui/data-grid';
+
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
@@ -27,12 +28,8 @@ const getAvatarColorClass = (name: string) => {
 
 export function ClassroomManagement() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : 'table');
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('table');
+
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -115,17 +112,87 @@ export function ClassroomManagement() {
     }),
   [filteredClassrooms, sortBy, sortOrder]);
 
+  const [itemsPerPage, setItemsPerPage] = usePageSize('classroom', 6);
+  
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedClassrooms,
-    itemsPerPage,
     setCurrentPage
   } = usePagination({
     data: sortedClassrooms,
-    itemsPerPage: 6,
-    mobileItemsPerPage: 6
+    itemsPerPage
   });
+
+  const classroomColumns = useMemo<ColumnDef<Classroom>[]>(() => [
+    {
+      id: 'classroom',
+      header: 'Classroom',
+      className: 'w-1/4',
+      hideInCardBody: true,
+      cell: (classroom) => (
+        <div className="flex items-center gap-2.5">
+          <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} className={`${getAvatarColorClass(classroom.name)} font-bold`} />
+          <div className="min-w-0">
+            <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm font-bold text-slate-900 hover:text-[#0F2D52] hover:underline block truncate">
+              {classroom.name}
+            </Link>
+            <p className="text-xs text-slate-400 font-semibold mt-0.5">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</p>
+          </div>
+        </div>
+      )
+    },
+    {
+      id: 'students',
+      header: 'Students',
+      className: 'w-1/8',
+      hideInCardBody: true,
+      cell: (classroom) => (
+        <div className="flex items-center gap-1.5 text-slate-650 font-semibold text-sm">
+          <Users className="h-4 w-4 text-slate-400" />
+          <span>{classroom.studentsCount}</span>
+        </div>
+      )
+    },
+    {
+      id: 'assigned_forms',
+      header: 'Assigned Forms',
+      className: 'w-1/4',
+      hideInCardBody: true,
+      cell: (classroom) => (
+        <div className="flex flex-wrap gap-1">
+          {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 2).map(form => (
+            <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">{form.name}</Badge>
+          )) : <span className="text-xs text-slate-400 font-semibold">No forms assigned</span>}
+          {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">+{classroom.assignedForms.length - 2} more</Badge>}
+        </div>
+      )
+    },
+    {
+      id: 'actions',
+      header: 'Actions',
+      className: 'w-1/8',
+      hideInCardBody: true,
+      cell: (classroom) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650"><MoreHorizontal className="h-4 w-4" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+            <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+              <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+            </DropdownMenuItem>
+            <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(classroom)}>
+              <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
+            </DropdownMenuItem>
+            <DropdownMenuItem className={`cursor-pointer ${classroom.studentsCount > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-red-650 focus:text-red-700 focus:bg-red-50'}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
+              <Trash2 className="h-4 w-4 mr-2" />Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )
+    }
+  ], []);
   const handleAddClassroom = async () => {
     if (!validateClassroom()) return;
     try {
@@ -317,227 +384,163 @@ export function ClassroomManagement() {
             </div>
           </div>
 
-          {/* Conditional Rendering of Views */}
-          {viewMode === 'card' ? (
-            <div className="p-5 space-y-4">
-              <div className="flex items-center justify-between px-1">
-                <span className="text-[11px] text-slate-400 font-semibold">{paginatedClassrooms.length} of {sortedClassrooms.length}</span>
-              </div>
-              {paginatedClassrooms.length === 0 ? (
-                <div className="py-16 text-center">
-                  <Users className="h-10 w-10 text-slate-200 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm font-semibold">No classrooms found matching your search criteria.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {paginatedClassrooms.map((classroom, index) => (
-                    <div key={classroom.id || `classroom-${index}`} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
-                      {/* Header */}
-                      <div className="p-4 flex items-start gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
-                          {classroom.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                        </div>
-                        <div className="min-w-0 flex-1 overflow-hidden">
-                          <Link to={`/admin/classrooms/${classroom.id}`} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
-                            {classroom.name}
-                          </Link>
-                          <div className="flex items-center gap-3 mt-1 flex-wrap">
-                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
-                              <Users className="h-3 w-3" />{classroom.studentsCount} students
-                            </span>
-                            <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
-                              <FileText className="h-3 w-3" />{classroom.formsCount} forms
-                            </span>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
-                              <MoreHorizontal className="h-3.5 w-3.5" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
-                              <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => openEditDialog(classroom)}>
-                              <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className={`cursor-pointer font-semibold text-xs text-red-600 ${classroom.studentsCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
-                              <Trash2 className="h-4 w-4 mr-2" />Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      <div className="mx-4 border-t border-slate-50" />
-
-                      {/* Stats */}
-                      <div className="px-4 py-3 grid grid-cols-2 gap-3 flex-shrink-0">
-                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
-                          <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Students</span>
-                          <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
-                            <Users className="h-3.5 w-3.5 text-[#0F2D52]" />{classroom.studentsCount}
-                          </span>
-                        </div>
-                        <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
-                          <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Forms</span>
-                          <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
-                            <FileText className="h-3.5 w-3.5 text-emerald-600" />{classroom.formsCount}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mx-4 border-t border-slate-50" />
-
-                      {/* Form badges */}
-                      <div className="px-4 py-3 flex-1">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assigned Forms</p>
-                        <div className="flex flex-wrap gap-1.5 min-h-[24px]">
-                          {classroom.assignedForms.length > 0 ? (
-                            <>
-                              {classroom.assignedForms.slice(0, 3).map(form => (
-                                <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] border-none truncate max-w-[120px]">{form.name}</Badge>
-                              ))}
-                              {classroom.assignedForms.length > 3 && (
-                                <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-500 whitespace-nowrap">+{classroom.assignedForms.length - 3}</Badge>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic font-medium">No forms assigned</span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="px-4 pb-4 pt-1 mt-auto">
-                        <Link to={`/admin/classrooms/${classroom.id}`} className="text-xs font-bold text-[#0F2D52] hover:underline flex items-center gap-1">
-                          View classroom profile →
-                        </Link>
-                      </div>
+          {/* Data Grid */}
+          <DataGrid
+            data={paginatedClassrooms}
+            columns={classroomColumns}
+            viewMode={viewMode}
+            loading={loading}
+            loadingMessage="Loading classrooms..."
+            emptyMessage="No classrooms found. Try a different search or add a new classroom."
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredClassrooms.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={setItemsPerPage}
+            gridClassName="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            renderCard={(classroom, dynamicColumns) => (
+              <div key={classroom.id} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+                {/* Header */}
+                <div className="p-4 flex items-start gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-extrabold text-sm flex-shrink-0">
+                    {classroom.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                  </div>
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <Link to={`/admin/classrooms/${classroom.id}`} className="font-bold text-sm text-slate-900 hover:text-[#0F2D52] hover:underline block truncate leading-tight">
+                      {classroom.name}
+                    </Link>
+                    <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
+                        <Users className="h-3 w-3" />{classroom.studentsCount} students
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-semibold flex items-center gap-1 whitespace-nowrap">
+                        <FileText className="h-3 w-3" />{classroom.formsCount} forms
+                      </span>
                     </div>
-                  ))}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 px-2 rounded-xl text-slate-400 hover:text-[#0F2D52] hover:bg-slate-50 flex-shrink-0">
+                        <MoreHorizontal className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                      <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
+                        <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-slate-700" onClick={() => openEditDialog(classroom)}>
+                        <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className={`cursor-pointer font-semibold text-xs text-red-600 ${classroom.studentsCount > 0 ? 'opacity-50 cursor-not-allowed' : ''}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
+                        <Trash2 className="h-4 w-4 mr-2" />Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
-              )}
-              {totalPages > 1 && (
-                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                  <span className="text-xs text-slate-400 font-semibold">Page {currentPage} of {totalPages}</span>
-                  <div className="flex items-center gap-1">
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.max(1, currentPage - 1))} disabled={currentPage === 1} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Prev</Button>
-                    <Button variant="outline" size="sm" onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200">Next</Button>
+
+                <div className="mx-4 border-t border-slate-50" />
+
+                {/* Stats */}
+                <div className="px-4 py-3 grid grid-cols-2 gap-3 flex-shrink-0">
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
+                    <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Students</span>
+                    <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
+                      <Users className="h-3.5 w-3.5 text-[#0F2D52]" />{classroom.studentsCount}
+                    </span>
+                  </div>
+                  <div className="bg-slate-50/50 rounded-xl p-3 border border-slate-100">
+                    <span className="block text-[10px] uppercase font-bold tracking-wider text-slate-400">Forms</span>
+                    <span className="text-base font-extrabold text-slate-900 flex items-center gap-1.5 mt-1">
+                      <FileText className="h-3.5 w-3.5 text-emerald-600" />{classroom.formsCount}
+                    </span>
                   </div>
                 </div>
-              )}
-            </div>
-          ) : (
-            <DataTable
-              className="relative z-0"
-              loading={loading}
-              loadingMessage="Loading classrooms..."
-              emptyMessage="No classrooms found. Try a different search or add a new classroom."
-              currentPage={currentPage}
-              totalPages={totalPages}
-              totalItems={filteredClassrooms.length}
-              itemsPerPage={itemsPerPage}
-              onPageChange={setCurrentPage}
-              columns={[
-                { header: 'Classroom', className: 'w-1/4' },
-                { header: 'Students', className: 'w-1/8' },
-                { header: 'Assigned Forms', className: 'w-1/4' },
-                { header: 'Actions', className: 'w-1/8' },
-              ]}
-              rows={paginatedClassrooms.map((classroom, index) => (
-                <tr key={classroom.id || `classroom-${index}`} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-all duration-200 ease-in-out">
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-2.5">
-                      <AvatarInitials initials={classroom.name.split(' ').map(w => w[0]).join('')} className={`${getAvatarColorClass(classroom.name)} font-bold`} />
-                      <div className="min-w-0">
-                        <Link to={`/admin/classrooms/${classroom.id}`} className="text-sm font-bold text-slate-900 hover:text-[#0F2D52] hover:underline block truncate">
-                          {classroom.name}
-                        </Link>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5">{classroom.studentsCount} student{classroom.studentsCount === 1 ? '' : 's'}</p>
+
+                <div className="mx-4 border-t border-slate-50" />
+
+                {/* Form badges */}
+                <div className="px-4 py-3 flex-1">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Assigned Forms</p>
+                  <div className="flex flex-wrap gap-1.5 min-h-[24px]">
+                    {classroom.assignedForms.length > 0 ? (
+                      <>
+                        {classroom.assignedForms.slice(0, 3).map(form => (
+                          <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold bg-[#EFF5FB] text-[#0F2D52] border-none truncate max-w-[120px]">{form.name}</Badge>
+                        ))}
+                        {classroom.assignedForms.length > 3 && (
+                          <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold border-slate-200 text-slate-500 whitespace-nowrap">+{classroom.assignedForms.length - 3}</Badge>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-xs text-slate-400 italic font-medium">No forms assigned</span>
+                    )}
+                  </div>
+                </div>
+                
+                {/* Dynamic Columns */}
+                {dynamicColumns.length > 0 && (
+                  <div className="px-4 py-3 border-t border-slate-50 space-y-2">
+                    {dynamicColumns.map(col => (
+                      <div key={col.id} className="flex flex-col">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{col.header}</span>
+                        <div className="text-sm">{col.cell(classroom)}</div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex items-center gap-1.5 text-slate-650 font-semibold text-sm">
-                      <Users className="h-4 w-4 text-slate-400" />
-                      <span>{classroom.studentsCount}</span>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex flex-wrap gap-1">
-                      {classroom.assignedForms.length > 0 ? classroom.assignedForms.slice(0, 2).map(form => (
-                        <Badge key={form.id} variant="secondary" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">{form.name}</Badge>
-                      )) : <span className="text-xs text-slate-400 font-semibold">No forms assigned</span>}
-                      {classroom.assignedForms.length > 2 && <Badge variant="outline" className="text-[10px] rounded-full px-2.5 py-0.5 font-bold">+{classroom.assignedForms.length - 2} more</Badge>}
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650"><MoreHorizontal className="h-4 w-4" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                        <DropdownMenuItem className="cursor-pointer" onClick={() => navigate(`/admin/form-assignments?classroom=${classroom.id}`)}>
-                          <FileText className="h-4 w-4 mr-2 text-slate-400" />Manage Forms
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(classroom)}>
-                          <Edit className="h-4 w-4 mr-2 text-slate-400" />Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className={`cursor-pointer ${classroom.studentsCount > 0 ? 'text-slate-400 cursor-not-allowed' : 'text-red-650 focus:text-red-700 focus:bg-red-50'}`} disabled={classroom.studentsCount > 0} onClick={() => openDeleteDialog(classroom)}>
-                          <Trash2 className="h-4 w-4 mr-2" />Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </td>
-                </tr>
-              ))}
-            />
-          )}
+                    ))}
+                  </div>
+                )}
+
+                {/* Footer */}
+                <div className="px-4 pb-4 pt-1 mt-auto">
+                  <Link to={`/admin/classrooms/${classroom.id}`} className="text-xs font-bold text-[#0F2D52] hover:underline flex items-center gap-1">
+                    View classroom profile →
+                  </Link>
+                </div>
+              </div>
+            )}
+          />
         </div>
       </motion.div>
 
       {/* Add Classroom Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0" preventClose>
-          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
-            <DialogTitle className="text-lg font-bold text-slate-900">Add New Classroom</DialogTitle>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md" preventClose>
+          <DialogHeader>
+            <DialogTitle>Add New Classroom</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-2">
+              Classroom Name
+            </label>
+            <Input
+              value={newClassroomName}
+              onChange={e => {
+                setNewClassroomName(e.target.value);
+                if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
+              }}
+              placeholder="Enter classroom name"
+              className={`${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
+              autoFocus
+            />
+            {classroomErrors.newClassroomName && (
+              <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
+            )}
           </div>
-          <div className="p-6 space-y-4">
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Classroom Name</label>
-              <Input
-                value={newClassroomName}
-                onChange={e => {
-                  setNewClassroomName(e.target.value);
-                  if (classroomErrors.newClassroomName) setClassroomErrors(prev => ({...prev, newClassroomName: ''}));
-                }}
-                placeholder="Enter classroom name"
-                className={`w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white ${classroomErrors.newClassroomName ? 'border-red-500' : ''}`}
-                autoFocus
-              />
-              {classroomErrors.newClassroomName && (
-                <p className="text-xs text-red-600 mt-1 font-bold">{classroomErrors.newClassroomName}</p>
-              )}
-            </div>
-          </div>
-          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+          <DialogFooter>
             <Button
               variant="outline"
               onClick={() => setIsAddDialogOpen(false)}
-              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
             >
               Cancel
             </Button>
             <AsyncButton
               onClick={handleAddClassroom}
-              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all"
+              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1558a0] text-white transition-all"
               disabled={!newClassroomName.trim()}
             >
               Add Classroom
             </AsyncButton>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

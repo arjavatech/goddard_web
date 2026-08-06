@@ -3,6 +3,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
+import { usePageSize } from '../../hooks/usePageSize';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
@@ -30,7 +31,7 @@ export function AdminManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [itemsPerPage, setItemsPerPage] = usePageSize('admin', 8);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -45,13 +46,9 @@ export function AdminManagement() {
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('adminMgmtViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('adminMgmtViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('adminMgmtViewMode', mode); };
-  React.useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -290,16 +287,15 @@ export function AdminManagement() {
       <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
         
         {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-14 animate-fade-in duration-200">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
-              Admin Management
-            </h1>
-            <p className="text-sm text-slate-500 mt-0.5 font-medium">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Admin Management</h1>
+            <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
               Manage system administrator accounts and access
             </p>
           </div>
-          <Button 
+          <div>
+             <Button 
             className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2" 
             size="sm" 
             onClick={() => {
@@ -310,6 +306,7 @@ export function AdminManagement() {
             <Plus className="w-4 h-4 mr-1" />
             Invite Admin
           </Button>
+          </div>
         </div>
 
         {loadError && (
@@ -454,6 +451,9 @@ export function AdminManagement() {
               currentPage={currentPage}
               totalPages={totalPages}
               onPageChange={setCurrentPage}
+              itemsPerPage={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
+              totalItems={filteredAdmins.length}
               gridClassName="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
               cards={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
@@ -472,7 +472,7 @@ export function AdminManagement() {
                                 <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
                               )}
                             </div>
-                            <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{admin.email}</p>
+                            <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5`}>{admin.email}</div></div>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -545,6 +545,7 @@ export function AdminManagement() {
               totalPages={totalPages}
               totalItems={filteredAdmins.length}
               itemsPerPage={itemsPerPage}
+              onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
                 { header: 'Administrator', className: 'w-2/5' },
@@ -568,7 +569,7 @@ export function AdminManagement() {
                               <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
                             )}
                           </div>
-                          <p className="text-xs text-slate-400 font-semibold block truncate mt-0.5">{admin.email}</p>
+                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5`}>{admin.email}</div></div>
                         </div>
                       </div>
                     </td>
@@ -798,7 +799,7 @@ export function AdminManagement() {
                   <AvatarInitials initials={`${selectedAdmin.first_name?.[0] || ''}${selectedAdmin.last_name?.[0] || ''}`.toUpperCase()} size="lg" />
                   <div className="min-w-0">
                     <h3 className="text-base font-bold text-slate-900 truncate">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
-                    <p className="text-xs text-slate-400 font-semibold break-all">{selectedAdmin.email}</p>
+                    <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold`}>{selectedAdmin.email}</div></div>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">

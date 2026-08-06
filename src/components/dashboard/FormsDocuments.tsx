@@ -83,15 +83,6 @@ function FormCard({
         <div className="flex gap-1 flex-shrink-0">
           {isApproved && (
             <>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                onClick={(e) => { e.stopPropagation(); if (disabled) return; onView?.(); }}
-                title="View Form (Read-only)"
-              >
-                <Eye className="h-3.5 w-3.5" />
-              </Button>
               {recentPdfLink && (
                 <>
                   <Button
@@ -214,17 +205,12 @@ export function FormsDocuments({
   const processedFormToOpenRef = useRef<string | null>(null);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(
-    window.innerWidth < 640 ? 'card' : (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
+    (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
   );
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
-    if (window.innerWidth >= 640) localStorage.setItem('parentFormsViewMode', mode);
+    localStorage.setItem('parentFormsViewMode', mode);
   };
-  useEffect(() => {
-    const onResize = () => { if (window.innerWidth < 640) setViewMode('card'); };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
   const handleDownloadAll = async () => {
     if (!enrollmentId) return;
     setIsDownloadingAll(true);
@@ -377,13 +363,7 @@ export function FormsDocuments({
       const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
 
       if (isReadOnly) {
-        // For approved/submitted forms, use direct PDF link for react-pdf viewer
-        if (recentPdfLink && recentPdfLink !== '#' && recentPdfLink.trim() !== '') {
-          formUrl = recentPdfLink;
-        } else {
-          // If no PDF link available, don't allow viewing
-          return;
-        }
+        return;
       } else {
         const isFillout = (() => {
           const link = recentEditLink || filloutFormId;
@@ -396,7 +376,8 @@ export function FormsDocuments({
 
         if (isFillout) {
           // Backend validation requires this hidden field; do not open Fillout without it.
-          if (!idForPayload.isValid) {
+          // Exception: if recentEditLink is available, allow opening directly without assignment ID.
+          if (!idForPayload.isValid && !(recentEditLink && recentEditLink !== '#' && recentEditLink.trim() !== '')) {
             const debugPayload = {
               formId: form.formId || form._key,
               status: form.status,
@@ -827,11 +808,13 @@ export function FormsDocuments({
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isDisabled} onClick={() => handleView(form)} title="View">
-                                {isLoadingThis && loadingAction?.action === 'view'
-                                  ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
-                                  : <Eye className="h-3 w-3" />}
-                              </Button>
+                              {!isApproved && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isDisabled} onClick={() => handleView(form)} title="View">
+                                  {isLoadingThis && loadingAction?.action === 'view'
+                                    ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                                    : <Eye className="h-3 w-3" />}
+                                </Button>
+                              )}
                               {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (
                                 <>
                                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isLoadingThis} onClick={() => handleDownload(form)} title="Download">
@@ -920,11 +903,13 @@ export function FormsDocuments({
                           </td>
                           <td className="px-3 py-2.5">
                             <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
-                              <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isDisabled} onClick={() => handleView(form)} title="View">
-                                {isLoadingThis && loadingAction?.action === 'view'
-                                  ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
-                                  : <Eye className="h-3 w-3" />}
-                              </Button>
+                              {!isApproved && (
+                                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isDisabled} onClick={() => handleView(form)} title="View">
+                                  {isLoadingThis && loadingAction?.action === 'view'
+                                    ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                                    : <Eye className="h-3 w-3" />}
+                                </Button>
+                              )}
                               {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (
                                 <>
                                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" disabled={isLoadingThis} onClick={() => handleDownload(form)} title="Download">

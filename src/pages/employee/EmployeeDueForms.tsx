@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { AdminLayout } from './AdminLayout';
+import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -7,36 +7,63 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List } from 'lucide-react';
-import { DueForm } from '../../services/api/admin';
+import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { usePagination } from '../../hooks/usePagination';
-import { PageLoader } from '../../components/ui/page-loader';
-import { StatCard } from '../../components/ui/stat-card';
+import { usePageSize } from '../../hooks/usePageSize';
 import { downloadCSV, printAsPDF } from '../../lib/export';
+import { useUserContext } from '../../contexts/UserContext';
+import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
+import { fetchFormTemplates } from '../../services/api/dashboard';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
-type LocalDueForm = Omit<DueForm, 'status'> & { status: DueFormStatus };
 
-export function DueForms() {
+interface LocalDueForm {
+  id: string;
+  formId: string;
+  formName: string;
+  employeeName: string;
+  employeeType: string;
+  employeeEmail: string;
+  dueDate: string | null;
+  status: DueFormStatus;
+  assignedDate: string;
+}
+
+const parseDueDate = (dateString: string | null): Date | null => {
+  if (!dateString) return null;
+  const parts = dateString.split('-');
+  if (parts.length !== 3) return null;
+  let day: string, month: string, year: string;
+  if (parts[0].length === 4) {
+    [year, month, day] = parts;
+  } else {
+    [day, month, year] = parts;
+  }
+  const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+  return isNaN(date.getTime()) ? null : date;
+};
+
+export function EmployeeDueForms() {
   const [dueForms, setDueForms] = useState<LocalDueForm[]>([]);
   const [filteredForms, setFilteredForms] = useState<LocalDueForm[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
+  const [roleFilter, setRoleFilter] = useState<string[]>([]);
   const [formFilter, setFormFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
-  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'table');
+  const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('empDueFormsViewMode', mode); };
+  const [itemsPerPage, setItemsPerPage] = usePageSize('empDueForms', 10);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) setViewMode('card'); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -44,8 +71,9 @@ export function DueForms() {
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
+  const { userData } = useUserContext();
 
-  const schoolId = localStorage.getItem('schoolId');
+  const schoolId = userData?.schoolId;
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
     if (currentValues.includes(value)) {
@@ -146,105 +174,79 @@ export function DueForms() {
     (async () => {
       try {
         setLoading(true);
-        // const user = await fetchUserContext();
         if (!schoolId) return;
-        
-        // Use new enrollments API
-        const response = await fetch(`${apiBaseUrl}/enrollments?school_id=${schoolId}`, {
-          method: 'GET',
-          headers: {
-            'X-API-Key': 'test-owner-key-2024',
-            'Content-Type': 'application/json'
+
+        const [employees, templates, assignments] = await Promise.all([
+          EmployeeService.fetchEmployees(schoolId).catch(() => [] as Employee[]),
+          fetchFormTemplates(schoolId).catch(() => []),
+          EmployeeService.fetchSchoolFormAssignments(schoolId).catch(() => [] as EmployeeFormAssignment[])
+        ]);
+
+        if (!isMounted) return;
+
+        const employeeMap = new Map(employees.map(e => [e.id, e]));
+        const templateMap = new Map(templates.map((t: any) => [String(t.id), t]));
+        const today = new Date();
+        const mappedForms: LocalDueForm[] = [];
+
+        assignments.forEach(assignment => {
+          const employee = employeeMap.get(assignment.employeeId);
+          if (!employee) return;
+          const template = templateMap.get(assignment.formId);
+          const formName = template?.formName || 'Employee Form';
+          const dueDate = template?.due_date || null;
+
+          let status: DueFormStatus = 'pending';
+          if (assignment.status === 'Approved') {
+            status = 'completed';
+          } else if (assignment.status === 'Submitted') {
+            status = 'submitted';
+          } else if (assignment.status === 'Rejected') {
+            status = 'in_progress';
+          } else {
+            const due = parseDueDate(dueDate);
+            if (due && due < today) {
+              status = 'overdue';
+            }
           }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          const enrollments = data.enrollments || [];
-          
-          // Map enrollments to due forms
-          const mappedForms: LocalDueForm[] = [];
-          
-          enrollments.forEach((enrollment: any) => {
-            Object.entries(enrollment.forms || {}).forEach(([formName, formData]: [string, any]) => {
-              const today = new Date();
-              
-              // Parse DD-MM-YYYY format
-              let dueDate = null;
-              if (formData.due_date) {
-                const parts = formData.due_date.split('-');
-                if (parts.length === 3) {
-                  const [day, month, year] = parts;
-                  dueDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                }
-              }
-              
-              const submittedStatuses = new Set(['submitted', 'received']);
-              const inProgressStatuses = new Set(['in progress', 'in_progress']);
-              let status: 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress' = 'pending';
-              if (formData.status === 'approved') {
-                status = 'completed';
-              } else if (formData.status && inProgressStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
-                status = 'in_progress';
-              } else if (formData.status && submittedStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
-                status = 'submitted';
-              } else if (dueDate && dueDate < today) {
-                status = 'overdue';
-              }
-              
-              // Skip completed and submitted forms
-              if (status === 'completed' || status === 'submitted') {
-                return;
-              }
-              
-              // Combine parent names and emails
-              let parentName = `${enrollment.parent_first_name} ${enrollment.parent_last_name}`;
-              let parentEmail = enrollment.primary_email;
-              
-              if (enrollment.secondary_parent_first_name) {
-                parentName += ` & ${enrollment.secondary_parent_first_name} ${enrollment.secondary_parent_last_name}`;
-                if (enrollment.secondary_parent_email) {
-                  parentEmail += `, ${enrollment.secondary_parent_email}`;
-                }
-              }
-              
-              mappedForms.push({
-                id: `${enrollment.enrollment_id}-${formName}`,
-                formName,
-                studentName: `${enrollment.child_first_name} ${enrollment.child_last_name}`,
-                classroomName: enrollment.class_name || 'Unassigned',
-                parentName,
-                parentEmail,
-                dueDate: formData.due_date || null,
-                status,
-                assignedDate: formData.assigned_at || ''
-              });
-            });
+
+          // Skip completed and submitted forms
+          if (status === 'completed' || status === 'submitted') {
+            return;
+          }
+
+          mappedForms.push({
+            id: assignment.id,
+            formId: assignment.formId,
+            formName,
+            employeeName: `${employee.firstName} ${employee.lastName}`,
+            employeeType: employee.employeeType || 'Employee',
+            employeeEmail: employee.email,
+            dueDate,
+            status,
+            assignedDate: assignment.assignedOn
           });
-          
-          if (!isMounted) return;
-          setDueForms(mappedForms);
-          setFilteredForms(mappedForms);
-        } else {
-          console.error('Failed to fetch enrollments');
-        }
+        });
+
+        setDueForms(mappedForms);
+        setFilteredForms(mappedForms);
       } catch (error) {
-        console.error('Error fetching due forms:', error);
+        console.error('Error fetching employee due forms:', error);
       } finally {
         if (isMounted) {
           setLoading(false);
         }
       }
     })();
-    
+
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [schoolId]);
 
-  const allClassrooms = useMemo(() => {
+  const allRoles = useMemo(() => {
     const set = new Set<string>();
-    dueForms.forEach(f => { if (f.classroomName && f.classroomName !== 'Unassigned') set.add(f.classroomName); });
+    dueForms.forEach(f => { if (f.employeeType) set.add(f.employeeType); });
     return Array.from(set).sort();
   }, [dueForms]);
 
@@ -255,11 +257,11 @@ export function DueForms() {
   }, [dueForms]);
 
   const activeFilterCount = useMemo(() => {
-    return [classroomFilter, formFilter, statusFilter].filter(arr => arr.length > 0).length;
-  }, [classroomFilter, formFilter, statusFilter]);
+    return [roleFilter, formFilter, statusFilter].filter(arr => arr.length > 0).length;
+  }, [roleFilter, formFilter, statusFilter]);
 
   const clearAllFilters = () => {
-    setClassroomFilter([]);
+    setRoleFilter([]);
     setFormFilter([]);
     setStatusFilter([]);
   };
@@ -268,16 +270,16 @@ export function DueForms() {
     return dueForms.filter(form => {
       const matchesSearch =
         form.formName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        form.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        form.parentName.toLowerCase().includes(searchQuery.toLowerCase());
+        form.employeeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        form.employeeEmail.toLowerCase().includes(searchQuery.toLowerCase());
 
-      const matchesClassroom = classroomFilter.length === 0 || classroomFilter.includes(form.classroomName);
+      const matchesRole = roleFilter.length === 0 || roleFilter.includes(form.employeeType);
       const matchesForm = formFilter.length === 0 || formFilter.includes(form.formName);
       const matchesStatus = statusFilter.length === 0 || statusFilter.includes(form.status);
 
-      return matchesSearch && matchesClassroom && matchesForm && matchesStatus;
+      return matchesSearch && matchesRole && matchesForm && matchesStatus;
     });
-  }, [dueForms, searchQuery, classroomFilter, formFilter, statusFilter]);
+  }, [dueForms, searchQuery, roleFilter, formFilter, statusFilter]);
 
   const [sortBy, setSortBy] = useState('formName');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -285,9 +287,8 @@ export function DueForms() {
   const getSortLabel = () => {
     const labels: Record<string, string> = {
       formName: 'Form',
-      studentName: 'Student',
-      classroomName: 'Classroom',
-      parentName: 'Parent',
+      employeeName: 'Employee',
+      employeeType: 'Role',
       dueDate: 'Due Date',
       status: 'Status',
     };
@@ -299,9 +300,8 @@ export function DueForms() {
       let aVal: any, bVal: any;
       switch (sortBy) {
         case 'formName': aVal = a.formName; bVal = b.formName; break;
-        case 'studentName': aVal = a.studentName; bVal = b.studentName; break;
-        case 'classroomName': aVal = a.classroomName; bVal = b.classroomName; break;
-        case 'parentName': aVal = a.parentName; bVal = b.parentName; break;
+        case 'employeeName': aVal = a.employeeName; bVal = b.employeeName; break;
+        case 'employeeType': aVal = a.employeeType; bVal = b.employeeType; break;
         case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
         case 'status': aVal = a.status; bVal = b.status; break;
         default: aVal = a.formName; bVal = b.formName;
@@ -314,44 +314,33 @@ export function DueForms() {
     setFilteredForms(sorted);
   }, [filteredFormsData, sortBy, sortOrder]);
 
-  const calculatedItemsPerPage = useMemo(() => {
-    if (viewMode !== 'card') return 10;
-    // Mobile view (<768px) is handled internally by usePagination.
-    // Tablet view (768px <= width < 1024px) has a 2-column grid. We want 10 items (balanced 5 rows).
-    // Desktop view (width >= 1024px) has a 3-column grid. We want 9 items (balanced 3 rows).
-    if (windowWidth >= 768 && windowWidth < 1024) {
-      return 10;
-    }
-    return 9;
-  }, [viewMode, windowWidth]);
+
 
   const {
     currentPage,
     totalPages,
     paginatedData: paginatedForms,
-    itemsPerPage,
     setCurrentPage
-  } = usePagination({ data: filteredForms, itemsPerPage: calculatedItemsPerPage });
+  } = usePagination({ data: filteredForms, itemsPerPage });
 
-  const dueFormsExportHeaders = ['Form', 'Student', 'Classroom', 'Parent', 'Parent Email', 'Due Date', 'Status'];
+  const dueFormsExportHeaders = ['Form', 'Employee', 'Role', 'Email', 'Due Date', 'Status'];
   
   const getDueFormsExportRows = () => filteredForms.map(form => [
     form.formName,
-    form.studentName,
-    form.classroomName,
-    form.parentName,
-    form.parentEmail,
+    form.employeeName,
+    form.employeeType,
+    form.employeeEmail,
     formatDate(form.dueDate),
     form.status
   ]);
 
   const exportToCSV = () => downloadCSV(
-    `due_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
+    `employee_due_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
     dueFormsExportHeaders,
     getDueFormsExportRows()
   );
 
-  const exportToPDF = () => printAsPDF('Due Forms Export', dueFormsExportHeaders, getDueFormsExportRows());
+  const exportToPDF = () => printAsPDF('Employee Due Forms Export', dueFormsExportHeaders, getDueFormsExportRows());
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -386,10 +375,8 @@ export function DueForms() {
       }
       
       const reminders = formsToRemind.map(form => ({
-        parent_email: form.parentEmail,
-        parent_name: form.parentName,
-        student_name: form.studentName,
-        class_name: form.classroomName,
+        employee_email: form.employeeEmail,
+        employee_name: form.employeeName,
         form_name: form.formName,
         due_date: form.dueDate || ''
       }));
@@ -413,11 +400,11 @@ export function DueForms() {
 
       if (response.ok) {
         const data = await response.json();
-        const { total_sent, total_failed, failed_emails, message } = data;
+        const { total_failed, failed_emails, message } = data;
         
         if (total_failed > 0) {
           const failedEmailsList = failed_emails.filter((email: string) => email).join(', ');
-          showToast('warning', `${message}. Failed emails: ${failedEmailsList}`);
+          showToast('error', `${message}. Failed emails: ${failedEmailsList}`);
         } else {
           showToast('success', message);
         }
@@ -446,7 +433,7 @@ export function DueForms() {
       case 'overdue':
         return <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Overdue</Badge>;
       case 'in_progress':
-        return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />In Progress</Badge>;
+        return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />Needs Attention</Badge>;
       case 'pending':
         return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
       default:
@@ -456,35 +443,19 @@ export function DueForms() {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return 'No due date';
-    
-    // Handle DD-MM-YYYY format
-    const parts = dateString.split('-');
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString('en-US');
-      }
+    const date = parseDueDate(dateString);
+    if (date) {
+      return date.toLocaleDateString('en-US');
     }
-    
     return dateString;
   };
 
   const isOverdue = (dueDate: string | null) => {
     if (!dueDate) return false;
-    
-    // Parse DD-MM-YYYY format
-    const parts = dueDate.split('-');
-    if (parts.length === 3) {
-      const [day, month, year] = parts;
-      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      if (!isNaN(date.getTime())) {
-        const today = new Date();
-        return date < today && date.toDateString() !== today.toDateString();
-      }
-    }
-    
-    return false;
+    const date = parseDueDate(dueDate);
+    if (!date) return false;
+    const today = new Date();
+    return date < today && date.toDateString() !== today.toDateString();
   };
 
   const stats = {
@@ -500,7 +471,7 @@ export function DueForms() {
         <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
-            <p className="text-slate-500 text-sm font-semibold">Loading due forms tracking...</p>
+            <p className="text-slate-500 text-sm font-semibold">Loading employee due forms tracking...</p>
           </div>
         </div>
       </AdminLayout>
@@ -518,10 +489,10 @@ export function DueForms() {
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">              Due Forms Tracking
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">             Employee Due Forms Tracking
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
-              Monitor form completion status and send reminders to parents
+              Monitor form completion status and send reminders to employees
             </p>
           </div>
         </div>
@@ -565,7 +536,7 @@ export function DueForms() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
-                    In Progress
+                    Needs Attention
                   </p>
                   <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.in_progress}</p>
                 </div>
@@ -600,7 +571,7 @@ export function DueForms() {
               <div className="relative flex-1">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <Input
-                  placeholder="Search forms, students, or parents..."
+                  placeholder="Search forms, employees, or emails..."
                   className="pl-9 h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
@@ -634,12 +605,10 @@ export function DueForms() {
                   <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
                     <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('formName'); setSortOrder('asc'); }}>Form A-Z</DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('formName'); setSortOrder('desc'); }}>Form Z-A</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('studentName'); setSortOrder('asc'); }}>Student A-Z</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('studentName'); setSortOrder('desc'); }}>Student Z-A</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('classroomName'); setSortOrder('asc'); }}>Classroom A-Z</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('classroomName'); setSortOrder('desc'); }}>Classroom Z-A</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('parentName'); setSortOrder('asc'); }}>Parent A-Z</DropdownMenuItem>
-                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('parentName'); setSortOrder('desc'); }}>Parent Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('employeeName'); setSortOrder('asc'); }}>Employee A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('employeeName'); setSortOrder('desc'); }}>Employee Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('employeeType'); setSortOrder('asc'); }}>Role A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('employeeType'); setSortOrder('desc'); }}>Role Z-A</DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
                     <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
                   </DropdownMenuContent>
@@ -662,13 +631,13 @@ export function DueForms() {
                 )}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Classroom</label>
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Role</label>
                     <MultiSelectDropdown
-                      value={classroomFilter}
-                      onValueChange={setClassroomFilter}
-                      options={allClassrooms}
-                      placeholder="Select classrooms"
-                      label="Classroom"
+                      value={roleFilter}
+                      onValueChange={setRoleFilter}
+                      options={allRoles}
+                      placeholder="Select roles"
+                      label="Role"
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -745,15 +714,14 @@ export function DueForms() {
                       const headers = dueFormsExportHeaders;
                       const rows = selectedFormObjects.map(form => [
                         form.formName,
-                        form.studentName,
-                        form.classroomName,
-                        form.parentName,
-                        form.parentEmail,
+                        form.employeeName,
+                        form.employeeType,
+                        form.employeeEmail,
                         formatDate(form.dueDate),
                         form.status
                       ]);
                       downloadCSV(
-                        `selected_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
+                        `selected_employee_forms_export_${new Date().toISOString().split('T')[0]}.csv`,
                         headers,
                         rows
                       );
@@ -763,14 +731,13 @@ export function DueForms() {
                       const headers = dueFormsExportHeaders;
                       const rows = selectedFormObjects.map(form => [
                         form.formName,
-                        form.studentName,
-                        form.classroomName,
-                        form.parentName,
-                        form.parentEmail,
+                        form.employeeName,
+                        form.employeeType,
+                        form.employeeEmail,
                         formatDate(form.dueDate),
                         form.status
                       ]);
-                      printAsPDF('Selected Forms Export', headers, rows);
+                      printAsPDF('Selected Employee Forms Export', headers, rows);
                     }}>Export as PDF</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -826,7 +793,7 @@ export function DueForms() {
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id), true)}
                     disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0 || bulkRemindLoading}
                   >
-                    Remind In Progress ({filteredForms.filter(f => f.status === 'in_progress').length})
+                    Remind Needs Attention ({filteredForms.filter(f => f.status === 'in_progress').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id), true)}
@@ -836,9 +803,18 @@ export function DueForms() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
+              </div>
+            </CardHeader>
+            <div className="flex justify-end items-center px-4 py-3 border-b border-slate-50 bg-slate-50/20">
+              <div className="flex items-center gap-2">
+                <PageSizeSelector
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={setItemsPerPage}
+                  options={[10, 25, 50, 100]}
+                />
+              </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            <CardContent className="p-0">
             {filteredForms.length > 0 ? (
               <>
                 {/* Conditional Rendering of Views */}
@@ -863,26 +839,20 @@ export function DueForms() {
                                   className="flex-shrink-0"
                                 />
                                 <div className="w-9 h-9 rounded-xl bg-[#044ba0] text-white flex items-center justify-center font-extrabold text-xs flex-shrink-0 border border-slate-100">
-                                  {form.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                                  {form.employeeName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                                 </div>
                                 <div className="min-w-0 flex-1">
                                   <p className="font-bold text-slate-900 text-sm truncate">{form.formName}</p>
-                                  <p className="text-[10px] font-extrabold text-slate-400 truncate mt-0.5 uppercase tracking-wider">{form.studentName} &bull; {form.classroomName}</p>
+                                  <p className="text-[10px] font-extrabold text-slate-400 truncate mt-0.5 uppercase tracking-wider">{form.employeeName} &bull; {form.employeeType}</p>
                                 </div>
                               </div>
                             </div>
 
                             <div className="space-y-1.5 text-xs pt-3 border-t border-slate-100">
                               <div className="flex items-center justify-between gap-2">
-                                <span className="text-slate-400 font-semibold">Parent:</span>
-                                <span className="font-bold text-slate-700 truncate max-w-[60%] text-right">{form.parentName.split(' & ')[0]}</span>
+                                <span className="text-slate-400 font-semibold">Email:</span>
+                                <div className="whitespace-nowrap font-bold text-slate-700 text-right">{form.employeeEmail}</div>
                               </div>
-                              {form.parentName.includes(' & ') && (
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-slate-400 font-semibold">Secondary:</span>
-                                  <span className="font-bold text-slate-700 truncate max-w-[60%] text-right">{form.parentName.split(' & ')[1]}</span>
-                                </div>
-                              )}
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-slate-400 font-semibold">Due:</span>
                                 <span className={`font-bold ${
@@ -926,6 +896,7 @@ export function DueForms() {
                       totalPages={totalPages}
                       totalItems={filteredForms.length}
                       itemsPerPage={itemsPerPage}
+                      onPageSizeChange={setItemsPerPage}
                       onPageChange={setCurrentPage}
                     />
                   </div>
@@ -942,13 +913,13 @@ export function DueForms() {
                                 onCheckedChange={handleSelectAll}
                               />
                             </th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Form</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell">Student</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Classroom</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Parent</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell">Due Date</th>
-                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Status</th>
-                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Actions</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[20%]">Form</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell w-[15%]">Employee</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[12%]">Role</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[23%]">Email</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell w-[10%]">Due Date</th>
+                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Status</th>
+                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -962,29 +933,19 @@ export function DueForms() {
                               </td>
                               <td className="py-4 px-3 max-w-xs">
                                 <div className="font-bold text-slate-900 text-sm truncate">{form.formName}</div>
-                                <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.studentName}</div>
-                                <div className="text-xs font-semibold text-slate-400 truncate md:hidden">
-                                  {form.parentName.split(' & ')[0]}
-                                </div>
+                                <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.employeeName}</div>
                                 <div className="text-xs font-semibold text-slate-400 truncate lg:hidden sm:hidden">
                                   {formatDate(form.dueDate)}
                                 </div>
                               </td>
                               <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden sm:table-cell max-w-0">
-                                <div className="truncate">{form.studentName}</div>
+                                <div className="truncate">{form.employeeName}</div>
                               </td>
                               <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden md:table-cell max-w-0">
-                                <div className="truncate">{form.classroomName}</div>
+                                <div className="truncate">{form.employeeType}</div>
                               </td>
                               <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
-                                <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[0]}</div>
-                                <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[0]}</div>
-                                {form.parentName.includes(' & ') && (
-                                  <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-                                    <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[1]}</div>
-                                    <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[1] || ''}</div>
-                                  </div>
-                                )}
+                                <div className="whitespace-nowrap font-bold text-slate-800">{form.employeeEmail}</div>
                               </td>
                               <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
                                 <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>
@@ -1022,6 +983,7 @@ export function DueForms() {
                         totalPages={totalPages}
                         totalItems={filteredForms.length}
                         itemsPerPage={itemsPerPage}
+                        onPageSizeChange={setItemsPerPage}
                         onPageChange={setCurrentPage}
                         className="flex"
                       />

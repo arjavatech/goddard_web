@@ -1,6 +1,7 @@
 import React from 'react';
 import { Loading } from './loading';
 import { Pagination } from './pagination';
+import { PageSizeSelector } from './page-size-selector';
 
 interface Column {
   header: string | React.ReactNode;
@@ -18,6 +19,8 @@ interface DataTableProps {
   totalItems: number;
   itemsPerPage: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+  tableLayout?: 'auto' | 'fixed';
   className?: string;
 }
 
@@ -32,12 +35,25 @@ export function DataTable({
   totalItems,
   itemsPerPage,
   onPageChange,
+  onPageSizeChange,
+  tableLayout = 'fixed',
   className,
 }: DataTableProps) {
   return (
     <div className={className}>
+      {onPageSizeChange && (
+        <div className="flex justify-end items-center px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <PageSizeSelector
+              pageSize={itemsPerPage}
+              onPageSizeChange={onPageSizeChange}
+              options={[10, 25, 50, 100]}
+            />
+          </div>
+        </div>
+      )}
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[800px] table-fixed border-collapse stagger-rows">
+        <table className={`w-full min-w-[800px] border-collapse stagger-rows ${tableLayout === 'auto' ? 'table-auto' : 'table-fixed'}`}>
           <thead>
             <tr className="border-b border-slate-200 bg-slate-500/50">
               {columns.map((col, i) => (
@@ -75,6 +91,7 @@ export function DataTable({
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );

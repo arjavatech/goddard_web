@@ -42,6 +42,7 @@ const DialogContent = forwardRef<
       ref={ref}
       className={cn(
         'fixed left-[50%] top-[50%] z-50 grid w-[calc(100vw-2rem)] max-w-lg translate-x-[-50%] translate-y-[-50%] gap-4',
+        'max-h-[90vh] overflow-y-auto',
         'border border-slate-200/80 bg-white p-5 sm:p-6 rounded-2xl',
         'shadow-[0_20px_60px_-8px_rgba(15,23,42,0.18),0_8px_24px_-4px_rgba(15,23,42,0.08)]',
         'duration-200',

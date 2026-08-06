@@ -28,20 +28,25 @@ export function App() {
   useEffect(() => {
     if (!loading && userData && schoolSubdomain) {
       const currentPath = window.location.pathname;
-      const expectedPath = userData.role === 'Admin'
+      const role = userData.role?.toLowerCase();
+      const isAdmin = role === 'admin' || role === 'superadmin';
+      const isEmployee = role === 'employee';
+
+      const expectedPath = isAdmin
         ? `/${schoolSubdomain}/admin`
+        : isEmployee
+        ? `/${schoolSubdomain}/employee/dashboard`
         : `/${schoolSubdomain}/dashboard`;
-        
-      const isMismatch = (userData.role === 'Admin' && currentPath.endsWith('/admin') && !currentPath.startsWith(`/${schoolSubdomain}/`)) ||
-                         (userData.role === 'Parent' && currentPath.endsWith('/dashboard') && !currentPath.startsWith(`/${schoolSubdomain}/`));
-                         
-      if (currentPath === '/dashboard' || currentPath === '/admin' || currentPath === '/' || isMismatch) {
+
+      const isGenericPath = currentPath === '/dashboard' || currentPath === '/admin' || currentPath === '/';
+      const isWrongSubdomain = !currentPath.startsWith(`/${schoolSubdomain}/`);
+
+      if (isGenericPath || isWrongSubdomain) {
         setShouldRedirect(expectedPath);
       }
     }
   }, [userData, loading, schoolSubdomain]);
 
-  // Show loading while fetching user data
   if (loading || !userData) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -50,11 +55,9 @@ export function App() {
     );
   }
 
-  // Redirect admin users to admin dashboard
   if (shouldRedirect) {
     return <Navigate to={shouldRedirect} replace />;
   }
 
-  // Show parent dashboard for parent users or as default
   return <Dashboard />;
 }

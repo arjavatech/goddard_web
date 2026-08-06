@@ -45,7 +45,15 @@ export function Login() {
       prefilloutProvision(userData).catch(() => {/* non-blocking */});
 
       const userSubdomain = userData.schoolData?.subdomain || 'goddard';
-      const isAdmin = userData.role && ['admin', 'superadmin'].includes(userData.role.toLowerCase());
+      const role = userData.role?.toLowerCase();
+      const isAdmin = role === 'admin' || role === 'superadmin';
+      const isEmployee = role === 'employee';
+
+      const defaultPath = isAdmin
+        ? `/${userSubdomain}/admin`
+        : isEmployee
+        ? `/${userSubdomain}/employee/dashboard`
+        : `/${userSubdomain}/dashboard`;
 
       let redirectTo = location.state?.from?.pathname;
 
@@ -57,11 +65,17 @@ export function Login() {
         }
       }
 
-      if (!redirectTo || redirectTo === '/dashboard' || redirectTo === '/admin' || redirectTo === '/') {
-        redirectTo = isAdmin ? `/${userSubdomain}/admin` : `/${userSubdomain}/dashboard`;
+      // If the saved "from" path doesn't match the user's role, discard it
+      if (redirectTo) {
+        const isAdminPath = redirectTo.includes('/admin');
+        const isEmployeePath = redirectTo.includes('/employee');
+        const isParentPath = !isAdminPath && !isEmployeePath;
+        if ((isAdmin && !isAdminPath) || (isEmployee && !isEmployeePath) || (!isAdmin && !isEmployee && !isParentPath)) {
+          redirectTo = null;
+        }
       }
 
-      navigate(redirectTo, { replace: true });
+      navigate(redirectTo || defaultPath, { replace: true });
     } catch (err) {
       showToast('error', (err as Error).message, 'Login Failed');
       setIsLoading(false);

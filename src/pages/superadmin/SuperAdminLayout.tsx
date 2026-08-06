@@ -103,7 +103,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-              <p className="text-[11px] text-slate-400 truncate mt-0.5">{userData?.email}</p>
+              <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-400 mt-0.5`}>{userData?.email}</div></div>
             </div>
             <button
               onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}

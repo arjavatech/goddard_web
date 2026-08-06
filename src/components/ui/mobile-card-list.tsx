@@ -1,5 +1,6 @@
 import { Loading } from './loading';
 import { MobilePagination } from './pagination';
+import { PageSizeSelector } from './page-size-selector';
 
 interface MobileCardListProps {
   cards: React.ReactNode[];
@@ -11,6 +12,7 @@ interface MobileCardListProps {
   totalItems?: number;
   itemsPerPage?: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
   className?: string;
   gridClassName?: string;
 }
@@ -25,11 +27,23 @@ export function MobileCardList({
   totalItems,
   itemsPerPage,
   onPageChange,
+  onPageSizeChange,
   className,
   gridClassName = 'grid grid-cols-1 sm:grid-cols-2 gap-3',
 }: MobileCardListProps) {
   return (
     <div className={className}>
+      {onPageSizeChange && (
+        <div className="flex justify-end items-center px-4 py-3 mb-2 border-b border-slate-200 bg-white rounded-t-xl">
+          <div className="flex items-center gap-2">
+            <PageSizeSelector
+              pageSize={itemsPerPage ?? 10}
+              onPageSizeChange={onPageSizeChange}
+              options={[10, 25, 50, 100]}
+            />
+          </div>
+        </div>
+      )}
       {loading ? (
         <div className="py-6 sm:py-8">
           <Loading message={loadingMessage} size="sm" />
@@ -47,6 +61,7 @@ export function MobileCardList({
         totalItems={totalItems}
         itemsPerPage={itemsPerPage}
         onPageChange={onPageChange}
+        onPageSizeChange={onPageSizeChange}
       />
     </div>
   );
