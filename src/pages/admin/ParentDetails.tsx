@@ -803,7 +803,7 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                    {form.status !== 'Approved' && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
@@ -823,7 +823,7 @@ export function ParentDetails() {
                                         <Eye className="h-3.5 w-3.5 mr-1" />
                                         <span>View Form</span>
                                       </Button>
-                                    </Link>
+                                    </Link>}
                                     {form.status === 'Submitted' && (
                                       <div className="flex gap-1.5">
                                         <Button variant="outline" size="sm" className="h-8 rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/50 text-xs font-bold" onClick={() => { setSelectedChildId(child.id); openReviewDialog(form, 'approve'); }}>
