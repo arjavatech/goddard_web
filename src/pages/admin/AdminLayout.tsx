@@ -92,14 +92,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
 
-    {
-      label: 'Employee Enrollment',
-      items: [
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Due Forms', path: `${schoolPrefix}/admin/employee-forms/due` },
-      ],
-    },
+    // {
+    //   label: 'Employee Enrollment',
+    //   items: [
+    //     { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+    //     { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
+    //     { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Due Forms', path: `${schoolPrefix}/admin/employee-forms/due` },
+    //   ],
+    // },
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: [
@@ -107,12 +107,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
 
     }] : []),
-    ...(isSuperAdmin ? [{
-      label: 'Super Administration',
-      items: [
-        { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
-      ],
-    }] : []),
+    // ...(isSuperAdmin ? [{
+    //   label: 'Super Administration',
+    //   items: [
+    //     { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
+    //   ],
+    // }] : []),
   ];
 
   const initials = userData?.firstName && userData?.lastName
