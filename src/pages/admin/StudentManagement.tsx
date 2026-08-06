@@ -91,14 +91,13 @@ export function StudentManagement() {
   };
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('studentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('studentViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('student', 10);
   
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) setViewMode('card'); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);

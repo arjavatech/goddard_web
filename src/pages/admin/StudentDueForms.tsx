@@ -33,13 +33,12 @@ export function DueForms() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => typeof window !== 'undefined' && window.innerWidth < 768 ? 'card' : (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('studentDueForms', 10);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) setViewMode('card'); 
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -979,15 +978,19 @@ export function DueForms() {
                               <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden md:table-cell max-w-0">
                                 <div className="truncate">{form.classroomName}</div>
                               </td>
-                              <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
-                                <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[0]}</div>
-                                <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[0]}</div>
-                                {form.parentName.includes(' & ') && (
-                                  <div className="mt-1.5 pt-1.5 border-t border-slate-100">
-                                    <div className="font-bold text-slate-800 truncate">{form.parentName.split(' & ')[1]}</div>
-                                    <div className="text-slate-400 font-semibold truncate mt-0.5">{form.parentEmail.split(', ')[1] || ''}</div>
+                              <td className="py-4 px-3 hidden md:table-cell">
+                                <div className="min-w-0 space-y-1.5">
+                                  <div>
+                                    <div className="font-bold text-slate-800 block truncate text-sm">{form.parentName.split(' & ')[0]}</div>
+                                    <div className="whitespace-nowrap text-xs text-slate-400 font-medium mt-0.5">{form.parentEmail.split(', ')[0]}</div>
                                   </div>
-                                )}
+                                  {form.parentName.includes(' & ') && (
+                                    <div className="border-t border-slate-100 pt-1.5">
+                                      <div className="font-bold text-slate-800 block truncate text-xs">{form.parentName.split(' & ')[1]}</div>
+                                      <div className="whitespace-nowrap text-[10px] text-slate-400 font-medium mt-0.5">{form.parentEmail.split(', ')[1] || ''}</div>
+                                    </div>
+                                  )}
+                                </div>
                               </td>
                               <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
                                 <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>

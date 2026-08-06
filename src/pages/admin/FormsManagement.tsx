@@ -7,7 +7,7 @@ import { AsyncButton } from '../../components/ui/async-button';
 import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check, LayoutGrid, List } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogTitle } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
@@ -56,13 +56,9 @@ export function FormsManagement() {
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => window.innerWidth < 768 ? 'card' : (localStorage.getItem('formsViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('formsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('formsViewMode', mode); };
-  useEffect(() => {
-    const handleResize = () => { if (window.innerWidth < 768) setViewMode('card'); };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+
   const [isAddingForm, setIsAddingForm] = useState(false);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
   const [hasTriedAddFormSubmit, setHasTriedAddFormSubmit] = useState(false);
@@ -792,38 +788,38 @@ export function FormsManagement() {
 
       {/* Assign to All Students Dialog */}
       <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0">
-          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-b bg-slate-50/50">
-            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">Assign Form to All Students</DialogTitle>
-          </div>
-          <div className="px-5 sm:px-6 py-5 space-y-4">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg max-h-[92vh] overflow-y-auto no-scrollbar">
+          <DialogHeader className="mb-1">
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 pr-6">Assign Form to All Students</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 sm:py-3 space-y-3 sm:space-y-4">
             <p className="text-xs text-slate-600 font-semibold leading-relaxed">
               Are you sure you want to assign{' '}
               <span className="font-extrabold text-[#0F2D52]">{selectedFormForAssign?.name}</span>{' '}
               to all students in the school? This will add the form to every student's enrollment.
             </p>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Due Date (Optional)</label>
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">Due Date (Optional)</label>
               <Input
                 type="date"
                 value={formDueDate}
                 onChange={e => setFormDueDate(e.target.value)}
-                className="w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white"
+                className="w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-cyan-500/20 focus:border-cyan-500 bg-white"
                 min={new Date().toISOString().split('T')[0]}
               />
-              <p className="text-[10px] text-slate-400 font-semibold mt-1">
+              <p className="text-[10px] text-slate-400 font-semibold mt-1.5">
                 Leave empty to use default 30-day due date
               </p>
             </div>
           </div>
-          <div className="flex-shrink-0 px-5 sm:px-6 py-4 border-t bg-slate-50/20 flex flex-col-reverse sm:flex-row gap-2 sm:gap-3 sm:justify-end">
-            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-1">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAssignToAllStudents} className="w-full sm:w-auto h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all">
+            <AsyncButton onClick={handleAssignToAllStudents} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200">
               Assign to All Students
             </AsyncButton>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>

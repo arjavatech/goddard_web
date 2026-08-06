@@ -16,6 +16,7 @@ import { fetchParentDetails } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
+import { useUserContext } from '../../contexts/UserContext';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -124,7 +125,8 @@ export function ParentDetails() {
   const [loadingAction, setLoadingAction] = useState<{ formId: string, action: 'download' | 'print' } | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const { showToast } = useToast();
-
+  const { userData } = useUserContext();
+  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
 
   const schoolId = localStorage.getItem('schoolId');
   useEffect(() => {
@@ -610,10 +612,10 @@ export function ParentDetails() {
                         </div>
                       )}
 
-                      <div className="flex items-center gap-2 text-xs font-bold text-slate-500 px-1 pt-1">
+                      {/* <div className="flex items-center gap-2 text-xs font-bold text-slate-500 px-1 pt-1">
                         <School className="h-4 w-4 text-slate-400" />
-                        <span>{isPrimaryParent ? 'Primary Guardian' : 'Secondary Guardian'}</span>
-                      </div>
+                        <span>{isPrimaryParent ? 'Primary Parent' : 'Secondary Parent'}</span>
+                      </div> */}
                     </div>
                   );
                 })()}
@@ -803,7 +805,7 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                    {(form.status !== 'Approved' || isAdminOrSuperAdmin) && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
@@ -823,7 +825,7 @@ export function ParentDetails() {
                                         <Eye className="h-3.5 w-3.5 mr-1" />
                                         <span>View Form</span>
                                       </Button>
-                                    </Link>
+                                    </Link>}
                                     {form.status === 'Submitted' && (
                                       <div className="flex gap-1.5">
                                         <Button variant="outline" size="sm" className="h-8 rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/50 text-xs font-bold" onClick={() => { setSelectedChildId(child.id); openReviewDialog(form, 'approve'); }}>

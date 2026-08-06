@@ -408,7 +408,7 @@ export function AdminDashboard() {
   const quickActions = [
     {
       title: "Invite Parent",
-      description: "Send portal access invitation to a parent and student.",
+      description: "Send portal access invitation to a parent.",
       icon: Mail,
       iconBg: "bg-[#EFF5FB]",
       iconColor: "text-[#0F2D52]",

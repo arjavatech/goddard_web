@@ -108,9 +108,11 @@ export function ParentManagement() {
     setExpandedParents(prev => ({ ...prev, [parentId]: !prev[parentId] }));
   };
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>((localStorage.getItem('parentViewMode') as 'card' | 'table') || 'table');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('parentViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('parentViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('parent', 10);
+  
+
   const [parentToDeactivate, setParentToDeactivate] = useState<Parent | null>(null);
   const [resendingParentId, setResendingParentId] = useState<string | null>(null);
   const [deactivatingParentId, setDeactivatingParentId] = useState<string | null>(null);
@@ -1144,15 +1146,15 @@ export function ParentManagement() {
         isDialogClosing={isDialogClosing}
       />
       <Dialog open={isAddChildDialogOpen} onOpenChange={setIsAddChildDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl border border-slate-100 bg-white shadow-2xl p-0 gap-0" preventClose>
-          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
-            <DialogTitle className="text-lg font-bold text-slate-900">
+        <DialogContent className="w-[calc(100vw-1.5rem)] max-w-lg max-h-[92vh] overflow-y-auto no-scrollbar" preventClose>
+          <DialogHeader className="mb-1">
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 pr-6">
               Add Child to {selectedParent?.firstName} {selectedParent?.lastName}
             </DialogTitle>
-          </div>
-          <div className="p-6 space-y-4">
+          </DialogHeader>
+          <div className="py-2 sm:py-3 space-y-3 sm:space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">
                 First Name
               </label>
               <Input 
@@ -1173,7 +1175,7 @@ export function ParentManagement() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">
                 Last Name
               </label>
               <Input 
@@ -1193,8 +1195,8 @@ export function ParentManagement() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-                Date of Birth (Optional)
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-900 mb-2">
+                Date of Birth
               </label>
               <Input 
                 type="date" 
@@ -1214,7 +1216,7 @@ export function ParentManagement() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">
                 Gender
               </label>
               <Select value={newChildGender} onValueChange={(value) => {
@@ -1237,7 +1239,7 @@ export function ParentManagement() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">
                 Classroom
               </label>
               <Select value={newChildClassroom} onValueChange={(value) => {
@@ -1262,14 +1264,14 @@ export function ParentManagement() {
               )}
             </div>
           </div>
-          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
-            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4">
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 pt-1">
+            <Button variant="outline" onClick={() => setIsAddChildDialogOpen(false)} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
               Cancel
             </Button>
-            <AsyncButton onClick={handleAddChild} className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all">
+            <AsyncButton onClick={handleAddChild} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200">
               Add Child
             </AsyncButton>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
