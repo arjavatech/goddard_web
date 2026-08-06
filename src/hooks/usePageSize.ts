@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { PreferencesService } from '../services/preferences';
 
-export function usePageSize(pageKey: string, defaultSize: number = 10) {
+export function usePageSize(pageKey: string, defaultSize = 10) {
   const [pageSize, setPageSizeState] = useState<number>(() => {
     return PreferencesService.getPageSize(pageKey, defaultSize);
   });

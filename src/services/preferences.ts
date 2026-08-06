@@ -1,5 +1,5 @@
 export const PreferencesService = {
-  getPageSize: (key: string, defaultValue: number = 10): number => {
+  getPageSize: (key: string, defaultValue = 10): number => {
     try {
       const value = localStorage.getItem(`pageSize_${key}`);
       return value ? parseInt(value, 10) : defaultValue;

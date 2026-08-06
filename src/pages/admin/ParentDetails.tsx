@@ -12,8 +12,8 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchParentDetails, fetchSchoolEnrollments, fetchClassrooms } from '../../services/api/admin';
-import { fetchFormTemplates, fetchEnrollmentChildren } from '../../services/api/dashboard';
+import { fetchParentDetails } from '../../services/api/admin';
+import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
@@ -167,12 +167,8 @@ export function ParentDetails() {
           }
           return;
         }
-        const [, classrooms, templates] = await Promise.all([fetchSchoolEnrollments(schoolId).catch(() => []), fetchClassrooms(schoolId).catch(() => []), fetchFormTemplates(schoolId).catch(() => []), fetchEnrollmentChildren(schoolId).catch(() => [])]);
+        const [templates] = await Promise.all([fetchFormTemplates(schoolId).catch(() => [])]);
         if (!isMounted) return;
-        const classroomByName = new Map(classrooms.map(cls => [cls.name.toLowerCase(), {
-          id: cls.id,
-          name: cls.name
-        }]));
         // Process children directly from parent record which has forms data
         const processedChildren = parentRecord.children?.map((child: any) => {
           let formsArray: Form[] = [];
@@ -213,7 +209,7 @@ export function ParentDetails() {
           }
           const completed = formsArray.filter(form => COMPLETION_STATUSES.has(form.status)).length;
           const progress = formsArray.length > 0 ? Math.round(completed / formsArray.length * 100) : 0;
-          const classroomInfo = classroomByName.get((child.classroomName ?? 'Unassigned').toLowerCase()) ?? {
+          const classroomInfo = {
             id: child.classroomId ?? 'Unassigned',
             name: child.classroomName ?? 'Unassigned'
           };

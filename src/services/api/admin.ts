@@ -925,7 +925,7 @@ export async function assignFormsToStudent(
 export async function assignFormToAllStudents(
   schoolId: string,
   formTemplateId: string,
-  isRequired: boolean = true,
+  isRequired = true,
   dueDate?: string
 ): Promise<void> {
   await authedFetch({
@@ -1078,7 +1078,7 @@ export async function transferStudentToClass(
 export async function promoteStudent(
   enrollmentId: string,
   targetClassroomId: string,
-  reason: string = 'Age progression',
+  reason = 'Age progression',
   effectiveDate?: string
 ): Promise<void> {
   await authedFetch({
