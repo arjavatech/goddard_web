@@ -230,6 +230,7 @@ export function InviteParentModal({
                   <SelectContent>
                     <SelectItem value="male">Male</SelectItem>
                     <SelectItem value="female">Female</SelectItem>
+                    <SelectItem value="female">Other</SelectItem>
                   </SelectContent>
                 </Select>
                 {inviteFormErrors.childGender && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.childGender}</p>}

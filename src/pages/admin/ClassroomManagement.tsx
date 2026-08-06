@@ -514,7 +514,7 @@ export function ClassroomManagement() {
           </div>
           <div className="p-6 space-y-4">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Classroom Name</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">Classroom Name</label>
               <Input
                 value={newClassroomName}
                 onChange={e => {

@@ -968,7 +968,7 @@ export function AdminDashboard() {
               <DialogTitle>Add New Classroom</DialogTitle>
             </DialogHeader>
             <div className="py-2">
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-800 mb-2">
                 Classroom Name
               </label>
               <Input
