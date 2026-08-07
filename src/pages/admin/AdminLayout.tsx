@@ -36,10 +36,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    try { await signOut(); } catch (err) { console.error('Logout error:', err); } finally {
-      localStorage.clear(); sessionStorage.clear();
-      setIsLoggingOut(false); setShowLogoutModal(false);
-      window.location.href = '/';
+    try {
+      localStorage.clear();
+      sessionStorage.setItem('explicit_logout', 'true');
+      await signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
     }
   };
 

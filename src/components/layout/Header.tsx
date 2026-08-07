@@ -32,10 +32,8 @@ export function Header() {
 
   const handleLogout = () => {
     localStorage.clear();
-    sessionStorage.clear();
     sessionStorage.setItem('explicit_logout', 'true');
     signOut().catch(err => console.error('Logout error:', err));
-    window.location.href = '/';
   };
 
   return (

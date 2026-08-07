@@ -375,7 +375,7 @@ export function EmployeeManagement() {
                         <div className="flex items-center space-x-3 min-w-0 flex-1">
                           <AvatarInitials initials={initials} className="bg-[#01478d] text-white font-semibold w-9 h-9 rounded-full flex-shrink-0" />
                           <div className="min-w-0 flex-1">
-                            <span className="text-sm font-bold text-slate-800 block truncate">
+                            <span className="text-sm font-bold text-slate-800 block truncate cursor-pointer hover:text-[#0F2D52] hover:underline" onClick={() => handleViewEmployee(emp)}>
                               {emp.firstName} {emp.lastName}
                             </span>
                             <div className="whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5">{emp.email}</div>
@@ -494,30 +494,30 @@ export function EmployeeManagement() {
             <div className="space-y-4 py-2">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">First Name</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
                   <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Last Name</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
                   <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Email</label>
+                <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
                 <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
                 {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
+                <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
                 <Input value={empPhone} onChange={(e) => setEmpPhone(e.target.value)} placeholder="Phone" className="w-full h-10 rounded-xl" />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>
+                <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
                 <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 gap-3">
                 {/* <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Type</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Type</label>
                   <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
                     <option value="Full Time">Full Time</option>
                     <option value="Part Time">Part Time</option>
@@ -525,7 +525,7 @@ export function EmployeeManagement() {
                   </select>
                 </div> */}
                 <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Joined On</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>

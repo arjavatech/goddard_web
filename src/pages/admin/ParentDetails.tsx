@@ -294,7 +294,8 @@ export function ParentDetails() {
           }
 
           setSelectedChildId(targetId);
-          setExpandedChildren({ [targetId]: true });
+          const routeChildId = location.state?.selectedChildId || new URLSearchParams(location.search).get('childId');
+          setExpandedChildren(routeChildId ? { [targetId]: true } : {});
         }
       } catch (error) {
         if (isMounted) {
@@ -832,7 +833,7 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    {form.status !== 'Approved' && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                    {(form.status !== 'Approved' || isAdminOrSuperAdmin) && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,

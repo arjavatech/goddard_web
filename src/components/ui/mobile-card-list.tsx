@@ -32,7 +32,7 @@ export function MobileCardList({
   gridClassName = 'grid grid-cols-1 sm:grid-cols-2 gap-3',
 }: MobileCardListProps) {
   return (
-    <div className={className}>
+    <div className={`${className ?? ''} pl-4 pb-4`}>
       {onPageSizeChange && (
         <div className="flex justify-end items-center px-4 py-3 mb-2 border-b border-slate-200 bg-white rounded-t-xl">
           <div className="flex items-center gap-2">

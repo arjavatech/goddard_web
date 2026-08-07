@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/card';
-import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
@@ -11,6 +11,8 @@ import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formSt
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
@@ -27,6 +29,7 @@ export function EmployeeDashboard() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>(
     (localStorage.getItem('empDashFormsViewMode') as 'card' | 'table') || 'card'
   );
+  const [showGuide, setShowGuide] = useState(false);
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
     localStorage.setItem('empDashFormsViewMode', mode);
@@ -238,6 +241,15 @@ export function EmployeeDashboard() {
                         {totalForms} form{totalForms !== 1 ? 's' : ''}
                       </span>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => setShowGuide(true)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white/80 hover:text-white transition-all text-[11px] font-bold"
+                      title="Employee Guide"
+                    >
+                      <HelpCircle className="h-3.5 w-3.5" />
+                      <span className="hidden sm:inline">Guide</span>
+                    </button>
                     <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
                       <button
                         type="button"
@@ -421,6 +433,18 @@ export function EmployeeDashboard() {
         )}
       </main>
       <Footer />
+
+      <Dialog open={showGuide} onOpenChange={setShowGuide}>
+        <DialogContent className="w-[95vw] max-w-lg rounded-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <HelpCircle className="h-4 w-4 text-amazon-teal" />
+              Employee Guide
+            </DialogTitle>
+          </DialogHeader>
+          <EmployeeGuideContent />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
