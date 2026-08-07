@@ -25,6 +25,7 @@ export function EmployeeFormView() {
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const isSubmittingRef = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!assignment) {
@@ -65,6 +66,8 @@ export function EmployeeFormView() {
     navigate(back, { replace: true, state: { formCompleted: true } });
   }, [assignment, back, navigate, showToast]);
 
+  const prevHeightRef = useRef<number | null>(null);
+
   // Listen for Fillout submission via postMessage
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
@@ -89,6 +92,47 @@ export function EmployeeFormView() {
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [handleSubmission]);
+
+  // Scroll to top when the embedded form navigates to the next/previous page
+  useEffect(() => {
+    const scrollTop = () => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    const handlePageChange = (event: MessageEvent) => {
+      let parsed: any = null;
+      if (typeof event.data === 'string') {
+        try { parsed = JSON.parse(event.data); } catch { /* not JSON */ }
+      } else if (event.data && typeof event.data === 'object') {
+        parsed = event.data;
+      }
+      if (!parsed) return;
+      const type = (parsed.type || parsed.event || '').toString().toLowerCase();
+      if (
+        type.includes('page') ||
+        type.includes('step') ||
+        type.includes('next') ||
+        type.includes('prev') ||
+        type.includes('navigate') ||
+        type.includes('transition')
+      ) {
+        scrollTop();
+        return;
+      }
+      // Fallback: Fillout resets iframe height on each page — treat a significant
+      // height change as a page-navigation signal.
+      const h =
+        (parsed.type === 'form_resized' ? parsed.size : undefined) ??
+        parsed.height ?? parsed.value ?? parsed.clientHeight ?? parsed.size ??
+        parsed.payload?.height ?? parsed.data?.height;
+      if (typeof h === 'number' && h > 0) {
+        const newH = Math.ceil(h);
+        if (prevHeightRef.current !== null && Math.abs(newH - prevHeightRef.current) > 100) {
+          scrollTop();
+        }
+        prevHeightRef.current = newH;
+      }
+    };
+    window.addEventListener('message', handlePageChange);
+    return () => window.removeEventListener('message', handlePageChange);
+  }, []);
 
   // Interval-based detection via iframe URL (catches Fillout's built-in thank-you page)
   useEffect(() => {
@@ -124,7 +168,7 @@ export function EmployeeFormView() {
   return (
     <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 flex flex-col min-h-0 relative">
+      <main ref={mainRef} className="flex-1 flex flex-col min-h-0 relative overflow-y-auto">
 
         {/* Title Bar */}
         <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm">
@@ -189,7 +233,7 @@ export function EmployeeFormView() {
         </div>
 
         {/* Iframe Container */}
-        <div ref={iframeContainerRef} className="flex-1 relative w-full h-full bg-[#F7F9FC] overflow-hidden">
+        <div ref={iframeContainerRef} className="flex-1 relative w-full bg-[#F7F9FC]" style={{ minHeight: 'calc(100vh - 120px)' }}>
           {(!viewUrl || isFrameLoading) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10">
               <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
@@ -201,7 +245,8 @@ export function EmployeeFormView() {
             <iframe
               src={viewUrl}
               title={assignment.formTitle}
-              className={`w-full h-full border-0 transition-opacity duration-300 ${isFrameLoading ? 'opacity-0' : 'opacity-100'}`}
+              className={`w-full border-0 transition-opacity duration-300 ${isFrameLoading ? 'opacity-0' : 'opacity-100'}`}
+              style={{ height: 'calc(100vh - 120px)', display: 'block' }}
               onLoad={() => setIsFrameLoading(false)}
               allow="camera; microphone; geolocation"
             />

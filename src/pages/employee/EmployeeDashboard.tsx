@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/card';
-import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
@@ -27,16 +27,30 @@ export function EmployeeDashboard() {
   const location = useLocation();
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
+  const [employee, setEmployee] = useState<import('../../services/api/employee').Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(
-    (localStorage.getItem('empDashFormsViewMode') as 'card' | 'table') || 'card'
-  );
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [showGuide, setShowGuide] = useState(false);
+  const [userOverride, setUserOverride] = useState(false);
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
+    setUserOverride(true);
     localStorage.setItem('empDashFormsViewMode', mode);
   };
+
+  // Auto-switch based on screen size, unless user has manually changed
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (!userOverride) {
+        setViewMode(e.matches ? 'card' : 'table');
+      }
+    };
+    handler(mq);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [userOverride]);
 
   // Show a toast when returning from a successful form submission
   useEffect(() => {
@@ -57,6 +71,7 @@ export function EmployeeDashboard() {
         // First resolve the current user's employee record to get their employee UUID.
         const employee = await EmployeeService.fetchCurrentEmployee(userData.schoolId);
         if (!isMounted) return;
+        setEmployee(employee);
 
         const rawAssignments = await EmployeeService.fetchEmployeeFormAssignments(employee.id);
         if (!isMounted) return;
@@ -219,14 +234,16 @@ export function EmployeeDashboard() {
                     <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
                         { label: 'Role', value: 'Employee' },
+                        { label: 'Phone number', value: employee?.phone || '—' },
+                        { label: 'Address', value: employee?.address || '—' },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
-                        { label: 'Status', value: progress === 100 ? 'All Complete' : 'In Progress' },
                       ].map(({ label, value }) => (
                         <div key={label} className="flex justify-between items-center">
                           <span className="text-[11px] font-semibold text-slate-400">{label}</span>
                           <span className="text-[11px] font-bold text-slate-700">{value}</span>
                         </div>
                       ))}
+                      
                     </div>
                   </CardContent>
                 </Card>
@@ -253,16 +270,16 @@ export function EmployeeDashboard() {
                         {totalForms} form{totalForms !== 1 ? 's' : ''}
                       </span>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => setShowGuide(true)}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 text-white/80 hover:text-white transition-all text-[11px] font-bold"
-                      title="Employee Guide"
-                    >
-                      <HelpCircle className="h-3.5 w-3.5" />
-                      <span className="hidden sm:inline">Guide</span>
-                    </button>
+                   
                     <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
+                       <button
+                        type="button"
+                        onClick={() => handleViewModeChange('table')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
+                      >
+                        <List className="h-3 w-3" />
+                        <span className="hidden sm:inline">Table</span>
+                      </button> 
                       <button
                         type="button"
                         onClick={() => handleViewModeChange('card')}
@@ -271,14 +288,7 @@ export function EmployeeDashboard() {
                         <LayoutGrid className="h-3 w-3" />
                         <span className="hidden sm:inline">Card</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange('table')}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
-                      >
-                        <List className="h-3 w-3" />
-                        <span className="hidden sm:inline">Table</span>
-                      </button>
+                     
                     </div>
                   </div>
                 </div>

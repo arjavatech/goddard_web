@@ -20,6 +20,8 @@ interface InviteParentModalProps {
   setParentEmail: (value: string) => void;
   parentPhoneNumber: string;
   setParentPhoneNumber: (value: string) => void;
+  primaryRelationType: string;
+  setPrimaryRelationType: (value: string) => void;
   secondaryParentFirstName: string;
   setSecondaryParentFirstName: (value: string) => void;
   secondaryParentLastName: string;
@@ -28,6 +30,8 @@ interface InviteParentModalProps {
   setSecondaryParentEmail: (value: string) => void;
   secondaryParentPhoneNumber: string;
   setSecondaryParentPhoneNumber: (value: string) => void;
+  secondaryRelationType: string;
+  setSecondaryRelationType: (value: string) => void;
   childFirstName: string;
   setChildFirstName: (value: string) => void;
   childLastName: string;
@@ -56,6 +60,8 @@ export function InviteParentModal({
   setParentEmail,
   parentPhoneNumber,
   setParentPhoneNumber,
+  primaryRelationType,
+  setPrimaryRelationType,
   secondaryParentFirstName,
   setSecondaryParentFirstName,
   secondaryParentLastName,
@@ -64,6 +70,8 @@ export function InviteParentModal({
   setSecondaryParentEmail,
   secondaryParentPhoneNumber,
   setSecondaryParentPhoneNumber,
+  secondaryRelationType,
+  setSecondaryRelationType,
   childFirstName,
   setChildFirstName,
   childLastName,
@@ -111,7 +119,7 @@ export function InviteParentModal({
           {/* Primary Parent */}
           <div className="space-y-3">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-100 pb-2">Primary Parent Information</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1.5">First Name</label>
                 <Input
@@ -127,6 +135,18 @@ export function InviteParentModal({
                   onChange={e => setParentLastName(e.target.value.replace(/[^a-zA-Z\s]/g, ''))}
                   placeholder="Enter last name"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1.5">Relation Type</label>
+                <Select value={primaryRelationType} onValueChange={setPrimaryRelationType}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select relation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="father">Father</SelectItem>
+                    <SelectItem value="mother">Mother</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -168,6 +188,8 @@ export function InviteParentModal({
             setSecondaryParentEmail={setSecondaryParentEmail}
             secondaryParentPhoneNumber={secondaryParentPhoneNumber}
             setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+            secondaryRelationType={secondaryRelationType}
+            setSecondaryRelationType={setSecondaryRelationType}
             inviteFormErrors={inviteFormErrors}
             setInviteFormErrors={setInviteFormErrors}
             isDialogClosing={isDialogClosing}
@@ -295,6 +317,8 @@ interface SecondaryParentSectionProps {
   setSecondaryParentEmail: (v: string) => void;
   secondaryParentPhoneNumber: string;
   setSecondaryParentPhoneNumber: (v: string) => void;
+  secondaryRelationType: string;
+  setSecondaryRelationType: (v: string) => void;
   inviteFormErrors: { [key: string]: string };
   setInviteFormErrors: (errors: { [key: string]: string } | ((prev: { [key: string]: string }) => { [key: string]: string })) => void;
   isDialogClosing: boolean;
@@ -305,6 +329,7 @@ function SecondaryParentSection({
   secondaryParentLastName, setSecondaryParentLastName,
   secondaryParentEmail, setSecondaryParentEmail,
   secondaryParentPhoneNumber, setSecondaryParentPhoneNumber,
+  secondaryRelationType, setSecondaryRelationType,
   inviteFormErrors, setInviteFormErrors, isDialogClosing,
 }: SecondaryParentSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -316,6 +341,7 @@ function SecondaryParentSection({
       setSecondaryParentLastName('');
       setSecondaryParentEmail('');
       setSecondaryParentPhoneNumber('');
+      setSecondaryRelationType('');
       setInviteFormErrors(prev => ({
         ...prev,
         secondaryParentFirstName: '',
@@ -351,7 +377,7 @@ function SecondaryParentSection({
       {/* Collapsible content */}
       {isOpen && (
         <div className="px-4 pb-4 pt-3 space-y-3 bg-white">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium mb-1.5">First Name</label>
               <Input
@@ -389,6 +415,18 @@ function SecondaryParentSection({
               {inviteFormErrors.secondaryParentLastName && (
                 <p className="text-xs text-red-600 mt-1">{inviteFormErrors.secondaryParentLastName}</p>
               )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Relation Type</label>
+              <Select value={secondaryRelationType} onValueChange={setSecondaryRelationType}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select relation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="father">Father</SelectItem>
+                  <SelectItem value="mother">Mother</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -58,6 +58,8 @@ export function AdminDashboard() {
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
   const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
+  const [primaryRelationType, setPrimaryRelationType] = useState('');
+  const [secondaryRelationType, setSecondaryRelationType] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -144,6 +146,8 @@ export function AdminDashboard() {
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
     setSecondaryParentPhoneNumber('');
+    setPrimaryRelationType('');
+    setSecondaryRelationType('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -935,6 +939,10 @@ export function AdminDashboard() {
           setSecondaryParentEmail={setSecondaryParentEmail}
           secondaryParentPhoneNumber={secondaryParentPhoneNumber}
           setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+          primaryRelationType={primaryRelationType}
+          setPrimaryRelationType={setPrimaryRelationType}
+          secondaryRelationType={secondaryRelationType}
+          setSecondaryRelationType={setSecondaryRelationType}
           childFirstName={childFirstName}
           setChildFirstName={setChildFirstName}
           childLastName={childLastName}

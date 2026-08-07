@@ -472,7 +472,7 @@ export function AdminManagement() {
                                 <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
                               )}
                             </div>
-                            <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5`}>{admin.email}</div></div>
+                            <p className="text-xs text-slate-400 font-semibold mt-0.5 break-all">{admin.email}</p>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -569,7 +569,7 @@ export function AdminManagement() {
                               <Shield className="w-3.5 h-3.5 text-brand-blue flex-shrink-0" />
                             )}
                           </div>
-                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold block mt-0.5`}>{admin.email}</div></div>
+                          <p className="text-xs text-slate-400 font-semibold mt-0.5 break-all">{admin.email}</p>
                         </div>
                       </div>
                     </td>
@@ -799,7 +799,7 @@ export function AdminManagement() {
                   <AvatarInitials initials={`${selectedAdmin.first_name?.[0] || ''}${selectedAdmin.last_name?.[0] || ''}`.toUpperCase()} size="lg" />
                   <div className="min-w-0">
                     <h3 className="text-base font-bold text-slate-900 truncate">{selectedAdmin.first_name} {selectedAdmin.last_name}</h3>
-                    <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400 font-semibold`}>{selectedAdmin.email}</div></div>
+                    <p className="text-xs text-slate-400 font-semibold break-all">{selectedAdmin.email}</p>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t border-slate-50 pt-4">

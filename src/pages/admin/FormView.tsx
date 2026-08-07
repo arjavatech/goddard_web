@@ -12,6 +12,7 @@ import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment, getFormResumeLink } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
+import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
@@ -42,7 +43,9 @@ export function FormView() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { userData } = useUserContext();
   const { showToast } = useToast();
+  const isViewOnly = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -356,10 +359,8 @@ export function FormView() {
         <CardContent className="p-6">
           <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
             <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
-            {isApproved ? (
+            {isApproved || isViewOnly ? (
               <div className="flex items-center gap-2 text-green-600">
-                {/* <CheckCircle className="h-4 w-4 flex-shrink-0" />
-                  <span>This form has been approved and is read-only.</span> */}
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">

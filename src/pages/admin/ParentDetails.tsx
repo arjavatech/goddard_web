@@ -833,7 +833,7 @@ export function ParentDetails() {
                                         </Button>
                                       </div>
                                     )}
-                                    {(form.status !== 'Approved' || isAdminOrSuperAdmin) && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
+                                      {form.status !== 'Approved' && <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.id}`} state={{
                                       form,
                                       childId: child.id,
                                       childName: `${child.firstName} ${child.lastName}`,
