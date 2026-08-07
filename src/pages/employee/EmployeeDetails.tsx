@@ -139,7 +139,10 @@ export function EmployeeDetails() {
 
   const progress = useMemo(() => {
     if (assignments.length === 0) return 0;
-    const completed = assignments.filter(f => normalizeFormStatus(f.status) === 'Approved').length;
+    const completed = assignments.filter(f => {
+      const ns = normalizeFormStatus(f.status);
+      return ns === 'Approved' || ns === 'Submitted';
+    }).length;
     return Math.round((completed / assignments.length) * 100);
   }, [assignments]);
 

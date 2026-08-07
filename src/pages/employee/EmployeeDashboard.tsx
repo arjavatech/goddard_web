@@ -8,11 +8,12 @@ import { EmployeeService, type EmployeeFormAssignment } from '../../services/api
 import { useUserContext } from '../../contexts/UserContext';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
+import { useToast } from '../../contexts/ToastContext';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
@@ -23,6 +24,8 @@ type EnrichedAssignment = EmployeeFormAssignment & {
 export function EmployeeDashboard() {
   const { userData, schoolSubdomain } = useUserContext();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +37,15 @@ export function EmployeeDashboard() {
     setViewMode(mode);
     localStorage.setItem('empDashFormsViewMode', mode);
   };
+
+  // Show a toast when returning from a successful form submission
+  useEffect(() => {
+    if ((location.state as any)?.formCompleted) {
+      showToast('success', 'Form submitted successfully');
+      // Clear the state so the toast doesn't re-appear on further navigation
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,7 +76,7 @@ export function EmployeeDashboard() {
       }
     })();
     return () => { isMounted = false; };
-  }, [userData?.schoolId]);
+  }, [userData?.schoolId, location.key]);
 
   const handleOpenForm = (assignment: EnrichedAssignment) => {
     navigate(`/${schoolSubdomain}/employee/form/${assignment.id}`, {
@@ -73,8 +85,8 @@ export function EmployeeDashboard() {
   };
 
   const totalForms = assignments.length;
-  const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved').length;
-  const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved').length;
+  const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved' || a.normalizedStatus === 'Submitted').length;
+  const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved' && a.normalizedStatus !== 'Submitted').length;
   const progress = totalForms > 0 ? Math.round((completedForms / totalForms) * 100) : 0;
 
   const handleDownload = async (a: EnrichedAssignment) => {
@@ -204,7 +216,7 @@ export function EmployeeDashboard() {
                         <p className="text-xs text-slate-500 truncate">{userData?.email || '—'}</p>
                       </div>
                     </div>
-                    {/* <div className="space-y-2.5 border-t border-slate-50 pt-3">
+                    <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
                         { label: 'Role', value: 'Employee' },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
@@ -215,7 +227,7 @@ export function EmployeeDashboard() {
                           <span className="text-[11px] font-bold text-slate-700">{value}</span>
                         </div>
                       ))}
-                    </div> */}
+                    </div>
                   </CardContent>
                 </Card>
               </div>

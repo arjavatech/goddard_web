@@ -4,7 +4,7 @@ import { ChevronLeft, FileText, User } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
-import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
+import type { EmployeeFormAssignment } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 
@@ -58,17 +58,11 @@ export function EmployeeFormView() {
     })();
   }, [assignment, userData]);
 
-  const handleSubmission = useCallback(async () => {
+  const handleSubmission = useCallback(() => {
     if (isSubmittingRef.current || !assignment) return;
     isSubmittingRef.current = true;
-    try {
-      await EmployeeService.submitEmployeeForm(assignment.id, { submittedViaIframe: true });
-      showToast('success', 'Form submitted successfully');
-      navigate(back, { replace: true });
-    } catch {
-      showToast('error', 'Failed to submit form status');
-      isSubmittingRef.current = false;
-    }
+    showToast('success', 'Form submitted successfully');
+    navigate(back, { replace: true, state: { formCompleted: true } });
   }, [assignment, back, navigate, showToast]);
 
   // Listen for Fillout submission via postMessage
