@@ -1,15 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
+import { FileText, User } from 'lucide-react';
 import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
+import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 
 export function EmployeeFormView() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { schoolSlug, formId } = useParams<{ schoolSlug: string; formId: string }>();
+  const { schoolSlug } = useParams<{ schoolSlug: string; formId: string }>();
+  const { userData } = useUserContext();
   const { showToast } = useToast();
 
   const { assignment } = (location.state ?? {}) as {
@@ -19,6 +21,7 @@ export function EmployeeFormView() {
   const back = `/${schoolSlug}/employee/dashboard`;
 
   const [isFrameLoading, setIsFrameLoading] = useState(true);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,13 +30,39 @@ export function EmployeeFormView() {
     }
   }, [assignment, navigate, back]);
 
+  // Build the form URL: prefer recentEditLink (resume in-progress form) over filloutFormId (fresh start)
+  useEffect(() => {
+    const baseUrl = assignment?.recentEditLink || assignment?.filloutFormId;
+    if (!baseUrl) return;
+
+    (async () => {
+      let url = baseUrl;
+
+      // Append employee_form_assignment_id so the webhook can identify the submission
+      if (!url.includes('employee_form_assignment_id')) {
+        url += `${url.includes('?') ? '&' : '?'}employee_form_assignment_id=${encodeURIComponent(assignment.id)}`;
+      }
+
+      // Provision Fillout user for signature/initials re-use (same as parent flow)
+      const email = (userData?.email || '').trim().toLowerCase();
+      const externalUserId = email || assignment.userId;
+      if (externalUserId) {
+        const name = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || email || 'Employee';
+        const filloutCtx = await getFilloutUserContext({ externalUserId, email: email || `${externalUserId}@goddard.employee`, name });
+        url = appendFilloutUserParams(url, filloutCtx);
+      }
+
+      setViewUrl(url);
+    })();
+  }, [assignment, userData]);
+
   // Listen for Fillout submission via postMessage
   useEffect(() => {
     const handleMessage = async (event: MessageEvent) => {
       let isSubmitted = false;
       if (typeof event.data === 'string') {
         const lower = event.data.toLowerCase();
-        if ((lower.includes('submit') || lower.includes('complete')) && 
+        if ((lower.includes('submit') || lower.includes('complete')) &&
             (lower.includes('submission') || lower.includes('success'))) {
           isSubmitted = true;
         }
@@ -53,58 +82,82 @@ export function EmployeeFormView() {
         }
       }
     };
-    
+
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
   }, [assignment, navigate, back, showToast]);
 
   if (!assignment) return null;
+  if (!assignment.recentEditLink && !assignment.filloutFormId) {
+    return (
+      <div className="h-screen flex items-center justify-center text-slate-500 text-sm">
+        Form URL is not configured for this assignment.
+      </div>
+    );
+  }
 
-  // In a real app, you'd get the actual fillout URL from the form template.
-  // We'll mock it for now since the mock API doesn't pass the fillout URL in EmployeeFormAssignment yet.
-  const viewUrl = `https://forms.fillout.com/t/mockform?assignmentId=${assignment.id}`;
+  const employeeName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ')
+    || [assignment.employeeFirstName, assignment.employeeLastName].filter(Boolean).join(' ')
+    || 'Employee';
 
   return (
     <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
       <Header />
-      <main className="flex-1 flex flex-col min-h-0 relative mt-16 sm:mt-24">
-        
-        {/* Top Bar */}
-        <div className="bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-4 flex-1">
-            <button 
-              onClick={() => navigate(back)}
-              className="flex items-center justify-center w-8 h-8 rounded-full hover:bg-slate-100 transition-colors shrink-0"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
-            </button>
+      <main className="flex-1 flex flex-col min-h-0 relative">
+
+        {/* Info Bar */}
+        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+              <User className="w-3.5 h-3.5 text-[#0F2D52]" />
+            </div>
             <div className="min-w-0">
-              <h1 className="text-sm font-bold text-slate-900 truncate">
-                {assignment.formTitle}
-              </h1>
-              <p className="text-xs text-slate-500 font-medium truncate">
-                {assignment.formDescription}
-              </p>
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
+              <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
             </div>
           </div>
+
+          <div className="h-8 w-px bg-slate-100 shrink-0" />
+
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+              <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
+              <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
+            </div>
+          </div>
+
+          {assignment.dueDate && (
+            <>
+              <div className="h-8 w-px bg-slate-100 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
+                <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Iframe Container */}
         <div ref={iframeContainerRef} className="flex-1 relative w-full h-full bg-[#F7F9FC] overflow-hidden">
-          {isFrameLoading && (
+          {(!viewUrl || isFrameLoading) && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10">
               <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
               <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
             </div>
           )}
-          
-          <iframe
-            src={viewUrl}
-            title={assignment.formTitle}
-            className={`w-full h-full border-0 transition-opacity duration-300 ${isFrameLoading ? 'opacity-0' : 'opacity-100'}`}
-            onLoad={() => setIsFrameLoading(false)}
-            allow="camera; microphone; geolocation"
-          />
+
+          {viewUrl && (
+            <iframe
+              src={viewUrl}
+              title={assignment.formTitle}
+              className={`w-full h-full border-0 transition-opacity duration-300 ${isFrameLoading ? 'opacity-0' : 'opacity-100'}`}
+              onLoad={() => setIsFrameLoading(false)}
+              allow="camera; microphone; geolocation"
+            />
+          )}
         </div>
       </main>
     </div>
