@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp } from 'lucide-react';
+import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp, Phone, MapPin } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -51,6 +51,8 @@ interface ParentDetailView {
   lastName: string;
   email: string;
   phone: string;
+  address?: string | null;
+  relationType?: string | null;
   children: ChildInfo[];
   familyForms: Form[];
   additionalParentEmail?: string | null;
@@ -268,7 +270,9 @@ export function ParentDetails() {
           firstName: parentRecord.firstName || friendly.first,
           lastName: parentRecord.lastName || friendly.last,
           email: parentRecord.email,
-          phone: '—',
+          phone: (parentRecord as any).phoneNumber || '—',
+          address: (parentRecord as any).address || null,
+          relationType: (parentRecord as any).relationType || null,
           children: processedChildren,
           familyForms: Array.from(allForms.values()),
           additionalParentEmail,
@@ -572,17 +576,34 @@ export function ParentDetails() {
                     {/* Primary Parent */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-3">
-                        <div className="min-w-0">
+                        <div className="min-w-0 w-full">
                           <div className="flex flex-wrap items-center gap-2">
                             <h1 className="text-lg sm:text-2xl font-extrabold text-slate-950 tracking-tight truncate">
                               {primaryData.name}
                             </h1>
                             <Badge variant="secondary" className="text-[10px] rounded-md px-2 py-0.5 font-bold uppercase tracking-wider bg-[#0F2D52]/10 text-[#0F2D52] hover:bg-[#0F2D52]/15 border-0">Primary Parent</Badge>
+                            {isPrimaryParent && parent.relationType && (
+                              <Badge variant="outline" className={`text-[10px] rounded-md px-2 py-0.5 font-bold uppercase tracking-wider border-0 ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
+                                {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
+                              </Badge>
+                            )}
                           </div>
                           <div className="flex items-center gap-1.5 mt-0.5 sm:mt-1">
                             <MailIcon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                             <span className="text-xs sm:text-sm text-slate-500 font-medium truncate">{primaryData.email}</span>
                           </div>
+                          {isPrimaryParent && parent.phone && parent.phone !== '—' && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="text-xs text-slate-500 font-medium">{parent.phone}</span>
+                            </div>
+                          )}
+                          {isPrimaryParent && parent.address && (
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                              <span className="text-xs text-slate-500 font-medium">{parent.address}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -594,17 +615,34 @@ export function ParentDetails() {
                         <div className="sm:hidden h-px bg-slate-100 w-full" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center justify-between gap-3">
-                            <div className="min-w-0">
+                            <div className="min-w-0 w-full">
                               <div className="flex flex-wrap items-center gap-2">
                                 <h2 className="text-base sm:text-lg font-extrabold text-slate-800 tracking-tight truncate">
                                   {secondaryData.name}
                                 </h2>
                                 <Badge variant="outline" className="text-[10px] rounded-md px-2 py-0.5 font-bold uppercase tracking-wider text-slate-500 border-slate-200">Secondary Parent</Badge>
+                                {!isPrimaryParent && parent.relationType && (
+                                  <Badge variant="outline" className={`text-[10px] rounded-md px-2 py-0.5 font-bold uppercase tracking-wider border-0 ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
+                                    {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
+                                  </Badge>
+                                )}
                               </div>
                               <div className="flex items-center gap-1.5 mt-0.5">
                                 <MailIcon className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
                                 <span className="text-xs sm:text-sm text-slate-500 font-medium truncate">{secondaryData.email}</span>
                               </div>
+                              {!isPrimaryParent && parent.phone && parent.phone !== '—' && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <Phone className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                  <span className="text-xs text-slate-500 font-medium">{parent.phone}</span>
+                                </div>
+                              )}
+                              {!isPrimaryParent && parent.address && (
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  <MapPin className="h-3.5 w-3.5 text-slate-400 flex-shrink-0" />
+                                  <span className="text-xs text-slate-500 font-medium">{parent.address}</span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
