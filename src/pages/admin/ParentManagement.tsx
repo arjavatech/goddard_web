@@ -290,12 +290,20 @@ export function ParentManagement() {
           <div className="whitespace-nowrap font-medium text-slate-900">{parent.email}</div>
           <div className="text-slate-400">{parent.phoneNumber || 'No phone number'}</div>
           {parent.address && <div className="text-slate-400 truncate max-w-[180px]">{parent.address}</div>}
-          {parent.relationType && (
-            <span className={`inline-block text-[9px] px-1.5 py-0 rounded-full font-bold ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
-              {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
-            </span>
-          )}
         </div>
+      )
+    },
+    {
+      id: 'relation',
+      header: 'Relation',
+      className: 'w-[100px] text-center',
+      hideInCardBody: true,
+      cell: (parent) => parent.relationType ? (
+        <span className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
+          {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
+        </span>
+      ) : (
+        <span className="text-slate-300 text-xs">—</span>
       )
     },
     {
