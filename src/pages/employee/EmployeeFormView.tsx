@@ -6,6 +6,8 @@ import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
+import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
+import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
 
 export function EmployeeFormView() {
   const location = useLocation();
@@ -23,6 +25,37 @@ export function EmployeeFormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
+
+  useIframeScrollLock();
+  const embeddedResize = useEmbeddedFormResize(viewUrl);
+
+  const [formHeight, setFormHeight] = useState<number>(() =>
+    typeof window !== 'undefined' ? Math.max(480, window.innerHeight - 120) : 700
+  );
+
+  // Listen for Fillout height updates on every page change
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      try {
+        const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+        if (!data || typeof data !== 'object') return;
+        const h =
+          (data.type === 'form_resized' ? data.size : undefined) ??
+          data.height ?? data.value ?? data.clientHeight ?? data.size ??
+          data.payload?.height ?? data.payload?.size ??
+          data.data?.height ?? data.data?.size;
+        if (typeof h === 'number' && h > 0) {
+          setFormHeight(prev => {
+            const newH = Math.ceil(h);
+            if (newH > prev && (newH - prev) < 50) return prev;
+            return newH;
+          });
+        }
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   useEffect(() => {
     if (!assignment) {
@@ -101,7 +134,7 @@ export function EmployeeFormView() {
     || 'Employee';
 
   return (
-    <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#F7F9FC] flex flex-col">
       <Header />
       <main className="flex-1 flex flex-col min-h-0 relative">
 
@@ -141,9 +174,9 @@ export function EmployeeFormView() {
         </div>
 
         {/* Iframe Container */}
-        <div ref={iframeContainerRef} className="flex-1 relative w-full h-full bg-[#F7F9FC] overflow-hidden">
+        <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative">
           {(!viewUrl || isFrameLoading) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm z-10">
+            <div className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm" style={{ height: `${formHeight}px` }}>
               <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
               <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
             </div>
@@ -151,10 +184,20 @@ export function EmployeeFormView() {
 
           {viewUrl && (
             <iframe
+              ref={embeddedResize.iframeRef}
               src={viewUrl}
               title={assignment.formTitle}
-              className={`w-full h-full border-0 transition-opacity duration-300 ${isFrameLoading ? 'opacity-0' : 'opacity-100'}`}
-              onLoad={() => setIsFrameLoading(false)}
+              style={{
+                width: '100%',
+                height: embeddedResize.isDynamic
+                  ? `${embeddedResize.height ?? formHeight}px`
+                  : `${formHeight}px`,
+                border: 'none',
+                display: 'block',
+                opacity: isFrameLoading ? 0 : 1,
+                transition: 'opacity 0.3s ease-in-out',
+              }}
+              onLoad={() => { embeddedResize.handleLoad(); setIsFrameLoading(false); }}
               allow="camera; microphone; geolocation"
             />
           )}

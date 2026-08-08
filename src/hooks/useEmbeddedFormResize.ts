@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { getFormBuilderOrigin } from '@/lib/formBuilderUrl';
 
-const READY_MESSAGE = 'arjava:embed:ready';
-const INIT_MESSAGE = 'arjava:embed:init';
+const READY_MESSAGE  = 'arjava:embed:ready';
+const INIT_MESSAGE   = 'arjava:embed:init';
 const RESIZE_MESSAGE = 'arjava:embed:resize';
 const MAX_EMBED_HEIGHT = 200_000;
 
@@ -12,20 +12,20 @@ function createChannelId() {
 
 /** Coordinates a secure, dynamic-height channel with an Arjava form-builder iframe. */
 export function useEmbeddedFormResize(formUrl: string | null | undefined) {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef    = useRef<HTMLIFrameElement>(null);
   const channelIdRef = useRef(createChannelId());
   const [height, setHeight] = useState<number | null>(null);
   const expectedOrigin = getFormBuilderOrigin(formUrl);
 
   const initializeChild = useCallback(() => {
     if (!expectedOrigin || !iframeRef.current?.contentWindow) return;
-
-    iframeRef.current.contentWindow.postMessage({
-      type: INIT_MESSAGE,
-      channelId: channelIdRef.current,
-    }, expectedOrigin);
+    iframeRef.current.contentWindow.postMessage(
+      { type: INIT_MESSAGE, channelId: channelIdRef.current },
+      expectedOrigin,
+    );
   }, [expectedOrigin]);
 
+  // Reset channel when the form URL changes.
   useEffect(() => {
     channelIdRef.current = createChannelId();
     setHeight(null);
@@ -38,8 +38,8 @@ export function useEmbeddedFormResize(formUrl: string | null | undefined) {
     // run first, so retry the handshake briefly instead of relying on one load
     // event that may arrive before the child installs its message listener.
     initializeChild();
-    const retryId = window.setInterval(initializeChild, 250);
-    const stopRetryId = window.setTimeout(() => window.clearInterval(retryId), 5_000);
+    const retryId   = window.setInterval(initializeChild, 250);
+    const stopRetry = window.setTimeout(() => window.clearInterval(retryId), 5_000);
 
     const handleMessage = (event: MessageEvent) => {
       if (event.origin !== expectedOrigin || event.source !== iframeRef.current?.contentWindow) return;
@@ -47,36 +47,22 @@ export function useEmbeddedFormResize(formUrl: string | null | undefined) {
       const data = event.data;
       if (!data || typeof data !== 'object') return;
 
-      if (data.type === READY_MESSAGE) {
-        initializeChild();
-        return;
-      }
-
+      if (data.type === READY_MESSAGE) { initializeChild(); return; }
       if (data.type !== RESIZE_MESSAGE) return;
       if (typeof data.height !== 'number' || data.height < 1 || data.height > MAX_EMBED_HEIGHT) return;
 
       window.clearInterval(retryId);
-      setHeight(prev => {
-        const newHeight = Math.ceil(data.height);
-        // Arjava forms often have a bug where they continuously report slightly larger heights 
-        // (e.g., +20px padding) in a loop if not capped. We use a 50px delta to block this aggressive loop.
-        if (prev !== null && Math.abs(prev - newHeight) < 50) return prev;
-        return newHeight;
-      });
+
+      setHeight(() => Math.ceil(data.height));
     };
 
     window.addEventListener('message', handleMessage);
     return () => {
       window.clearInterval(retryId);
-      window.clearTimeout(stopRetryId);
+      window.clearTimeout(stopRetry);
       window.removeEventListener('message', handleMessage);
     };
   }, [expectedOrigin, initializeChild]);
 
-  return {
-    iframeRef,
-    height,
-    isDynamic: Boolean(expectedOrigin),
-    handleLoad: initializeChild,
-  };
+  return { iframeRef, height, isDynamic: Boolean(expectedOrigin), handleLoad: initializeChild };
 }

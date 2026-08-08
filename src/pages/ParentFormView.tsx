@@ -394,11 +394,7 @@ export function ParentFormView() {
                       style={{
                         width: '100%',
                         height: embeddedResize.isDynamic
-                          // Arjava forms report cumulative height of ALL pages, causing massive
-                          // blank space. Cap at viewport height so only the current page shows;
-                          // scrolling="auto" lets the form builder navigate pages internally.
-                          ? `${Math.min(embeddedResize.height ?? 320, typeof window !== 'undefined' ? window.innerHeight - 120 : 700)}px`
-                          // Fillout forms: use postMessage height so the page scrolls naturally.
+                          ? `${embeddedResize.height ?? 700}px`
                           : `${formHeight}px`,
                         border: 'none',
                         display: 'block',
