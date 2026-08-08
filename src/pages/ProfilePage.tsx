@@ -31,24 +31,27 @@ function ProfileContent() {
   const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [secondaryParent, setSecondaryParent] = useState<{ firstName?: string; lastName?: string; email?: string; parentType?: string } | null>(null);
+  const [loadingExtra, setLoadingExtra] = useState(true);
   const { user } = useAuth();
 
   useEffect(() => {
     if (isEmployee && userData?.schoolId) {
       EmployeeService.fetchCurrentEmployee(userData.schoolId)
         .then(setEmployeeDetails)
-        .catch(() => {});
-    }
-  }, [isEmployee, userData?.schoolId]);
-
-  useEffect(() => {
-    if (!isEmployee && !isAdmin && userData?.schoolId) {
+        .catch(() => {})
+        .finally(() => setLoadingExtra(false));
+    } else if (!isEmployee && !isAdmin && userData?.schoolId) {
       const parentId = userData.parentId || user?.id;
       if (parentId) {
         fetchSingleParent(parentId, userData.schoolId)
           .then(data => setSecondaryParent(data?.otherParent ?? null))
-          .catch(() => {});
+          .catch(() => {})
+          .finally(() => setLoadingExtra(false));
+      } else {
+        setLoadingExtra(false);
       }
+    } else {
+      setLoadingExtra(false);
     }
   }, [isEmployee, isAdmin, userData?.schoolId, userData?.parentId, user?.id]);
 
@@ -57,6 +60,38 @@ function ProfileContent() {
     : isEmployee
     ? `/${schoolSlug}/employee/dashboard`
     : `/${schoolSlug}/dashboard`;
+
+  if (loadingExtra) {
+    return (
+      <div className="max-w-2xl mx-auto px-2 mt-14 py-6 space-y-5">
+        <div className="rounded-2xl overflow-hidden shadow-md bg-white">
+          <div className="h-28 bg-gradient-to-br from-[#0F2D52] via-[#1a4a8a] to-[#1a6fc4] animate-pulse" />
+          <div className="px-6 pb-6 pt-0">
+            <div className="flex items-end justify-between -mt-10 mb-5">
+              <div className="w-20 h-20 rounded-2xl bg-slate-200 animate-pulse ring-4 ring-white" />
+              <div className="h-6 w-20 rounded-full bg-slate-200 animate-pulse" />
+            </div>
+            <div className="space-y-2 mb-5">
+              <div className="h-5 w-40 rounded-lg bg-slate-200 animate-pulse" />
+              <div className="h-4 w-56 rounded-lg bg-slate-100 animate-pulse" />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />)}
+            </div>
+          </div>
+        </div>
+        {[1,2].map(i => (
+          <div key={i} className="rounded-2xl bg-white shadow-sm border border-slate-100 px-6 py-5 space-y-3">
+            <div className="h-4 w-36 rounded bg-slate-200 animate-pulse" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="h-14 rounded-xl bg-slate-100 animate-pulse" />
+              <div className="h-14 rounded-xl bg-slate-100 animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-5 py-6 px-2 mt-14 animate-fade-in">

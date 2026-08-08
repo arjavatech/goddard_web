@@ -32,10 +32,19 @@ export function Header() {
 
   const profilePath = `/${schoolSubdomain || 'goddard'}/profile`;
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.setItem('explicit_logout', 'true');
-    signOut().catch(err => console.error('Logout error:', err));
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      sessionStorage.setItem('explicit_logout', 'true');
+      await signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      localStorage.clear();
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+      navigate('/login', { replace: true });
+    }
   };
 
   const UserMenuContent = () => (
