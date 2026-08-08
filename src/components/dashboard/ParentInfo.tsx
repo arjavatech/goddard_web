@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, CardContent } from '../ui/card';
-import { User, Mail, UserPlus } from 'lucide-react';
+import { User, Mail, UserPlus, Phone, MapPin, Users } from 'lucide-react';
 
 interface ParentInfoProps {
   parentData: {
@@ -8,6 +8,9 @@ interface ParentInfoProps {
     lastName?: string;
     email: string;
     parentType?: string;
+    phoneNumber?: string | null;
+    address?: string | null;
+    relationType?: string | null;
     additional_first_name?: string;
     additional_last_name?: string;
     additional_email?: string;
@@ -55,6 +58,15 @@ function ParentRow({
   );
 }
 
+function DetailRow({ icon, value }: { icon: React.ReactNode; value: string }) {
+  return (
+    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+      <span className="text-slate-400 flex-shrink-0">{icon}</span>
+      <span className="truncate">{value}</span>
+    </div>
+  );
+}
+
 export function ParentInfo({ parentData }: ParentInfoProps) {
   if (!parentData) return null;
 
@@ -62,6 +74,8 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
   const additionalName = parentData.additional_first_name
     ? `${parentData.additional_first_name || ''} ${parentData.additional_last_name || ''}`.trim()
     : null;
+
+  const hasExtra = !!(parentData.phoneNumber || parentData.address || parentData.relationType);
 
   return (
     <Card className="rounded-2xl border border-slate-100 shadow-sm overflow-hidden bg-white hover:shadow-md transition-all duration-300 self-start">
@@ -75,6 +89,23 @@ export function ParentInfo({ parentData }: ParentInfoProps) {
 
       <CardContent className="pt-4 pb-4 space-y-3">
         <ParentRow name={primaryName} email={parentData.email} isPrimary />
+
+        {hasExtra && (
+          <div className="space-y-1.5 pl-1">
+            {parentData.relationType && (
+              <DetailRow
+                icon={<Users className="w-3 h-3" />}
+                value={parentData.relationType.charAt(0) + parentData.relationType.slice(1).toLowerCase()}
+              />
+            )}
+            {parentData.phoneNumber && (
+              <DetailRow icon={<Phone className="w-3 h-3" />} value={parentData.phoneNumber} />
+            )}
+            {parentData.address && (
+              <DetailRow icon={<MapPin className="w-3 h-3" />} value={parentData.address} />
+            )}
+          </div>
+        )}
 
         {additionalName && parentData.additional_email && (
           <>

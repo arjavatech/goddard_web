@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { LogOut, User, ChevronDown, School } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/dialog';
@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '../ui/dr
 import { NotificationBell } from '../notifications/NotificationBell';
 
 export function Header() {
-  const { userData, schoolName } = useUserContext();
+  const { userData, schoolName, schoolSubdomain } = useUserContext();
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -30,13 +30,52 @@ export function Header() {
     return 'Parent';
   })();
 
-  const handleLogout = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    sessionStorage.setItem('explicit_logout', 'true');
-    signOut().catch(err => console.error('Logout error:', err));
-    window.location.href = '/';
+  const profilePath = `/${schoolSubdomain || 'goddard'}/profile`;
+
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    try {
+      sessionStorage.setItem('explicit_logout', 'true');
+      await signOut();
+    } catch (err) {
+      console.error('Logout error:', err);
+    } finally {
+      localStorage.clear();
+      setIsLoggingOut(false);
+      setShowLogoutModal(false);
+      navigate('/login', { replace: true });
+    }
   };
+
+  const UserMenuContent = () => (
+    <>
+      <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
+            {initials}
+          </div>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
+            <p className="text-xs text-slate-400">{roleLabel}</p>
+          </div>
+        </div>
+      </div>
+      <div className="p-2 space-y-0.5">
+        <Link
+          to={profilePath}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          <User className="w-4 h-4 text-slate-400" /> Profile
+        </Link>
+        <button
+          onClick={() => setShowLogoutModal(true)}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+        >
+          <LogOut className="w-4 h-4" /> Sign out
+        </button>
+      </div>
+    </>
+  );
 
   return (
     <>
@@ -63,26 +102,7 @@ export function Header() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
-                  <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                        <p className="text-xs text-slate-400">{roleLabel}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    <button
-                      onClick={() => setShowLogoutModal(true)}
-                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign out
-                    </button>
-                  </div>
+                  <UserMenuContent />
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -104,22 +124,7 @@ export function Header() {
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
-                  <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm">
-                        {initials}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                        <p className="text-xs text-slate-400">{roleLabel}</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-2">
-                    <button onClick={() => setShowLogoutModal(true)} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors">
-                      <LogOut className="w-4 h-4" /> Sign out
-                    </button>
-                  </div>
+                  <UserMenuContent />
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -159,26 +164,7 @@ export function Header() {
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-60 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
-                <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">
-                      {initials}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900 truncate">{displayName}</p>
-                      <p className="text-xs text-slate-400">{roleLabel}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-2">
-                  <button
-                    onClick={() => setShowLogoutModal(true)}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    Sign out
-                  </button>
-                </div>
+                <UserMenuContent />
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

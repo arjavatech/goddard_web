@@ -26,7 +26,7 @@ export function Login() {
 
   useEffect(() => {
     if (localStorage.getItem('session_invalidated') === 'true') {
-      showToast('error', 'Your account has been logged out because it was signed in from another device.', 'Session Ended');
+      showToast('warning', 'Your session was ended because this account was signed in on another device.', 'Signed Out for Security');
       localStorage.removeItem('session_invalidated');
     }
   }, [showToast]);
@@ -77,7 +77,18 @@ export function Login() {
 
       navigate(redirectTo || defaultPath, { replace: true });
     } catch (err) {
-      showToast('error', (err as Error).message, 'Login Failed');
+      const raw = (err as Error).message?.toLowerCase() ?? '';
+      const friendly =
+        raw.includes('invalid login') || raw.includes('invalid credentials') || raw.includes('wrong password')
+          ? 'The email or password you entered is incorrect. Please try again.'
+          : raw.includes('email not confirmed')
+          ? 'Please verify your email address before signing in.'
+          : raw.includes('too many requests') || raw.includes('rate limit')
+          ? 'Too many sign-in attempts. Please wait a moment and try again.'
+          : raw.includes('user not found') || raw.includes('no user')
+          ? 'No account found with this email address.'
+          : 'Something went wrong. Please try again or contact support.';
+      showToast('error', friendly, 'Sign-in Failed');
       setIsLoading(false);
     }
     // Note: setIsLoading(false) is intentionally omitted from finally — the

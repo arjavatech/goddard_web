@@ -1,9 +1,9 @@
 import * as React from "react"
-import { X, CheckCircle, AlertCircle } from "lucide-react"
+import { X, CheckCircle, AlertCircle, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ToastProps {
-  type: 'success' | 'error'
+  type: 'success' | 'error' | 'warning'
   title?: string
   message: string
   onClose: () => void
@@ -26,18 +26,22 @@ export function Toast({ type, title, message, onClose, index, id }: ToastProps) 
     >
       <div className={cn(
         "glass-card flex items-start gap-3 p-4 rounded-lg shadow-lg border w-full transition-all duration-300",
-        type === 'success' 
-          ? "bg-gradient-to-r from-green-50 to-emerald-50 border-amazon-teal/20 text-green-800" 
-          : "bg-gradient-to-r from-red-50 to-orange-50 border-amazon-orange/20 text-red-800"
+        type === 'success'
+          ? "bg-white border-emerald-200 text-slate-800"
+          : type === 'warning'
+          ? "bg-white border-amber-200 text-slate-800"
+          : "bg-white border-red-200 text-slate-800"
       )}>
         {type === 'success' ? (
-          <CheckCircle className="h-5 w-5 text-amazon-teal mt-0.5 flex-shrink-0" />
+          <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
+        ) : type === 'warning' ? (
+          <ShieldAlert className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
         ) : (
-          <AlertCircle className="h-5 w-5 text-amazon-orange mt-0.5 flex-shrink-0" />
+          <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
         )}
         <div className="flex-1">
-          {title && <div className="font-semibold mb-1 text-foreground">{title}</div>}
-          <div className="text-sm font-medium">{message}</div>
+          {title && <div className="text-sm font-semibold text-slate-900 mb-0.5">{title}</div>}
+          <div className="text-xs text-slate-500 leading-relaxed">{message}</div>
         </div>
         <button
           onClick={onClose}

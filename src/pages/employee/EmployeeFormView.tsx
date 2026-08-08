@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { FileText, User } from 'lucide-react';
+import { ChevronLeft, FileText, User } from 'lucide-react';
+import { Button } from '../../components/ui/button';
 import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
-import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
+import type { EmployeeFormAssignment } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
@@ -25,6 +26,8 @@ export function EmployeeFormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
+  const isSubmittingRef = useRef(false);
+  const mainRef = useRef<HTMLElement>(null);
 
   useIframeScrollLock();
   const embeddedResize = useEmbeddedFormResize(viewUrl);
@@ -89,36 +92,98 @@ export function EmployeeFormView() {
     })();
   }, [assignment, userData]);
 
+  const handleSubmission = useCallback(() => {
+    if (isSubmittingRef.current || !assignment) return;
+    isSubmittingRef.current = true;
+    showToast('success', 'Form submitted successfully');
+    navigate(back, { replace: true, state: { formCompleted: true } });
+  }, [assignment, back, navigate, showToast]);
+
+  const prevHeightRef = useRef<number | null>(null);
+
   // Listen for Fillout submission via postMessage
   useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
+    const handleMessage = (event: MessageEvent) => {
       let isSubmitted = false;
+      let parsed: any = null;
       if (typeof event.data === 'string') {
-        const lower = event.data.toLowerCase();
-        if ((lower.includes('submit') || lower.includes('complete')) &&
-            (lower.includes('submission') || lower.includes('success'))) {
-          isSubmitted = true;
-        }
+        try { parsed = JSON.parse(event.data); } catch { /* not JSON */ }
       } else if (event.data && typeof event.data === 'object') {
-        if (event.data.type === 'fillout-form-submitted' || event.data.type === 'FORM_SUBMITTED') {
-          isSubmitted = true;
-        }
+        parsed = event.data;
       }
-
-      if (isSubmitted && assignment) {
-        try {
-          await EmployeeService.submitEmployeeForm(assignment.id, { submittedViaIframe: true });
-          showToast('success', 'Form submitted successfully');
-          navigate(back, { replace: true });
-        } catch (error) {
-          showToast('error', 'Failed to submit form status');
-        }
+      if (parsed) {
+        const type = parsed.type || parsed.event;
+        if (type === 'fillout-form-submitted' || type === 'FORM_SUBMITTED') isSubmitted = true;
+        if (!isSubmitted && (parsed.success === true || parsed.success === 'true') && (parsed.submission_id || parsed.submissionId)) isSubmitted = true;
       }
+      if (!isSubmitted && typeof event.data === 'string') {
+        const lower = event.data.toLowerCase();
+        if ((lower.includes('submit') || lower.includes('complete')) && (lower.includes('submission') || lower.includes('success'))) isSubmitted = true;
+      }
+      if (isSubmitted) handleSubmission();
     };
-
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [assignment, navigate, back, showToast]);
+  }, [handleSubmission]);
+
+  // Scroll to top when the embedded form navigates to the next/previous page
+  useEffect(() => {
+    const scrollTop = () => mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    const handlePageChange = (event: MessageEvent) => {
+      let parsed: any = null;
+      if (typeof event.data === 'string') {
+        try { parsed = JSON.parse(event.data); } catch { /* not JSON */ }
+      } else if (event.data && typeof event.data === 'object') {
+        parsed = event.data;
+      }
+      if (!parsed) return;
+      const type = (parsed.type || parsed.event || '').toString().toLowerCase();
+      if (
+        type.includes('page') ||
+        type.includes('step') ||
+        type.includes('next') ||
+        type.includes('prev') ||
+        type.includes('navigate') ||
+        type.includes('transition')
+      ) {
+        scrollTop();
+        return;
+      }
+      // Fallback: Fillout resets iframe height on each page — treat a significant
+      // height change as a page-navigation signal.
+      const h =
+        (parsed.type === 'form_resized' ? parsed.size : undefined) ??
+        parsed.height ?? parsed.value ?? parsed.clientHeight ?? parsed.size ??
+        parsed.payload?.height ?? parsed.data?.height;
+      if (typeof h === 'number' && h > 0) {
+        const newH = Math.ceil(h);
+        if (prevHeightRef.current !== null && Math.abs(newH - prevHeightRef.current) > 100) {
+          scrollTop();
+        }
+        prevHeightRef.current = newH;
+      }
+    };
+    window.addEventListener('message', handlePageChange);
+    return () => window.removeEventListener('message', handlePageChange);
+  }, []);
+
+  // Interval-based detection via iframe URL (catches Fillout's built-in thank-you page)
+  useEffect(() => {
+    if (!assignment?.formTitle) return;
+    const interval = setInterval(() => {
+      try {
+        const iframe = document.querySelector(`iframe[title="${assignment.formTitle}"]`) as HTMLIFrameElement;
+        if (iframe?.contentWindow) {
+          const url = iframe.contentWindow.location.href;
+          if (url.includes('thank') || url.includes('success') || url.includes('complete')) {
+            clearInterval(interval);
+            handleSubmission();
+          }
+        }
+      } catch { /* cross-origin, expected */ }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [assignment?.formTitle, handleSubmission]);
 
   if (!assignment) return null;
   if (!assignment.recentEditLink && !assignment.filloutFormId) {
@@ -136,7 +201,34 @@ export function EmployeeFormView() {
   return (
     <div className="min-h-screen bg-[#F7F9FC] flex flex-col">
       <Header />
-      <main className="flex-1 flex flex-col min-h-0 relative">
+      <main ref={mainRef} className="flex-1 flex flex-col min-h-0 relative overflow-y-auto">
+
+        {/* Title Bar */}
+        <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm">
+          <div className="flex-1 flex items-center justify-start">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 px-2 gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 lg:hidden"
+              onClick={() => navigate(back)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden lg:flex h-8 px-3 gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200"
+              onClick={() => navigate(back)}
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              Back to Dashboard
+            </Button>
+          </div>
+          <div className="flex-1 flex items-center justify-center">
+            <h2 className="text-sm font-semibold text-slate-900 truncate text-center">{assignment.formTitle}</h2>
+          </div>
+          <div className="flex-1" />
+        </div>
 
         {/* Info Bar */}
         <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">

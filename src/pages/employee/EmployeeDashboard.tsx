@@ -3,14 +3,17 @@ import { motion } from 'framer-motion';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/card';
-import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
+import { useToast } from '../../contexts/ToastContext';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
@@ -21,16 +24,42 @@ type EnrichedAssignment = EmployeeFormAssignment & {
 export function EmployeeDashboard() {
   const { userData, schoolSubdomain } = useUserContext();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
+  const [employee, setEmployee] = useState<import('../../services/api/employee').Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(
-    (localStorage.getItem('empDashFormsViewMode') as 'card' | 'table') || 'card'
-  );
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [showGuide, setShowGuide] = useState(false);
+  const [userOverride, setUserOverride] = useState(false);
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
+    setUserOverride(true);
     localStorage.setItem('empDashFormsViewMode', mode);
   };
+
+  // Auto-switch based on screen size, unless user has manually changed
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)');
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      if (!userOverride) {
+        setViewMode(e.matches ? 'card' : 'table');
+      }
+    };
+    handler(mq);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, [userOverride]);
+
+  // Show a toast when returning from a successful form submission
+  useEffect(() => {
+    if ((location.state as any)?.formCompleted) {
+      showToast('success', 'Form submitted successfully');
+      // Clear the state so the toast doesn't re-appear on further navigation
+      window.history.replaceState({}, '');
+    }
+  }, [location.state]);
 
   useEffect(() => {
     let isMounted = true;
@@ -42,6 +71,7 @@ export function EmployeeDashboard() {
         // First resolve the current user's employee record to get their employee UUID.
         const employee = await EmployeeService.fetchCurrentEmployee(userData.schoolId);
         if (!isMounted) return;
+        setEmployee(employee);
 
         const rawAssignments = await EmployeeService.fetchEmployeeFormAssignments(employee.id);
         if (!isMounted) return;
@@ -61,7 +91,7 @@ export function EmployeeDashboard() {
       }
     })();
     return () => { isMounted = false; };
-  }, [userData?.schoolId]);
+  }, [userData?.schoolId, location.key]);
 
   const handleOpenForm = (assignment: EnrichedAssignment) => {
     navigate(`/${schoolSubdomain}/employee/form/${assignment.id}`, {
@@ -70,8 +100,8 @@ export function EmployeeDashboard() {
   };
 
   const totalForms = assignments.length;
-  const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved').length;
-  const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved').length;
+  const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved' || a.normalizedStatus === 'Submitted').length;
+  const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved' && a.normalizedStatus !== 'Submitted').length;
   const progress = totalForms > 0 ? Math.round((completedForms / totalForms) * 100) : 0;
 
   const handleDownload = async (a: EnrichedAssignment) => {
@@ -201,18 +231,20 @@ export function EmployeeDashboard() {
                         <p className="text-xs text-slate-500 truncate">{userData?.email || '—'}</p>
                       </div>
                     </div>
-                    {/* <div className="space-y-2.5 border-t border-slate-50 pt-3">
+                    <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
                         { label: 'Role', value: 'Employee' },
+                        { label: 'Phone number', value: employee?.phone || '—' },
+                        { label: 'Address', value: employee?.address || '—' },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
-                        { label: 'Status', value: progress === 100 ? 'All Complete' : 'In Progress' },
                       ].map(({ label, value }) => (
                         <div key={label} className="flex justify-between items-center">
                           <span className="text-[11px] font-semibold text-slate-400">{label}</span>
                           <span className="text-[11px] font-bold text-slate-700">{value}</span>
                         </div>
                       ))}
-                    </div> */}
+                      
+                    </div>
                   </CardContent>
                 </Card>
               </div>
@@ -238,7 +270,16 @@ export function EmployeeDashboard() {
                         {totalForms} form{totalForms !== 1 ? 's' : ''}
                       </span>
                     )}
+                   
                     <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
+                       <button
+                        type="button"
+                        onClick={() => handleViewModeChange('table')}
+                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
+                      >
+                        <List className="h-3 w-3" />
+                        <span className="hidden sm:inline">Table</span>
+                      </button> 
                       <button
                         type="button"
                         onClick={() => handleViewModeChange('card')}
@@ -247,14 +288,7 @@ export function EmployeeDashboard() {
                         <LayoutGrid className="h-3 w-3" />
                         <span className="hidden sm:inline">Card</span>
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleViewModeChange('table')}
-                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all ${viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-white/70 hover:text-white'}`}
-                      >
-                        <List className="h-3 w-3" />
-                        <span className="hidden sm:inline">Table</span>
-                      </button>
+                     
                     </div>
                   </div>
                 </div>
@@ -421,6 +455,18 @@ export function EmployeeDashboard() {
         )}
       </main>
       <Footer />
+
+      <Dialog open={showGuide} onOpenChange={setShowGuide}>
+        <DialogContent className="w-[95vw] max-w-lg rounded-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <HelpCircle className="h-4 w-4 text-amazon-teal" />
+              Employee Guide
+            </DialogTitle>
+          </DialogHeader>
+          <EmployeeGuideContent />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
