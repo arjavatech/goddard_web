@@ -27,7 +27,7 @@ export function FilloutFormButton({
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
         <DialogContent className="max-w-4xl w-full p-0 h-[90vh]" preventClose>
           <iframe src={formUrl} title={formTitle} className="w-full h-full border-0" style={{
-          minHeight: '80vh'
+         
         }} />
         </DialogContent>
       </Dialog>

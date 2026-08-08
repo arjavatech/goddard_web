@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { Phone, Mail, Globe, HelpCircle, BookOpen } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '../ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Button } from '../ui/button';
 import { HelpCenterContent } from '../HelpCenterContent';
 import { ParentGuideContent } from '../ParentGuideContent';
+import { EmployeeGuideContent } from '../EmployeeGuideContent';
 import { useUserContext } from '../../contexts/UserContext';
 
 export function Footer() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
+  const [showEmployeeGuideModal, setShowEmployeeGuideModal] = useState(false);
   const { schoolName, schoolPhone, schoolEmail, schoolAddress, userData } = useUserContext();
+
+  const isEmployee = userData?.role?.toLowerCase() === 'employee';
 
   return (
     <footer className="w-full bg-[#1a3a5c]">
@@ -24,7 +29,9 @@ export function Footer() {
               className="h-9 w-auto object-contain brightness-0 invert opacity-90"
             />
             <p className="text-sm text-slate-300/70 leading-relaxed max-w-sm">
-              Quality early childhood education through play-based learning — nurturing curious, confident, and creative kids since 1988.
+              {isEmployee
+                ? 'Supporting our dedicated staff with the tools and documentation needed to deliver exceptional early childhood education.'
+                : 'Quality early childhood education through play-based learning — nurturing curious, confident, and creative kids since 1988.'}
             </p>
             <div className="flex flex-col gap-2 pt-1">
               {schoolPhone && (
@@ -63,17 +70,26 @@ export function Footer() {
           <div className="space-y-4 min-w-[200px]">
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
             <ul className="space-y-2.5">
+             
+                <li>
+                  <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                    <HelpCircle className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium">Help Center</span>
+                  </button>
+                </li>
+              
               <li>
-                <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
-                  <HelpCircle className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                  <span className="font-medium">Help Center</span>
-                </button>
-              </li>
-              <li>
-                <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
-                  <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                  <span className="font-medium">Parent Guide</span>
-                </button>
+                {isEmployee ? (
+                  <button onClick={() => setShowEmployeeGuideModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                    <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium">Employee Guide</span>
+                  </button>
+                ) : (
+                  <button onClick={() => setShowGuideModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
+                    <BookOpen className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
+                    <span className="font-medium">Parent Guide</span>
+                  </button>
+                )}
               </li>
               <li>
                 <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
@@ -103,31 +119,78 @@ export function Footer() {
         </div>
       </div>
 
+      {/* Employee Guide Modal */}
+      <Dialog open={showEmployeeGuideModal} onOpenChange={setShowEmployeeGuideModal}>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl shadow-lg no-scrollbar">
+          <DialogHeader className="pb-0">
+            <div className="flex items-center gap-3 p-1 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900 leading-tight">Employee Guide</DialogTitle>
+                <p className="text-xs text-slate-400 mt-0.5">Everything you need to complete your assigned forms</p>
+              </div>
+            </div>
+          </DialogHeader>
+          <div className="py-3">
+            <EmployeeGuideContent />
+          </div>
+          <div className="border-t border-slate-100 pt-3 flex justify-end">
+            <Button variant="outline" onClick={() => setShowEmployeeGuideModal(false)} className="h-9 px-4 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
+              Close
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Parent Guide Modal */}
       <Dialog open={showGuideModal} onOpenChange={setShowGuideModal}>
-        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-[#0F2D52]" />
-              Parent Guide
-            </DialogTitle>
-            <DialogDescription>Everything you need to complete your child's enrollment</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl shadow-lg no-scrollbar">
+          <DialogHeader className="pb-0">
+            <div className="flex items-center gap-3 p-1 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                <BookOpen className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900 leading-tight">Parent Guide</DialogTitle>
+                <p className="text-xs text-slate-400 mt-0.5">Everything you need to complete your child's enrollment</p>
+              </div>
+            </div>
           </DialogHeader>
-          <ParentGuideContent />
+          <div className="py-3">
+            <ParentGuideContent />
+          </div>
+          <div className="border-t border-slate-100 pt-3 flex justify-end">
+            <Button variant="outline" onClick={() => setShowGuideModal(false)} className="h-9 px-4 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       {/* Help Center Modal */}
       <Dialog open={showHelpModal} onOpenChange={setShowHelpModal}>
-        <DialogContent className="w-[95vw] max-w-3xl max-h-[85vh] overflow-y-auto rounded-2xl no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <HelpCircle className="h-5 w-5 text-[#0F2D52]" />
-              Help Center
-            </DialogTitle>
-            <DialogDescription>Find answers to common questions about your enrollment</DialogDescription>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl shadow-lg no-scrollbar">
+          <DialogHeader className="pb-0">
+            <div className="flex items-center gap-3 p-1 pb-3 border-b border-slate-100">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                <HelpCircle className="h-4 w-4 text-white" />
+              </div>
+              <div>
+                <DialogTitle className="text-base font-bold text-slate-900 leading-tight">Help Center</DialogTitle>
+                <p className="text-xs text-slate-400 mt-0.5">Find answers to common questions about your enrollment</p>
+              </div>
+            </div>
           </DialogHeader>
-          <HelpCenterContent role="parent" />
+          <div className="py-3">
+            <HelpCenterContent role="parent" />
+          </div>
+          <div className="border-t border-slate-100 pt-3 flex justify-end">
+            <Button variant="outline" onClick={() => setShowHelpModal(false)} className="h-9 px-4 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
+              Close
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </footer>

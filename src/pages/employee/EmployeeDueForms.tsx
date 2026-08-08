@@ -60,7 +60,7 @@ export function EmployeeDueForms() {
   const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
-  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'card');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empDueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('empDueFormsViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('empDueForms', 10);
   useEffect(() => {
@@ -425,13 +425,13 @@ export function EmployeeDueForms() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'overdue':
-        return <Badge variant="destructive" className="text-xs"><AlertTriangle className="h-3 w-3 mr-1" />Overdue</Badge>;
+        return <Badge variant="destructive" className="text-[10px] px-1.5 py-0"><AlertTriangle className="h-2.5 w-2.5 mr-1" />Overdue</Badge>;
       case 'in_progress':
-        return <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />Needs Attention</Badge>;
+        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0"><Clock className="h-2.5 w-2.5 mr-1" />In Progress</Badge>;
       case 'pending':
-        return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending</Badge>;
+        return <Badge variant="warning" className="text-[10px] px-1.5 py-0"><Clock className="h-2.5 w-2.5 mr-1" />Pending</Badge>;
       case 'submitted':
-        return <Badge variant="warning" className="text-xs"><Clock className="h-3 w-3 mr-1" />Pending Approval</Badge>;
+        return <Badge variant="secondary" className="text-[10px] px-1.5 py-0"><Clock className="h-2.5 w-2.5 mr-1" />Submitted</Badge>;
       default:
         return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
@@ -532,7 +532,7 @@ export function EmployeeDueForms() {
               <div className="flex items-center justify-between">
                 <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
-                    Needs Attention
+                    In Progress
                   </p>
                   <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.in_progress}</p>
                 </div>
@@ -789,7 +789,7 @@ export function EmployeeDueForms() {
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id), true)}
                     disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0 || bulkRemindLoading}
                   >
-                    Remind Needs Attention ({filteredForms.filter(f => f.status === 'in_progress').length})
+                    Remind In Progress ({filteredForms.filter(f => f.status === 'in_progress').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id), true)}
@@ -916,13 +916,13 @@ export function EmployeeDueForms() {
                                 onCheckedChange={handleSelectAll}
                               />
                             </th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[20%]">Form</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell w-[15%]">Employee</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[12%]">Role</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-[23%]">Email</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell w-[10%]">Due Date</th>
-                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Status</th>
-                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 w-[10%]">Actions</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Form</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell">Employee</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Role</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Email</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell">Due Date</th>
+                            <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Status</th>
+                            <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -935,9 +935,9 @@ export function EmployeeDueForms() {
                                 />
                               </td>
                               <td className="py-4 px-3 max-w-xs">
-                                <div className="font-bold text-slate-900 text-sm truncate">{form.formName}</div>
-                                <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.employeeName}</div>
-                                <div className="text-xs font-semibold text-slate-400 truncate lg:hidden sm:hidden">
+                                <div className="font-bold text-slate-900 text-xs truncate max-w-[10rem]">{form.formName}</div>
+                                <div className="text-[10px] font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.employeeName}</div>
+                                <div className="text-[10px] font-semibold text-slate-400 truncate lg:hidden sm:hidden">
                                   {formatDate(form.dueDate)}
                                 </div>
                               </td>
@@ -948,7 +948,7 @@ export function EmployeeDueForms() {
                                 <div className="truncate">{form.employeeType}</div>
                               </td>
                               <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
-                                <div className="whitespace-nowrap font-bold text-slate-800">{form.employeeEmail}</div>
+                                <div className="overflow-x-auto scrollbar-thin max-w-[180px] font-bold text-slate-800 whitespace-nowrap">{form.employeeEmail}</div>
                               </td>
                               <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
                                 <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>

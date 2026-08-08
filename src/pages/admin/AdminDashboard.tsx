@@ -54,10 +54,13 @@ export function AdminDashboard() {
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPhoneNumber, setParentPhoneNumber] = useState('');
+  const [parentAddress, setParentAddress] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
   const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
+  const [primaryRelationType, setPrimaryRelationType] = useState('');
+  const [secondaryRelationType, setSecondaryRelationType] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -140,10 +143,13 @@ export function AdminDashboard() {
     setParentLastName('');
     setParentEmail('');
     setParentPhoneNumber('');
+    setParentAddress('');
     setSecondaryParentFirstName('');
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
     setSecondaryParentPhoneNumber('');
+    setPrimaryRelationType('');
+    setSecondaryRelationType('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -273,6 +279,8 @@ export function AdminDashboard() {
         parentLastName,
         parentEmail,
         parentPhoneNumber: parentPhoneNumber.trim() || undefined,
+        parentAddress: parentAddress.trim() || undefined,
+        parentRelationType: primaryRelationType || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob: childDob || undefined,
         classroomId: childClassroom,
@@ -280,7 +288,8 @@ export function AdminDashboard() {
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
         secondaryParentLastName: secondaryParentLastName.trim() || undefined,
-        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined,
+        secondaryParentRelationType: secondaryRelationType || undefined
       });
 
       setIsInviteDialogOpen(false);
@@ -927,6 +936,8 @@ export function AdminDashboard() {
           setParentEmail={setParentEmail}
           parentPhoneNumber={parentPhoneNumber}
           setParentPhoneNumber={setParentPhoneNumber}
+          parentAddress={parentAddress}
+          setParentAddress={setParentAddress}
           secondaryParentFirstName={secondaryParentFirstName}
           setSecondaryParentFirstName={setSecondaryParentFirstName}
           secondaryParentLastName={secondaryParentLastName}
@@ -935,6 +946,10 @@ export function AdminDashboard() {
           setSecondaryParentEmail={setSecondaryParentEmail}
           secondaryParentPhoneNumber={secondaryParentPhoneNumber}
           setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+          primaryRelationType={primaryRelationType}
+          setPrimaryRelationType={setPrimaryRelationType}
+          secondaryRelationType={secondaryRelationType}
+          setSecondaryRelationType={setSecondaryRelationType}
           childFirstName={childFirstName}
           setChildFirstName={setChildFirstName}
           childLastName={childLastName}

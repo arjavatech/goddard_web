@@ -21,6 +21,8 @@ export type UserContext = {
   email?: string;
   firstName?: string;
   lastName?: string;
+  phone?: string;
+  address?: string;
   schoolData?: SchoolData | null;
 };
 
@@ -53,6 +55,9 @@ const userContextSchema = z.object({
   firstName: z.string().optional(),
   last_name: z.string().optional(),
   lastName: z.string().optional(),
+  phone: z.string().optional(),
+  phone_number: z.string().optional(),
+  address: z.string().optional(),
   school_data: schoolDataSchema.nullable().optional(),
 }).passthrough();
 
@@ -79,6 +84,8 @@ export async function fetchUserContext(): Promise<UserContext> {
       email: data.email,
       firstName: data.first_name || data.firstName,
       lastName: data.last_name || data.lastName,
+      phone: data.phone || data.phone_number,
+      address: data.address,
       schoolData: data.school_data || null,
     };
 

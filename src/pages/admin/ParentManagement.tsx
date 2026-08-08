@@ -45,6 +45,9 @@ interface Parent {
   children: Child[];
   status: ParentStatus;
   signupStatus: SignupStatus;
+  phoneNumber?: string | null;
+  address?: string | null;
+  relationType?: string | null;
 }
 const friendlyNameFromEmail = (email: string): {
   first: string;
@@ -89,10 +92,13 @@ export function ParentManagement() {
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPhoneNumber, setParentPhoneNumber] = useState('');
+  const [parentAddress, setParentAddress] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
   const [secondaryParentPhoneNumber, setSecondaryParentPhoneNumber] = useState('');
+  const [primaryRelationType, setPrimaryRelationType] = useState('');
+  const [secondaryRelationType, setSecondaryRelationType] = useState('');
   const [childFirstName, setChildFirstName] = useState('');
   const [childLastName, setChildLastName] = useState('');
   const [childDob, setChildDob] = useState('');
@@ -163,7 +169,10 @@ export function ParentManagement() {
       email: detail.email,
       children,
       status: hasCompletedForms ? 'Active' : 'Archive',
-      signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed'
+      signupStatus: detail.signedStatus === 'signed' ? 'Signed' : 'Not Signed',
+      phoneNumber: detail.phoneNumber || null,
+      address: detail.address || null,
+      relationType: detail.relationType || null,
     } satisfies Parent;
 
     // console.log('Mapped parent:', { id: mappedParent.id, email: mappedParent.email });
@@ -277,10 +286,24 @@ export function ParentManagement() {
       className: 'w-auto',
       hideInCardBody: true,
       cell: (parent) => (
-        <div className="text-xs font-semibold text-slate-600">
+        <div className="text-xs font-semibold text-slate-600 space-y-0.5">
           <div className="whitespace-nowrap font-medium text-slate-900">{parent.email}</div>
-          <div className="text-slate-400 mt-0.5">{(parent as any).phoneNumber || 'No phone number'}</div>
+          <div className="text-slate-400">{parent.phoneNumber || 'No phone number'}</div>
+          {parent.address && <div className="text-slate-400 truncate max-w-[180px]">{parent.address}</div>}
         </div>
+      )
+    },
+    {
+      id: 'relation',
+      header: 'Relation',
+      className: 'w-[100px] text-center',
+      hideInCardBody: true,
+      cell: (parent) => parent.relationType ? (
+        <span className={`inline-block text-[10px] px-2.5 py-0.5 rounded-full font-bold ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
+          {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
+        </span>
+      ) : (
+        <span className="text-slate-300 text-xs">—</span>
       )
     },
     {
@@ -467,6 +490,8 @@ export function ParentManagement() {
         parentLastName,
         parentEmail,
         parentPhoneNumber: parentPhoneNumber.trim() || undefined,
+        parentAddress: parentAddress.trim() || undefined,
+        parentRelationType: primaryRelationType || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob: childDob || undefined,
         classroomId: childClassroom,
@@ -474,7 +499,8 @@ export function ParentManagement() {
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
         secondaryParentLastName: secondaryParentLastName.trim() || undefined,
-        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined,
+        secondaryParentRelationType: secondaryRelationType || undefined
       });
       
       // Re-fetch to get the real parent_id assigned by the DB
@@ -571,10 +597,13 @@ export function ParentManagement() {
     setParentLastName('');
     setParentEmail('');
     setParentPhoneNumber('');
+    setParentAddress('');
     setSecondaryParentFirstName('');
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
     setSecondaryParentPhoneNumber('');
+    setPrimaryRelationType('');
+    setSecondaryRelationType('');
     setChildFirstName('');
     setChildLastName('');
     setChildDob('');
@@ -1056,7 +1085,14 @@ export function ParentManagement() {
                         {parent.signupStatus === 'Signed' ? <CheckCircle className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                         {parent.signupStatus}
                       </Badge>
-                      <span className="text-[11px] text-slate-400 font-semibold">{(parent as any).phoneNumber || ''}</span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        {parent.phoneNumber && <span className="text-[11px] text-slate-400 font-semibold">{parent.phoneNumber}</span>}
+                        {parent.relationType && (
+                          <span className={`text-[9px] px-1.5 py-0 rounded-full font-bold ${parent.relationType.toUpperCase() === 'FATHER' ? 'bg-emerald-50 text-emerald-700' : 'bg-pink-50 text-pink-700'}`}>
+                            {parent.relationType.charAt(0) + parent.relationType.slice(1).toLowerCase()}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="my-3 border-t border-slate-50" />
@@ -1122,6 +1158,8 @@ export function ParentManagement() {
         setParentEmail={setParentEmail}
         parentPhoneNumber={parentPhoneNumber}
         setParentPhoneNumber={setParentPhoneNumber}
+        parentAddress={parentAddress}
+        setParentAddress={setParentAddress}
         secondaryParentFirstName={secondaryParentFirstName}
         setSecondaryParentFirstName={setSecondaryParentFirstName}
         secondaryParentLastName={secondaryParentLastName}
@@ -1130,6 +1168,10 @@ export function ParentManagement() {
         setSecondaryParentEmail={setSecondaryParentEmail}
         secondaryParentPhoneNumber={secondaryParentPhoneNumber}
         setSecondaryParentPhoneNumber={setSecondaryParentPhoneNumber}
+        primaryRelationType={primaryRelationType}
+        setPrimaryRelationType={setPrimaryRelationType}
+        secondaryRelationType={secondaryRelationType}
+        setSecondaryRelationType={setSecondaryRelationType}
         childFirstName={childFirstName}
         setChildFirstName={setChildFirstName}
         childLastName={childLastName}

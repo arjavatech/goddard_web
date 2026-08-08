@@ -25,15 +25,14 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      localStorage.clear();
+      sessionStorage.setItem('explicit_logout', 'true');
       await signOut();
     } catch (err) {
       console.error('Logout error during SuperAdmin sign out:', err);
     } finally {
-      localStorage.clear();
-      sessionStorage.clear();
       setIsLoggingOut(false);
       setShowLogoutModal(false);
-      window.location.href = '/';
     }
   };
 

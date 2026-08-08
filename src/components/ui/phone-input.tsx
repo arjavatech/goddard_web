@@ -24,9 +24,10 @@ export interface PhoneInputProps {
   placeholder?: string;
   className?: string;
   error?: boolean;
+  usePortal?: boolean;
 }
 
-export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone number', className, error }: PhoneInputProps) {
+export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone number', className, error, usePortal = false }: PhoneInputProps) {
   const defaultCountry = COUNTRIES.find(c => c.id === 'US') || COUNTRIES[0];
   const [selectedCountry, setSelectedCountry] = useState<CountryData>(defaultCountry);
   const [localValue, setLocalValue] = useState('');
@@ -140,7 +141,7 @@ export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone numbe
 
   return (
     <div className={cn("flex items-center w-full rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 transition-shadow", error && "border-red-500 focus-within:ring-red-500", className)}>
-      <PopoverPrimitive.Root open={open} onOpenChange={setOpen}>
+      <PopoverPrimitive.Root open={open} onOpenChange={setOpen} modal={usePortal}>
         <PopoverPrimitive.Trigger asChild>
           <button
             type="button"
@@ -152,63 +153,135 @@ export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone numbe
           </button>
         </PopoverPrimitive.Trigger>
         
-        <PopoverPrimitive.Content 
-          className="z-50 w-[300px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
-          align="start"
-          sideOffset={4}
-        >
-          <Command
-            filter={(value, search) => {
-              const searchLower = search.toLowerCase().trim();
-              if (!searchLower) return 1;
-              
-              const [name, dialCode, iso] = value.toLowerCase().split(':::');
-              if (!name) return 0;
-              
-              // Exact matches get highest priority (1.0)
-              if (name === searchLower || iso === searchLower || dialCode === searchLower) {
-                return 1;
-              }
-              
-              // Prefix matches get high priority (0.75)
-              if (name.startsWith(searchLower) || dialCode.startsWith(searchLower) || iso.startsWith(searchLower)) {
-                return 0.75;
-              }
-              
-              // Substring matches get lowest priority (0.5)
-              if (name.includes(searchLower)) {
-                return 0.5;
-              }
-              
-              return 0;
-            }}
+        {usePortal ? (
+          <PopoverPrimitive.Portal>
+            <PopoverPrimitive.Content 
+              className="z-[100] w-[300px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+              align="start"
+              side="bottom"
+              sideOffset={4}
+              avoidCollisions={false}
+              style={{ pointerEvents: 'auto' }}
+              onOpenAutoFocus={(e) => e.preventDefault()}
+            >
+              <div onPointerDown={(e) => e.stopPropagation()}>
+                <Command
+                  filter={(value, search) => {
+                    const searchLower = search.toLowerCase().trim();
+                    if (!searchLower) return 1;
+                    
+                    const [name, dialCode, iso] = value.toLowerCase().split(':::');
+                    if (!name) return 0;
+                    
+                    // Exact matches get highest priority (1.0)
+                    if (name === searchLower || iso === searchLower || dialCode === searchLower) {
+                      return 1;
+                    }
+                    
+                    // Prefix matches get high priority (0.75)
+                    if (name.startsWith(searchLower) || dialCode.startsWith(searchLower) || iso.startsWith(searchLower)) {
+                      return 0.75;
+                    }
+                    
+                    // Substring matches get lowest priority (0.5)
+                    if (name.includes(searchLower)) {
+                      return 0.5;
+                    }
+                    
+                    return 0;
+                  }}
+                >
+                  <CommandInput placeholder="Search country or code..." autoFocus />
+                  <CommandList>
+                    <CommandEmpty>No country found.</CommandEmpty>
+                    <CommandGroup>
+                      {COUNTRIES.map((country) => (
+                        <CommandItem
+                          key={country.id}
+                          value={`${country.name}:::${country.dialCode}:::${country.id}`}
+                          onSelect={() => {
+                            handleCountryChange(country.id);
+                            setOpen(false);
+                          }}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <span className="text-base leading-none">{country.flag}</span>
+                          <span className="text-sm truncate max-w-[160px]">{country.name}</span>
+                          <span className="text-xs text-slate-500 ml-auto">{country.dialCode}</span>
+                          {selectedCountry.id === country.id && (
+                            <Check className="ml-2 h-4 w-4 text-primary" />
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </div>
+            </PopoverPrimitive.Content>
+          </PopoverPrimitive.Portal>
+        ) : (
+          <PopoverPrimitive.Content 
+            className="z-50 w-[300px] rounded-md border bg-popover p-0 text-popover-foreground shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2"
+            align="start"
+            side="bottom"
+            sideOffset={4}
+            avoidCollisions={false}
           >
-            <CommandInput placeholder="Search country or code..." autoFocus />
-            <CommandList>
-              <CommandEmpty>No country found.</CommandEmpty>
-              <CommandGroup>
-                {COUNTRIES.map((country) => (
-                  <CommandItem
-                    key={country.id}
-                    value={`${country.name}:::${country.dialCode}:::${country.id}`}
-                    onSelect={() => {
-                      handleCountryChange(country.id);
-                      setOpen(false);
-                    }}
-                    className="flex items-center gap-2 cursor-pointer"
-                  >
-                    <span className="text-base leading-none">{country.flag}</span>
-                    <span className="text-sm truncate max-w-[160px]">{country.name}</span>
-                    <span className="text-xs text-slate-500 ml-auto">{country.dialCode}</span>
-                    {selectedCountry.id === country.id && (
-                      <Check className="ml-2 h-4 w-4 text-primary" />
-                    )}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverPrimitive.Content>
+            <div onPointerDown={(e) => e.stopPropagation()}>
+              <Command
+                filter={(value, search) => {
+                  const searchLower = search.toLowerCase().trim();
+                  if (!searchLower) return 1;
+                  
+                  const [name, dialCode, iso] = value.toLowerCase().split(':::');
+                  if (!name) return 0;
+                  
+                  // Exact matches get highest priority (1.0)
+                  if (name === searchLower || iso === searchLower || dialCode === searchLower) {
+                    return 1;
+                  }
+                  
+                  // Prefix matches get high priority (0.75)
+                  if (name.startsWith(searchLower) || dialCode.startsWith(searchLower) || iso.startsWith(searchLower)) {
+                    return 0.75;
+                  }
+                  
+                  // Substring matches get lowest priority (0.5)
+                  if (name.includes(searchLower)) {
+                    return 0.5;
+                  }
+                  
+                  return 0;
+                }}
+              >
+                <CommandInput placeholder="Search country or code..." autoFocus />
+                <CommandList>
+                  <CommandEmpty>No country found.</CommandEmpty>
+                  <CommandGroup>
+                    {COUNTRIES.map((country) => (
+                      <CommandItem
+                        key={country.id}
+                        value={`${country.name}:::${country.dialCode}:::${country.id}`}
+                        onSelect={() => {
+                          handleCountryChange(country.id);
+                          setOpen(false);
+                        }}
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <span className="text-base leading-none">{country.flag}</span>
+                        <span className="text-sm truncate max-w-[160px]">{country.name}</span>
+                        <span className="text-xs text-slate-500 ml-auto">{country.dialCode}</span>
+                        {selectedCountry.id === country.id && (
+                          <Check className="ml-2 h-4 w-4 text-primary" />
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </div>
+          </PopoverPrimitive.Content>
+        )}
       </PopoverPrimitive.Root>
       
       <div className="w-px h-5 bg-slate-200 shrink-0" />

@@ -139,7 +139,10 @@ export function EmployeeDetails() {
 
   const progress = useMemo(() => {
     if (assignments.length === 0) return 0;
-    const completed = assignments.filter(f => normalizeFormStatus(f.status) === 'Approved').length;
+    const completed = assignments.filter(f => {
+      const ns = normalizeFormStatus(f.status);
+      return ns === 'Approved' || ns === 'Submitted';
+    }).length;
     return Math.round((completed / assignments.length) * 100);
   }, [assignments]);
 
@@ -369,22 +372,24 @@ export function EmployeeDetails() {
                                 </Button>
                               </>
                             )}
-                            <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.formId}`} state={{
-                              form,
-                              employeeId: employee.id,
-                              employeeName: `${employee.firstName} ${employee.lastName}`,
-                              returnPath: `/${schoolSlug || 'goddard'}/admin/employees/${employee.id}`,
-                              recentEditLink: form.recentEditLink,
-                              filloutFormId: form.filloutFormId,
-                              studentFormAssignmentId: form.id,
-                              schoolId: form.schoolId,
-                              isEmployeeForm: true,
-                            }}>
-                              <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
-                                <Eye className="h-3.5 w-3.5 mr-1" />
-                                <span>View Form</span>
-                              </Button>
-                            </Link>
+                            {normalizeFormStatus(form.status) !== 'Approved' && (
+                              <Link to={`/${schoolSlug || 'goddard'}/admin/forms/view/${form.formId}`} state={{
+                                form,
+                                employeeId: employee.id,
+                                employeeName: `${employee.firstName} ${employee.lastName}`,
+                                returnPath: `/${schoolSlug || 'goddard'}/admin/employees/${employee.id}`,
+                                recentEditLink: form.recentEditLink,
+                                filloutFormId: form.filloutFormId,
+                                studentFormAssignmentId: form.id,
+                                schoolId: form.schoolId,
+                                isEmployeeForm: true,
+                              }}>
+                                <Button variant="outline" size="sm" className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50">
+                                  <Eye className="h-3.5 w-3.5 mr-1" />
+                                  <span>View Form</span>
+                                </Button>
+                              </Link>
+                            )}
 
                             {normalizeFormStatus(form.status) === 'Submitted' && (
                               <div className="flex gap-2">

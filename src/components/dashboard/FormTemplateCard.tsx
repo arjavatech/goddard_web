@@ -52,7 +52,7 @@ export function FormTemplateCard({
             Created: {formatDate(template.createdAt)}
           </div>}
 
-        {template.filloutFormUrl ? <FilloutFormButton formUrl={template.filloutFormUrl} formTitle={template.formName} variant="outline" size="sm" className="w-full" /> : <div className="text-xs text-muted-foreground text-center py-2">
+        {template.filloutFormUrl ? <FilloutFormButton formUrl={template.filloutFormUrl} formTitle={template.formName} variant="outline" size="sm" className="w-full h-80vh" /> : <div className="text-xs text-muted-foreground text-center py-2">
             Form URL not available
           </div>}
       </CardContent>

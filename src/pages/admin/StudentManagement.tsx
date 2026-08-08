@@ -40,10 +40,15 @@ interface EnrollmentData {
   additional_parent_email?: string | null;
   child_status?: string;
   enrollment_id?: string;
+  parent_phone_number?: string | null;
+  parent_address?: string | null;
+  parent_relation_type?: string | null;
   secondary_parent_id?: string | null;
   secondary_parent_first_name?: string | null;
   secondary_parent_last_name?: string | null;
   secondary_parent_email?: string | null;
+  secondary_parent_phone_number?: string | null;
+  secondary_parent_relation_type?: string | null;
 }
 interface Student {
   id: string;
@@ -64,11 +69,16 @@ interface Student {
     id: string;
     name: string;
     email: string;
+    phone?: string | null;
+    address?: string | null;
+    relationType?: string | null;
   };
   secondaryParent?: {
     id: string;
     name: string;
     email: string;
+    phone?: string | null;
+    relationType?: string | null;
   } | null;
   assignedForms: {
     id: string;
@@ -340,7 +350,9 @@ export function StudentManagement() {
           secondaryParent = {
             id: enrollment.secondary_parent_id,
             name: `${enrollment.secondary_parent_first_name || ''} ${enrollment.secondary_parent_last_name || ''}`.trim(),
-            email: enrollment.secondary_parent_email || ''
+            email: enrollment.secondary_parent_email || '',
+            phone: enrollment.secondary_parent_phone_number || null,
+            relationType: enrollment.secondary_parent_relation_type || null,
           };
         }
 
@@ -362,7 +374,10 @@ export function StudentManagement() {
           parent: {
             id: parentId,
             name: parentName,
-            email: parentEmail
+            email: parentEmail,
+            phone: enrollment.parent_phone_number || null,
+            address: enrollment.parent_address || null,
+            relationType: enrollment.parent_relation_type || null,
           },
           secondaryParent,
           assignedForms: formsArray,
@@ -554,17 +569,37 @@ export function StudentManagement() {
       cell: (student) => (
         <div className="min-w-0 space-y-1.5">
           <div>
-            <Link to={`/admin/parents/${student.parent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-sm">
-              {student.parent.name}
-            </Link>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <Link to={`/admin/parents/${student.parent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors truncate text-sm">
+                {student.parent.name}
+              </Link>
+              {student.parent.relationType && (
+                <Badge variant="outline" className={`text-[9px] px-1.5 py-0 rounded-full font-bold flex-shrink-0 ${student.parent.relationType.toUpperCase() === 'FATHER' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-pink-200 text-pink-700 bg-pink-50'}`}>
+                  {student.parent.relationType.charAt(0) + student.parent.relationType.slice(1).toLowerCase()}
+                </Badge>
+              )}
+            </div>
             <div className="whitespace-nowrap text-xs text-slate-400 font-medium mt-0.5">{student.parent.email}</div>
+            {student.parent.phone && (
+              <div className="whitespace-nowrap text-xs text-slate-400 font-medium">{student.parent.phone}</div>
+            )}
           </div>
           {student.secondaryParent && (
             <div className="border-t border-slate-100 pt-1.5">
-              <Link to={`/admin/parents/${student.secondaryParent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors block truncate text-xs">
-                {student.secondaryParent.name}
-              </Link>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Link to={`/admin/parents/${student.secondaryParent.id}`} state={{ fromStudents: true }} className="text-[#1a6fc4] hover:text-[#0F2D52] font-semibold hover:underline transition-colors truncate text-xs">
+                  {student.secondaryParent.name}
+                </Link>
+                {student.secondaryParent.relationType && (
+                  <Badge variant="outline" className={`text-[9px] px-1.5 py-0 rounded-full font-bold flex-shrink-0 ${student.secondaryParent.relationType.toUpperCase() === 'FATHER' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-pink-200 text-pink-700 bg-pink-50'}`}>
+                    {student.secondaryParent.relationType.charAt(0) + student.secondaryParent.relationType.slice(1).toLowerCase()}
+                  </Badge>
+                )}
+              </div>
               <div className="whitespace-nowrap text-[10px] text-slate-400 font-medium mt-0.5">{student.secondaryParent.email}</div>
+              {student.secondaryParent.phone && (
+                <div className="whitespace-nowrap text-[10px] text-slate-400 font-medium">{student.secondaryParent.phone}</div>
+              )}
             </div>
           )}
         </div>
@@ -747,14 +782,16 @@ export function StudentManagement() {
     setAssignDialogSearchTerm('');
   };
   const studentExportHeaders = [
-    'Student Name', 'Classroom', 'Parent Name', 'Parent Email',
-    'Secondary Parent', 'Secondary Parent Email',
+    'Student Name', 'Classroom',
+    'Primary Parent Name', 'Primary Parent Email', 'Primary Parent Phone', 'Primary Parent Address', 'Primary Parent Relation',
+    'Secondary Parent Name', 'Secondary Parent Email', 'Secondary Parent Phone', 'Secondary Parent Relation',
     'Enrollment Status', 'Child Status', 'Forms Completed', 'Progress'
   ];
   const getStudentExportRows = () => filteredAndSortedStudents.map(s => [
     `${s.firstName} ${s.lastName}`,
-    s.classroom.name, s.parent.name, s.parent.email,
-    s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+    s.classroom.name,
+    s.parent.name, s.parent.email, s.parent.phone ?? '', s.parent.address ?? '', s.parent.relationType ?? '',
+    s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '', s.secondaryParent?.phone ?? '', s.secondaryParent?.relationType ?? '',
     s.enrollmentStatus, s.childStatus,
     `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
   ]);
@@ -948,8 +985,9 @@ export function StudentManagement() {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
-                            s.classroom.name, s.parent.name, s.parent.email,
-                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+                            s.classroom.name,
+                            s.parent.name, s.parent.email, s.parent.phone ?? '', s.parent.address ?? '', s.parent.relationType ?? '',
+                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '', s.secondaryParent?.phone ?? '', s.secondaryParent?.relationType ?? '',
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
@@ -959,8 +997,9 @@ export function StudentManagement() {
                           const selectedStudentObjects = students.filter(s => selectedStudentsForBulkAction.includes(s.id));
                           const rows = selectedStudentObjects.map(s => [
                             `${s.firstName} ${s.lastName}`,
-                            s.classroom.name, s.parent.name, s.parent.email,
-                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '',
+                            s.classroom.name,
+                            s.parent.name, s.parent.email, s.parent.phone ?? '', s.parent.address ?? '', s.parent.relationType ?? '',
+                            s.secondaryParent?.name ?? '', s.secondaryParent?.email ?? '', s.secondaryParent?.phone ?? '', s.secondaryParent?.relationType ?? '',
                             s.enrollmentStatus, s.childStatus,
                             `${s.formsCompleted}/${s.totalForms}`, `${s.enrollmentProgress}%`
                           ]);
@@ -1172,20 +1211,38 @@ export function StudentManagement() {
                       <div className="py-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Parents</p>
                         <div className="flex flex-col gap-1.5" style={{ minWidth: 'min-content' }}>
-                          <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group w-fit max-w-full">
-                            <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                            <Link to={`/admin/parents/${student.parent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
-                              {student.parent.name}
-                            </Link>
-                            <div className="whitespace-nowrap text-[10px] text-slate-400 ml-1">{student.parent.email}</div>
-                          </div>
-                          {student.secondaryParent && (
+                          <div className="flex flex-col gap-0.5">
                             <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group w-fit max-w-full">
                               <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
-                              <Link to={`/admin/parents/${student.secondaryParent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
-                                {student.secondaryParent.name}
+                              <Link to={`/admin/parents/${student.parent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                                {student.parent.name}
                               </Link>
-                              <div className="whitespace-nowrap text-[10px] text-slate-400 ml-1">{student.secondaryParent.email}</div>
+                              {student.parent.relationType && (
+                                <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold border-[#1a6fc4]/30 text-[#1a6fc4] bg-white flex-shrink-0">
+                                  {student.parent.relationType.charAt(0) + student.parent.relationType.slice(1).toLowerCase()}
+                                </Badge>
+                              )}
+                            </div>
+                            {student.parent.phone && (
+                              <div className="whitespace-nowrap text-[10px] text-slate-400 pl-2">{student.parent.phone}</div>
+                            )}
+                          </div>
+                          {student.secondaryParent && (
+                            <div className="flex flex-col gap-0.5">
+                              <div className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] rounded-full pl-2 pr-2.5 py-0.5 text-xs transition-all group w-fit max-w-full">
+                                <Users className="h-3 w-3 text-[#0F2D52]/70 flex-shrink-0" />
+                                <Link to={`/admin/parents/${student.secondaryParent.id}`} className="font-bold text-[#0F2D52]/90 hover:underline truncate max-w-[120px]">
+                                  {student.secondaryParent.name}
+                                </Link>
+                                {student.secondaryParent.relationType && (
+                                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold border-[#1a6fc4]/30 text-[#1a6fc4] bg-white flex-shrink-0">
+                                    {student.secondaryParent.relationType.charAt(0) + student.secondaryParent.relationType.slice(1).toLowerCase()}
+                                  </Badge>
+                                )}
+                              </div>
+                              {student.secondaryParent.phone && (
+                                <div className="whitespace-nowrap text-[10px] text-slate-400 pl-2">{student.secondaryParent.phone}</div>
+                              )}
                             </div>
                           )}
                         </div>

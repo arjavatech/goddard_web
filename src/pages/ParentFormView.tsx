@@ -51,6 +51,8 @@ export function ParentFormView() {
   const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCountingDownRef = useRef(false);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const mainAreaRef = useRef<HTMLDivElement>(null);
 
   useIframeScrollLock();
   const embeddedResize = useEmbeddedFormResize(viewUrl);
@@ -76,7 +78,8 @@ export function ParentFormView() {
     if (!viewUrl) navigate(back, { replace: true });
   }, []);
 
-  // Form height via postMessage
+  // Form height via postMessage — also scroll to top on page change (height resets on each Fillout page)
+  const prevFormHeightRef = useRef<number | null>(null);
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       try {
@@ -87,11 +90,46 @@ export function ParentFormView() {
           data.height ?? data.value ?? data.clientHeight ?? data.size ??
           data.payload?.height ?? data.payload?.size ??
           data.data?.height ?? data.data?.size;
-        if (typeof h === 'number' && h > 0) setFormHeight(Math.ceil(h));
+        if (typeof h === 'number' && h > 0) {
+          const newH = Math.ceil(h);
+          // Fillout resets height on each page navigation — use a significant
+          // drop (>100px) as a reliable page-change signal to scroll to top.
+          if (prevFormHeightRef.current !== null && Math.abs(newH - prevFormHeightRef.current) > 100) {
+            mainAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+          prevFormHeightRef.current = newH;
+          setFormHeight(newH);
+        }
       } catch { /* ignore */ }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Scroll to top when the embedded form navigates to the next/previous page
+  useEffect(() => {
+    const scrollTop = () => mainAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+    const handlePageChange = (event: MessageEvent) => {
+      let parsed: any = null;
+      if (typeof event.data === 'string') {
+        try { parsed = JSON.parse(event.data); } catch { /* not JSON */ }
+      } else if (event.data && typeof event.data === 'object') {
+        parsed = event.data;
+      }
+      if (!parsed) return;
+
+      const type = (parsed.type || parsed.event || '').toString().toLowerCase();
+      if (
+        type.includes('page') ||          // fillout: 'fillout-page-changed', arjava: 'arjava:page:change'
+        type.includes('step') ||           // step-based forms
+        type.includes('next') ||
+        type.includes('prev') ||
+        type.includes('navigate') ||
+        type.includes('transition')
+      ) scrollTop();
+    };
+    window.addEventListener('message', handlePageChange);
+    return () => window.removeEventListener('message', handlePageChange);
   }, []);
 
   // Form completion detection via postMessage
@@ -277,7 +315,7 @@ export function ParentFormView() {
         )}
 
         {/* ── Main form area ── */}
-        <div className="flex-1 flex flex-col min-w-0 bg-white relative">
+        <div ref={mainAreaRef} className="flex-1 flex flex-col min-w-0 bg-white relative overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
           {/* Title bar — sticky header */}
           <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
             
@@ -347,7 +385,10 @@ export function ParentFormView() {
                 <div className="flex flex-col min-h-[70vh]">
                   <div className="flex items-center justify-between p-3 bg-white border-b border-slate-100">
                     <Button variant="outline" size="sm"
-                      onClick={() => setPageNumber(p => Math.max(1, p - 1))}
+                      onClick={() => {
+                        setPageNumber(p => Math.max(1, p - 1));
+                        pdfContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                       disabled={pageNumber <= 1}
                       className="flex items-center gap-1 text-xs px-3 h-7"
                     >
@@ -355,14 +396,21 @@ export function ParentFormView() {
                     </Button>
                     <span className="text-xs font-medium text-slate-600">{pageNumber} / {numPages || '...'}</span>
                     <Button variant="outline" size="sm"
-                      onClick={() => setPageNumber(p => Math.min(numPages || 1, p + 1))}
+                      onClick={() => {
+                        setPageNumber(p => Math.min(numPages || 1, p + 1));
+                        pdfContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
                       disabled={pageNumber >= (numPages || 1)}
                       className="flex items-center gap-1 text-xs px-3 h-7"
                     >
                       Next <ChevronRight className="h-3 w-3" />
                     </Button>
                   </div>
-                  <div className="flex-1 flex justify-center overflow-auto p-4">
+                  <div
+                    ref={pdfContainerRef}
+                    className="flex-1 flex justify-center overflow-auto p-4"
+                    style={{ scrollBehavior: 'smooth' }}
+                  >
                     <Document
                       file={viewUrl}
                       onLoadSuccess={({ numPages: n }) => { setNumPages(n); setIsFrameLoading(false); }}
@@ -371,7 +419,7 @@ export function ParentFormView() {
                     >
                       <Page
                         pageNumber={pageNumber}
-                        width={typeof window !== 'undefined' ? Math.min(800, window.innerWidth - 40) : 800}
+                        width={typeof window !== 'undefined' ? Math.min(1100, window.innerWidth - 40) : 1100}
                         renderTextLayer={true}
                         renderAnnotationLayer={false}
                         className="shadow-lg"
@@ -399,7 +447,7 @@ export function ParentFormView() {
                         border: 'none',
                         display: 'block',
                         opacity: isFrameLoading ? 0 : 1,
-                        transition: 'opacity 0.3s ease-in-out',
+                        transition: 'opacity 0.3s ease-in-out, height 0.2s ease-in-out',
                       }}
                       scrolling="auto"
                       title={title}

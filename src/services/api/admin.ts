@@ -27,6 +27,9 @@ export type ParentDetail = {
   signedStatus: string;
   createdAt: string | null;
   parentType?: string;
+  phoneNumber?: string | null;
+  address?: string | null;
+  relationType?: string | null;
   additional_first_name?: string;
   additional_last_name?: string;
   additional_email?: string;
@@ -232,6 +235,9 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
       lastName: item.parent_last_name || item.lastName,
       signedStatus: item.signed_status || 'not signed',
       createdAt: item.created_at || item.createdAt || null,
+      phoneNumber: item.parent_phone_number || item.phoneNumber || null,
+      address: item.parent_address || item.address || null,
+      relationType: item.parent_relation_type || item.relationType || null,
       children: (item.children || []).map((child: any) => ({
         childId: child.child_id || child.childId || '',
         childFullName: child.child_full_name || child.childFullName || `${child.firstName || ''} ${child.lastName || ''}`.trim(),
@@ -330,6 +336,9 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
       signedStatus: data.signed_status || 'not signed',
       createdAt: data.created_at || data.createdAt || null,
       parentType: data.parent_type || data.parentType || 'primary_parent',
+      phoneNumber: data.parent_phone_number || null,
+      address: data.parent_address || null,
+      relationType: data.parent_relation_type || null,
       additional_first_name: data.additional_first_name || data.additionalFirstName,
       additional_last_name: data.additional_last_name || data.additionalLastName,
       additional_email: data.additional_email || data.additionalEmail,
@@ -509,6 +518,8 @@ export async function inviteParent(schoolId: string, parentData: {
   parentLastName: string;
   parentEmail: string;
   parentPhoneNumber?: string;
+  parentAddress?: string;
+  parentRelationType?: string;
   childFullName: string;
   childDob?: string;
   classroomId: string;
@@ -517,6 +528,7 @@ export async function inviteParent(schoolId: string, parentData: {
   secondaryParentFirstName?: string;
   secondaryParentLastName?: string;
   secondaryParentPhoneNumber?: string;
+  secondaryParentRelationType?: string;
 }): Promise<void> {
   const [childFirstName, ...childLastNameParts] = parentData.childFullName.split(' ');
   const childLastName = childLastNameParts.join(' ');
@@ -540,12 +552,23 @@ export async function inviteParent(schoolId: string, parentData: {
     body.parent_phone_number = parentData.parentPhoneNumber;
   }
 
+  if (parentData.parentAddress) {
+    body.parent_address = parentData.parentAddress;
+  }
+
+  if (parentData.parentRelationType) {
+    body.parent_relation_type = parentData.parentRelationType;
+  }
+
   if (parentData.secondaryParentEmail) {
     body.secondary_parent_email = parentData.secondaryParentEmail;
     body.secondary_parent_first_name = parentData.secondaryParentFirstName || '';
     body.secondary_parent_last_name = parentData.secondaryParentLastName || '';
     if (parentData.secondaryParentPhoneNumber) {
       body.secondary_parent_phone_number = parentData.secondaryParentPhoneNumber;
+    }
+    if (parentData.secondaryParentRelationType) {
+      body.secondary_parent_relation_type = parentData.secondaryParentRelationType;
     }
   }
 
