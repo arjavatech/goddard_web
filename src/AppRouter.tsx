@@ -48,6 +48,7 @@ import { EmployeeFormsManagement } from './pages/employee/EmployeeFormsManagemen
 import { EmployeeDueForms } from './pages/employee/EmployeeDueForms';
 import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
+import { ProfilePage } from './pages/ProfilePage';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -96,6 +97,9 @@ export function AppRouter() {
             {/* Dev-accessible employee dashboard (no auth guard) */}
             <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
             <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+            {/* Profile routes */}
+            <Route path="/:schoolSlug/profile" element={<ProfilePage />} />
+            <Route path="/:schoolSlug/admin/profile" element={<ProfilePage />} />
             <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
                 </ProtectedRoute>} />

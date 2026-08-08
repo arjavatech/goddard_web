@@ -648,7 +648,7 @@ export function AdminManagement() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">First Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
                 <Input
                   value={adminFirstName}
                   onChange={(e) => setAdminFirstName(e.target.value)}
@@ -658,7 +658,7 @@ export function AdminManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name</label>
                 <Input
                   value={adminLastName}
                   onChange={(e) => setAdminLastName(e.target.value)}
@@ -668,7 +668,7 @@ export function AdminManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email Address</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address</label>
                 <Input
                   type="email"
                   value={adminEmail}
@@ -723,7 +723,7 @@ export function AdminManagement() {
             </DialogHeader>
             <div className="space-y-4 py-2">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">First Name</label>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
                 <Input
                   value={adminFirstName}
                   onChange={(e) => setAdminFirstName(e.target.value)}

@@ -68,6 +68,7 @@ export function ClassroomDetails() {
   const [parentLastName, setParentLastName] = useState('');
   const [parentEmail, setParentEmail] = useState('');
   const [parentPhoneNumber, setParentPhoneNumber] = useState('');
+  const [parentAddress, setParentAddress] = useState('');
   const [secondaryParentFirstName, setSecondaryParentFirstName] = useState('');
   const [secondaryParentLastName, setSecondaryParentLastName] = useState('');
   const [secondaryParentEmail, setSecondaryParentEmail] = useState('');
@@ -245,6 +246,7 @@ export function ClassroomDetails() {
     setParentLastName('');
     setParentEmail('');
     setParentPhoneNumber('');
+    setParentAddress('');
     setSecondaryParentFirstName('');
     setSecondaryParentLastName('');
     setSecondaryParentEmail('');
@@ -952,6 +954,8 @@ export function ClassroomDetails() {
           setParentEmail={setParentEmail}
           parentPhoneNumber={parentPhoneNumber}
           setParentPhoneNumber={setParentPhoneNumber}
+          parentAddress={parentAddress}
+          setParentAddress={setParentAddress}
           secondaryParentFirstName={secondaryParentFirstName}
           setSecondaryParentFirstName={setSecondaryParentFirstName}
           secondaryParentLastName={secondaryParentLastName}

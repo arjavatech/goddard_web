@@ -330,6 +330,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       </div>
                     </div>
                     <div className="p-2 space-y-0.5">
+                      <DropdownMenuItem onClick={() => navigate(`${schoolPrefix}/admin/profile`)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
+                        <UserCog className="w-4 h-4 text-slate-400" /> Profile
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => navigate('/admin')} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                         <LayoutDashboard className="w-4 h-4 text-slate-400" /> Dashboard
                       </DropdownMenuItem>

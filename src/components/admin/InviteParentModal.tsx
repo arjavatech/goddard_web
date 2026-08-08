@@ -20,6 +20,8 @@ interface InviteParentModalProps {
   setParentEmail: (value: string) => void;
   parentPhoneNumber: string;
   setParentPhoneNumber: (value: string) => void;
+  parentAddress: string;
+  setParentAddress: (value: string) => void;
   primaryRelationType: string;
   setPrimaryRelationType: (value: string) => void;
   secondaryParentFirstName: string;
@@ -60,6 +62,8 @@ export function InviteParentModal({
   setParentEmail,
   parentPhoneNumber,
   setParentPhoneNumber,
+  parentAddress,
+  setParentAddress,
   primaryRelationType,
   setPrimaryRelationType,
   secondaryParentFirstName,
@@ -175,6 +179,14 @@ export function InviteParentModal({
                 />
                 {inviteFormErrors.parentPhoneNumber && <p className="text-xs text-red-600 mt-1">{inviteFormErrors.parentPhoneNumber}</p>}
               </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1.5">Address <span className="font-normal text-muted-foreground">(Optional)</span></label>
+              <Input
+                value={parentAddress}
+                onChange={e => setParentAddress(e.target.value)}
+                placeholder="Enter address"
+              />
             </div>
           </div>
 
