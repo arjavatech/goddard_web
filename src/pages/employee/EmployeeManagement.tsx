@@ -14,6 +14,7 @@ import { EmployeeService, type Employee } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
+import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
 import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -42,6 +43,7 @@ export function EmployeeManagement() {
   const [empJoinedOn, setEmpJoinedOn] = useState('');
 
   const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -117,7 +119,7 @@ export function EmployeeManagement() {
     }
   };
 
-  const isFormValid = empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && empJoinedOn;
+  const isFormValid = empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn;
 
   const handleInviteEmployee = async () => {
     if (!isFormValid || !userData?.schoolId) return;
@@ -162,6 +164,7 @@ export function EmployeeManagement() {
     setEmpType(emp.employeeType);
     setEmpJoinedOn(emp.joinedOn);
     setEmailError('');
+    setPhoneError('');
     setIsEditDialogOpen(true);
   };
 
@@ -216,6 +219,7 @@ export function EmployeeManagement() {
     setEmpType('Full Time');
     setEmpJoinedOn('');
     setEmailError('');
+    setPhoneError('');
   };
 
   if (isLoading && employees.length === 0) {
@@ -509,7 +513,20 @@ export function EmployeeManagement() {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
-                <Input value={empPhone} onChange={(e) => setEmpPhone(e.target.value)} placeholder="Phone" className="w-full h-10 rounded-xl" />
+                <PhoneInput
+                  value={empPhone}
+                  onChange={(val) => {
+                    setEmpPhone(val);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  onBlur={() => {
+                    if (empPhone && !validatePhoneNumber(empPhone)) {
+                      setPhoneError('Please enter a valid phone number');
+                    }
+                  }}
+                  error={!!phoneError}
+                />
+                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
@@ -568,7 +585,20 @@ export function EmployeeManagement() {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
-                <Input value={empPhone} onChange={(e) => setEmpPhone(e.target.value)} className="w-full h-10 rounded-xl" />
+                <PhoneInput
+                  value={empPhone}
+                  onChange={(val) => {
+                    setEmpPhone(val);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  onBlur={() => {
+                    if (empPhone && !validatePhoneNumber(empPhone)) {
+                      setPhoneError('Please enter a valid phone number');
+                    }
+                  }}
+                  error={!!phoneError}
+                />
+                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>
