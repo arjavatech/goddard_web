@@ -470,6 +470,8 @@ export function ParentManagement() {
         parentLastName,
         parentEmail,
         parentPhoneNumber: parentPhoneNumber.trim() || undefined,
+        parentAddress: parentAddress.trim() || undefined,
+        parentRelationType: primaryRelationType || undefined,
         childFullName: `${childFirstName} ${childLastName}`,
         childDob: childDob || undefined,
         classroomId: childClassroom,
@@ -477,7 +479,8 @@ export function ParentManagement() {
         secondaryParentEmail: secondaryParentEmail.trim() || undefined,
         secondaryParentFirstName: secondaryParentFirstName.trim() || undefined,
         secondaryParentLastName: secondaryParentLastName.trim() || undefined,
-        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined
+        secondaryParentPhoneNumber: secondaryParentPhoneNumber.trim() || undefined,
+        secondaryParentRelationType: secondaryRelationType || undefined
       });
       
       // Re-fetch to get the real parent_id assigned by the DB

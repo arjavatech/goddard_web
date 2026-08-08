@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
@@ -31,6 +31,7 @@ function ProfileContent() {
   const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [employeeDetails, setEmployeeDetails] = useState<Employee | null>(null);
   const [secondaryParent, setSecondaryParent] = useState<{ firstName?: string; lastName?: string; email?: string; parentType?: string } | null>(null);
+  const [parentExtraInfo, setParentExtraInfo] = useState<{ phone?: string | null; address?: string | null; relationType?: string | null } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const { user } = useAuth();
 
@@ -44,7 +45,14 @@ function ProfileContent() {
       const parentId = userData.parentId || user?.id;
       if (parentId) {
         fetchSingleParent(parentId, userData.schoolId)
-          .then(data => setSecondaryParent(data?.otherParent ?? null))
+          .then(data => {
+            setSecondaryParent(data?.otherParent ?? null);
+            setParentExtraInfo({
+              phone: data?.phoneNumber ?? null,
+              address: data?.address ?? null,
+              relationType: data?.relationType ?? null,
+            });
+          })
           .catch(() => {})
           .finally(() => setLoadingExtra(false));
       } else {
@@ -169,7 +177,7 @@ function ProfileContent() {
       )}
 
       {/* Personal Info Card — parent */}
-      {!isEmployee && !isAdmin && (userData?.phone || userData?.address) && (
+      {!isEmployee && !isAdmin && (userData?.phone || userData?.address || parentExtraInfo?.phone || parentExtraInfo?.address || parentExtraInfo?.relationType) && (
         <Card className="rounded-2xl shadow-sm border border-slate-100">
           <CardContent className="px-6 py-5">
             <div className="flex items-center gap-2 mb-4">
@@ -179,8 +187,15 @@ function ProfileContent() {
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Personal Information</h2>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {userData?.phone && <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone" value={userData.phone} />}
-              {userData?.address && <InfoRow icon={<MapPin className="w-4 h-4" />} label="Address" value={userData.address} className="sm:col-span-2" />}
+              {parentExtraInfo?.relationType && (
+                <InfoRow icon={<Users className="w-4 h-4" />} label="Relation" value={parentExtraInfo.relationType.charAt(0) + parentExtraInfo.relationType.slice(1).toLowerCase()} />
+              )}
+              {(parentExtraInfo?.phone || userData?.phone) && (
+                <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone" value={parentExtraInfo?.phone || userData?.phone || ''} />
+              )}
+              {(parentExtraInfo?.address || userData?.address) && (
+                <InfoRow icon={<MapPin className="w-4 h-4" />} label="Address" value={parentExtraInfo?.address || userData?.address || ''} className="sm:col-span-2" />
+              )}
             </div>
           </CardContent>
         </Card>
