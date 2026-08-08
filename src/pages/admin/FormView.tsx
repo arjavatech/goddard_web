@@ -104,7 +104,8 @@ export function FormView() {
         if (typeof h === 'number' && h > 0) {
           setFormHeight(prev => {
             const newHeight = Math.ceil(h);
-            if (Math.abs(prev - newHeight) < 50) return prev;
+            // Only block small increases (loop prevention); always allow shrinks.
+            if (newHeight > prev && (newHeight - prev) < 50) return prev;
             return newHeight;
           });
         }
@@ -483,7 +484,8 @@ export function FormView() {
                         style={{
                           width: '100%',
                           height: embeddedResize.isDynamic
-                            // Arjava forms: use the dynamic height reported by the embed.
+                            // Arjava forms: use the full dynamic height so the page scrolls
+                            // rather than the iframe scrolling internally.
                             ? `${embeddedResize.height ?? 800}px`
                             // Fillout forms: use postMessage height.
                             : `${formHeight}px`,
