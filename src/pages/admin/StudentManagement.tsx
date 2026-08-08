@@ -574,7 +574,7 @@ export function StudentManagement() {
                 {student.parent.name}
               </Link>
               {student.parent.relationType && (
-                <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold border-[#1a6fc4]/30 text-[#1a6fc4] bg-[#EFF5FB] flex-shrink-0">
+                <Badge variant="outline" className={`text-[9px] px-1.5 py-0 rounded-full font-bold flex-shrink-0 ${student.parent.relationType.toUpperCase() === 'FATHER' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-pink-200 text-pink-700 bg-pink-50'}`}>
                   {student.parent.relationType.charAt(0) + student.parent.relationType.slice(1).toLowerCase()}
                 </Badge>
               )}
@@ -591,7 +591,7 @@ export function StudentManagement() {
                   {student.secondaryParent.name}
                 </Link>
                 {student.secondaryParent.relationType && (
-                  <Badge variant="outline" className="text-[9px] px-1.5 py-0 rounded-full font-bold border-[#1a6fc4]/30 text-[#1a6fc4] bg-[#EFF5FB] flex-shrink-0">
+                  <Badge variant="outline" className={`text-[9px] px-1.5 py-0 rounded-full font-bold flex-shrink-0 ${student.secondaryParent.relationType.toUpperCase() === 'FATHER' ? 'border-emerald-200 text-emerald-700 bg-emerald-50' : 'border-pink-200 text-pink-700 bg-pink-50'}`}>
                     {student.secondaryParent.relationType.charAt(0) + student.secondaryParent.relationType.slice(1).toLowerCase()}
                   </Badge>
                 )}
