@@ -38,6 +38,7 @@ export function EmployeeManagement() {
   const [empLastName, setEmpLastName] = useState('');
   const [empEmail, setEmpEmail] = useState('');
   const [empPhone, setEmpPhone] = useState('');
+  const [empPhoneCountry, setEmpPhoneCountry] = useState('US');
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
@@ -132,6 +133,7 @@ export function EmployeeManagement() {
         lastName: empLastName.trim(),
         email: empEmail.trim(),
         phone: empPhone.trim(),
+        phoneCountry: empPhoneCountry,
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
@@ -161,6 +163,7 @@ export function EmployeeManagement() {
     setEmpLastName(emp.lastName);
     setEmpEmail(emp.email);
     setEmpPhone(emp.phone);
+    setEmpPhoneCountry(emp.phoneCountry || 'US');
     setEmpAddress(emp.address);
     setEmpType(emp.employeeType);
     setEmpJoinedOn(emp.joinedOn);
@@ -175,6 +178,7 @@ export function EmployeeManagement() {
     try {
       await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
         phone: empPhone.trim(),
+        phoneCountry: empPhoneCountry,
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
@@ -185,6 +189,7 @@ export function EmployeeManagement() {
           return {
             ...e,
             phone: empPhone.trim(),
+            phoneCountry: empPhoneCountry,
             address: empAddress.trim(),
             employeeType: empType,
             joinedOn: empJoinedOn,
@@ -230,6 +235,7 @@ export function EmployeeManagement() {
     setEmpLastName('');
     setEmpEmail('');
     setEmpPhone('');
+    setEmpPhoneCountry('US');
     setEmpAddress('');
     setEmpType('Full Time');
     setEmpJoinedOn('');
@@ -530,6 +536,10 @@ export function EmployeeManagement() {
                 <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
                 <PhoneInput
                   value={empPhone}
+                  country={empPhoneCountry}
+                  onCountryChange={(val) => {
+                    setEmpPhoneCountry(val);
+                  }}
                   onChange={(val) => {
                     setEmpPhone(val);
                     if (phoneError) setPhoneError('');
@@ -602,6 +612,10 @@ export function EmployeeManagement() {
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
                 <PhoneInput
                   value={empPhone}
+                  country={empPhoneCountry}
+                  onCountryChange={(val) => {
+                    setEmpPhoneCountry(val);
+                  }}
                   onChange={(val) => {
                     setEmpPhone(val);
                     if (phoneError) setPhoneError('');

@@ -25,13 +25,25 @@ export interface PhoneInputProps {
   className?: string;
   error?: boolean;
   usePortal?: boolean;
+  country?: string;
+  onCountryChange?: (countryId: string) => void;
 }
 
-export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone number', className, error, usePortal = false }: PhoneInputProps) {
-  const defaultCountry = COUNTRIES.find(c => c.id === 'US') || COUNTRIES[0];
+export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone number', className, error, usePortal = false, country: countryProp, onCountryChange }: PhoneInputProps) {
+  const defaultCountry = COUNTRIES.find(c => c.id === (countryProp || 'US')) || COUNTRIES[0];
   const [selectedCountry, setSelectedCountry] = useState<CountryData>(defaultCountry);
   const [localValue, setLocalValue] = useState('');
   const [open, setOpen] = useState(false);
+
+  // Sync selectedCountry with prop if provided explicitly
+  useEffect(() => {
+    if (countryProp) {
+      const c = COUNTRIES.find(c => c.id === countryProp);
+      if (c && c.id !== selectedCountry.id) {
+        setSelectedCountry(c);
+      }
+    }
+  }, [countryProp]);
 
   // Helper to format the number nicely without the trunk prefix (e.g. without the 0 in India/UK)
   const formatWithoutTrunk = (phoneNumber: any) => {
@@ -60,27 +72,44 @@ export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone numbe
       if (phoneNumber && phoneNumber.country) {
         const country = COUNTRIES.find(c => c.id === phoneNumber.country);
         if (country) {
-          setSelectedCountry(country);
-          
           // Avoid overwriting the user's input while typing if it represents the exact same valid number
+          // Also prevents overriding the user's manually selected country if they share the same dial code
           try {
-             const localParsed = parsePhoneNumberFromString(localValue, country.id as CountryCode);
+             const localParsed = parsePhoneNumberFromString(localValue, selectedCountry.id as CountryCode);
              if (localParsed && localParsed.format('E.164') === phoneNumber.format('E.164')) {
                 return;
              }
           } catch(e) {}
 
+          // If the parent explicitly provided a country and the dial codes match, trust the parent's explicit choice over inference
+          if (countryProp && countryProp === selectedCountry.id && country.dialCode === selectedCountry.dialCode) {
+            setLocalValue(formatWithoutTrunk(phoneNumber));
+            return;
+          }
+
+          setSelectedCountry(country);
+          if (onCountryChange && country.id !== selectedCountry.id) onCountryChange(country.id);
           setLocalValue(formatWithoutTrunk(phoneNumber));
           return;
         }
       }
       
       if (value.startsWith('+')) {
+        // Keep the currently selected country if its dial code still matches
+        if (selectedCountry && value.startsWith(selectedCountry.dialCode)) {
+          const newLocalValue = value.substring(selectedCountry.dialCode.length).trim();
+          if (newLocalValue !== localValue) {
+            setLocalValue(newLocalValue);
+          }
+          return;
+        }
+
         const matchingCountry = [...COUNTRIES]
           .sort((a, b) => b.dialCode.length - a.dialCode.length)
           .find(c => value.startsWith(c.dialCode));
         if (matchingCountry) {
           setSelectedCountry(matchingCountry);
+          if (onCountryChange && matchingCountry.id !== selectedCountry.id) onCountryChange(matchingCountry.id);
           setLocalValue(value.substring(matchingCountry.dialCode.length).trim());
           return;
         }
@@ -96,6 +125,7 @@ export function PhoneInput({ value, onChange, onBlur, placeholder = 'Phone numbe
     const country = COUNTRIES.find(c => c.id === countryId);
     if (!country) return;
     setSelectedCountry(country);
+    if (onCountryChange) onCountryChange(country.id);
     if (localValue.trim()) {
       updateParent(country.dialCode, localValue, country.id as CountryCode);
     }
