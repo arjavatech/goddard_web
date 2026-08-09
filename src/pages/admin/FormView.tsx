@@ -45,7 +45,7 @@ export function FormView() {
   const { user } = useAuth();
   const { userData } = useUserContext();
   const { showToast } = useToast();
-  const isViewOnly = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
+  const isViewOnly = userData?.role !== 'Admin' && userData?.role !== 'SuperAdmin';
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);

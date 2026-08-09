@@ -38,6 +38,7 @@ export function EmployeeManagement() {
   const [empLastName, setEmpLastName] = useState('');
   const [empEmail, setEmpEmail] = useState('');
   const [empPhone, setEmpPhone] = useState('');
+  const [empPhoneCountry, setEmpPhoneCountry] = useState('US');
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
@@ -45,6 +46,7 @@ export function EmployeeManagement() {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('employeeMgmtViewMode') as 'card' | 'table') || 'table');
@@ -131,6 +133,7 @@ export function EmployeeManagement() {
         lastName: empLastName.trim(),
         email: empEmail.trim(),
         phone: empPhone.trim(),
+        phoneCountry: empPhoneCountry,
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
@@ -160,6 +163,7 @@ export function EmployeeManagement() {
     setEmpLastName(emp.lastName);
     setEmpEmail(emp.email);
     setEmpPhone(emp.phone);
+    setEmpPhoneCountry(emp.phoneCountry || 'US');
     setEmpAddress(emp.address);
     setEmpType(emp.employeeType);
     setEmpJoinedOn(emp.joinedOn);
@@ -169,22 +173,38 @@ export function EmployeeManagement() {
   };
 
   const handleUpdateEmployee = async () => {
-    if (!selectedEmployee || !isFormValid) return;
+    if (!selectedEmployee || !isFormValid || isUpdating) return;
+    setIsUpdating(true);
     try {
-      const updated = await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
+      await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
         phone: empPhone.trim(),
+        phoneCountry: empPhoneCountry,
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
       });
 
-      setEmployees(employees.map(e => e.id === selectedEmployee.id ? updated : e));
+      setEmployees(employees.map(e => {
+        if (e.id === selectedEmployee.id) {
+          return {
+            ...e,
+            phone: empPhone.trim(),
+            phoneCountry: empPhoneCountry,
+            address: empAddress.trim(),
+            employeeType: empType,
+            joinedOn: empJoinedOn,
+          };
+        }
+        return e;
+      }));
       showToast('success', 'Employee updated successfully');
       setIsEditDialogOpen(false);
       setSelectedEmployee(null);
       resetForm();
     } catch (error) {
       showToast('error', 'Failed to update employee');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -215,6 +235,7 @@ export function EmployeeManagement() {
     setEmpLastName('');
     setEmpEmail('');
     setEmpPhone('');
+    setEmpPhoneCountry('US');
     setEmpAddress('');
     setEmpType('Full Time');
     setEmpJoinedOn('');
@@ -515,6 +536,10 @@ export function EmployeeManagement() {
                 <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
                 <PhoneInput
                   value={empPhone}
+                  country={empPhoneCountry}
+                  onCountryChange={(val) => {
+                    setEmpPhoneCountry(val);
+                  }}
                   onChange={(val) => {
                     setEmpPhone(val);
                     if (phoneError) setPhoneError('');
@@ -587,6 +612,10 @@ export function EmployeeManagement() {
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
                 <PhoneInput
                   value={empPhone}
+                  country={empPhoneCountry}
+                  onCountryChange={(val) => {
+                    setEmpPhoneCountry(val);
+                  }}
                   onChange={(val) => {
                     setEmpPhone(val);
                     if (phoneError) setPhoneError('');
@@ -621,7 +650,9 @@ export function EmployeeManagement() {
             </div>
             <DialogFooter className="mt-6">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateEmployee} className="bg-[#0F2D52] text-white">Update</Button>
+              <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
+                {isUpdating ? 'Updating...' : 'Update'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

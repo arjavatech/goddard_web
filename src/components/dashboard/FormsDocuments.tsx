@@ -666,7 +666,7 @@ export function FormsDocuments({
         {/* ── Section header card ── */}
         <div className="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden mb-4">
           {/* Gradient title + controls */}
-          <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 sm:px-5 py-3 flex items-center justify-between gap-3">
+          <div className="bg-gradient-to-r from-[#0F2D52] to-[#1a6fc4] px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
                 <FileText className="w-3.5 h-3.5 text-white" />
@@ -676,7 +676,7 @@ export function FormsDocuments({
                 <h2 className="text-sm font-bold text-white leading-tight">Forms & Documents</h2>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 flex-shrink-0">
               <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
                 <button
                   type="button"
@@ -697,7 +697,7 @@ export function FormsDocuments({
               </div>
               {onYearFilterChange && (
                 <Select value={yearFilter} onValueChange={onYearFilterChange}>
-                  <SelectTrigger className="w-24 h-7 text-[11px] bg-white/10 border-white/20 text-white hover:bg-white/20 focus:ring-0 focus:ring-offset-0">
+                  <SelectTrigger className="w-auto min-w-[70px] sm:w-24 h-7 text-[11px] bg-white/10 border-white/20 text-white hover:bg-white/20 focus:ring-0 focus:ring-offset-0">
                     <SelectValue placeholder="Year" />
                   </SelectTrigger>
                   <SelectContent>
@@ -715,12 +715,12 @@ export function FormsDocuments({
                   onClick={handleDownloadAll}
                   disabled={isDownloadingAll || !allForms.some(f => f.status === 'Approved')}
                   title={!allForms.some(f => f.status === 'Approved') ? 'No completed forms available' : 'Download all approved forms as ZIP'}
-                  className="h-7 px-2.5 text-[11px] gap-1 bg-white text-[#0F2D52] hover:bg-slate-100 border-0 shadow-sm font-bold"
+                  className="h-7 px-2.5 text-[11px] gap-1 bg-white text-[#0F2D52] hover:text-[#0F2D52] hover:bg-slate-100 border-0 shadow-sm font-bold flex-1 sm:flex-none justify-center"
                 >
                   {isDownloadingAll
                     ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />
                     : <Download className="h-3 w-3" />}
-                  <span className="hidden sm:inline">{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
+                  <span>{isDownloadingAll ? 'Downloading…' : 'Download All'}</span>
                 </Button>
               )}
             </div>

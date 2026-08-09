@@ -34,7 +34,7 @@ export function usePagination<T>({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const actualItemsPerPage = isMobile ? mobileItemsPerPage : itemsPerPage;
+  const actualItemsPerPage = itemsPerPage;
 
   const paginatedData = useMemo(() => {
     const startIndex = (currentPage - 1) * actualItemsPerPage;

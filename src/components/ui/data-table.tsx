@@ -46,7 +46,10 @@ export function DataTable({
           <div className="flex items-center gap-2">
             <PageSizeSelector
               pageSize={itemsPerPage}
-              onPageSizeChange={onPageSizeChange}
+              onPageSizeChange={(size) => {
+                onPageSizeChange?.(size);
+                onPageChange(1);
+              }}
               options={[10, 25, 50, 100]}
             />
           </div>
