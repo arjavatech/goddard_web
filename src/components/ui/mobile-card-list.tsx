@@ -38,7 +38,10 @@ export function MobileCardList({
           <div className="flex items-center gap-2">
             <PageSizeSelector
               pageSize={itemsPerPage ?? 10}
-              onPageSizeChange={onPageSizeChange}
+              onPageSizeChange={(size) => {
+                onPageSizeChange?.(size);
+                onPageChange(1);
+              }}
               options={[10, 25, 50, 100]}
             />
           </div>
