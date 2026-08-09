@@ -45,6 +45,7 @@ export function EmployeeManagement() {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('employeeMgmtViewMode') as 'card' | 'table') || 'table');
@@ -169,22 +170,36 @@ export function EmployeeManagement() {
   };
 
   const handleUpdateEmployee = async () => {
-    if (!selectedEmployee || !isFormValid) return;
+    if (!selectedEmployee || !isFormValid || isUpdating) return;
+    setIsUpdating(true);
     try {
-      const updated = await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
+      await EmployeeService.updateEmployee(selectedEmployee.id, userData?.schoolId ?? '', {
         phone: empPhone.trim(),
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
       });
 
-      setEmployees(employees.map(e => e.id === selectedEmployee.id ? updated : e));
+      setEmployees(employees.map(e => {
+        if (e.id === selectedEmployee.id) {
+          return {
+            ...e,
+            phone: empPhone.trim(),
+            address: empAddress.trim(),
+            employeeType: empType,
+            joinedOn: empJoinedOn,
+          };
+        }
+        return e;
+      }));
       showToast('success', 'Employee updated successfully');
       setIsEditDialogOpen(false);
       setSelectedEmployee(null);
       resetForm();
     } catch (error) {
       showToast('error', 'Failed to update employee');
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -621,7 +636,9 @@ export function EmployeeManagement() {
             </div>
             <DialogFooter className="mt-6">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateEmployee} className="bg-[#0F2D52] text-white">Update</Button>
+              <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
+                {isUpdating ? 'Updating...' : 'Update'}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
