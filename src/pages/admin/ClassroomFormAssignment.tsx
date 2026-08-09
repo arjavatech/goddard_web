@@ -667,7 +667,7 @@ export function ClassroomFormAssignment() {
               </Button>
               <AsyncButton
                 onClick={handleAssignToAllStudents}
-                className="h-9 bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl text-xs font-bold"
+                className="h-9 bg-white text-[#0F2D52] hover:text-[#0F2D52] border border-[#0F2D52] hover:bg-slate-50 rounded-xl text-xs font-bold"
                 disabled={selectedFormIds.length === 0}
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
