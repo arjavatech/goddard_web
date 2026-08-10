@@ -7,8 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
 import { 
-  ShoppingBag, Search, Filter, Clock, Play, CheckCircle2, 
-  ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign, Calendar
+  ShoppingBag, Search, Clock, Play, CheckCircle2,
+  ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign
 } from 'lucide-react';
 
 export function SuperAdminRequests() {
@@ -22,7 +22,7 @@ export function SuperAdminRequests() {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<'employee' | 'admin'>('employee');
   
   // Modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -127,11 +127,11 @@ export function SuperAdminRequests() {
   };
 
   const searchedAndFiltered = requests.filter(req => {
+    const matchesTab = activeTab === 'employee' ? req.requesterRole === 'employee' : req.requesterRole === 'admin';
     const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
-    const matchesRole = roleFilter === 'all' || req.requesterRole.toLowerCase() === roleFilter.toLowerCase();
-    return matchesSearch && matchesStatus && matchesRole;
+    return matchesTab && matchesSearch && matchesStatus;
   });
 
   const getStatusBadgeClass = (status: RequestStatus) => {
@@ -160,20 +160,42 @@ export function SuperAdminRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto px-4 py-6">
+      <div className="space-y-5 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
         
         {/* Upper Header Row */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <ShoppingBag className="w-6 h-6 text-[#0F2D52]" /> Super Admin Requests Queue
+        <div className="mt-10 sm:mt-14">
+          <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
+            <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Super Admin Requests Queue
           </h1>
           <p className="text-xs text-slate-500 mt-1">
             Validate, approve, and record payments for requests submitted by employees and school administrators.
           </p>
         </div>
 
+        {/* Tabs */}
+        <div className="-mx-4 px-4 overflow-x-auto border-b border-slate-200">
+          <div className="flex min-w-max">
+          <button
+            onClick={() => setActiveTab('employee')}
+            className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold text-center border-b-2 transition-all ${
+              activeTab === 'employee' ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Employee Requests ({requests.filter(r => r.requesterRole === 'employee').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('admin')}
+            className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold text-center border-b-2 transition-all ${
+              activeTab === 'admin' ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            Admin Requests ({requests.filter(r => r.requesterRole === 'admin').length})
+          </button>
+          </div>
+        </div>
+
         {/* Filter and Search Bar */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
@@ -185,23 +207,12 @@ export function SuperAdminRequests() {
             />
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            {/* Requester Role Filter */}
-            <select
-              value={roleFilter}
-              onChange={e => setRoleFilter(e.target.value)}
-              className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
-            >
-              <option value="all">All Requesters</option>
-              <option value="employee">Employees</option>
-              <option value="admin">Admins</option>
-            </select>
-
+          <div className="flex items-center gap-2 w-full md:w-auto">
             {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+              className="min-w-0 flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
@@ -239,7 +250,7 @@ export function SuperAdminRequests() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
               {searchedAndFiltered.map((req, idx) => (
                 <motion.div
@@ -250,34 +261,34 @@ export function SuperAdminRequests() {
                   transition={{ duration: 0.25, delay: idx * 0.03 }}
                 >
                   <Card className="border border-slate-100 bg-white hover:border-slate-200 transition-all rounded-2xl overflow-hidden shadow-sm h-full flex flex-col justify-between">
-                    <div className="p-5 space-y-4">
+                    <div className="p-4 sm:p-5 space-y-4">
                       {/* Top Meta info */}
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
+                      <div className="flex flex-col min-[420px]:flex-row min-[420px]:justify-between items-start gap-2">
+                        <div className="min-w-0">
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                             Category: {req.category || 'Supplies'}
                           </p>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5">
-                            <span className="font-semibold text-[#0F2D52]">{req.requesterName}</span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.2 bg-slate-100 rounded text-slate-500">{req.requesterRole}</span>
+                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
+                            <span className="font-semibold text-[#0F2D52] truncate max-w-[12rem]">{req.requesterName}</span>
+                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">{req.requesterRole}</span>
                           </p>
                         </div>
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                        <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                           {getStatusIcon(req.status)}
                           {req.status}
                         </span>
                       </div>
 
                       {/* Content block */}
-                      <div className="flex gap-4">
+                    <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
                         {req.productImage ? (
                           <img
                             src={req.productImage}
                             alt={req.item}
-                            className="w-20 h-20 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
+                            className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
+                          <div className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
                             <ImageIcon className="w-8 h-8" />
                           </div>
                         )}
@@ -285,7 +296,7 @@ export function SuperAdminRequests() {
                         <div className="min-w-0 flex-1 space-y-1">
                           <h3 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug">{req.item}</h3>
                           
-                          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-2 gap-y-1 text-xs">
                             <p className="text-slate-500">Qty: <span className="font-bold text-slate-700">{req.quantity}</span></p>
                             <p className="text-slate-500 truncate">
                               {req.scope === 'classroom' && (
@@ -306,8 +317,8 @@ export function SuperAdminRequests() {
                     </div>
 
                     {/* Bottom Actions section */}
-                    <div className="bg-slate-50/50 px-5 py-4 border-t border-slate-50 flex items-center justify-between gap-3">
-                      <div>
+                    <div className="bg-slate-50/50 px-4 sm:px-5 py-4 border-t border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between items-stretch gap-3">
+                      <div className="min-w-0">
                         {req.productLink && (
                           <a
                             href={req.productLink}
@@ -322,23 +333,23 @@ export function SuperAdminRequests() {
                       </div>
 
                       {/* Action buttons */}
-                      <div>
+                      <div className="w-full sm:w-auto">
                         {req.status === 'Completed' ? (
-                          <div className="text-right text-[11px]">
-                            <div className="flex justify-end gap-1.5 font-bold text-emerald-800 text-xs">
+                          <div className="text-left sm:text-right text-[11px]">
+                            <div className="flex sm:justify-end gap-1.5 font-bold text-emerald-800 text-xs">
                               <span>Spent:</span>
                               <span>${req.amountSpent?.toFixed(2)}</span>
                             </div>
                             <p className="text-[10px] text-slate-400 font-medium">via {req.paymentMethod} on {req.purchaseDate}</p>
                           </div>
                         ) : req.requesterRole === 'employee' && req.status === 'Pending' ? (
-                          <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
+                          <span className="text-[11px] text-amber-600 font-semibold inline-flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
                             <Clock className="w-3 h-3" /> Awaiting Admin Validation
                           </span>
                         ) : (
                           <Button
                             onClick={() => handleOpenPurchaseModal(req)}
-                            className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs px-3.5 flex items-center gap-1 shadow-sm"
+                            className="h-9 w-full sm:w-auto rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs px-3.5 flex items-center justify-center gap-1 shadow-sm"
                           >
                             <CreditCard className="w-3.5 h-3.5" /> Record Purchase
                           </Button>
@@ -356,7 +367,7 @@ export function SuperAdminRequests() {
 
       {/* Record Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
-        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900">Record Purchase & Complete</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
@@ -454,7 +465,7 @@ export function SuperAdminRequests() {
               <Button
                 type="submit"
                 disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-emerald-600 to-teal-600 text-white text-xs font-bold hover:from-emerald-700"
+                className="w-full sm:w-auto rounded-xl h-11 bg-[#0F2D52] text-white text-xs font-bold hover:bg-[#1a3d6e]"
               >
                 {submitting ? 'Processing...' : 'Complete Request'}
               </Button>

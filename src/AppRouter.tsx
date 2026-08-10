@@ -52,7 +52,8 @@ import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { ProfilePage } from './pages/ProfilePage';
 
-// SuperAdmin Expense analytics page
+// SuperAdmin Requests & Expense analytics pages
+import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 
 function ScrollToTop() {
@@ -158,7 +159,8 @@ export function AppRouter() {
                   <Route path="/superadmin-arjava/clients" element={<ClientManagement />} />
                   <Route path="/superadmin-arjava/csv-upload" element={<SuperAdminCSVUploadPage />} />
                   <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
-                  
+                  <Route path="/superadmin-arjava/requests" element={<SuperAdminRequests />} />
+                  <Route path="/superadmin-arjava/expenses" element={<SuperAdminExpenses />} />
                 </Route>
 
                 {/* 404 Catch-all */}

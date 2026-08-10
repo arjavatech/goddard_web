@@ -10,7 +10,7 @@ import { RequestService, type Request, type RequestStatus } from '../../services
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { 
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2, 
-  ExternalLink, Link2, ImageIcon, RefreshCw, Check, ArrowRight, User, School
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -23,11 +23,9 @@ export function AdminRequests() {
   
   // States
   const [loading, setLoading] = useState(true);
-  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [listType, setListType] = useState<'employee' | 'admin'>('employee'); // Toggle between employee-submitted and admin-submitted
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -36,23 +34,13 @@ export function AdminRequests() {
     item: '',
     quantity: 1,
     category: 'Classroom Supplies',
-    scope: 'school' as 'school' | 'teacher' | 'classroom',
+    scope: 'school' as 'school' | 'teacher',
     teacherId: '',
     teacherName: '',
-    classroomId: '',
-    classroomName: '',
     productLink: '',
     productImage: '',
     notes: ''
   });
-
-  const classrooms = [
-    { id: 'classroom-1', name: 'Preschool A' },
-    { id: 'classroom-2', name: 'Preschool B' },
-    { id: 'classroom-3', name: 'Toddler Room' },
-    { id: 'classroom-4', name: 'Infant Room' },
-    { id: 'classroom-5', name: 'Pre-K A' }
-  ];
 
   const categories = [
     'Classroom Supplies',
@@ -105,21 +93,6 @@ export function AdminRequests() {
     loadData();
   }, [userData?.schoolId]);
 
-  const handleValidate = async (requestId: string) => {
-    setActionLoadingId(requestId);
-    try {
-      await RequestService.validateRequest(requestId, userData?.schoolId || 'school-1');
-      showToast('success', 'Employee request validated. It is now In Progress and forwarded to Super Admin.', 'Request Validated');
-      // Reload list
-      const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1', 'admin');
-      setRequests(reqList);
-    } catch (e) {
-      showToast('error', 'Failed to validate request.', 'Action Failed');
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -146,18 +119,7 @@ export function AdminRequests() {
     }
   };
 
-  const handleSimulateImageUpload = () => {
-    const images = [
-      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=150&auto=format&fit=crop&q=60',
-      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=150&auto=format&fit=crop&q=60',
-      'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=150&auto=format&fit=crop&q=60',
-      'https://images.unsplash.com/photo-1566694271453-390536dd1f0d?w=150&auto=format&fit=crop&q=60'
-    ];
-    const randomImg = images[Math.floor(Math.random() * images.length)];
-    setFormData(prev => ({ ...prev, productImage: randomImg }));
-    showToast('success', 'Product image placeholder uploaded', 'Image Attached');
-  };
-
+  
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item name is required';
@@ -166,10 +128,6 @@ export function AdminRequests() {
     if (formData.scope === 'teacher' && !formData.teacherId) {
       errors.teacherId = 'Please select a teacher';
     }
-    if (formData.scope === 'classroom' && !formData.classroomId) {
-      errors.classroomId = 'Please select a classroom';
-    }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -182,8 +140,6 @@ export function AdminRequests() {
       scope: 'school',
       teacherId: teachers[0]?.id || '',
       teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
-      classroomId: 'classroom-1',
-      classroomName: 'Preschool A',
       productLink: '',
       productImage: '',
       notes: ''
@@ -213,8 +169,6 @@ export function AdminRequests() {
         scope: formData.scope,
         teacherId: formData.scope === 'teacher' ? formData.teacherId : undefined,
         teacherName: formData.scope === 'teacher' ? formData.teacherName : undefined,
-        classroomId: formData.scope === 'classroom' ? formData.classroomId : undefined,
-        classroomName: formData.scope === 'classroom' ? formData.classroomName : undefined,
         productLink: formData.productLink || undefined,
         productImage: formData.productImage || undefined,
         notes: formData.notes || undefined
@@ -232,16 +186,8 @@ export function AdminRequests() {
     }
   };
 
-  // Filter requests list by listType (Employee vs Admin submitted)
-  const listFiltered = requests.filter(req => {
-    if (listType === 'employee') {
-      return req.requesterRole === 'employee';
-    } else {
-      return req.requesterRole === 'admin' || req.requesterRole === 'superadmin';
-    }
-  });
-
-  const searchedAndFiltered = listFiltered.filter(req => {
+  const searchedAndFiltered = requests.filter(req => {
+    if (req.requesterRole !== 'admin' && req.requesterRole !== 'superadmin') return false;
     const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
@@ -274,7 +220,7 @@ export function AdminRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 mt-14 max-w-7xl mx-auto px-4 py-6">
         
         {/* Upper Header Row */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -283,7 +229,7 @@ export function AdminRequests() {
               <ShoppingBag className="w-6 h-6 text-[#0F2D52]" /> Procurement Request Board
             </h1>
             <p className="text-xs text-slate-500 mt-1">
-              Review and validate employee material requests, or create procurement requests for the school/teachers.
+              Create and manage procurement requests for the school or specific teachers.
             </p>
           </div>
 
@@ -295,37 +241,13 @@ export function AdminRequests() {
           </Button>
         </div>
 
-        {/* Workspace Toggle Tabs */}
-        <div className="flex border-b border-slate-200">
-          <button
-            onClick={() => setListType('employee')}
-            className={`px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
-              listType === 'employee'
-                ? 'border-[#0f2d52] text-[#0f2d52]'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            Employee Requests ({requests.filter(r => r.requesterRole === 'employee').length})
-          </button>
-          <button
-            onClick={() => setListType('admin')}
-            className={`px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
-              listType === 'admin'
-                ? 'border-[#0f2d52] text-[#0f2d52]'
-                : 'border-transparent text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            Admin Requests ({requests.filter(r => r.requesterRole === 'admin').length})
-          </button>
-        </div>
-
         {/* Filter and Search Bar */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
               type="text"
-              placeholder={listType === 'employee' ? "Search by item or employee..." : "Search by item..."}
+              placeholder="Search by item..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
@@ -427,10 +349,10 @@ export function AdminRequests() {
                                 <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
                               )}
                               {req.scope === 'teacher' && (
-                                <>Scope: <span className="font-bold text-slate-700">Teacher ({req.teacherName})</span></>
+                                <>Scope: <span className="font-bold text-slate-700">Teacher Issue ({req.teacherName})</span></>
                               )}
                               {req.scope === 'school' && (
-                                <>Scope: <span className="font-bold text-slate-700">School-Wide</span></>
+                                <>Scope: <span className="font-bold text-slate-700">All Classrooms</span></>
                               )}
                             </p>
                           </div>
@@ -457,27 +379,6 @@ export function AdminRequests() {
 
                       {/* Action buttons */}
                       <div>
-                        {listType === 'employee' && req.status === 'Pending' && (
-                          <Button
-                            onClick={() => handleValidate(req.id)}
-                            disabled={actionLoadingId === req.id}
-                            className="h-8 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 flex items-center gap-1.5 shadow-sm"
-                          >
-                            {actionLoadingId === req.id ? (
-                              <span className="h-3 w-3 rounded-full border border-white/40 border-t-white animate-spin" />
-                            ) : (
-                              <Check className="w-3.5 h-3.5" />
-                            )}
-                            Validate Request
-                          </Button>
-                        )}
-
-                        {listType === 'employee' && req.status === 'In Progress' && (
-                          <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
-                            Validated <ArrowRight className="w-3 h-3" /> Sent to Super Admin
-                          </span>
-                        )}
-
                         {req.status === 'Completed' && (
                           <div className="text-right text-[11px]">
                             <span className="font-semibold text-slate-400">Spent:</span>{' '}
@@ -485,9 +386,15 @@ export function AdminRequests() {
                           </div>
                         )}
 
-                        {listType === 'admin' && req.status === 'Pending' && (
+                        {req.status === 'Pending' && (
                           <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
                             Pending Super Admin Approval
+                          </span>
+                        )}
+
+                        {req.status === 'In Progress' && (
+                          <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
+                            <ArrowRight className="w-3 h-3" /> In Progress
                           </span>
                         )}
                       </div>
@@ -507,7 +414,7 @@ export function AdminRequests() {
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Submit a request on behalf of the school or a specific teacher. This will be verified and approved by the Super Admin.
+              Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
             </DialogDescription>
           </DialogHeader>
 
@@ -518,39 +425,32 @@ export function AdminRequests() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Request Scope <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, scope: 'school', teacherId: '', teacherName: '' }))}
-                  className={`flex items-center justify-center gap-1.5 p-2.5 border rounded-xl text-xs font-bold transition-all ${
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
                     formData.scope === 'school'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                   }`}
                 >
-                  <School className="w-3.5 h-3.5" /> Entire School
+                  <School className="w-4 h-4" />
+                  <span>All Classrooms</span>
+                  <span className="text-[9px] font-medium opacity-60">School-wide</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, scope: 'teacher', teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '' }))}
-                  className={`flex items-center justify-center gap-1.5 p-2.5 border rounded-xl text-xs font-bold transition-all ${
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
                     formData.scope === 'teacher'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
                   }`}
                 >
-                  <User className="w-3.5 h-3.5" /> Teacher
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'classroom', teacherId: '', teacherName: '' }))}
-                  className={`flex items-center justify-center gap-1.5 p-2.5 border rounded-xl text-xs font-bold transition-all ${
-                    formData.scope === 'classroom'
-                      ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
-                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
-                  }`}
-                >
-                  <School className="w-3.5 h-3.5" /> Classroom
+                  <User className="w-4 h-4" />
+                  <span>Teacher Issue</span>
+                  <span className="text-[9px] font-medium opacity-60">Specific teacher</span>
                 </button>
               </div>
             </div>
@@ -559,7 +459,7 @@ export function AdminRequests() {
             {formData.scope === 'teacher' && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Select Teacher <span className="text-red-500">*</span>
+                  Teacher Involved <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="teacherId"
@@ -572,29 +472,6 @@ export function AdminRequests() {
                   ))}
                 </select>
                 {formErrors.teacherId && <p className="text-xs text-red-600 font-semibold">{formErrors.teacherId}</p>}
-              </div>
-            )}
-
-            {/* Classroom Selector (if scope is classroom) */}
-            {formData.scope === 'classroom' && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Select Classroom <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="classroomId"
-                  value={formData.classroomId}
-                  onChange={e => {
-                    const selected = classrooms.find(c => c.id === e.target.value);
-                    setFormData(prev => ({ ...prev, classroomId: e.target.value, classroomName: selected?.name || '' }));
-                  }}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
-                >
-                  {classrooms.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                {formErrors.classroomId && <p className="text-xs text-red-600 font-semibold">{formErrors.classroomId}</p>}
               </div>
             )}
 
@@ -671,13 +548,7 @@ export function AdminRequests() {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Product Image (Optional)
                 </label>
-                <button
-                  type="button"
-                  onClick={handleSimulateImageUpload}
-                  className="text-[10px] font-extrabold text-[#1a6fc4] hover:text-[#0F2D52] flex items-center gap-1 focus:outline-none"
-                >
-                  <ImageIcon className="w-3.5 h-3.5" /> Auto-Attach Demo Image
-                </button>
+               
               </div>
               <input
                 type="text"

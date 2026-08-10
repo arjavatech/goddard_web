@@ -106,38 +106,20 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
 
-
-
     ...(isSuperAdmin ? [
       {
         label: 'Procurement',
         items: [
-          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Board', path: `${schoolPrefix}/admin/requests` },
-          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
+          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Queue', path: `/superadmin-arjava/requests` },
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
         ],
-      },
-      {
-
+      }, {
         label: 'Administration',
         items: [
           { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
-          // { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Queue', path: `${schoolPrefix}/admin/requests` },
-        ],
 
-      }] : [
-      {
-        label: 'Procurement',
-        items: [
-          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
         ],
-      },
-    ]),
-    // ...(isSuperAdmin ? [{
-    //   label: 'Super Administration',
-    //   items: [
-    //     { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
-    //   ],
-    // }] : []),
+      }] : []),
   ];
 
   const initials = userData?.firstName && userData?.lastName

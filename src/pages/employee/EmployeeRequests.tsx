@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Header } from '../../components/layout/Header';
 import { Footer } from '../../components/layout/Footer';
 import { Card, CardContent } from '../../components/ui/card';
@@ -12,11 +13,11 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import { 
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2, 
-  ExternalLink, Link2, ImageIcon, AlertCircle, RefreshCw, FileText
+  ExternalLink, Link2, ImageIcon, AlertCircle, RefreshCw, FileText, ArrowLeft
 } from 'lucide-react';
 
 export function EmployeeRequests() {
-  const { userData } = useUserContext();
+  const { userData, schoolSubdomain } = useUserContext();
   const { showToast } = useToast();
   const [requests, setRequests] = useState<Request[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -129,19 +130,7 @@ export function EmployeeRequests() {
     }
   };
 
-  // Simulated product image selection
-  const handleSimulateImageUpload = () => {
-    // Generate a random high-quality placeholder image
-    const images = [
-      'https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=150&auto=format&fit=crop&q=60', // Art supplies
-      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=150&auto=format&fit=crop&q=60', // Books
-      'https://images.unsplash.com/photo-1587654780291-39c9404d746b?w=150&auto=format&fit=crop&q=60', // Blocks
-      'https://images.unsplash.com/photo-1566694271453-390536dd1f0d?w=150&auto=format&fit=crop&q=60'  // Toys
-    ];
-    const randomImg = images[Math.floor(Math.random() * images.length)];
-    setFormData(prev => ({ ...prev, productImage: randomImg }));
-    showToast('success', 'Product image placeholder uploaded', 'Image Attached');
-  };
+
 
   const validateForm = () => {
     const errors: Record<string, string> = {};
@@ -248,10 +237,17 @@ export function EmployeeRequests() {
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20" />
           <div className="relative z-10 px-6 py-10 sm:px-12 sm:py-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
+              <Link
+                to={`/${schoolSubdomain || 'goddard'}/employee/dashboard`}
+                className="group inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white shadow-sm backdrop-blur-sm transition-all hover:-translate-x-0.5 hover:border-white/35 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60 focus:ring-offset-2 focus:ring-offset-[#0F2D52]"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+                Back to Dashboard
+              </Link><br />
+              {/* <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
                 <ShoppingBag className="w-3.5 h-3.5" /> Procurement Portal
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Request Materials & Supplies</h1>
+              </div> */}
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: '#ffffff' }}>Request Materials & Supplies</h1>
               <p className="text-sm text-slate-200/90 max-w-xl">
                 Need items for your classroom? Submit a request here. Once approved, the admin will validate it and send it to the Super Admin for purchasing.
               </p>
@@ -540,13 +536,7 @@ export function EmployeeRequests() {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Product Image (Optional)
                 </label>
-                <button
-                  type="button"
-                  onClick={handleSimulateImageUpload}
-                  className="text-[10px] font-extrabold text-[#1a6fc4] hover:text-[#0F2D52] flex items-center gap-1 focus:outline-none"
-                >
-                  <ImageIcon className="w-3.5 h-3.5" /> Auto-Attach Demo Image
-                </button>
+               
               </div>
               <input
                 type="text"
