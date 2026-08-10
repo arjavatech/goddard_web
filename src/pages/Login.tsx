@@ -42,7 +42,7 @@ export function Login() {
       
       if (formData.password === 'Keller@2026') {
         sessionStorage.setItem('first_login_reset_pending', 'true');
-        navigate('/set-password', { replace: true });
+        navigate('/reset-password', { replace: true });
         return;
       }
 
