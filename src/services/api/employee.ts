@@ -9,6 +9,7 @@ export type Employee = {
   lastName: string;
   email: string;
   phone: string;
+  phoneCountry?: string;
   address: string;
   employeeType: string;
   joinedOn: string;
@@ -65,6 +66,7 @@ function mapEmployee(raw: any): Employee {
     lastName: raw.last_name ?? '',
     email: raw.email ?? '',
     phone: raw.phone ?? '',
+    phoneCountry: raw.phone_country ?? undefined,
     address: raw.address ?? '',
     employeeType: raw.employee_type ?? '',
     joinedOn: raw.joined_on ?? '',
@@ -154,6 +156,7 @@ export const EmployeeService = {
     lastName: string;
     email: string;
     phone?: string;
+    phoneCountry?: string;
     address?: string;
     employeeType?: string;
     joinedOn?: string;
@@ -169,6 +172,7 @@ export const EmployeeService = {
           last_name: employeeData.lastName,
           email: employeeData.email,
           phone: employeeData.phone,
+          phone_country: employeeData.phoneCountry,
           address: employeeData.address,
           employee_type: employeeData.employeeType,
           joined_on: employeeData.joinedOn,
@@ -188,7 +192,7 @@ export const EmployeeService = {
   async updateEmployee(
     id: string,
     schoolId: string,
-    updates: { phone?: string; address?: string; employeeType?: string; joinedOn?: string },
+    updates: { phone?: string; phoneCountry?: string; address?: string; employeeType?: string; joinedOn?: string },
   ): Promise<Employee> {
     const data = await authedFetch(
       {
@@ -196,6 +200,7 @@ export const EmployeeService = {
         url: `/employees/${id}?school_id=${schoolId}`,
         body: {
           phone: updates.phone,
+          phone_country: updates.phoneCountry,
           address: updates.address,
           employee_type: updates.employeeType,
           joined_on: updates.joinedOn,

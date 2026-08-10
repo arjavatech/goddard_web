@@ -903,7 +903,7 @@ export function ParentManagement() {
                   {sortedParents.length > 0 ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button size="sm" className="bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
+                        <Button size="sm" className="bg-white text-slate-700 hover:text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl h-9 text-xs font-bold transition-all">
                           <Download className="h-3.5 w-3.5 mr-1.5 text-slate-400" />
                           Export
                         </Button>

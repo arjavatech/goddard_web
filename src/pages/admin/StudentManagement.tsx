@@ -336,6 +336,8 @@ export function StudentManagement() {
 
         // Calculate progress based on completed forms
         const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+        
+        const computedFormStatus = (total > 0 && approved === total) ? 'complete' : 'incomplete';
 
         const classroomName = enrollment.class_name || 'Unassigned';
         const classroomId = classroomName;
@@ -383,7 +385,7 @@ export function StudentManagement() {
           assignedForms: formsArray,
           childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
           enrollmentId: enrollment.enrollment_id,
-          formStatus: enrollment.form_status
+          formStatus: computedFormStatus
         };
         return student;
       });
@@ -612,7 +614,7 @@ export function StudentManagement() {
       hideInCardBody: true,
       cell: (student) => {
         const apiFormStatus = student.formStatus || 'incomplete';
-        const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Complete' : apiFormStatus;
+        const displayStatus = apiFormStatus === 'incomplete' ? 'Incomplete' : apiFormStatus === 'complete' ? 'Completed' : apiFormStatus;
         const statusVariant = apiFormStatus === 'complete' ? 'success' : apiFormStatus === 'incomplete' ? 'secondary' : 'outline';
         const statusIcon = apiFormStatus === 'complete' ? <CheckCircle className="h-3.5 w-3.5 mr-1" /> : <Clock className="h-3.5 w-3.5 mr-1" />;
         return (
