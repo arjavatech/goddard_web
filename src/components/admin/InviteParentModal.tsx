@@ -7,6 +7,7 @@ import { AsyncButton } from '../ui/async-button';
 import { ValidatedEmailInput } from '../ui/validated-email-input';
 import { PhoneInput, validatePhoneNumber } from '../ui/phone-input';
 import { Mail, ChevronDown, ChevronUp, UserPlus } from 'lucide-react';
+import { validateEmail } from '../../lib/emailValidation';
 
 interface InviteParentModalProps {
   isOpen: boolean;
@@ -297,18 +298,27 @@ export function InviteParentModal({
             onClick={onInvite}
             className="w-full sm:w-auto h-9 sm:h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white transition-all duration-200"
             disabled={(() => {
-              const primaryParentValid = parentFirstName.trim() && parentLastName.trim() && parentEmail.trim() && validatePhoneNumber(parentPhoneNumber);
-              const childValid = childFirstName.trim() && childLastName.trim() && childGender && childClassroom;
-              if (!primaryParentValid || !childValid) return true;
-              const hasSecondaryParentData =
-                secondaryParentFirstName.trim() ||
-                secondaryParentLastName.trim() ||
-                secondaryParentEmail.trim() ||
-                secondaryParentPhoneNumber.trim();
-              if (hasSecondaryParentData) {
-                return !(secondaryParentFirstName.trim() && secondaryParentLastName.trim() && secondaryParentEmail.trim() && validatePhoneNumber(secondaryParentPhoneNumber));
-              }
-              return false;
+              // Ensure there are no active validation errors displayed
+              if (Object.values(inviteFormErrors).some(err => err !== '')) return true;
+
+              // Validate ONLY the genuinely required primary parent fields and formats
+              const isPrimaryParentValid = 
+                parentFirstName.trim() !== '' && 
+                parentLastName.trim() !== '' && 
+                parentEmail.trim() !== '' && 
+                !validateEmail(parentEmail) && // Must be a valid email
+                validatePhoneNumber(parentPhoneNumber); // Ensures format is valid if entered
+
+              // Validate ONLY the genuinely required child fields
+              const isChildValid = 
+                childFirstName.trim() !== '' && 
+                childLastName.trim() !== '' && 
+                childGender !== '' && 
+                childClassroom !== '';
+
+              // The button must NOT depend on the Secondary Parent section because it is optional.
+              // Any secondary parent validation issues will be caught by validateInviteForm() upon submission.
+              return !isPrimaryParentValid || !isChildValid;
             })()}
           >
             <Mail className="h-4 w-4 mr-2" />

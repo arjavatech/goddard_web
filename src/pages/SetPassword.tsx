@@ -40,9 +40,15 @@ export function SetPassword() {
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
         if (!isMounted) return;
-        if (session) { setSessionReady(true); setError(''); }
+        if (session) { setSessionReady(true); setTokenValidated(true); setError(''); }
       });
       authSubscription = subscription;
+
+      const { data: existingSession } = await supabase.auth.getSession();
+      if (existingSession?.session) {
+        if (isMounted) { setSessionReady(true); setTokenValidated(true); setError(''); }
+        return;
+      }
 
       const hash = window.location.hash.substring(1);
       const search = window.location.search.substring(1);
@@ -157,6 +163,7 @@ export function SetPassword() {
       }
 
       await supabase.auth.updateUser({ data: { password_set: true } });
+      sessionStorage.removeItem('first_login_reset_pending');
       setSuccess(true);
       setTimeout(() => navigate('/', { replace: true }), 2000);
     } catch (err) {

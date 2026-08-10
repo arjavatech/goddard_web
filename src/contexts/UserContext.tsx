@@ -71,6 +71,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return Promise.resolve();
     }
 
+    if (sessionStorage.getItem('first_login_reset_pending') === 'true') {
+      resetUserContext();
+      setLoading(false);
+      setIsReady(true);
+      return Promise.resolve();
+    }
+
     const requestKey = `${user.id}:${authGeneration}`;
     if (!force && activeRequestRef.current?.key === requestKey) {
       return activeRequestRef.current.promise;
