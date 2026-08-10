@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User, ChevronDown, School } from 'lucide-react';
+import { LogOut, User, ChevronDown, School, ShoppingBag } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
@@ -67,6 +67,14 @@ export function Header() {
         >
           <User className="w-4 h-4 text-slate-400" /> Profile
         </Link>
+        {userData?.role?.toLowerCase() === 'employee' && (
+          <Link
+            to={`/${schoolSubdomain || 'goddard'}/employee/requests`}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+          >
+            <ShoppingBag className="w-4 h-4 text-slate-400" /> Requests
+          </Link>
+        )}
         <button
           onClick={() => setShowLogoutModal(true)}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"

@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -32,7 +32,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
-  const isSuperAdmin = userData?.role === 'SuperAdmin';
+  const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -105,13 +105,33 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Due Forms', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
-    ...(isSuperAdmin ? [{
-      label: 'Administration',
-      items: [
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
-      ],
 
-    }] : []),
+
+
+    ...(isSuperAdmin ? [
+      {
+        label: 'Procurement',
+        items: [
+          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Board', path: `${schoolPrefix}/admin/requests` },
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
+        ],
+      },
+      {
+
+        label: 'Administration',
+        items: [
+          { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+          // { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Queue', path: `${schoolPrefix}/admin/requests` },
+        ],
+
+      }] : [
+      {
+        label: 'Procurement',
+        items: [
+          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+        ],
+      },
+    ]),
     // ...(isSuperAdmin ? [{
     //   label: 'Super Administration',
     //   items: [
