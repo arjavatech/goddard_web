@@ -26,7 +26,7 @@ type UseAuth = {
   isBypassed: boolean;
   loading: boolean;
   authGeneration: number;
-  signInWithPassword: (email: string, password: string) => Promise<void>;
+  signInWithPassword: (email: string, password: string) => Promise<{ user: User | null; session: Session | null } | null>;
   signUpWithPassword: (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => Promise<{
     user: User | null;
     session: Session | null;
@@ -97,15 +97,17 @@ function useAuthState(): UseAuth {
     return () => subscription.unsubscribe();
   }, []);
   const signInWithPassword = useCallback(async (email: string, password: string) => {
-    if (isAuthBypassed) return;
+    if (isAuthBypassed) return null;
     if (!supabase) throw new Error('Supabase not initialized');
     const {
+      data,
       error
     } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     if (error) throw error as AuthError;
+    return data;
   }, []);
   const signUpWithPassword = useCallback(async (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => {
     if (isAuthBypassed) {
