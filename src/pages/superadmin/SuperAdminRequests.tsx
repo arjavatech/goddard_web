@@ -160,7 +160,7 @@ export function SuperAdminRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 sm:space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
+      <div className="space-y-5 sm:space-y-6  mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
         
         {/* Upper Header Row */}
         <div className="mt-10 sm:mt-14">

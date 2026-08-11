@@ -230,7 +230,7 @@ export function EmployeeRequests() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
       <Header />
       
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
         {/* Banner Card */}
         <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white shadow-xl mb-8">

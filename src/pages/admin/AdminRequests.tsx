@@ -220,7 +220,7 @@ export function AdminRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 mt-14 max-w-7xl mx-auto px-4 py-6">
+      <div className="space-y-6 mt-14 mx-auto px-4 py-6">
         
         {/* Upper Header Row */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

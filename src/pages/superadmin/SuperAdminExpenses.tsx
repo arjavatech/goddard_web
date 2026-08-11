@@ -174,7 +174,7 @@ export function SuperAdminExpenses() {
 
   return (
     <AdminLayout>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-8 mt-10">
+      <div className="mx-auto px-4 sm:px-6 py-8 space-y-8 mt-10">
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
