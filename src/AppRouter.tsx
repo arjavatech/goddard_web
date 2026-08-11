@@ -56,16 +56,6 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 
-function ScrollToTop() {
-  const { pathname } = useLocation();
-
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, [pathname]);
-
-  return null;
-}
-
 function NavigateToAdmin() {
   const { schoolSubdomain, loading } = useUserContext();
   const location = useLocation();
@@ -89,7 +79,6 @@ export function AppRouter() {
         <NotificationsProvider>
           <ToastProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-              <ScrollToTop />
               <Routes>
                 <Route path="/" element={<Login />} />
                 <Route path="/dashboard" element={<ProtectedRoute>
