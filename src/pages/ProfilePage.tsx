@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users, Key, Eye, EyeOff } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
@@ -33,6 +33,8 @@ function ProfileContent() {
   const [secondaryParent, setSecondaryParent] = useState<{ firstName?: string; lastName?: string; email?: string; parentType?: string } | null>(null);
   const [parentExtraInfo, setParentExtraInfo] = useState<{ phone?: string | null; address?: string | null; relationType?: string | null } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
+  const [tapTimePin, setTapTimePin] = useState("1234");
+  const [showPin, setShowPin] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -171,6 +173,13 @@ function ProfileContent() {
               {employeeDetails.employeeType && <InfoRow icon={<Briefcase className="w-4 h-4" />} label="Role" value={employeeDetails.employeeType} />}
               {employeeDetails.phone && <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone" value={employeeDetails.phone} />}
               {employeeDetails.address && <InfoRow icon={<MapPin className="w-4 h-4" />} label="Address" value={employeeDetails.address} className="sm:col-span-2" />}
+              <EditablePinRow 
+                label="Tap-Time PIN" 
+                value={tapTimePin} 
+                onChange={setTapTimePin} 
+                showPin={showPin} 
+                onToggleShow={() => setShowPin(!showPin)} 
+              />
             </div>
           </CardContent>
         </Card>
@@ -265,6 +274,45 @@ function InfoRow({ icon, label, value, className = '' }: { icon: React.ReactNode
       <div className="min-w-0">
         <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
         <p className="text-sm font-semibold text-slate-800 break-all leading-snug mt-0.5">{value}</p>
+      </div>
+    </div>
+  );
+}
+
+function EditablePinRow({ label, value, onChange, showPin, onToggleShow }: { label: string; value: string; onChange: (v: string) => void; showPin: boolean; onToggleShow: () => void; }) {
+  return (
+    <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors sm:col-span-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="text-[#1a6fc4]"><Key className="w-4 h-4" /></span>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
+        </div>
+        <button type="button" onClick={onToggleShow} className="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
+          {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      </div>
+      <div className="mt-1">
+        {showPin ? (
+          <input 
+            type="text" 
+            value={value} 
+            onChange={(e) => onChange(e.target.value)} 
+            className="w-full bg-transparent border-none p-0 text-sm font-semibold text-slate-800 focus:ring-0 placeholder:text-slate-400"
+            placeholder="Enter PIN"
+          />
+        ) : (
+          <div className="flex items-center relative">
+            <span className="text-sm font-semibold text-slate-800 w-full cursor-text block leading-snug">
+              {value ? "***" : ""}
+            </span>
+            <input 
+              type="password"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              className="w-full bg-transparent border-none p-0 text-sm font-semibold text-slate-800 focus:ring-0 opacity-0 absolute top-0 left-0 bottom-0" 
+            />
+          </div>
+        )}
       </div>
     </div>
   );
