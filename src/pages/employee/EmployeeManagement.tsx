@@ -42,6 +42,7 @@ export function EmployeeManagement() {
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
+  const [empTapTimePin, setEmpTapTimePin] = useState('');
 
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -239,6 +240,7 @@ export function EmployeeManagement() {
     setEmpAddress('');
     setEmpType('Full Time');
     setEmpJoinedOn('');
+    setEmpTapTimePin('');
     setEmailError('');
     setPhoneError('');
   };
@@ -566,9 +568,15 @@ export function EmployeeManagement() {
                     <option value="Contractor">Contractor</option>
                   </select>
                 </div> */}
-                <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
-                  <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                    <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Tap-Time PIN</label>
+                    <Input value={empTapTimePin} onChange={(e) => setEmpTapTimePin(e.target.value)} placeholder="PIN" className="w-full h-10 rounded-xl" />
+                  </div>
                 </div>
               </div>
             </div>

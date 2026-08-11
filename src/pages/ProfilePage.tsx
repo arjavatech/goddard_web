@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users, Key, Eye, EyeOff } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users, Key, Eye, EyeOff, Edit2, Check, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
@@ -280,6 +280,19 @@ function InfoRow({ icon, label, value, className = '' }: { icon: React.ReactNode
 }
 
 function EditablePinRow({ label, value, onChange, showPin, onToggleShow }: { label: string; value: string; onChange: (v: string) => void; showPin: boolean; onToggleShow: () => void; }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(value);
+
+  const handleSave = () => {
+    onChange(editValue);
+    setIsEditing(false);
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditValue(value);
+  };
+
   return (
     <div className="flex flex-col gap-1 p-3.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors sm:col-span-2">
       <div className="flex items-center justify-between">
@@ -287,31 +300,42 @@ function EditablePinRow({ label, value, onChange, showPin, onToggleShow }: { lab
           <span className="text-[#1a6fc4]"><Key className="w-4 h-4" /></span>
           <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
         </div>
-        <button type="button" onClick={onToggleShow} className="text-slate-400 hover:text-slate-600 transition-colors focus:outline-none">
-          {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {!isEditing ? (
+            <>
+              <button type="button" onClick={onToggleShow} className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded transition-colors focus:outline-none" title={showPin ? "Hide PIN" : "Show PIN"}>
+                {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+              <button type="button" onClick={() => { setEditValue(value); setIsEditing(true); }} className="p-1 text-slate-400 hover:text-[#0F2D52] hover:bg-slate-200/50 rounded transition-colors focus:outline-none" title="Edit PIN">
+                <Edit2 className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <>
+              <button type="button" onClick={handleSave} className="p-1 text-emerald-600 hover:bg-emerald-50 rounded transition-colors focus:outline-none" title="Save">
+                <Check className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={handleCancel} className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors focus:outline-none" title="Cancel">
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
       </div>
       <div className="mt-1">
-        {showPin ? (
+        {isEditing ? (
           <input 
             type="text" 
-            value={value} 
-            onChange={(e) => onChange(e.target.value)} 
-            className="w-full bg-transparent border-none p-0 text-sm font-semibold text-slate-800 focus:ring-0 placeholder:text-slate-400"
+            value={editValue} 
+            onChange={(e) => setEditValue(e.target.value)} 
+            className="w-full bg-white border border-slate-300 rounded px-2 py-1 text-sm font-semibold text-slate-800 focus:outline-none focus:border-[#0F2D52] focus:ring-1 focus:ring-[#0F2D52]"
             placeholder="Enter PIN"
+            autoFocus
           />
         ) : (
-          <div className="flex items-center relative">
-            <span className="text-sm font-semibold text-slate-800 w-full cursor-text block leading-snug">
-              {value ? "***" : ""}
-            </span>
-            <input 
-              type="password"
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="w-full bg-transparent border-none p-0 text-sm font-semibold text-slate-800 focus:ring-0 opacity-0 absolute top-0 left-0 bottom-0" 
-            />
-          </div>
+          <p className="text-sm font-semibold text-slate-800 tracking-wider">
+            {showPin ? value : '***'}
+          </p>
         )}
       </div>
     </div>
