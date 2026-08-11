@@ -6,9 +6,12 @@ import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
+import { Pagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { 
   ShoppingBag, Search, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign
+  ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign,
+  LayoutGrid, TableProperties
 } from 'lucide-react';
 
 export function SuperAdminRequests() {
@@ -23,6 +26,8 @@ export function SuperAdminRequests() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<'employee' | 'admin'>('employee');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
+  const [recordsPerPage, setRecordsPerPage] = useState(10);
   
   // Modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -134,6 +139,14 @@ export function SuperAdminRequests() {
     return matchesTab && matchesSearch && matchesStatus;
   });
 
+  const {
+    currentPage,
+    totalPages,
+    paginatedData,
+    itemsPerPage,
+    setCurrentPage,
+  } = usePagination({ data: searchedAndFiltered, itemsPerPage: recordsPerPage });
+
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
       case 'Pending':
@@ -233,6 +246,39 @@ export function SuperAdminRequests() {
           </div>
         </div>
 
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="text-sm font-medium text-slate-600">
+            Showing <span className="font-bold text-slate-900">{searchedAndFiltered.length}</span> requests
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={recordsPerPage}
+              onChange={e => setRecordsPerPage(Number(e.target.value))}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700"
+            >
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={50}>50 per page</option>
+            </select>
+            <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setViewMode('cards')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'cards' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('table')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'table' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <TableProperties className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Requests Queue */}
         {loading ? (
           <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center min-h-[300px]">
@@ -250,116 +296,201 @@ export function SuperAdminRequests() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <AnimatePresence mode="popLayout">
-              {searchedAndFiltered.map((req, idx) => (
-                <motion.div
-                  key={req.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.25, delay: idx * 0.03 }}
-                >
-                  <Card className="border border-slate-100 bg-white hover:border-slate-200 transition-all rounded-2xl overflow-hidden shadow-sm h-full flex flex-col justify-between">
-                    <div className="p-4 sm:p-5 space-y-4">
-                      {/* Top Meta info */}
-                      <div className="flex flex-col min-[420px]:flex-row min-[420px]:justify-between items-start gap-2">
-                        <div className="min-w-0">
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                            Category: {req.category || 'Supplies'}
-                          </p>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
-                            <span className="font-semibold text-[#0F2D52] truncate max-w-[12rem]">{req.requesterName}</span>
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">{req.requesterRole}</span>
-                          </p>
-                        </div>
-                        <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                          {getStatusIcon(req.status)}
-                          {req.status}
-                        </span>
-                      </div>
-
-                      {/* Content block */}
-                    <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
-                        {req.productImage ? (
-                          <img
-                            src={req.productImage}
-                            alt={req.item}
-                            className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
-                          />
-                        ) : (
-                          <div className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
-                            <ImageIcon className="w-8 h-8" />
-                          </div>
-                        )}
-
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <h3 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug">{req.item}</h3>
-                          
-                          <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-2 gap-y-1 text-xs">
-                            <p className="text-slate-500">Qty: <span className="font-bold text-slate-700">{req.quantity}</span></p>
-                            <p className="text-slate-500 truncate">
-                              {req.scope === 'classroom' && (
-                                <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
-                              )}
-                              {req.scope === 'teacher' && (
-                                <>Scope: <span className="font-bold text-slate-700">Teacher ({req.teacherName})</span></>
-                              )}
-                              {req.scope === 'school' && (
-                                <>Scope: <span className="font-bold text-slate-700">Entire School</span></>
-                              )}
-                            </p>
-                          </div>
-                          
-                          <p className="text-[10px] text-slate-400">Created on {new Date(req.createdAt).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Actions section */}
-                    <div className="bg-slate-50/50 px-4 sm:px-5 py-4 border-t border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between items-stretch gap-3">
-                      <div className="min-w-0">
-                        {req.productLink && (
-                          <a
-                            href={req.productLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold"
-                          >
-                            <Link2 className="w-3.5 h-3.5" /> Product Page <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        )}
-                        {!req.productLink && <span className="text-[11px] text-slate-400 italic">No product link</span>}
-                      </div>
-
-                      {/* Action buttons */}
-                      <div className="w-full sm:w-auto">
-                        {req.status === 'Completed' ? (
-                          <div className="text-left sm:text-right text-[11px]">
-                            <div className="flex sm:justify-end gap-1.5 font-bold text-emerald-800 text-xs">
-                              <span>Spent:</span>
-                              <span>${req.amountSpent?.toFixed(2)}</span>
+          <div className="space-y-4">
+            {viewMode === 'cards' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <AnimatePresence mode="popLayout">
+                  {paginatedData.map((req, idx) => (
+                    <motion.div
+                      key={req.id}
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.25, delay: idx * 0.03 }}
+                    >
+                      <Card className="border border-slate-100 bg-white hover:border-slate-200 transition-all rounded-2xl overflow-hidden shadow-sm h-full flex flex-col justify-between">
+                        <div className="p-4 sm:p-5 space-y-4">
+                          {/* Top Meta info */}
+                          <div className="flex flex-col min-[420px]:flex-row min-[420px]:justify-between items-start gap-2">
+                            <div className="min-w-0">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
+                                Category: {req.category || 'Supplies'}
+                              </p>
+                              <p className="text-xs text-slate-500 font-medium mt-0.5 flex flex-wrap items-center gap-1.5">
+                                <span className="font-semibold text-[#0F2D52] truncate max-w-[12rem]">{req.requesterName}</span>
+                                <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">{req.requesterRole}</span>
+                              </p>
                             </div>
-                            <p className="text-[10px] text-slate-400 font-medium">via {req.paymentMethod} on {req.purchaseDate}</p>
+                            <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                              {getStatusIcon(req.status)}
+                              {req.status}
+                            </span>
                           </div>
-                        ) : req.requesterRole === 'employee' && req.status === 'Pending' ? (
-                          <span className="text-[11px] text-amber-600 font-semibold inline-flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
-                            <Clock className="w-3 h-3" /> Awaiting Admin Validation
-                          </span>
-                        ) : (
-                          <Button
-                            onClick={() => handleOpenPurchaseModal(req)}
-                            className="h-9 w-full sm:w-auto rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs px-3.5 flex items-center justify-center gap-1 shadow-sm"
-                          >
-                            <CreditCard className="w-3.5 h-3.5" /> Record Purchase
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+
+                          {/* Content block */}
+                        <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
+                            {req.productImage ? (
+                              <img
+                                src={req.productImage}
+                                alt={req.item}
+                                className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
+                              />
+                            ) : (
+                              <div className="w-full h-32 min-[420px]:w-20 min-[420px]:h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
+                                <ImageIcon className="w-8 h-8" />
+                              </div>
+                            )}
+
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <h3 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug">{req.item}</h3>
+                              
+                              <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-x-2 gap-y-1 text-xs">
+                                <p className="text-slate-500">Qty: <span className="font-bold text-slate-700">{req.quantity}</span></p>
+                                <p className="text-slate-500 truncate">
+                                  {req.scope === 'classroom' && (
+                                    <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
+                                  )}
+                                  {req.scope === 'teacher' && (
+                                    <>Scope: <span className="font-bold text-slate-700">Teacher ({req.teacherName})</span></>
+                                  )}
+                                  {req.scope === 'school' && (
+                                    <>Scope: <span className="font-bold text-slate-700">Entire School</span></>
+                                  )}
+                                </p>
+                              </div>
+                              
+                              <p className="text-[10px] text-slate-400">Created on {new Date(req.createdAt).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Actions section */}
+                        <div className="bg-slate-50/50 px-4 sm:px-5 py-4 border-t border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between items-stretch gap-3">
+                          <div className="min-w-0">
+                            {req.productLink && (
+                              <a
+                                href={req.productLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold"
+                              >
+                                <Link2 className="w-3.5 h-3.5" /> Product Page <ExternalLink className="w-2.5 h-2.5" />
+                              </a>
+                            )}
+                            {!req.productLink && <span className="text-[11px] text-slate-400 italic">No product link</span>}
+                          </div>
+
+                          {/* Action buttons */}
+                          <div className="w-full sm:w-auto">
+                            {req.status === 'Completed' ? (
+                              <div className="text-left sm:text-right text-[11px]">
+                                <div className="flex sm:justify-end gap-1.5 font-bold text-emerald-800 text-xs">
+                                  <span>Spent:</span>
+                                  <span>${req.amountSpent?.toFixed(2)}</span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium">via {req.paymentMethod} on {req.purchaseDate}</p>
+                              </div>
+                            ) : req.requesterRole === 'employee' && req.status === 'Pending' ? (
+                              <span className="text-[11px] text-amber-600 font-semibold inline-flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
+                                <Clock className="w-3 h-3" /> Awaiting Admin Validation
+                              </span>
+                            ) : (
+                              <Button
+                                onClick={() => handleOpenPurchaseModal(req)}
+                                className="h-9 w-full sm:w-auto rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs px-3.5 flex items-center justify-center gap-1 shadow-sm"
+                              >
+                                <CreditCard className="w-3.5 h-3.5" /> Record Purchase
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-slate-100 bg-slate-50/60">
+                        {['Item', 'Requester', 'Scope / Target', 'Status', 'Date', 'Amount', 'Actions'].map(h => (
+                          <th key={h} className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {paginatedData.map((req) => (
+                        <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-5 py-3.5 min-w-[200px]">
+                            <p className="font-semibold text-slate-800 line-clamp-2">{req.item}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
+                            {req.productLink && (
+                              <a
+                                href={req.productLink}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold mt-1"
+                              >
+                                <Link2 className="w-3 h-3" /> Product Page
+                              </a>
+                            )}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <p className="font-medium text-slate-700">{req.requesterName}</p>
+                            <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wide mt-0.5">{req.requesterRole}</p>
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-600">
+                            {req.scope === 'classroom' && <span>Classroom: <b className="text-slate-700">{req.classroomName}</b></span>}
+                            {req.scope === 'teacher'   && <span>Teacher: <b className="text-slate-700">{req.teacherName}</b></span>}
+                            {req.scope === 'school'    && <span className="text-slate-400 italic">Entire School</span>}
+                          </td>
+                          <td className="px-5 py-3.5">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)} whitespace-nowrap`}>
+                              {getStatusIcon(req.status)}
+                              {req.status}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</td>
+                          <td className="px-5 py-3.5 text-right font-medium">
+                            {req.status === 'Completed' ? (
+                              <span className="font-bold text-emerald-700 text-sm">${req.amountSpent?.toFixed(2)}</span>
+                            ) : '-'}
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            {req.status === 'Completed' ? (
+                              <span className="text-[10px] text-slate-400">Recorded</span>
+                            ) : req.requesterRole === 'employee' && req.status === 'Pending' ? (
+                              <span className="text-[10px] text-amber-600 font-semibold whitespace-nowrap">Awaiting Validation</span>
+                            ) : (
+                              <Button
+                                onClick={() => handleOpenPurchaseModal(req)}
+                                className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs px-3 shadow-sm whitespace-nowrap"
+                              >
+                                Record
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            )}
+
+            {searchedAndFiltered.length > 0 && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={searchedAndFiltered.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
           </div>
         )}
 
@@ -367,7 +498,7 @@ export function SuperAdminRequests() {
 
       {/* Record Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 sm:p-6">
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-4 sm:p-6 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900">Record Purchase & Complete</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">

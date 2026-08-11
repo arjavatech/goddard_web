@@ -90,6 +90,8 @@ export function SuperAdminExpenses() {
   const [form, setForm] = useState<AddExpenseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [ledgerView, setLedgerView] = useState<'cards' | 'table'>('table');
+  const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
+  const [recordsPerPage, setRecordsPerPage] = useState(10);
 
   const loadData = async () => {
     setLoading(true);
@@ -156,13 +158,19 @@ export function SuperAdminExpenses() {
   const categorySpendingData  = (summary?.byCategory ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
   const schoolWideSpent = scopeSpendingData.filter(i => i.name === 'Entire School').reduce((s, i) => s + i.value, 0);
   const completedList = expenseData?.expenses ?? [];
+  const filteredCompletedList = completedList.filter(exp => 
+    exp.item.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) || 
+    exp.requesterName.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) ||
+    (exp.category && exp.category.toLowerCase().includes(ledgerSearchTerm.toLowerCase()))
+  );
+
   const {
     currentPage: ledgerPage,
     totalPages: ledgerTotalPages,
     paginatedData: paginatedExpenses,
     itemsPerPage: ledgerItemsPerPage,
     setCurrentPage: setLedgerPage,
-  } = usePagination({ data: completedList, itemsPerPage: 10 });
+  } = usePagination({ data: filteredCompletedList, itemsPerPage: recordsPerPage });
 
   const tooltipStyle = {
     contentStyle: {
@@ -330,36 +338,56 @@ export function SuperAdminExpenses() {
                 <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
                   <ListCollapse className="w-4 h-4 text-[#0F2D52]" /> Spending Ledger
                 </CardTitle>
-                <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-2">
-                  <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5" aria-label="Ledger view">
-                    <button
-                      type="button"
-                      onClick={() => setLedgerView('cards')}
-                      aria-label="Show card view"
-                      title="Card view"
-                      className={`rounded-md p-1.5 transition-colors ${ledgerView === 'cards' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setLedgerView('table')}
-                      aria-label="Show table view"
-                      title="Table view"
-                      className={`rounded-md p-1.5 transition-colors ${ledgerView === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                    >
-                      <TableProperties className="h-3.5 w-3.5" />
-                    </button>
+                <div className="flex flex-col sm:flex-row w-full sm:w-auto items-start sm:items-center justify-between sm:justify-end gap-3 sm:gap-2 mt-3 sm:mt-0">
+                  <div className="relative w-full sm:w-48 lg:w-64">
+                    <input
+                      type="text"
+                      placeholder="Search ledger..."
+                      value={ledgerSearchTerm}
+                      onChange={e => setLedgerSearchTerm(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0F2D52] transition-colors"
+                    />
                   </div>
-                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full">
-                    {completedList.length} transactions
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={recordsPerPage}
+                      onChange={e => setRecordsPerPage(Number(e.target.value))}
+                      className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700"
+                    >
+                      <option value={10}>10 per page</option>
+                      <option value={20}>20 per page</option>
+                      <option value={50}>50 per page</option>
+                    </select>
+                    <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5" aria-label="Ledger view">
+                      <button
+                        type="button"
+                        onClick={() => setLedgerView('cards')}
+                        aria-label="Show card view"
+                        title="Card view"
+                        className={`rounded-md p-1.5 transition-colors ${ledgerView === 'cards' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        <LayoutGrid className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setLedgerView('table')}
+                        aria-label="Show table view"
+                        title="Table view"
+                        className={`rounded-md p-1.5 transition-colors ${ledgerView === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                      >
+                        <TableProperties className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full whitespace-nowrap">
+                      {filteredCompletedList.length} txns
+                    </span>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className={ledgerView === 'table' ? 'p-0 overflow-x-auto' : 'p-3 sm:p-4'}>
-                {completedList.length === 0 ? (
+                {filteredCompletedList.length === 0 ? (
                   <div className="py-16 text-center text-slate-400 text-xs">
-                    No completed purchases logged yet.
+                    No completed purchases matched your criteria.
                   </div>
                 ) : ledgerView === 'cards' ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
@@ -419,11 +447,11 @@ export function SuperAdminExpenses() {
                   </table>
                 )}
               </CardContent>
-              {completedList.length > 0 && (
+              {filteredCompletedList.length > 0 && (
                 <Pagination
                   currentPage={ledgerPage}
                   totalPages={ledgerTotalPages}
-                  totalItems={completedList.length}
+                  totalItems={filteredCompletedList.length}
                   itemsPerPage={ledgerItemsPerPage}
                   onPageChange={setLedgerPage}
                 />
@@ -435,7 +463,7 @@ export function SuperAdminExpenses() {
       </div>
       {/* Add Expense Modal */}
       <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
-        <DialogContent className="w-[95vw] max-w-lg rounded-2xl">
+        <DialogContent className="w-[95vw] max-w-lg rounded-2xl max-h-[90vh] overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900">Add New Expense</DialogTitle>
           </DialogHeader>
