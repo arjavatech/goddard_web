@@ -488,10 +488,12 @@ export function FormsDocuments({
         };
         const prefill: Record<string, string> = {};
         const dob = toYMD(selectedChildDob);
+        const parentName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ');
         if (form.childName)      prefill['child_name']   = form.childName;
         if (dob)                 prefill['child_dob']    = dob;
         if (selectedChildGender) prefill['child_gender'] = selectedChildGender.charAt(0).toUpperCase() + selectedChildGender.slice(1).toLowerCase();
         if (parentEmail)         prefill['parent_email'] = parentEmail;
+        if (parentName)          prefill['parent_name']  = parentName;
         const paramStr = Object.entries(prefill)
           .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
           .join('&');
