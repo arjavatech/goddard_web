@@ -1,21 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, FileText, CheckCircle2, LayoutList, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, CheckCircle2, LayoutList, X, Download, Printer, Home } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Loading } from '../components/ui/loading';
 import { Header } from '../components/layout/Header';
 import { StatusBadge } from '../components/dashboard/StatusBadge';
 import { useIframeScrollLock } from '../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../hooks/useEmbeddedFormResize';
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/TextLayer.css';
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL(
-  'pdfjs-dist/build/pdf.worker.min.mjs',
-  import.meta.url,
-).toString();
-
-type SiblingForm = { formId: string; title: string; status: string };
+type SiblingForm = {
+  formId: string;
+  title: string;
+  status: string;
+  recentPdfLink?: string | null;
+  recentEditLink?: string | null;
+  childName?: string | null;
+};
 
 export function ParentFormView() {
   const location = useLocation();
@@ -40,18 +40,14 @@ export function ParentFormView() {
 
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [numPages, setNumPages] = useState<number | null>(null);
-  const [pageNumber, setPageNumber] = useState(1);
   const [formHeight, setFormHeight] = useState(() =>
     typeof window !== 'undefined' ? Math.max(480, window.innerHeight - 120) : 700
   );
 
   const [drawerOpen, setDrawerOpen] = useState(false);
 
-  const thankYouTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isCountingDownRef = useRef(false);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
-  const pdfContainerRef = useRef<HTMLDivElement>(null);
   const mainAreaRef = useRef<HTMLDivElement>(null);
 
   useIframeScrollLock();
@@ -61,16 +57,53 @@ export function ParentFormView() {
   const progressPct = totalForms ? Math.round(((completedCount ?? 0) / totalForms) * 100) : 0;
   const hasSidebar = siblingForms && siblingForms.length > 0;
 
+  // Current form index in sibling list
+  const currentIndex = siblingForms
+    ? siblingForms.findIndex(f => f.formId === decodeURIComponent(currentFormId ?? ''))
+    : -1;
+  const prevSibling = currentIndex > 0 ? siblingForms![currentIndex - 1] : null;
+  const nextSibling = siblingForms && currentIndex >= 0 && currentIndex < siblingForms.length - 1
+    ? siblingForms[currentIndex + 1]
+    : null;
+
   const handleBack = () => navigate(back);
 
-  const startThankYouCountdown = () => {
+  const handleNavigateToSibling = (sibling: SiblingForm) => {
+    setDrawerOpen(false);
+    if (sibling.formId === decodeURIComponent(currentFormId ?? '')) return;
+
+    const isApproved = sibling.status === 'Approved' || sibling.status === 'Submitted';
+    let siblingViewUrl: string | null = null;
+
+    if (isApproved && sibling.recentPdfLink) {
+      siblingViewUrl = sibling.recentPdfLink;
+    } else if (sibling.recentEditLink) {
+      siblingViewUrl = sibling.recentEditLink;
+    }
+
+    if (siblingViewUrl) {
+      navigate(`/${schoolSlug}/dashboard/form/${encodeURIComponent(sibling.formId)}`, {
+        state: {
+          viewUrl: siblingViewUrl,
+          title: sibling.title,
+          status: sibling.status,
+          childName: sibling.childName ?? childName,
+          returnPath: back,
+          siblingForms,
+          completedCount,
+          totalForms,
+        },
+      });
+    } else {
+      // No URL available — go back to dashboard so the user can open it from there
+      navigate(back);
+    }
+  };
+
+  const showThankYouScreen = () => {
     if (isCountingDownRef.current) return;
     isCountingDownRef.current = true;
     setShowThankYou(true);
-    if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current);
-    thankYouTimeoutRef.current = setTimeout(() => {
-      navigate(back, { state: { formCompleted: true } });
-    }, 2000);
   };
 
   // Redirect if opened without state (e.g. direct URL visit)
@@ -92,8 +125,6 @@ export function ParentFormView() {
           data.data?.height ?? data.data?.size;
         if (typeof h === 'number' && h > 0) {
           const newH = Math.ceil(h);
-          // Fillout resets height on each page navigation — use a significant
-          // drop (>100px) as a reliable page-change signal to scroll to top.
           if (prevFormHeightRef.current !== null && Math.abs(newH - prevFormHeightRef.current) > 100) {
             mainAreaRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
           }
@@ -120,8 +151,8 @@ export function ParentFormView() {
 
       const type = (parsed.type || parsed.event || '').toString().toLowerCase();
       if (
-        type.includes('page') ||          // fillout: 'fillout-page-changed', arjava: 'arjava:page:change'
-        type.includes('step') ||           // step-based forms
+        type.includes('page') ||
+        type.includes('step') ||
         type.includes('next') ||
         type.includes('prev') ||
         type.includes('navigate') ||
@@ -183,7 +214,7 @@ export function ParentFormView() {
           ) isSubmitted = true;
         }
       }
-      if (isSubmitted) startThankYouCountdown();
+      if (isSubmitted) showThankYouScreen();
     };
     window.addEventListener('message', handleMessageGlobal);
     return () => window.removeEventListener('message', handleMessageGlobal);
@@ -198,7 +229,7 @@ export function ParentFormView() {
         if (iframe?.contentWindow) {
           const url = iframe.contentWindow.location.href;
           if (url.includes('thank') || url.includes('success') || url.includes('complete')) {
-            startThankYouCountdown();
+            showThankYouScreen();
             clearInterval(interval);
           }
         }
@@ -207,9 +238,28 @@ export function ParentFormView() {
     return () => clearInterval(interval);
   }, [title]);
 
-  useEffect(() => {
-    return () => { if (thankYouTimeoutRef.current) clearTimeout(thankYouTimeoutRef.current); };
-  }, []);
+  const handleDownload = async () => {
+    if (!viewUrl) return;
+    try {
+      const response = await fetch(viewUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${title || 'form'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      window.open(viewUrl, '_blank');
+    }
+  };
+
+  const handlePrint = () => {
+    if (!viewUrl) return;
+    window.open(viewUrl, '_blank');
+  };
 
   if (!viewUrl) return null;
 
@@ -277,17 +327,18 @@ export function ParentFormView() {
               </div>
             </div>
 
-            {/* Forms list */}
+            {/* Forms list — clickable */}
             <nav className="flex-1 overflow-y-auto no-scrollbar py-2">
               {siblingForms!.map((f, idx) => {
                 const isCurrent = decodeURIComponent(currentFormId ?? '') === f.formId;
                 return (
-                  <div
+                  <button
                     key={f.formId}
-                    className={`flex items-start gap-3 px-4 py-3 transition-colors border-l-2 ${
+                    onClick={() => handleNavigateToSibling(f)}
+                    className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-l-2 ${
                       isCurrent
                         ? 'border-white bg-white/10'
-                        : 'border-transparent hover:bg-white/5'
+                        : 'border-transparent hover:bg-white/5 cursor-pointer'
                     }`}
                   >
                     <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
@@ -306,10 +357,21 @@ export function ParentFormView() {
                         className="mt-1 text-[9px] px-1.5 py-0.5 gap-0.5 opacity-90"
                       />
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </nav>
+
+            {/* Sidebar footer — Back to Dashboard */}
+            <div className="shrink-0 px-4 py-4 border-t border-white/10">
+              <button
+                onClick={handleBack}
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-xs font-semibold"
+              >
+                <Home className="w-4 h-4" />
+                Back to Dashboard
+              </button>
+            </div>
 
           </aside>
         )}
@@ -318,17 +380,9 @@ export function ParentFormView() {
         <div ref={mainAreaRef} className="flex-1 flex flex-col min-w-0 bg-white relative overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
           {/* Title bar — sticky header */}
           <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
-            
-            {/* Left side: Back to Dashboard */}
-            <div className="flex-1 flex items-center justify-start min-w-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0 h-8 w-8 lg:hidden text-slate-500 hover:text-[#0F2D52] mr-1"
-                onClick={handleBack}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+
+            {/* Left: mobile Forms drawer toggle */}
+            <div className="flex items-center justify-start min-w-[2rem]">
               {hasSidebar && (
                 <Button
                   variant="ghost"
@@ -340,15 +394,6 @@ export function ParentFormView() {
                   Forms
                 </Button>
               )}
-              <Button
-                variant="outline"
-                size="sm"
-                className="shrink-0 h-8 px-3 gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors hidden lg:flex border-slate-200"
-                onClick={handleBack}
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-                Back to Dashboard
-              </Button>
             </div>
 
             {/* Center: Form Name */}
@@ -356,15 +401,10 @@ export function ParentFormView() {
               <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate max-w-full text-center">
                 {title}
               </h2>
-              {isReadOnly && (
-                <span className="shrink-0 ml-2 text-[10px] font-semibold text-green-700 bg-green-50 border border-green-200 px-2 py-0.5 rounded-full hidden sm:inline-flex">
-                  Read-only
-                </span>
-              )}
             </div>
 
             {/* Right side: Child Name */}
-            <div className="flex-1 flex items-center justify-end min-w-0">
+            <div className="flex items-center justify-end min-w-[2rem]">
               {childName && (
                 <span className="shrink-0 text-[11px] bg-slate-100 px-3 py-1.5 rounded-full text-slate-700 font-semibold truncate max-w-[150px] sm:max-w-[200px]">
                   {childName}
@@ -373,61 +413,65 @@ export function ParentFormView() {
             </div>
           </div>
 
-          {/* Form viewer — natural height, page scrolls */}
-          <div className="relative min-h-[480px]">
-            {isFrameLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
-                <Loading message="Loading form..." size="sm" />
+          {/* ── Success screen ── */}
+          {showThankYou ? (
+            <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 bg-white">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mb-6">
+                <CheckCircle2 className="w-9 h-9 text-emerald-500" />
               </div>
-            )}
-            {viewUrl && viewUrl !== '#' ? (
-              isReadOnly ? (
-                <div className="flex flex-col min-h-[70vh]">
-                  <div className="flex items-center justify-between p-3 bg-white border-b border-slate-100">
-                    <Button variant="outline" size="sm"
-                      onClick={() => {
-                        setPageNumber(p => Math.max(1, p - 1));
-                        pdfContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      disabled={pageNumber <= 1}
-                      className="flex items-center gap-1 text-xs px-3 h-7"
-                    >
-                      <ChevronLeft className="h-3 w-3" /> Prev
-                    </Button>
-                    <span className="text-xs font-medium text-slate-600">{pageNumber} / {numPages || '...'}</span>
-                    <Button variant="outline" size="sm"
-                      onClick={() => {
-                        setPageNumber(p => Math.min(numPages || 1, p + 1));
-                        pdfContainerRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      disabled={pageNumber >= (numPages || 1)}
-                      className="flex items-center gap-1 text-xs px-3 h-7"
-                    >
-                      Next <ChevronRight className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  <div
-                    ref={pdfContainerRef}
-                    className="flex-1 flex justify-center overflow-auto p-4"
-                    style={{ scrollBehavior: 'smooth' }}
+              <h2 className="text-2xl font-bold text-slate-900 mb-2 text-center">
+                Submitted Successfully!
+              </h2>
+              <p className="text-sm text-slate-500 mb-8 text-center">
+                Thank you! Your response has been recorded.
+              </p>
+              <Button
+                className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white px-8 h-12 text-sm font-semibold gap-2 transition-colors rounded-xl shadow-sm"
+                onClick={() => navigate(back, { state: { formCompleted: true } })}
+              >
+                <Home className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+            </div>
+          ) : isReadOnly ? (
+            /* ── Approved / read-only form view ── */
+            <div className="flex-1 flex flex-col items-center justify-center px-6 py-16 bg-white">
+              <div className="w-16 h-16 rounded-full bg-[#0F2D52]/10 flex items-center justify-center mb-6">
+                <FileText className="w-8 h-8 text-[#0F2D52]" />
+              </div>
+              <h2 className="text-xl font-bold text-slate-900 mb-1 text-center">{title}</h2>
+              <p className="text-sm text-slate-500 mb-8 text-center">
+                This form has been approved. You can download or print a copy.
+              </p>
+              {viewUrl && viewUrl !== '#' && (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-11 px-6 gap-2 text-sm font-semibold transition-colors"
+                    onClick={handleDownload}
                   >
-                    <Document
-                      file={viewUrl}
-                      onLoadSuccess={({ numPages: n }) => { setNumPages(n); setIsFrameLoading(false); }}
-                      loading={<Loading message="Loading PDF..." size="sm" />}
-                      error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
-                    >
-                      <Page
-                        pageNumber={pageNumber}
-                        width={typeof window !== 'undefined' ? Math.min(1100, window.innerWidth - 40) : 1100}
-                        renderTextLayer={true}
-                        renderAnnotationLayer={false}
-                        className="shadow-lg"
-                      />
-                    </Document>
-                  </div>
+                    <Download className="h-4 w-4" />
+                    Download Form
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52] hover:text-white h-11 px-6 gap-2 text-sm font-semibold transition-colors"
+                    onClick={handlePrint}
+                  >
+                    <Printer className="h-4 w-4" />
+                    Print Form
+                  </Button>
                 </div>
-              ) : (
+              )}
+            </div>
+          ) : (
+            /* ── Editable form (iframe) ── */
+            <div className="relative min-h-[480px]">
+              {isFrameLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
+                  <Loading message="Loading form..." size="sm" />
+                </div>
+              )}
+              {viewUrl && viewUrl !== '#' ? (
                 <>
                   <style>{`
                     @media (max-width: 640px) {
@@ -455,13 +499,65 @@ export function ParentFormView() {
                     />
                   </div>
                 </>
-              )
-            ) : (
-              <div className="flex items-center justify-center min-h-[40vh] text-slate-400 text-sm">
-                Unable to load form. Please check the form configuration.
-              </div>
-            )}
-          </div>
+              ) : (
+                <div className="flex items-center justify-center min-h-[40vh] text-slate-400 text-sm">
+                  Unable to load form. Please check the form configuration.
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Bottom navigation bar ── */}
+          {!showThankYou && (
+            <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 flex items-center justify-between gap-3">
+              {/* Previous */}
+              {hasSidebar ? (
+                <Button
+                  variant="outline"
+                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 transition-colors ${
+                    prevSibling
+                      ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]'
+                      : 'text-slate-300 border-slate-200 cursor-not-allowed'
+                  }`}
+                  disabled={!prevSibling}
+                  onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+              ) : (
+                <div />
+              )}
+
+              {/* Back to Dashboard — center, prominent */}
+              <Button
+                className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
+                onClick={handleBack}
+              >
+                <Home className="h-4 w-4" />
+                Back to Dashboard
+              </Button>
+
+              {/* Next */}
+              {hasSidebar ? (
+                <Button
+                  variant="outline"
+                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 transition-colors ${
+                    nextSibling
+                      ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]'
+                      : 'text-slate-300 border-slate-200 cursor-not-allowed'
+                  }`}
+                  disabled={!nextSibling}
+                  onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              ) : (
+                <div />
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

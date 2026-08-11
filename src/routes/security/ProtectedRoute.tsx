@@ -25,7 +25,7 @@ export function ProtectedRoute({
   }
 
   if (sessionStorage.getItem('first_login_reset_pending') === 'true') {
-    return <Navigate to="/set-password" replace />;
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (!isReady) {
