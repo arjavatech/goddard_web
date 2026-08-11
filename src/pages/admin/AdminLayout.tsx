@@ -375,7 +375,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* ── Footer (outside main flex) ── */}
       <footer className="w-full bg-[#1a3a5c]">
         {/* Main body */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
             {/* ── Brand column ── */}
@@ -485,7 +485,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* ── Bottom bar ── */}
           <div className="border-t border-white/10 mt-3">
-            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
               <p className="text-xs text-slate-400 text-center sm:text-left">
                 © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
               </p>

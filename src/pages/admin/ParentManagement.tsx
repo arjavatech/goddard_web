@@ -800,7 +800,7 @@ export function ParentManagement() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12  mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading parent management...</p>
@@ -816,7 +816,7 @@ export function ParentManagement() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12  space-y-6 pb-12"
       >
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">

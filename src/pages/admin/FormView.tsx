@@ -327,7 +327,7 @@ export function FormView() {
     </AdminLayout>;
   }
   return <AdminLayout>
-    <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
+    <div className="space-y-6  mx-auto mt-14 pb-26">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">

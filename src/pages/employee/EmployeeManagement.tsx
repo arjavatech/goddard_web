@@ -246,7 +246,7 @@ export function EmployeeManagement() {
   if (isLoading && employees.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12  mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading employees...</p>
@@ -258,7 +258,7 @@ export function EmployeeManagement() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-2 sm:px-4 py-0 sm:pt-6 max-w-7xl space-y-6 pb-12">
+      <div className="container mx-auto px-2 sm:px-4 py-0 sm:pt-6  space-y-6 pb-12">
 
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
