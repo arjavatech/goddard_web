@@ -5,25 +5,30 @@ import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
 import { EmployeeService, type Employee } from '../../services/api/employee';
-import { 
-  ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2, 
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School
+import { fetchClassrooms, type Classroom } from '../../services/api/admin';
+import {
+  ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap
 } from 'lucide-react';
 
 export function AdminRequests() {
   const { userData } = useUserContext();
+  const { user } = useAuth();
   const { showToast } = useToast();
   
   // Lists
   const [requests, setRequests] = useState<Request[]>([]);
   const [teachers, setTeachers] = useState<Employee[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   
   // States
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
@@ -34,11 +39,12 @@ export function AdminRequests() {
     item: '',
     quantity: 1,
     category: 'Classroom Supplies',
-    scope: 'school' as 'school' | 'teacher',
+    scope: 'school' as 'school' | 'classroom' | 'teacher',
+    classroomId: '',
+    classroomName: '',
     teacherId: '',
     teacherName: '',
     productLink: '',
-    productImage: '',
     notes: ''
   });
 
@@ -75,12 +81,30 @@ export function AdminRequests() {
     }
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', 'Image must be under 2 MB.', 'File Too Large');
+      return;
+    }
+    setImageFile(file);
+  };
+
+  const handleClearImage = () => {
+    setImageFile(null);
+  };
+
   const loadData = async () => {
     if (!userData?.schoolId) return;
     setLoading(true);
     try {
-      await fetchTeacherList(userData.schoolId);
-      const reqList = await RequestService.fetchRequests(userData.schoolId, 'admin');
+      const [, classroomList, reqList] = await Promise.all([
+        fetchTeacherList(userData.schoolId),
+        fetchClassrooms(userData.schoolId),
+        RequestService.fetchRequests(userData.schoolId, 'admin'),
+      ]);
+      setClassrooms(classroomList);
       setRequests(reqList);
     } catch (e) {
       showToast('error', 'Failed to load requests data. Please refresh.', 'Error Loading Data');
@@ -96,7 +120,14 @@ export function AdminRequests() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
-    if (name === 'teacherId') {
+    if (name === 'classroomId') {
+      const selected = classrooms.find(c => c.id === value);
+      setFormData(prev => ({
+        ...prev,
+        classroomId: value,
+        classroomName: selected ? selected.name : ''
+      }));
+    } else if (name === 'teacherId') {
       const selected = teachers.find(t => t.id === value);
       setFormData(prev => ({
         ...prev,
@@ -125,6 +156,9 @@ export function AdminRequests() {
     if (!formData.item.trim()) errors.item = 'Request item name is required';
     if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
     
+    if (formData.scope === 'classroom' && !formData.classroomId) {
+      errors.classroomId = 'Please select a classroom';
+    }
     if (formData.scope === 'teacher' && !formData.teacherId) {
       errors.teacherId = 'Please select a teacher';
     }
@@ -138,12 +172,14 @@ export function AdminRequests() {
       quantity: 1,
       category: 'Classroom Supplies',
       scope: 'school',
+      classroomId: '',
+      classroomName: '',
       teacherId: teachers[0]?.id || '',
       teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
       productLink: '',
-      productImage: '',
       notes: ''
     });
+    setImageFile(null);
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -160,19 +196,20 @@ export function AdminRequests() {
 
       await RequestService.createRequest({
         schoolId: userData?.schoolId || 'school-1',
-        requesterId: userData?.email || 'admin-1',
+        requesterId: user?.id || '',
         requesterName,
         requesterRole: 'admin',
         item: formData.item,
         quantity: formData.quantity,
         category: formData.category,
         scope: formData.scope,
+        classroomId: formData.scope === 'classroom' ? formData.classroomId : undefined,
+        classroomName: formData.scope === 'classroom' ? formData.classroomName : undefined,
         teacherId: formData.scope === 'teacher' ? formData.teacherId : undefined,
         teacherName: formData.scope === 'teacher' ? formData.teacherName : undefined,
         productLink: formData.productLink || undefined,
-        productImage: formData.productImage || undefined,
         notes: formData.notes || undefined
-      });
+      }, imageFile || undefined);
 
       showToast('success', 'Admin request created successfully. Sent to Super Admin for validation.', 'Request Created');
       setIsModalOpen(false);
@@ -425,10 +462,10 @@ export function AdminRequests() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Request Scope <span className="text-red-500">*</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'school', teacherId: '', teacherName: '' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, scope: 'school', classroomId: '', classroomName: '', teacherId: '', teacherName: '' }))}
                   className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
                     formData.scope === 'school'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
@@ -436,12 +473,25 @@ export function AdminRequests() {
                   }`}
                 >
                   <School className="w-4 h-4" />
-                  <span>All Classrooms</span>
-                  <span className="text-[9px] font-medium opacity-60">School-wide</span>
+                  <span>School-wise</span>
+                  <span className="text-[9px] font-medium opacity-60">All classrooms</span>
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'teacher', teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '' }))}
+                  onClick={() => setFormData(prev => ({ ...prev, scope: 'classroom', classroomId: classrooms[0]?.id || '', classroomName: classrooms[0]?.name || '', teacherId: '', teacherName: '' }))}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
+                    formData.scope === 'classroom'
+                      ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
+                      : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
+                  }`}
+                >
+                  <GraduationCap className="w-4 h-4" />
+                  <span>Class-wise</span>
+                  <span className="text-[9px] font-medium opacity-60">Specific class</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, scope: 'teacher', classroomId: '', classroomName: '', teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '' }))}
                   className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
                     formData.scope === 'teacher'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
@@ -449,11 +499,31 @@ export function AdminRequests() {
                   }`}
                 >
                   <User className="w-4 h-4" />
-                  <span>Teacher Issue</span>
+                  <span>Teacher-wise</span>
                   <span className="text-[9px] font-medium opacity-60">Specific teacher</span>
                 </button>
               </div>
             </div>
+
+            {/* Classroom Selector (if scope is classroom) */}
+            {formData.scope === 'classroom' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Classroom <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="classroomId"
+                  value={formData.classroomId}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+                >
+                  {classrooms.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {formErrors.classroomId && <p className="text-xs text-red-600 font-semibold">{formErrors.classroomId}</p>}
+              </div>
+            )}
 
             {/* Teacher Selector (if scope is teacher) */}
             {formData.scope === 'teacher' && (
@@ -542,32 +612,43 @@ export function AdminRequests() {
               />
             </div>
 
-            {/* Product Image Link (Optional) */}
+            {/* Product Image Upload (Optional) */}
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Product Image (Optional)
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Product Image (Optional)
+              </label>
+              {!imageFile ? (
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                  <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
+                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
+                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP up to 2MB</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
                 </label>
-               
-              </div>
-              <input
-                type="text"
-                name="productImage"
-                placeholder="Paste Image URL or select Auto-Attach"
-                value={formData.productImage}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
-              />
-              {formData.productImage && (
-                <div className="mt-2 relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
-                  <img src={formData.productImage} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, productImage: '' }))}
-                    className="absolute top-1 right-1 bg-slate-900/60 text-white rounded-full p-0.5 text-[9px] w-4 h-4 flex items-center justify-center font-bold"
-                  >
-                    ×
-                  </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img
+                      src={URL.createObjectURL(imageFile)}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
+                    <button
+                      type="button"
+                      onClick={handleClearImage}
+                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -601,7 +682,7 @@ export function AdminRequests() {
                 disabled={submitting}
                 className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
               >
-                {submitting ? 'Submitting...' : 'Submit Request'}
+                {submitting ? (imageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
               </Button>
             </DialogFooter>
           </form>
