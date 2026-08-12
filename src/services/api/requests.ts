@@ -27,6 +27,7 @@ export type Request = {
   paymentMethod?: string;
   purchaseDate?: string;
   paymentNotes?: string;
+  billImageUrl?: string;
 };
 
 export type PaymentDetails = {
@@ -103,6 +104,7 @@ function mapRequest(r: any): Request {
     paymentMethod: r.payment_method ?? undefined,
     purchaseDate: r.purchase_date ?? undefined,
     paymentNotes: r.payment_notes ?? undefined,
+    billImageUrl: r.bill_image ?? undefined,
   };
 }
 
@@ -242,16 +244,34 @@ export const RequestService = {
   },
 
   /** POST /requests/:id/pay — mark as Completed and record payment */
-  async processPayment(requestId: string, paymentDetails: PaymentDetails): Promise<Request> {
+  async processPayment(requestId: string, paymentDetails: PaymentDetails, billImageFile?: File): Promise<Request> {
+    let billImageBase64: string | undefined;
+    let billImageName: string | undefined;
+    let billImageContentType: string | undefined;
+
+    if (billImageFile) {
+      billImageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(billImageFile);
+      });
+      billImageName = billImageFile.name;
+      billImageContentType = billImageFile.type;
+    }
+
     const data = await authedFetch(
       {
         method: 'POST',
         url: `/requests/${requestId}/pay`,
         body: {
-          amountSpent:   paymentDetails.amountSpent,
-          paymentMethod: paymentDetails.paymentMethod,
-          purchaseDate:  paymentDetails.purchaseDate,
-          paymentNotes:  paymentDetails.paymentNotes,
+          amountSpent:          paymentDetails.amountSpent,
+          paymentMethod:        paymentDetails.paymentMethod,
+          purchaseDate:         paymentDetails.purchaseDate,
+          paymentNotes:         paymentDetails.paymentNotes,
+          billImageBase64,
+          billImageName,
+          billImageContentType,
         },
       },
       z.any()
@@ -304,8 +324,8 @@ export const RequestService = {
   },
 
   /** Legacy alias for processPayment */
-  async verifyRequest(requestId: string, paymentDetails: PaymentDetails): Promise<Request> {
-    return RequestService.processPayment(requestId, paymentDetails);
+  async verifyRequest(requestId: string, paymentDetails: PaymentDetails, billImageFile?: File): Promise<Request> {
+    return RequestService.processPayment(requestId, paymentDetails, billImageFile);
   },
 
   /** DELETE /requests/:id */
