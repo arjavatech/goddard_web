@@ -31,6 +31,10 @@ interface Form {
   classroomsCount: number;
   dueDate?: string;
 }
+const parseLocalDate = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 const mapStatus = (status: string | null | undefined): FormStatus => {
   const value = (status ?? '').toLowerCase();
   if (value.includes('default') || value.includes('school_default')) return 'school_default';
@@ -188,7 +192,7 @@ export function FormsManagement() {
       hideInCardBody: true,
       cell: (form) => (
         <span className="text-xs font-semibold text-slate-600">
-          {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+          {form.dueDate ? parseLocalDate(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
         </span>
       )
     },
@@ -676,7 +680,7 @@ export function FormsManagement() {
                         <div className="min-w-0 flex-1">
                           <h3 className="font-bold text-sm text-slate-900 truncate leading-tight">{form.name}</h3>
                           <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                            Due: {form.dueDate ? new Date(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
+                            Due: {form.dueDate ? parseLocalDate(form.dueDate).toLocaleDateString('en-US') : 'No due date'}
                           </p>
                         </div>
                         <DropdownMenu>
