@@ -31,6 +31,7 @@ export function AdminRequests() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [scopeFilter, setScopeFilter] = useState<string>('all');
   
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -228,7 +229,8 @@ export function AdminRequests() {
     const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
+    const matchesScope = scopeFilter === 'all' || req.scope === scopeFilter;
+    return matchesSearch && matchesStatus && matchesScope;
   });
 
   const getStatusBadgeClass = (status: RequestStatus) => {
@@ -294,9 +296,19 @@ export function AdminRequests() {
           <div className="flex items-center gap-2 w-full md:w-auto">
             <Filter className="text-slate-400 w-4 h-4 flex-shrink-0" />
             <select
+              value={scopeFilter}
+              onChange={e => setScopeFilter(e.target.value)}
+              className="w-full md:w-40 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+            >
+              <option value="all">All Scopes</option>
+              <option value="school">School-wise</option>
+              <option value="classroom">Class-wise</option>
+              <option value="teacher">Teacher-wise</option>
+            </select>
+            <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
-              className="w-full md:w-44 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+              className="w-full md:w-40 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
