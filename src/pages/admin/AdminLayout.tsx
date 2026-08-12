@@ -195,7 +195,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-500 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
@@ -252,7 +251,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-400 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => setShowLogoutModal(true)}
@@ -322,13 +320,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <DropdownMenuContent align="end" className="w-auto min-w-[15rem] p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
-                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400`}>{userData?.email}</div></div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{userData?.firstName} {userData?.lastName}</p>
+                          <div className="whitespace-nowrap text-xs text-slate-400">{userData?.email}</div>
                           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
                         </div>
                       </div>

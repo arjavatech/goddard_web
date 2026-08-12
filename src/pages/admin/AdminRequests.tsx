@@ -12,7 +12,8 @@ import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -33,6 +34,21 @@ export function AdminRequests() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [scopeFilter, setScopeFilter] = useState<string>('all');
   
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const activeFilterCount = (sortConfig ? 1 : 0) + (scopeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setSortConfig(null);
+    setScopeFilter('all');
+    setStatusFilter('all');
+    setCurrentPage(1);
+  };
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -233,6 +249,33 @@ export function AdminRequests() {
     return matchesSearch && matchesStatus && matchesScope;
   });
 
+  const sortedRequests = [...searchedAndFiltered].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    const aVal = a[key] ?? '';
+    const bVal = b[key] ?? '';
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const requestSort = (key: keyof Request) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const totalPages = Math.max(1, Math.ceil(sortedRequests.length / recordsPerPage));
+  const paginatedRequests = sortedRequests.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
       case 'Pending':
@@ -281,51 +324,160 @@ export function AdminRequests() {
         </div>
 
         {/* Filter and Search Bar */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by item..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
-            />
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm mb-6 flex flex-col overflow-hidden">
+          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by item..."
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(prev => !prev)}
+                size="sm"
+                className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 sm:px-4 flex-shrink-0"
+              >
+                {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
+                {!showFilters && activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadData}
+                disabled={loading}
+                className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
+                title="Refresh list"
+              >
+                <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <Filter className="text-slate-400 w-4 h-4 flex-shrink-0" />
-            <select
-              value={scopeFilter}
-              onChange={e => setScopeFilter(e.target.value)}
-              className="w-full md:w-40 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
-            >
-              <option value="all">All Scopes</option>
-              <option value="school">School-wise</option>
-              <option value="classroom">Class-wise</option>
-              <option value="teacher">Teacher-wise</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="w-full md:w-40 px-3 py-2 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
+          {/* Collapsible Filter Area */}
+          {showFilters && (
+            <div className="p-4 border-t border-slate-50 bg-slate-50/50">
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                  </span>
+                  <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
+                  <select
+                    value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : 'default'}
+                    onChange={e => {
+                      if (e.target.value === 'default') {
+                        setSortConfig(null);
+                      } else {
+                        const [key, direction] = e.target.value.split('-');
+                        setSortConfig({ key: key as keyof Request, direction: direction as 'asc' | 'desc' });
+                      }
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
+                  >
+                    <option value="default">Default Sort</option>
+                    <option value="createdAt-desc">Date (Newest)</option>
+                    <option value="createdAt-asc">Date (Oldest)</option>
+                    <option value="item-asc">Item (A-Z)</option>
+                    <option value="item-desc">Item (Z-A)</option>
+                    <option value="quantity-desc">Quantity (High-Low)</option>
+                    <option value="quantity-asc">Quantity (Low-High)</option>
+                  </select>
+                </div>
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={loadData}
-              disabled={loading}
-              className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
-              title="Refresh list"
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
+                  <select
+                    value={scopeFilter}
+                    onChange={e => { setScopeFilter(e.target.value); setCurrentPage(1); }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  >
+                    <option value="all">All Scopes</option>
+                    <option value="school">School-wise</option>
+                    <option value="classroom">Class-wise</option>
+                    <option value="teacher">Teacher-wise</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Count + View Toggle */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+          <div className="text-sm font-medium text-slate-600">
+            Showing <span className="font-bold text-slate-900">{sortedRequests.length}</span> requests
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={recordsPerPage}
+              onChange={e => { setRecordsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700 h-9"
             >
-              <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
+            <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+              <button
+                onClick={() => setViewMode('card')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'card' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'table' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <TableProperties className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -335,7 +487,7 @@ export function AdminRequests() {
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] h-8 w-8 mb-3"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading request lists...</p>
           </div>
-        ) : searchedAndFiltered.length === 0 ? (
+        ) : sortedRequests.length === 0 ? (
           <div className="rounded-2xl border border-slate-100 bg-white p-12 text-center shadow-sm">
             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <ShoppingBag className="w-8 h-8 text-slate-300" />
@@ -345,10 +497,10 @@ export function AdminRequests() {
               No matching items for this role and status filter.
             </p>
           </div>
-        ) : (
+        ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {searchedAndFiltered.map((req, idx) => (
+              {paginatedRequests.map((req, idx) => (
                 <motion.div
                   key={req.id}
                   initial={{ opacity: 0, y: 15 }}
@@ -452,6 +604,141 @@ export function AdminRequests() {
                 </motion.div>
               ))}
             </AnimatePresence>
+          </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm min-w-[900px]">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors w-2/5" onClick={() => requestSort('item')}>
+                      <div className="flex items-center gap-1.5">
+                        Item {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors">
+                      Scope / Target
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
+                      <div className="flex items-center gap-1.5">
+                        Qty {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('status')}>
+                      <div className="flex items-center gap-1.5">
+                        Status {sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('createdAt')}>
+                      <div className="flex items-center gap-1.5">
+                        Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {paginatedRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-slate-50/40 transition-colors group">
+                      <td className="px-4 py-3.5 text-slate-900">
+                        <div className="flex gap-3 items-start">
+                          {req.productImage ? (
+                            <img src={req.productImage} alt={req.item} className="w-11 h-11 rounded-lg object-cover border border-slate-100 flex-shrink-0 bg-slate-50" />
+                          ) : (
+                            <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-sm line-clamp-2">{req.item}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{req.category || 'Supplies'}</span>
+                            <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                              <span className="font-semibold text-slate-700">{req.requesterName}</span>
+                              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded font-bold uppercase">{req.requesterRole}</span>
+                            </p>
+                            {req.productLink && (
+                              <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="text-[#1a6fc4] hover:text-[#0F2D52] hover:underline inline-flex items-center gap-1 text-[10px] font-medium w-fit mt-0.5">
+                                <Link2 className="w-3 h-3" /> View Product
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-600">
+                        {req.scope === 'classroom' && (
+                          <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
+                        )}
+                        {req.scope === 'teacher' && (
+                          <>Scope: <span className="font-bold text-slate-700">Teacher Issue ({req.teacherName})</span></>
+                        )}
+                        {req.scope === 'school' && (
+                          <>Scope: <span className="font-bold text-slate-700">All Classrooms</span></>
+                        )}
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-700">
+                        {req.quantity}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                            {getStatusIcon(req.status)}
+                            {req.status}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                        {new Date(req.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && sortedRequests.length > 0 && (
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+            <div className="text-slate-500">
+              Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span> to <span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span> requests
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+              </Button>
+              <div className="hidden sm:flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1)
+                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                  .map((p, i, arr) => (
+                    <React.Fragment key={p}>
+                      {i > 0 && arr[i - 1] !== p - 1 && (
+                        <span className="px-2 text-slate-400">...</span>
+                      )}
+                      <button
+                        onClick={() => setCurrentPage(p)}
+                        className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-colors ${currentPage === p ? 'bg-[#0F2D52] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                      >
+                        {p}
+                      </button>
+                    </React.Fragment>
+                  ))}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            </div>
           </div>
         )}
 
