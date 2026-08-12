@@ -11,9 +11,9 @@ import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
-import { 
-  ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2, 
-  ExternalLink, Link2, ImageIcon, AlertCircle, RefreshCw, FileText, ArrowLeft
+import {
+  ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft
 } from 'lucide-react';
 
 export function EmployeeRequests() {
@@ -42,6 +42,7 @@ export function EmployeeRequests() {
     productImage: '',
     notes: ''
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const categories = [
     'Classroom Supplies',
@@ -84,7 +85,7 @@ export function EmployeeRequests() {
     try {
       // First get employee record to identify requester ID
       const emp = await EmployeeService.fetchCurrentEmployee(userData.schoolId).catch(() => null);
-      const empId = emp?.id || userData.email || 'emp-bypass';
+      const empId = emp?.userId || userData.id || userData.email || 'emp-bypass';
       setEmployeeId(empId);
 
       // Load classrooms
@@ -142,6 +143,23 @@ export function EmployeeRequests() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      showToast('error', 'Image must be under 2 MB.', 'File Too Large');
+      e.target.value = '';
+      return;
+    }
+    setImageFile(file);
+    setFormData(prev => ({ ...prev, productImage: '' }));
+  };
+
+  const handleClearImage = () => {
+    setImageFile(null);
+    setFormData(prev => ({ ...prev, productImage: '' }));
+  };
+
   const handleOpenModal = () => {
     setFormData({
       item: '',
@@ -153,6 +171,7 @@ export function EmployeeRequests() {
       productImage: '',
       notes: ''
     });
+    setImageFile(null);
     setFormErrors({});
     setIsModalOpen(true);
   };
@@ -163,7 +182,7 @@ export function EmployeeRequests() {
 
     setSubmitting(true);
     try {
-      const requesterName = userData 
+      const requesterName = userData
         ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Employee'
         : 'Sarah Jenkins';
 
@@ -179,9 +198,8 @@ export function EmployeeRequests() {
         classroomId: formData.classroomId,
         classroomName: formData.classroomName,
         productLink: formData.productLink || undefined,
-        productImage: formData.productImage || undefined,
         notes: formData.notes || undefined
-      });
+      }, imageFile || undefined);
 
       showToast('success', 'Your request has been submitted with a Pending status.', 'Request Submitted');
       setIsModalOpen(false);
@@ -530,32 +548,43 @@ export function EmployeeRequests() {
               />
             </div>
 
-            {/* Product Image Link (Optional) */}
+            {/* Product Image Upload (Optional) */}
             <div className="space-y-1.5">
-              <div className="flex justify-between items-center">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Product Image (Optional)
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Product Image (Optional)
+              </label>
+              {!imageFile ? (
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                  <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
+                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
+                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP up to 2MB</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
                 </label>
-               
-              </div>
-              <input
-                type="text"
-                name="productImage"
-                placeholder="Paste Image URL or select Auto-Attach"
-                value={formData.productImage}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
-              />
-              {formData.productImage && (
-                <div className="mt-2 relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex items-center justify-center">
-                  <img src={formData.productImage} alt="Preview" className="w-full h-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, productImage: '' }))}
-                    className="absolute top-1 right-1 bg-slate-900/60 text-white rounded-full p-0.5 text-[9px] w-4 h-4 flex items-center justify-center font-bold"
-                  >
-                    ×
-                  </button>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img
+                      src={URL.createObjectURL(imageFile)}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
+                    <button
+                      type="button"
+                      onClick={handleClearImage}
+                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -589,7 +618,7 @@ export function EmployeeRequests() {
                 disabled={submitting}
                 className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
               >
-                {submitting ? 'Submitting...' : 'Submit Request'}
+                {submitting ? (imageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
               </Button>
             </DialogFooter>
           </form>

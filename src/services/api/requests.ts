@@ -1,9 +1,4 @@
-import {
-  requestsMockApi,
-  type PaymentDetails,
-  type ExpenseRecord,
-  type ExpenseSummary
-} from '../mock/requests';
+import { authedFetch, z } from './common';
 
 export type RequestStatus = 'Pending' | 'In Progress' | 'Completed';
 export type RequestScope = 'classroom' | 'teacher' | 'school';
@@ -17,7 +12,7 @@ export type Request = {
   item: string;
   quantity: number;
   productLink?: string;
-  productImage?: string; // Can be URL or Base64 string
+  productImage?: string;
   notes?: string;
   scope: RequestScope;
   classroomId?: string;
@@ -26,6 +21,7 @@ export type Request = {
   teacherName?: string;
   category?: string;
   status: RequestStatus;
+  source?: 'request' | 'manual';
   createdAt: string;
   amountSpent?: number;
   paymentMethod?: string;
@@ -33,67 +29,290 @@ export type Request = {
   paymentNotes?: string;
 };
 
-export type { PaymentDetails, ExpenseRecord, ExpenseSummary };
+export type PaymentDetails = {
+  amountSpent: number;
+  paymentMethod: string;
+  purchaseDate: string;
+  paymentNotes?: string;
+};
+
+export type ExpenseRecord = {
+  id: string;
+  requestId: string;
+  schoolId: string;
+  item: string;
+  requesterName: string;
+  requesterRole: Request['requesterRole'];
+  scope: RequestScope;
+  category?: string;
+  quantity: number;
+  classroomName?: string;
+  teacherName?: string;
+  amountSpent: number;
+  paymentMethod: string;
+  purchaseDate: string;
+  paymentNotes?: string;
+  recordedAt: string;
+};
+
+export type ExpenseSummary = {
+  totalSpent: number;
+  totalRequests: number;
+  completedCount: number;
+  byClassroom: { name: string; amount: number }[];
+  byTeacher: { name: string; amount: number }[];
+  byScope: { name: string; amount: number }[];
+  byCategory: { name: string; amount: number }[];
+  requestWise: {
+    requestId: string;
+    item: string;
+    requesterName: string;
+    requesterRole: Request['requesterRole'];
+    amount: number;
+    purchaseDate: string;
+    paymentMethod: string;
+  }[];
+};
+
 export type RequestExpenseData = { expenses: ExpenseRecord[]; summary: ExpenseSummary };
 
-/**
- * Procurement requests & expenses service.
- *
- * All operations currently delegate to the mock data layer in
- * `src/services/mock/requests.ts`. Once the real backend endpoints ship,
- * swap each method body for an `authedFetch` call — the signatures here are
- * kept as the stable contract that the UI depends on.
- */
+// ─── Mapping helpers (backend returns snake_case) ─────────────────────────────
+
+function mapRequest(r: any): Request {
+  return {
+    id: r.id,
+    schoolId: r.school_id,
+    requesterId: r.requester_id ?? '',
+    requesterName: r.requester_name,
+    requesterRole: r.requester_role as Request['requesterRole'],
+    item: r.item,
+    quantity: r.quantity ?? 1,
+    productLink: r.product_link ?? undefined,
+    productImage: r.product_image ?? undefined,
+    notes: r.notes ?? undefined,
+    scope: r.scope as RequestScope,
+    classroomId: r.classroom_id ?? undefined,
+    classroomName: r.classroom_name ?? undefined,
+    teacherId: r.teacher_id ?? undefined,
+    teacherName: r.teacher_name ?? undefined,
+    category: r.category ?? undefined,
+    status: r.status as RequestStatus,
+    source: r.source ?? 'request',
+    createdAt: r.created_at ?? new Date().toISOString(),
+    amountSpent: r.amount_spent ?? undefined,
+    paymentMethod: r.payment_method ?? undefined,
+    purchaseDate: r.purchase_date ?? undefined,
+    paymentNotes: r.payment_notes ?? undefined,
+  };
+}
+
+function mapExpenseRecord(r: any): ExpenseRecord {
+  return {
+    id: r.id,
+    requestId: r.id,
+    schoolId: r.school_id,
+    item: r.item,
+    requesterName: r.requester_name,
+    requesterRole: r.requester_role as Request['requesterRole'],
+    scope: (r.scope ?? 'school') as RequestScope,
+    category: r.category ?? undefined,
+    quantity: r.quantity ?? 1,
+    classroomName: r.classroom_name ?? undefined,
+    teacherName: r.teacher_name ?? undefined,
+    amountSpent: r.amount_spent ?? 0,
+    paymentMethod: r.payment_method ?? '',
+    purchaseDate: r.purchase_date ?? r.created_at?.slice(0, 10) ?? '',
+    paymentNotes: r.payment_notes ?? undefined,
+    recordedAt: r.created_at ?? new Date().toISOString(),
+  };
+}
+
+function mapSummary(s: any, expenseRows: any[]): ExpenseSummary {
+  const byScope: { name: string; amount: number }[] = [];
+  if (s?.by_scope) {
+    if (s.by_scope.classroom > 0) byScope.push({ name: 'Classrooms', amount: s.by_scope.classroom });
+    if (s.by_scope.teacher > 0)   byScope.push({ name: 'Teachers',   amount: s.by_scope.teacher });
+    if (s.by_scope.school > 0)    byScope.push({ name: 'Entire School', amount: s.by_scope.school });
+  }
+
+  return {
+    totalSpent: s?.total_spent ?? 0,
+    totalRequests: expenseRows.length,
+    completedCount: expenseRows.length,
+    byClassroom: (s?.by_classroom ?? []).map((x: any) => ({ name: x.name, amount: x.total })),
+    byTeacher:   (s?.by_teacher   ?? []).map((x: any) => ({ name: x.name, amount: x.total })),
+    byScope,
+    byCategory:  (s?.by_category  ?? []).map((x: any) => ({ name: x.name, amount: x.total })),
+    requestWise: expenseRows
+      .filter((r: any) => r.amount_spent != null)
+      .map((r: any) => ({
+        requestId:     r.id,
+        item:          r.item,
+        requesterName: r.requester_name,
+        requesterRole: r.requester_role as Request['requesterRole'],
+        amount:        r.amount_spent ?? 0,
+        purchaseDate:  r.purchase_date ?? '',
+        paymentMethod: r.payment_method ?? '',
+      })),
+  };
+}
+
+// ─── Service ─────────────────────────────────────────────────────────────────
+
 export const RequestService = {
   /** GET /requests */
-  async fetchRequests(schoolId?: string, userRole?: string, userId?: string): Promise<Request[]> {
-    return requestsMockApi.fetchRequests({ schoolId, role: userRole, userId });
+  async fetchRequests(schoolId?: string, _userRole?: string, userId?: string): Promise<Request[]> {
+    const params = new URLSearchParams();
+    if (schoolId)  params.set('schoolId', schoolId);
+    if (userId)    params.set('userId', userId);
+    params.set('limit', '100');
+
+    const data = await authedFetch(
+      { method: 'GET', url: `/requests?${params.toString()}` },
+      z.any()
+    );
+    const rows: any[] = data?.data ?? [];
+    return rows.map(mapRequest);
   },
 
-  /** POST /requests */
-  async createRequest(req: Omit<Request, 'id' | 'status' | 'createdAt'>): Promise<Request> {
-    return requestsMockApi.createRequest(req);
-  },
-
-  /** PATCH /requests/:id/status — update request status (Pending → In Progress → Completed) */
-  async updateRequestStatus(requestId: string, status: RequestStatus): Promise<Request> {
-    return requestsMockApi.updateRequestStatus(requestId, status);
-  },
-
-  /** Admin validation — moves an employee request forward for super-admin review. */
-  async validateRequest(requestId: string, _schoolId?: string): Promise<Request> {
-    return requestsMockApi.updateRequestStatus(requestId, 'In Progress');
-  },
-
-  /** Process a payment and record the expense ledger entry. */
-  async processPayment(requestId: string, paymentDetails: PaymentDetails): Promise<Request> {
-    return requestsMockApi.processPayment(requestId, paymentDetails);
-  },
-
-  /** POST /expenses — record an expense ledger entry. */
-  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>): Promise<ExpenseRecord> {
-    return requestsMockApi.recordExpense(details);
-  },
-
-  /** GET /expenses + GET /expenses/summary — expense/tracking data for analytics. */
-  async fetchExpenseData(schoolId?: string): Promise<RequestExpenseData> {
-    const [expenses, summary] = await Promise.all([
-      requestsMockApi.fetchExpenses({ schoolId }),
-      requestsMockApi.fetchExpenseSummary({ schoolId })
-    ]);
-    return { expenses, summary };
-  },
-
-  /** Legacy alias for processPayment — retained for existing callers. */
-  async verifyRequest(
-    requestId: string,
-    paymentDetails: PaymentDetails
+  /** POST /requests — image (if any) sent as base64; backend uploads to S3 */
+  async createRequest(
+    req: Omit<Request, 'id' | 'status' | 'createdAt'>,
+    imageFile?: File,
   ): Promise<Request> {
-    return requestsMockApi.processPayment(requestId, paymentDetails);
+    let imageBase64: string | undefined;
+    let imageName: string | undefined;
+    let imageContentType: string | undefined;
+
+    if (imageFile) {
+      imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]); // strip "data:image/...;base64," prefix
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+      imageName = imageFile.name;
+      imageContentType = imageFile.type;
+    }
+
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/requests',
+        body: {
+          schoolId:         req.schoolId,
+          requesterId:      req.requesterId,
+          requesterName:    req.requesterName,
+          requesterRole:    req.requesterRole,
+          item:             req.item,
+          quantity:         req.quantity,
+          category:         req.category,
+          scope:            req.scope,
+          classroomId:      req.classroomId,
+          classroomName:    req.classroomName,
+          teacherId:        req.teacherId,
+          teacherName:      req.teacherName,
+          productLink:      req.productLink,
+          notes:            req.notes,
+          imageBase64,
+          imageName,
+          imageContentType,
+        },
+      },
+      z.any()
+    );
+    return mapRequest(data);
+  },
+
+  /** PATCH /requests/:id/status */
+  async updateRequestStatus(requestId: string, status: RequestStatus): Promise<Request> {
+    const data = await authedFetch(
+      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status } },
+      z.any()
+    );
+    return mapRequest(data);
+  },
+
+  /** Admin validation — moves employee request to In Progress */
+  async validateRequest(requestId: string, _schoolId?: string): Promise<Request> {
+    return RequestService.updateRequestStatus(requestId, 'In Progress');
+  },
+
+  /** POST /requests/:id/pay — mark as Completed and record payment */
+  async processPayment(requestId: string, paymentDetails: PaymentDetails): Promise<Request> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: `/requests/${requestId}/pay`,
+        body: {
+          amountSpent:   paymentDetails.amountSpent,
+          paymentMethod: paymentDetails.paymentMethod,
+          purchaseDate:  paymentDetails.purchaseDate,
+          paymentNotes:  paymentDetails.paymentNotes,
+        },
+      },
+      z.any()
+    );
+    return mapRequest(data);
+  },
+
+  /** POST /expenses — manual expense entry (superadmin) */
+  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>): Promise<ExpenseRecord> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/expenses',
+        body: {
+          schoolId:      details.schoolId,
+          requesterName: details.requesterName,
+          requesterRole: details.requesterRole,
+          item:          details.item,
+          quantity:      details.quantity,
+          category:      details.category,
+          scope:         details.scope,
+          classroomName: details.classroomName,
+          teacherName:   details.teacherName,
+          amountSpent:   details.amountSpent,
+          paymentMethod: details.paymentMethod,
+          purchaseDate:  details.purchaseDate,
+          paymentNotes:  details.paymentNotes,
+        },
+      },
+      z.any()
+    );
+    return mapExpenseRecord(data);
+  },
+
+  /** GET /expenses?include=summary — expense list + analytics in one call */
+  async fetchExpenseData(schoolId?: string): Promise<RequestExpenseData> {
+    const params = new URLSearchParams({ include: 'summary', limit: '100' });
+    if (schoolId) params.set('schoolId', schoolId);
+
+    const data = await authedFetch(
+      { method: 'GET', url: `/expenses?${params.toString()}` },
+      z.any()
+    );
+
+    const rows: any[] = data?.data ?? [];
+    return {
+      expenses: rows.map(mapExpenseRecord),
+      summary:  mapSummary(data?.summary, rows),
+    };
+  },
+
+  /** Legacy alias for processPayment */
+  async verifyRequest(requestId: string, paymentDetails: PaymentDetails): Promise<Request> {
+    return RequestService.processPayment(requestId, paymentDetails);
   },
 
   /** DELETE /requests/:id */
   async deleteRequest(requestId: string): Promise<void> {
-    return requestsMockApi.deleteRequest(requestId);
-  }
+    await authedFetch(
+      { method: 'DELETE', url: `/requests/${requestId}` },
+      z.any()
+    );
+  },
 };
