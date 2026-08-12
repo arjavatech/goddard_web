@@ -106,20 +106,22 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
 
-    ...(isSuperAdmin ? [
-      {
-        label: 'Procurement',
-        items: [
-          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Queue', path: `/superadmin-arjava/requests` },
+    {
+      label: 'Procurement',
+      items: [
+        { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+        ...(isSuperAdmin ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
-        ],
-      }, {
-        label: 'Administration',
-        items: [
-          { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        ] : []),
+      ],
+    },
 
-        ],
-      }] : []),
+    ...(isSuperAdmin ? [{
+      label: 'Administration',
+      items: [
+        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+      ],
+    }] : []),
   ];
 
   const initials = userData?.firstName && userData?.lastName
