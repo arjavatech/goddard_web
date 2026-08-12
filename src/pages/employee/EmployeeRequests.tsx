@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Header } from '../../components/layout/Header';
-import { Footer } from '../../components/layout/Footer';
+import { EmployeeLayout } from './EmployeeLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -22,13 +21,13 @@ export function EmployeeRequests() {
   const [requests, setRequests] = useState<Request[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   const [employeeId, setEmployeeId] = useState<string>('');
-  
+
   // Page states
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  
+
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
@@ -107,7 +106,7 @@ export function EmployeeRequests() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    
+
     if (name === 'classroomId') {
       const selected = classrooms.find(c => c.id === value);
       setFormData(prev => ({
@@ -138,7 +137,7 @@ export function EmployeeRequests() {
     if (!formData.item.trim()) errors.item = 'Request item is required';
     if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
     if (!formData.classroomId) errors.classroomId = 'Please select a classroom';
-    
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -245,13 +244,11 @@ export function EmployeeRequests() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-      <Header />
-      
-      <main className="flex-1 w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        
+    <EmployeeLayout>
+      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
         {/* Banner Card */}
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white shadow-xl mb-8">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white shadow-xl mb-8 mt-8">
           <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20" />
           <div className="relative z-10 px-6 py-10 sm:px-12 sm:py-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="space-y-2">
@@ -270,7 +267,7 @@ export function EmployeeRequests() {
                 Need items for your classroom? Submit a request here. Once approved, the admin will validate it and send it to the Super Admin for purchasing.
               </p>
             </div>
-            
+
             <button
               onClick={handleOpenModal}
               className="flex items-center justify-center gap-2 px-5 py-3 h-12 bg-white text-[#0F2D52] hover:bg-slate-100 active:scale-[0.98] transition-all rounded-xl font-bold text-xs sm:text-sm shadow-md"
@@ -332,7 +329,7 @@ export function EmployeeRequests() {
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-1">No requests found</h3>
             <p className="text-sm text-slate-500 max-w-sm mx-auto">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all'
                 ? 'Try adjusting your search query or filter options.'
                 : 'You have not submitted any procurement requests yet.'}
             </p>
@@ -419,8 +416,8 @@ export function EmployeeRequests() {
                           <div className="flex justify-between items-center text-xs">
                             <span className="text-slate-400">Status details:</span>
                             <span className="text-[#0F2D52] font-semibold flex items-center gap-1">
-                              {req.status === 'Pending' 
-                                ? 'Awaiting validation' 
+                              {req.status === 'Pending'
+                                ? 'Awaiting validation'
                                 : 'Validated, pending purchase'}
                             </span>
                           </div>
@@ -449,8 +446,7 @@ export function EmployeeRequests() {
             </AnimatePresence>
           </div>
         )}
-
-      </main>
+      </div>
 
       {/* New Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -624,8 +620,6 @@ export function EmployeeRequests() {
           </form>
         </DialogContent>
       </Dialog>
-      
-      <Footer />
-    </div>
+    </EmployeeLayout>
   );
 }

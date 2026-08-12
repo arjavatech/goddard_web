@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { AdminLayout } from './admin/AdminLayout';
+import { EmployeeLayout } from './employee/EmployeeLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
@@ -274,6 +275,7 @@ export function ProfilePage() {
   const { userData } = useUserContext();
   const role = userData?.role?.toLowerCase() ?? '';
   const isAdmin = role === 'admin' || role === 'superadmin';
+  const isEmployee = role === 'employee';
 
   if (isAdmin) {
     return (
@@ -285,12 +287,23 @@ export function ProfilePage() {
     );
   }
 
+  if (isEmployee) {
+    return (
+      <EmployeeLayout>
+        <div className="max-w-2xl mx-auto w-full">
+          <ProfileContent />
+        </div>
+      </EmployeeLayout>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
       <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
         <ProfileContent />
       </main>
+      {/* Keeping Header/Footer for parents/others since they don't have a layout yet */}
       <Footer />
     </div>
   );
