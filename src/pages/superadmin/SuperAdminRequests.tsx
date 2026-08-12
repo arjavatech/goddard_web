@@ -941,7 +941,7 @@ export function SuperAdminRequests() {
 
       {/* Create Request Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6">
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">

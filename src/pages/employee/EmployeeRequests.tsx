@@ -12,7 +12,7 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, TableProperties, ArrowUp, ArrowDown, ArrowUpDown
 } from 'lucide-react';
 
 export function EmployeeRequests() {
@@ -27,6 +27,10 @@ export function EmployeeRequests() {
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(10);
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -219,6 +223,33 @@ export function EmployeeRequests() {
     return matchesSearch && matchesStatus;
   });
 
+  const sortedRequests = [...filteredRequests].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    const aVal = a[key] ?? '';
+    const bVal = b[key] ?? '';
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const requestSort = (key: keyof Request) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const totalPages = Math.max(1, Math.ceil(sortedRequests.length / recordsPerPage));
+  const paginatedRequests = sortedRequests.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [totalPages, currentPage]);
+
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
       case 'Pending':
@@ -277,8 +308,8 @@ export function EmployeeRequests() {
           </div>
         </div>
 
-        {/* Search and Filters Bar */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-4 mb-6 flex flex-col md:flex-row gap-4 justify-between items-center">
+        {/* Filter Bar */}
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-3 sm:p-4 mb-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
@@ -286,23 +317,42 @@ export function EmployeeRequests() {
               placeholder="Search by requested item..."
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
             />
           </div>
-
-          <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
             <Filter className="text-slate-400 w-4 h-4 flex-shrink-0" />
             <select
+              value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : 'default'}
+              onChange={e => {
+                if (e.target.value === 'default') {
+                  setSortConfig(null);
+                } else {
+                  const [key, direction] = e.target.value.split('-');
+                  setSortConfig({ key: key as keyof Request, direction: direction as 'asc' | 'desc' });
+                }
+                setCurrentPage(1);
+              }}
+              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
+            >
+              <option value="default">Default Sort</option>
+              <option value="createdAt-desc">Date (Newest)</option>
+              <option value="createdAt-asc">Date (Oldest)</option>
+              <option value="item-asc">Item (A-Z)</option>
+              <option value="item-desc">Item (Z-A)</option>
+              <option value="quantity-desc">Quantity (High-Low)</option>
+              <option value="quantity-asc">Quantity (Low-High)</option>
+            </select>
+            <select
               value={statusFilter}
-              onChange={e => setStatusFilter(e.target.value)}
-              className="w-full md:w-44 px-3 py-2 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
               <option value="in progress">In Progress</option>
               <option value="completed">Completed</option>
             </select>
-
             <Button
               variant="outline"
               size="icon"
@@ -313,6 +363,40 @@ export function EmployeeRequests() {
             >
               <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
             </Button>
+          </div>
+        </div>
+
+        {/* Count + View Toggle */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+          <div className="text-sm font-medium text-slate-600">
+            Showing <span className="font-bold text-slate-900">{sortedRequests.length}</span> requests
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={recordsPerPage}
+              onChange={e => { setRecordsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+              className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700 h-9"
+            >
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+              <option value={25}>25 per page</option>
+              <option value={50}>50 per page</option>
+              <option value={100}>100 per page</option>
+            </select>
+            <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+              <button
+                onClick={() => setViewMode('card')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'card' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('table')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'table' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+              >
+                <TableProperties className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
@@ -334,10 +418,10 @@ export function EmployeeRequests() {
                 : 'You have not submitted any procurement requests yet.'}
             </p>
           </div>
-        ) : (
+        ) : viewMode === 'card' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence mode="popLayout">
-              {filteredRequests.map((req, idx) => (
+              {paginatedRequests.map((req, idx) => (
                 <motion.div
                   key={req.id}
                   initial={{ opacity: 0, y: 15 }}
@@ -445,12 +529,126 @@ export function EmployeeRequests() {
               ))}
             </AnimatePresence>
           </div>
+        ) : (
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse text-sm min-w-[900px]">
+                <thead>
+                  <tr className="bg-slate-50/50 border-b border-slate-100">
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors w-2/5" onClick={() => requestSort('item')}>
+                      <div className="flex items-center gap-1.5">
+                        Item {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors">
+                      Classroom
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
+                      <div className="flex items-center gap-1.5">
+                        Qty {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('status')}>
+                      <div className="flex items-center gap-1.5">
+                        Status {sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('createdAt')}>
+                      <div className="flex items-center gap-1.5">
+                        Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {paginatedRequests.map((req) => (
+                    <tr key={req.id} className="hover:bg-slate-50/40 transition-colors group">
+                      <td className="px-4 py-3.5 text-slate-900">
+                        <div className="flex gap-3 items-start">
+                          {req.productImage ? (
+                            <img src={req.productImage} alt={req.item} className="w-11 h-11 rounded-lg object-cover border border-slate-100 flex-shrink-0 bg-slate-50" />
+                          ) : (
+                            <div className="w-11 h-11 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
+                              <ImageIcon className="w-5 h-5" />
+                            </div>
+                          )}
+                          <div className="flex flex-col gap-0.5">
+                            <span className="font-semibold text-sm line-clamp-2">{req.item}</span>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{req.category || 'Supplies'}</span>
+                            {req.notes && <span className="text-[11px] text-slate-500 italic line-clamp-1 mt-0.5">"{req.notes}"</span>}
+                            {req.productLink && (
+                              <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="text-[#1a6fc4] hover:text-[#0F2D52] hover:underline inline-flex items-center gap-1 text-[10px] font-medium w-fit mt-0.5">
+                                <Link2 className="w-3 h-3" /> View Product
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-semibold text-slate-600">
+                        {req.classroomName || '—'}
+                      </td>
+                      <td className="px-4 py-3.5 font-semibold text-slate-700">
+                        {req.quantity}
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col items-start gap-1">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                            {getStatusIcon(req.status)}
+                            {req.status}
+                          </span>
+                          {req.status !== 'Completed' && (
+                            <span className="text-[9px] font-medium text-slate-400">
+                              {req.status === 'Pending' ? 'Awaiting validation' : 'Pending purchase'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                        {new Date(req.createdAt).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && sortedRequests.length > 0 && totalPages > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-slate-100">
+            <p className="text-[11px] sm:text-xs text-slate-500 font-medium">
+              Showing <span className="font-bold text-slate-700">{((currentPage - 1) * recordsPerPage) + 1}</span> to <span className="font-bold text-slate-700">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-bold text-slate-700">{sortedRequests.length}</span> requests
+            </p>
+            <div className="flex items-center gap-1.5">
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="h-8 px-3 rounded-lg text-xs font-semibold border-slate-200"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1 px-2 text-xs font-semibold text-slate-600">
+                <span>Page {currentPage}</span>
+                <span className="text-slate-400">of {totalPages}</span>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 px-3 rounded-lg text-xs font-semibold border-slate-200"
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         )}
       </div>
 
       {/* New Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6">
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
