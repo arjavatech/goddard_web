@@ -38,9 +38,19 @@ export function SuperAdminRequests() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [scopeFilter, setScopeFilter] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
   const [activeTab, setActiveTab] = useState<'all' | 'employee' | 'admin'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [recordsPerPage, setRecordsPerPage] = useState(10);
+
+  const activeFilterCount = (sortConfig ? 1 : 0) + (scopeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setSortConfig(null);
+    setScopeFilter('all');
+    setStatusFilter('all');
+  };
 
   // Purchase modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -272,8 +282,18 @@ export function SuperAdminRequests() {
     return matchesTab && matchesSearch && matchesStatus && matchesScope;
   });
 
+  const sortedRequests = [...searchedAndFiltered].sort((a, b) => {
+    if (!sortConfig) return 0;
+    const { key, direction } = sortConfig;
+    const aVal = a[key] ?? '';
+    const bVal = b[key] ?? '';
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
   const { currentPage, totalPages, paginatedData, itemsPerPage, setCurrentPage } =
-    usePagination({ data: searchedAndFiltered, itemsPerPage: recordsPerPage });
+    usePagination({ data: sortedRequests, itemsPerPage: recordsPerPage });
 
   // ── Export helpers ──────────────────────────────────────────────────────────
 
@@ -462,39 +482,128 @@ export function SuperAdminRequests() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-3 sm:p-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by requested item or requester name..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
-            />
+        {/* Filter and Search Bar */}
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm mb-6 flex flex-col overflow-hidden">
+          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by requested item or requester name..."
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(prev => !prev)}
+                size="sm"
+                className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 sm:px-4 flex-shrink-0"
+              >
+                {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
+                {!showFilters && activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadData}
+                disabled={loading}
+                className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
+                title="Refresh list"
+              >
+                <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-            <Filter className="text-slate-400 w-4 h-4 flex-shrink-0" />
-            <select value={scopeFilter} onChange={e => setScopeFilter(e.target.value)}
-              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]">
-              <option value="all">All Scopes</option>
-              <option value="school">School-wise</option>
-              <option value="classroom">Class-wise</option>
-              <option value="teacher">Teacher-wise</option>
-            </select>
-            <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]">
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <Button variant="outline" size="icon" onClick={loadData} disabled={loading}
-              className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50">
-              <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+
+          {/* Collapsible Filter Area */}
+          {showFilters && (
+            <div className="p-4 border-t border-slate-50 bg-slate-50/50">
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => { clearAllFilters(); setCurrentPage(1); }} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
+                  <select
+                    value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : 'default'}
+                    onChange={e => {
+                      if (e.target.value === 'default') {
+                        setSortConfig(null);
+                      } else {
+                        const [key, direction] = e.target.value.split('-');
+                        setSortConfig({ key: key as keyof Request, direction: direction as 'asc' | 'desc' });
+                      }
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
+                  >
+                    <option value="default">Default Sort</option>
+                    <option value="createdAt-desc">Date (Newest)</option>
+                    <option value="createdAt-asc">Date (Oldest)</option>
+                    <option value="item-asc">Item (A-Z)</option>
+                    <option value="item-desc">Item (Z-A)</option>
+                    <option value="quantity-desc">Quantity (High-Low)</option>
+                    <option value="quantity-asc">Quantity (Low-High)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
+                  <select
+                    value={scopeFilter}
+                    onChange={e => { setScopeFilter(e.target.value); setCurrentPage(1); }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  >
+                    <option value="all">All Scopes</option>
+                    <option value="school">School-wise</option>
+                    <option value="classroom">Class-wise</option>
+                    <option value="teacher">Teacher-wise</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Count + Export + View Toggle */}
@@ -648,10 +757,10 @@ export function SuperAdminRequests() {
                         <tr key={req.id} onClick={() => setDetailRequest(req)} className="hover:bg-slate-50 transition-colors cursor-pointer align-middle">
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[100px]">
                             <p className="font-semibold text-slate-800 line-clamp-1 text-[7px] sm:text-[8px] md:text-xs leading-tight">{req.item}</p>
-                            <p className="text-[6px] sm:text-[7px] text-slate-400 leading-tight">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
+                            <p className="text-[6px] sm:text-[8px] text-slate-700 leading-tight">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
                             {req.productLink && (
                               <a href={req.productLink} target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center gap-0.5 text-[6px] sm:text-[7px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
+                                className="inline-flex items-center gap-0.5 text-[6px] sm:text-[8px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
                                 <Link2 className="w-2 h-2" /> Link
                               </a>
                             )}
@@ -661,8 +770,8 @@ export function SuperAdminRequests() {
                             <p className="text-[6px] sm:text-[7px] uppercase font-bold text-slate-400 tracking-wide leading-tight">{req.requesterRole}</p>
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[90px]">
-                            <p className="text-[7px] sm:text-[8px] font-semibold text-slate-800 leading-tight capitalize">{req.scope === 'classroom' ? 'Classroom' : req.scope === 'teacher' ? 'Teacher' : 'School'}</p>
-                            <p className="text-[6px] sm:text-[7px] text-slate-500 leading-tight">
+                            <p className="text-[7px] sm:text-[10px] font-semibold text-slate-800 leading-tight capitalize">{req.scope === 'classroom' ? 'Classroom' : req.scope === 'teacher' ? 'Teacher' : 'School'}</p>
+                            <p className="text-[6px] sm:text-[10px] text-slate-700 leading-tight">
                               {req.scope === 'classroom' && req.classroomName}
                               {req.scope === 'teacher' && req.teacherName}
                               {req.scope === 'school' && 'Entire School'}

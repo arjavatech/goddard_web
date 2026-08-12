@@ -12,7 +12,7 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, TableProperties, ArrowUp, ArrowDown, ArrowUpDown
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, TableProperties, ArrowUp, ArrowDown, ArrowUpDown, X
 } from 'lucide-react';
 
 export function EmployeeRequests() {
@@ -31,6 +31,15 @@ export function EmployeeRequests() {
   const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const activeFilterCount = (sortConfig ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setSortConfig(null);
+    setStatusFilter('all');
+    setCurrentPage(1);
+  };
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -308,62 +317,114 @@ export function EmployeeRequests() {
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-3 sm:p-4 mb-4 flex flex-col md:flex-row gap-3 sm:gap-4 justify-between items-stretch md:items-center">
-          <div className="relative w-full md:max-w-md">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by requested item..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
-            />
+        {/* Filter and Search Bar */}
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm mb-6 flex flex-col overflow-hidden">
+          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+            <div className="relative w-full md:max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by requested item..."
+                value={searchTerm}
+                onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <Button
+                variant="outline"
+                onClick={() => setShowFilters(prev => !prev)}
+                size="sm"
+                className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 sm:px-4 flex-shrink-0"
+              >
+                {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
+                {!showFilters && activeFilterCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={loadData}
+                disabled={loading}
+                className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
+                title="Refresh list"
+              >
+                <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2 w-full md:w-auto flex-wrap">
-            <Filter className="text-slate-400 w-4 h-4 flex-shrink-0" />
-            <select
-              value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : 'default'}
-              onChange={e => {
-                if (e.target.value === 'default') {
-                  setSortConfig(null);
-                } else {
-                  const [key, direction] = e.target.value.split('-');
-                  setSortConfig({ key: key as keyof Request, direction: direction as 'asc' | 'desc' });
-                }
-                setCurrentPage(1);
-              }}
-              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
-            >
-              <option value="default">Default Sort</option>
-              <option value="createdAt-desc">Date (Newest)</option>
-              <option value="createdAt-asc">Date (Oldest)</option>
-              <option value="item-asc">Item (A-Z)</option>
-              <option value="item-desc">Item (Z-A)</option>
-              <option value="quantity-desc">Quantity (High-Low)</option>
-              <option value="quantity-asc">Quantity (Low-High)</option>
-            </select>
-            <select
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="flex-1 md:flex-none px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
-            >
-              <option value="all">All Statuses</option>
-              <option value="pending">Pending</option>
-              <option value="in progress">In Progress</option>
-              <option value="completed">Completed</option>
-            </select>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={loadData}
-              disabled={loading}
-              className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
-              title="Refresh lists"
-            >
-              <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+
+          {/* Collapsible Filter Area */}
+          {showFilters && (
+            <div className="p-4 border-t border-slate-50 bg-slate-50/50">
+              {activeFilterCount > 0 && (
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                    {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                  </span>
+                  <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                    <X className="h-3.5 w-3.5 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl">
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
+                  <select
+                    value={sortConfig ? `${sortConfig.key}-${sortConfig.direction}` : 'default'}
+                    onChange={e => {
+                      if (e.target.value === 'default') {
+                        setSortConfig(null);
+                      } else {
+                        const [key, direction] = e.target.value.split('-');
+                        setSortConfig({ key: key as keyof Request, direction: direction as 'asc' | 'desc' });
+                      }
+                      setCurrentPage(1);
+                    }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
+                  >
+                    <option value="default">Default Sort</option>
+                    <option value="createdAt-desc">Date (Newest)</option>
+                    <option value="createdAt-asc">Date (Oldest)</option>
+                    <option value="item-asc">Item (A-Z)</option>
+                    <option value="item-desc">Item (Z-A)</option>
+                    <option value="quantity-desc">Quantity (High-Low)</option>
+                    <option value="quantity-asc">Quantity (Low-High)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Status</label>
+                  <select
+                    value={statusFilter}
+                    onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                    className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  >
+                    <option value="all">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Count + View Toggle */}
