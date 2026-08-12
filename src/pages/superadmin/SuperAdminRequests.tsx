@@ -375,38 +375,45 @@ export function SuperAdminRequests() {
   const ActionCell = ({ req }: { req: Request }) => {
     if (req.status === 'Completed') {
       return (
-        <div className="text-right text-[11px]">
-          <div className="flex sm:justify-end gap-1.5 font-bold text-emerald-800 text-xs">
-            <span>Spent:</span><span>${req.amountSpent?.toFixed(2)}</span>
+        <div className="text-right flex flex-col items-end gap-0.5">
+          <div className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-white border-2 border-transparent flex items-center justify-center">
+            <p className="text-[8px] sm:text-xs md:text-sm font-bold text-emerald-700 whitespace-nowrap">Spent: ${req.amountSpent?.toFixed(2)}</p>
           </div>
-          <p className="text-[10px] text-slate-400 font-medium">via {req.paymentMethod} on {req.purchaseDate}</p>
+          <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">via {req.paymentMethod} on {req.purchaseDate}</p>
         </div>
       );
     }
     if (req.status === 'Pending') {
       return (
-        <Button
-          onClick={() => handleStartProcessing(req)}
-          disabled={validatingId === req.id}
-          className="h-9 w-40 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs shadow-sm whitespace-nowrap flex items-center justify-center gap-2 transition-colors"
-        >
-          {validatingId === req.id ? (
-            <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-4 w-4 inline-block" />
-          ) : (
-            <ArrowRight className="w-4 h-4 shrink-0" />
-          )}
-          Start Processing
-        </Button>
+        <div className="flex justify-end">
+          <Button
+            onClick={() => handleStartProcessing(req)}
+            disabled={validatingId === req.id}
+            className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+          >
+            {validatingId === req.id ? (
+              <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 sm:h-3 w-2.5 sm:w-3 inline-block" />
+            ) : (
+              <ArrowRight className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+            )}
+            <span className="hidden sm:inline">Start Processing</span>
+            <span className="inline sm:hidden text-[7px]">Start</span>
+          </Button>
+        </div>
       );
     }
     // In Progress
     return (
-      <Button
-        onClick={() => handleOpenPurchaseModal(req)}
-        className="h-9 w-40 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-xs shadow-sm whitespace-nowrap flex items-center justify-center gap-2 transition-colors"
-      >
-        <CreditCard className="w-4 h-4 shrink-0" /> Record Purchase
-      </Button>
+      <div className="flex justify-end">
+        <Button
+          onClick={() => handleOpenPurchaseModal(req)}
+          className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+        >
+          <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+          <span className="hidden sm:inline">Record Purchase</span>
+          <span className="inline sm:hidden text-[7px]">Record</span>
+        </Button>
+      </div>
     );
   };
 
@@ -623,51 +630,57 @@ export function SuperAdminRequests() {
               </div>
             ) : (
               <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-xs text-left">
+                <div className="w-full overflow-x-auto">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/60">
-                        {['Item', 'Requester', 'Scope / Target', 'Status', 'Date', 'Amount'].map(h => (
-                          <th key={h} className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">{h}</th>
-                        ))}
-                        <th className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap text-right"></th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[100px]">Item</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[90px]">Requester</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[90px]">Scope / Target</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[80px]">Status</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[70px]">Date</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[90px]">Amount</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[120px]"></th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {paginatedData.map(req => (
-                        <tr key={req.id} onClick={() => setDetailRequest(req)} className="hover:bg-slate-50 transition-colors cursor-pointer">
-                          <td className="px-5 py-3.5 min-w-[200px]">
-                            <p className="font-semibold text-slate-800 line-clamp-2">{req.item}</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
+                        <tr key={req.id} onClick={() => setDetailRequest(req)} className="hover:bg-slate-50 transition-colors cursor-pointer align-middle">
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[100px]">
+                            <p className="font-semibold text-slate-800 line-clamp-1 text-[7px] sm:text-[8px] md:text-xs leading-tight">{req.item}</p>
+                            <p className="text-[6px] sm:text-[7px] text-slate-400 leading-tight">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
                             {req.productLink && (
                               <a href={req.productLink} target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1 text-[10px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold mt-1">
-                                <Link2 className="w-3 h-3" /> Product Page
+                                className="inline-flex items-center gap-0.5 text-[6px] sm:text-[7px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
+                                <Link2 className="w-2 h-2" /> Link
                               </a>
                             )}
                           </td>
-                          <td className="px-5 py-3.5">
-                            <p className="font-medium text-slate-700">{req.requesterName}</p>
-                            <p className="text-[9px] uppercase font-bold text-slate-400 tracking-wide mt-0.5">{req.requesterRole}</p>
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[90px]">
+                            <p className="font-medium text-slate-700 text-[7px] sm:text-[8px] md:text-xs line-clamp-1 leading-tight">{req.requesterName}</p>
+                            <p className="text-[6px] sm:text-[7px] uppercase font-bold text-slate-400 tracking-wide leading-tight">{req.requesterRole}</p>
                           </td>
-                          <td className="px-5 py-3.5 text-slate-600">
-                            {req.scope === 'classroom' && <span>Classroom: <b className="text-slate-700">{req.classroomName}</b></span>}
-                            {req.scope === 'teacher' && <span>Teacher: <b className="text-slate-700">{req.teacherName}</b></span>}
-                            {req.scope === 'school' && <span className="text-slate-400 italic">Entire School</span>}
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[90px]">
+                            <p className="text-[7px] sm:text-[8px] font-semibold text-slate-800 leading-tight capitalize">{req.scope === 'classroom' ? 'Classroom' : req.scope === 'teacher' ? 'Teacher' : 'School'}</p>
+                            <p className="text-[6px] sm:text-[7px] text-slate-500 leading-tight">
+                              {req.scope === 'classroom' && req.classroomName}
+                              {req.scope === 'teacher' && req.teacherName}
+                              {req.scope === 'school' && 'Entire School'}
+                            </p>
                           </td>
-                          <td className="px-5 py-3.5">
-                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)} whitespace-nowrap`}>
-                              {getStatusIcon(req.status)}{req.status}
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-center min-w-[80px]">
+                            <span className={`inline-flex items-center gap-0.5 text-[7px] sm:text-[8px] md:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${getStatusBadgeClass(req.status)}`}>
+                              {getStatusIcon(req.status)}<span className="hidden sm:inline">{req.status}</span>
                             </span>
                           </td>
-                          <td className="px-5 py-3.5 text-slate-500 whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</td>
-                          <td className="px-5 py-3.5 font-medium">
-                            {req.status === 'Completed' ? <span className="font-bold text-emerald-700 text-sm">${req.amountSpent?.toFixed(2)}</span> : '-'}
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[70px]">
+                            <p className="text-slate-500 text-[7px] sm:text-[8px] md:text-xs whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</p>
                           </td>
-                          <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
-                            <div className="flex justify-end">
-                              <ActionCell req={req} />
-                            </div>
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-[7px] sm:text-[8px] md:text-xs min-w-[90px] text-center">
+                            {req.status === 'Completed' ? <span className="font-bold text-emerald-700">${req.amountSpent?.toFixed(2)}</span> : '-'}
+                          </td>
+                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-right min-w-[120px]" onClick={e => e.stopPropagation()}>
+                            <ActionCell req={req} />
                           </td>
                         </tr>
                       ))}
@@ -704,9 +717,6 @@ export function SuperAdminRequests() {
                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                       {getStatusIcon(req.status)}{req.status}
                     </span>
-                    <button onClick={() => setDetailRequest(null)} className="text-blue-200 hover:text-white transition-colors">
-                      <X className="w-5 h-5" />
-                    </button>
                   </div>
                 </div>
 

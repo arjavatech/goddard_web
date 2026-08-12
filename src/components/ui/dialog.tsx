@@ -62,8 +62,8 @@ const DialogContent = forwardRef<
         <DialogPrimitive.Close
           className={cn(
             'absolute right-4 top-4 rounded-lg p-1.5',
-            'text-slate-400 hover:text-slate-600 hover:bg-slate-100',
-            'opacity-70 hover:opacity-100 transition-all duration-150',
+            'text-slate-600 bg-slate-100',
+            'opacity-100 hover:opacity-100 transition-all duration-150 hover:bg-slate-200',
             'focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20',
             'disabled:pointer-events-none'
           )}
