@@ -811,7 +811,7 @@ export function ParentDetails() {
                                       </span>
                                     </div>
                                     <div className="mt-2 flex flex-wrap items-center gap-2">
-                                      {form.approvedOn && (() => {
+                                      {form.status === 'Approved' && form.approvedOn && (() => {
                                         try {
                                           const date = new Date(form.approvedOn);
                                           if (!isNaN(date.getTime())) {
