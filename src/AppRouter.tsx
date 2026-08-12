@@ -11,6 +11,7 @@ import { AuthErrorBoundary } from './components/AuthErrorBoundary';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
 import { SetPassword } from './pages/SetPassword';
+import { ResetPassword } from './pages/ResetPassword';
 import { ForgotPassword } from './pages/ForgotPassword';
 // Admin pages
 import { AdminDashboard } from './pages/admin/AdminDashboard';
@@ -99,13 +100,14 @@ export function AppRouter() {
                 <Route path="/help" element={<ProtectedRoute>
                   <ParentHelpCenter />
                 </ProtectedRoute>} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
-                <Route path="/set-password" element={<SetPassword />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/set-password" element={<SetPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
 
-                {/* Fallback Admin Routes (redirecting to school-scoped paths) */}
-                <Route element={<ProtectedRoute>
+            {/* Fallback Admin Routes (redirecting to school-scoped paths) */}
+            <Route element={<ProtectedRoute>
                   <Outlet />
                 </ProtectedRoute>}>
                   <Route path="/admin" element={<NavigateToAdmin />} />

@@ -38,7 +38,14 @@ export function Login() {
 
     setIsLoading(true);
     try {
-      await signInWithPassword(formData.email, formData.password);
+      const authData = await signInWithPassword(formData.email, formData.password);
+      
+      if (formData.password === 'Keller@2026') {
+        sessionStorage.setItem('first_login_reset_pending', 'true');
+        navigate('/reset-password', { replace: true });
+        return;
+      }
+
       // Keep the established dev-branch behavior: load the fresh profile
       // directly after Supabase confirms the password login, then redirect.
       const userData = await fetchUserContext();

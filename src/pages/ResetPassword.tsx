@@ -11,7 +11,7 @@ interface PasswordRequirement {
   valid: boolean;
 }
 
-export function SetPassword() {
+export function ResetPassword() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -93,7 +93,7 @@ export function SetPassword() {
 
           if (sessionError) {
             if (sessionError.message?.includes('expired') || sessionError.message?.includes('invalid') ||
-                sessionError.message?.includes('already') || sessionError.status === 401 || sessionError.status === 422) {
+              sessionError.message?.includes('already') || sessionError.status === 401 || sessionError.status === 422) {
               const { data: fallbackSession } = await supabase.auth.getSession();
               if (fallbackSession?.session) {
                 if (isMounted) { setSessionReady(true); setTokenValidated(true); return; }
@@ -139,6 +139,10 @@ export function SetPassword() {
     e.preventDefault();
     setError('');
     if (!allRequirementsMet) { setError('Please ensure all password requirements are met.'); return; }
+    if (password === 'Keller@2026') {
+      setError('The temporary password Keller@2026 cannot be used as your new password.');
+      return;
+    }
     setLoading(true);
 
     try {
@@ -154,7 +158,7 @@ export function SetPassword() {
       const { error: updateError } = await supabase.auth.updateUser({ password });
       if (updateError) {
         if (updateError.message?.includes('expired') || updateError.message?.includes('invalid') ||
-            updateError.status === 401 || updateError.status === 403) {
+          updateError.status === 401 || updateError.status === 403) {
           setError('Your session has expired. Please request a new password reset link from your school administrator.');
           setLoading(false);
           return;
@@ -254,11 +258,10 @@ export function SetPassword() {
             className="space-y-3 pt-2"
           >
             {requirements.map((req, i) => (
-              <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors duration-200 ${
-                req.valid
+              <div key={i} className={`flex items-center gap-3 p-3 rounded-xl border transition-colors duration-200 ${req.valid
                   ? 'bg-emerald-500/10 border-emerald-500/20'
                   : 'bg-white/5 border-white/10'
-              }`}>
+                }`}>
                 {req.valid
                   ? <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
                   : <XCircle className="w-4 h-4 text-slate-500 flex-shrink-0" />
@@ -298,7 +301,7 @@ export function SetPassword() {
               <Shield className="w-3.5 h-3.5" /> Account Setup
             </motion.div>
             <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Set your password</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Reset your password</h2>
               <p className="text-xs sm:text-sm text-slate-500 leading-normal">Create a secure password to complete your account setup.</p>
             </div>
           </div>
@@ -314,6 +317,13 @@ export function SetPassword() {
                 {error}
               </div>
             )}
+
+            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+              <Shield className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
+                <span className="font-bold">Restricted Password:</span> The temporary password <span className="font-mono bg-amber-100/50 px-1 py-0.5 rounded text-[11px] sm:text-xs">Keller@2026</span> cannot be used as your new password.
+              </p>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* New Password */}
@@ -393,7 +403,7 @@ export function SetPassword() {
                   {loading ? (
                     <span className="flex items-center justify-center gap-2">
                       <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                      Setting Password…
+                      Resetting Password…
                     </span>
                   ) : !tokenValidated && !error ? (
                     <span className="flex items-center justify-center gap-2">
@@ -401,7 +411,7 @@ export function SetPassword() {
                       Authenticating…
                     </span>
                   ) : (
-                    'Set Password'
+                    'Reset Password'
                   )}
                 </Button>
               </motion.div>

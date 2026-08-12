@@ -9,7 +9,7 @@ export function ProtectedRoute({
   children
 }: ProtectedRouteProps) {
   const location = useLocation();
-  const { isAuthenticated, isBypassed, loading } = useAuth();
+  const { user, isAuthenticated, isBypassed, loading } = useAuth();
   const { userData, isReady, error: userError } = useUserContext();
 
   if (isBypassed) return children;
@@ -22,6 +22,10 @@ export function ProtectedRoute({
 
   if (!isAuthenticated) {
     return <Navigate to="/" state={{ from: location }} replace />;
+  }
+
+  if (sessionStorage.getItem('first_login_reset_pending') === 'true') {
+    return <Navigate to="/reset-password" replace />;
   }
 
   if (!isReady) {
