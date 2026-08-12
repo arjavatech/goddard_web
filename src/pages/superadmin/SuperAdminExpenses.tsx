@@ -8,6 +8,7 @@ import { Pagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { RequestService, type Request, type RequestExpenseData } from '../../services/api/requests';
 import { useToast } from '../../contexts/ToastContext';
+import { useUserContext } from '../../contexts/UserContext';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
   PieChart, Pie, Cell, CartesianGrid
@@ -83,6 +84,7 @@ const EMPTY_FORM: AddExpenseForm = {
 
 export function SuperAdminExpenses() {
   const { showToast } = useToast();
+  const { userData } = useUserContext();
   const [requests, setRequests] = useState<Request[]>([]);
   const [expenseData, setExpenseData] = useState<RequestExpenseData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ export function SuperAdminExpenses() {
     try {
       await RequestService.recordExpense({
         requestId: `manual-${Date.now()}`,
-        schoolId: 'school-1',
+        schoolId: userData?.schoolId || '00000000-0000-0000-0000-000000000000',
         item: form.item.trim(),
         requesterName: form.requesterName.trim(),
         requesterRole: 'superadmin',
@@ -152,8 +154,8 @@ export function SuperAdminExpenses() {
 
   const summary = expenseData?.summary;
   const totalSpent = summary?.totalSpent ?? 0;
-  const classroomSpendingData = summary?.byClassroom ?? [];
-  const teacherSpendingData   = summary?.byTeacher ?? [];
+  const classroomSpendingData = (summary?.byClassroom ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
+  const teacherSpendingData   = (summary?.byTeacher ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
   const scopeSpendingData     = (summary?.byScope ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
   const categorySpendingData  = (summary?.byCategory ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
   const schoolWideSpent = scopeSpendingData.filter(i => i.name === 'Entire School').reduce((s, i) => s + i.value, 0);
@@ -255,79 +257,32 @@ export function SuperAdminExpenses() {
         {!loading && (
           <div className="space-y-6">
 
-            {/* Row 1 — Bar Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-              <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white">
-                <CardHeader className="px-5 pt-5 pb-3 border-b border-slate-50">
-                  <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                    <School className="w-4 h-4 text-[#0F2D52]" /> Classroom-wise Spending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  {classroomSpendingData.length === 0 ? (
-                    <EmptyChart />
-                  ) : (
-                    <div className="h-60">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={classroomSpendingData} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                          <XAxis dataKey="name" stroke="#CBD5E1" fontSize={11} tickLine={false} axisLine={false} />
-                          <YAxis stroke="#CBD5E1" fontSize={11} tickLine={false} axisLine={false} />
-                          <Tooltip {...tooltipStyle} formatter={(v: any) => [`$${v}`, 'Spent']} />
-                          <Bar dataKey="amount" fill="#0F2D52" radius={[6, 6, 0, 0]} barSize={32} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white">
-                <CardHeader className="px-5 pt-5 pb-3 border-b border-slate-50">
-                  <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-[#0F2D52]" /> Teacher-wise Spending
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-5">
-                  {teacherSpendingData.length === 0 ? (
-                    <EmptyChart />
-                  ) : (
-                    <div className="h-60">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={teacherSpendingData} layout="vertical" margin={{ top: 4, right: 8, left: 10, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#F1F5F9" />
-                          <XAxis type="number" stroke="#CBD5E1" fontSize={11} tickLine={false} axisLine={false} />
-                          <YAxis dataKey="name" type="category" stroke="#CBD5E1" fontSize={11} tickLine={false} axisLine={false} width={80} />
-                          <Tooltip {...tooltipStyle} formatter={(v: any) => [`$${v}`, 'Spent']} />
-                          <Bar dataKey="amount" fill="#10B981" radius={[0, 6, 6, 0]} barSize={18} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-            </div>
-
-            {/* Row 2 — Donut Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Charts (3 Donut Charts) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
               <DonutCard
-                title="Spending by Request Scope"
-                icon={Layers}
-                data={scopeSpendingData}
+                title="Classroom-wise Spending"
+                icon={School}
+                data={classroomSpendingData}
                 totalSpent={totalSpent}
-                footer={<span className="text-slate-500">School-wide: <b className="text-slate-800">${schoolWideSpent.toFixed(2)}</b></span>}
                 colorOffset={0}
               />
 
               <DonutCard
-                title="Spending by Category"
-                icon={PieIcon}
-                data={categorySpendingData}
+                title="Teacher-wise Spending"
+                icon={Users}
+                data={teacherSpendingData}
                 totalSpent={totalSpent}
                 colorOffset={2}
+              />
+
+              <DonutCard
+                title="Combined Spending"
+                icon={Layers}
+                data={scopeSpendingData}
+                totalSpent={totalSpent}
+                footer={<span className="text-slate-500">School-wide: <b className="text-slate-800">${schoolWideSpent.toFixed(2)}</b></span>}
+                colorOffset={4}
               />
 
             </div>
@@ -590,8 +545,8 @@ function DonutCard({
         {data.length === 0 ? (
           <EmptyChart />
         ) : (
-          <div className="flex flex-col sm:flex-row items-center gap-6">
-            <div className="h-52 w-52 flex-shrink-0">
+          <div className="flex flex-col items-center gap-6">
+            <div className="h-48 w-48 sm:h-52 sm:w-52 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={data} cx="50%" cy="50%" innerRadius={58} outerRadius={78} paddingAngle={4} dataKey="value">
@@ -610,9 +565,9 @@ function DonutCard({
                 return (
                   <div key={item.name}>
                     <div className="flex items-center justify-between text-xs mb-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
-                        <span className="font-medium text-slate-600 truncate max-w-[140px]" title={item.name}>{item.name}</span>
+                        <span className="font-medium text-slate-600 truncate" title={item.name}>{item.name}</span>
                       </div>
                       <span className="font-bold text-slate-700 ml-2">{pct}%</span>
                     </div>
