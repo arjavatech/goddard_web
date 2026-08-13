@@ -314,7 +314,7 @@ export function SuperAdminExpenses() {
                 tooltipLabel="Spending"
               />
 
-              <AreaChartCard
+              <LollipopChartCard
                 title="Requests by Role"
                 icon={Users}
                 data={[
@@ -856,29 +856,19 @@ function PieChartCard({
   );
 }
 
-function AreaChartCard({
-  title, icon: Icon, data, isCurrency = true, colorOffset = 0, tooltipLabel = 'Value'
+function LollipopChartCard({
+  title, icon: Icon, data, colorOffset = 0
 }: {
   title: string;
   icon: React.ElementType;
   data: { name: string; value: number }[];
-  isCurrency?: boolean;
   colorOffset?: number;
-  tooltipLabel?: string;
 }) {
   const roleOrder = ['Employee', 'Admin', 'Super Admin'];
   const sortedData = [...data].sort((a, b) => {
     const idxA = roleOrder.indexOf(a.name);
     const idxB = roleOrder.indexOf(b.name);
     return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
-  });
-
-  const formattedData = sortedData.map(item => {
-    const obj: any = { name: item.name };
-    sortedData.forEach(d => {
-      obj[d.name] = item.name === d.name ? item.value : 0;
-    });
-    return obj;
   });
 
   const getSeriesColor = (name: string, index: number) => {
@@ -888,37 +878,16 @@ function AreaChartCard({
     return COLORS[(index + colorOffset) % COLORS.length];
   };
 
-  const CustomLegend = (props: any) => {
-    const { payload } = props;
-    const roleOrder = ['Employee', 'Admin', 'Super Admin'];
-    const sortedPayload = [...(payload || [])].sort((a: any, b: any) => {
-      const idxA = roleOrder.indexOf(a.value);
-      const idxB = roleOrder.indexOf(b.value);
-      return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
-    });
-    
-    return (
-      <ul style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: 0, margin: '10px 0 0 0', listStyle: 'none' }}>
-        {sortedPayload.map((entry: any, index: number) => (
-          <li key={`item-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: entry.color }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color }} />
-            {entry.value}
-          </li>
-        ))}
-      </ul>
-    );
-  };
-
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
-      const activePayload = payload.find((p: any) => p.dataKey === label);
-      if (!activePayload) return null;
+      const dataItem = payload[0].payload;
+      const color = getSeriesColor(dataItem.name, 0);
       return (
         <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px 14px', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activePayload.color || activePayload.stroke || getSeriesColor(label, 0) }} />
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: color }} />
             <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-              {tooltipLabel}: {isCurrency ? '$' : ''}{Number(activePayload.value).toLocaleString('en-US', { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 })}
+              {dataItem.name} — {dataItem.value} Requests
             </p>
           </div>
         </div>
@@ -927,16 +896,21 @@ function AreaChartCard({
     return null;
   };
 
-  const CustomDot = (props: any) => {
-    const { cx, cy, value, fill } = props;
-    if (!value || value === 0) return null;
-    return <circle cx={cx} cy={cy} r={4} fill={fill} strokeWidth={0} />;
-  };
-
-  const CustomActiveDot = (props: any) => {
-    const { cx, cy, value, fill } = props;
-    if (!value || value === 0) return null;
-    return <circle cx={cx} cy={cy} r={6} fill={fill} strokeWidth={0} />;
+  const LollipopBar = (props: any) => {
+    const { x, y, width, height, payload, index } = props;
+    const color = getSeriesColor(payload.name, index);
+    const cx = x + width / 2;
+    // Don't draw the stem if value is 0 or undefined
+    if (payload.value === 0) return null;
+    return (
+      <g>
+        <line x1={cx} y1={y + height} x2={cx} y2={y + 6} stroke={color} strokeWidth={2} strokeDasharray="3 3" />
+        <circle cx={cx} cy={y} r={6} fill={color} />
+        <text x={cx} y={y - 12} textAnchor="middle" fill="#64748B" fontSize="11" fontWeight="600">
+          {payload.value}
+        </text>
+      </g>
+    );
   };
 
   return (
@@ -953,7 +927,7 @@ function AreaChartCard({
           <div className="flex flex-col items-center gap-6">
             <div className="w-full h-48 sm:h-52 flex-shrink-0">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <BarChart data={sortedData} margin={{ top: 20, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
                   <XAxis 
                     dataKey="name" 
@@ -966,32 +940,18 @@ function AreaChartCard({
                     axisLine={false} 
                     tickLine={false} 
                     tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
-                    tickFormatter={(val: any) => isCurrency ? `$${val}` : val}
+                    allowDecimals={false}
                   />
                   <Tooltip
-                    cursor={{ fill: '#F8FAFC', strokeWidth: 1, strokeDasharray: '3 3' }}
+                    cursor={{ fill: '#F8FAFC' }}
                     content={<CustomTooltip />}
                   />
-                  <Legend content={<CustomLegend />} />
-                  {sortedData.map((item, index) => {
-                    const color = getSeriesColor(item.name, index);
-                    return (
-                      <Area 
-                        key={item.name}
-                        type="monotone" 
-                        dataKey={item.name} 
-                        name={item.name} 
-                        stroke={color} 
-                        strokeWidth={2} 
-                        strokeDasharray="6 4" 
-                        fill={color} 
-                        fillOpacity={0.15} 
-                        activeDot={<CustomActiveDot fill={color} />} 
-                        dot={<CustomDot fill={color} />}
-                      />
-                    );
-                  })}
-                </AreaChart>
+                  <Bar dataKey="value" shape={<LollipopBar />} isAnimationActive={false}>
+                    {sortedData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={getSeriesColor(entry.name, index)} />
+                    ))}
+                  </Bar>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </div>
