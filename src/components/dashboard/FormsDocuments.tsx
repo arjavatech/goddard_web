@@ -527,6 +527,12 @@ export function FormsDocuments({
             status: f.status,
             recentPdfLink: f.rawData?.recent_pdf_link || f.rawData?.recentPdfLink || f.recentPdfLink || null,
             recentEditLink: f.rawData?.recent_edit_link || f.rawData?.recentEditLink || f.recentEditLink || null,
+            // Keep the complete launch metadata for sidebar/Previous/Next navigation.
+            // A draft form may not have a resume link yet, but it can still be
+            // opened from its Fillout form id and student assignment id.
+            filloutFormId: f.rawData?.fillout_form_id || f.rawData?.filloutFormId || f.filloutFormId || null,
+            studentFormAssignmentId: f.studentFormAssignmentId ||
+              f.rawData?.student_form_assignment_id || f.rawData?.studentFormAssignmentId || null,
             childName: f.childName || null,
           })),
           completedCount,
