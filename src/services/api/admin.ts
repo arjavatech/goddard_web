@@ -1210,10 +1210,14 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
   // });
 
   if (formTemplate?.due_date) {
-    const dueDate = new Date(formTemplate.due_date);
-    if (!isNaN(dueDate.getTime())) {
-      // console.log('Using template due date:', dueDate.toLocaleDateString('en-US'));
-      return dueDate.toLocaleDateString('en-US');
+    const parts = formTemplate.due_date.split('-').map(Number);
+    if (parts.length === 3) {
+      const [y, m, d] = parts;
+      const dueDate = new Date(y, m - 1, d);
+      if (!isNaN(dueDate.getTime())) {
+        // console.log('Using template due date:', dueDate.toLocaleDateString('en-US'));
+        return dueDate.toLocaleDateString('en-US');
+      }
     }
   }
 
@@ -1222,7 +1226,7 @@ export function calculateFormDueDate(form: any, formTemplates: any[]): string | 
     const parts = form.assigned_at.split('-');
     if (parts.length === 3) {
       const [day, month, year] = parts;
-      const assigned = new Date(`${year}-${month}-${day}`);
+      const assigned = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       if (!isNaN(assigned.getTime())) {
         const due = new Date(assigned);
         due.setDate(due.getDate() + 30);
@@ -1264,19 +1268,20 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
 
             // Calculate due date (30 days from assigned date)
             let dueDateString = null;
+            let dueDate: Date | null = null;
             if (form.assigned_at) {
               const parts = form.assigned_at.split('-');
               if (parts.length === 3) {
                 const [day, month, year] = parts;
-                const assigned = new Date(`${year}-${month}-${day}`);
+                const assigned = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                 if (!isNaN(assigned.getTime())) {
                   const due = new Date(assigned);
                   due.setDate(due.getDate() + 30);
+                  dueDate = due;
                   dueDateString = due.toLocaleDateString('en-US');
                 }
               }
             }
-            const dueDate = dueDateString ? new Date(dueDateString) : null;
 
             let status: 'pending' | 'completed' | 'overdue' | 'submitted' = 'pending';
             if (form.status === 'completed' || form.status === 'approved') {

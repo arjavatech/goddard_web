@@ -257,8 +257,8 @@ export function SuperAdminExpenses() {
         {!loading && (
           <div className="space-y-6">
 
-            {/* Charts (3 Donut Charts) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Charts (4 Charts in 2x2 Grid) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
               <DonutCard
                 title="Classroom-wise Spending"
@@ -276,13 +276,26 @@ export function SuperAdminExpenses() {
                 colorOffset={2}
               />
 
-              <DonutCard
+              <BarChartCard
                 title="Combined Spending"
                 icon={Layers}
                 data={scopeSpendingData}
-                totalSpent={totalSpent}
-                footer={<span className="text-slate-500">School-wide: <b className="text-slate-800">${schoolWideSpent.toFixed(2)}</b></span>}
+                isCurrency={true}
                 colorOffset={4}
+                tooltipLabel="Spending"
+              />
+
+              <BarChartCard
+                title="Requests by Role"
+                icon={Users}
+                data={[
+                  { name: 'Employee', value: requests.filter(r => r.requesterRole === 'employee').length },
+                  { name: 'Admin', value: requests.filter(r => r.requesterRole === 'admin').length },
+                  { name: 'Super Admin', value: requests.filter(r => r.requesterRole === 'superadmin').length }
+                ].filter(i => i.value > 0)}
+                isCurrency={false}
+                colorOffset={1}
+                tooltipLabel="Requests"
               />
 
             </div>
@@ -580,6 +593,65 @@ function DonutCard({
               {footer && (
                 <div className="pt-3 border-t border-slate-100 text-xs">{footer}</div>
               )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BarChartCard({
+  title, icon: Icon, data, isCurrency = true, colorOffset = 0, tooltipLabel = 'Value'
+}: {
+  title: string;
+  icon: React.ElementType;
+  data: { name: string; value: number }[];
+  isCurrency?: boolean;
+  colorOffset?: number;
+  tooltipLabel?: string;
+}) {
+  return (
+    <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white flex flex-col">
+      <CardHeader className="px-5 pt-5 pb-3 border-b border-slate-50 flex-shrink-0">
+        <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[#0F2D52]" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-5 flex-1 flex flex-col justify-center">
+        {data.length === 0 ? (
+          <EmptyChart />
+        ) : (
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-full h-48 sm:h-52 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                    tickFormatter={(val: any) => isCurrency ? `$${val}` : val}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#F8FAFC' }}
+                    contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', fontWeight: 600, color: '#334155' }}
+                    formatter={(v: any) => isCurrency ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : v}
+                  />
+                  <Bar dataKey="value" name={tooltipLabel} radius={[4, 4, 0, 0]} maxBarSize={50}>
+                    {data.map((_, i) => (
+                      <Cell key={i} fill={COLORS[(i + colorOffset) % COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           </div>
         )}
