@@ -866,9 +866,16 @@ function AreaChartCard({
   colorOffset?: number;
   tooltipLabel?: string;
 }) {
-  const formattedData = data.map(item => {
+  const roleOrder = ['Employee', 'Admin', 'Super Admin'];
+  const sortedData = [...data].sort((a, b) => {
+    const idxA = roleOrder.indexOf(a.name);
+    const idxB = roleOrder.indexOf(b.name);
+    return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+  });
+
+  const formattedData = sortedData.map(item => {
     const obj: any = { name: item.name };
-    data.forEach(d => {
+    sortedData.forEach(d => {
       obj[d.name] = item.name === d.name ? item.value : 0;
     });
     return obj;
@@ -881,19 +888,55 @@ function AreaChartCard({
     return COLORS[(index + colorOffset) % COLORS.length];
   };
 
+  const CustomLegend = (props: any) => {
+    const { payload } = props;
+    const roleOrder = ['Employee', 'Admin', 'Super Admin'];
+    const sortedPayload = [...(payload || [])].sort((a: any, b: any) => {
+      const idxA = roleOrder.indexOf(a.value);
+      const idxB = roleOrder.indexOf(b.value);
+      return (idxA !== -1 ? idxA : 999) - (idxB !== -1 ? idxB : 999);
+    });
+    
+    return (
+      <ul style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: 0, margin: '10px 0 0 0', listStyle: 'none' }}>
+        {sortedPayload.map((entry: any, index: number) => (
+          <li key={`item-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 600, color: entry.color }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: entry.color }} />
+            {entry.value}
+          </li>
+        ))}
+      </ul>
+    );
+  };
+
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const activePayload = payload.find((p: any) => p.dataKey === label);
       if (!activePayload) return null;
       return (
         <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px 14px', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
-          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
-            {tooltipLabel}: {isCurrency ? '$' : ''}{Number(activePayload.value).toLocaleString('en-US', { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 })}
-          </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: activePayload.color || activePayload.stroke || getSeriesColor(label, 0) }} />
+            <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+              {tooltipLabel}: {isCurrency ? '$' : ''}{Number(activePayload.value).toLocaleString('en-US', { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 })}
+            </p>
+          </div>
         </div>
       );
     }
     return null;
+  };
+
+  const CustomDot = (props: any) => {
+    const { cx, cy, value, fill } = props;
+    if (!value || value === 0) return null;
+    return <circle cx={cx} cy={cy} r={4} fill={fill} strokeWidth={0} />;
+  };
+
+  const CustomActiveDot = (props: any) => {
+    const { cx, cy, value, fill } = props;
+    if (!value || value === 0) return null;
+    return <circle cx={cx} cy={cy} r={6} fill={fill} strokeWidth={0} />;
   };
 
   return (
@@ -929,11 +972,8 @@ function AreaChartCard({
                     cursor={{ fill: '#F8FAFC', strokeWidth: 1, strokeDasharray: '3 3' }}
                     content={<CustomTooltip />}
                   />
-                  <Legend 
-                    iconType="circle" 
-                    wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#64748B', paddingTop: '10px' }} 
-                  />
-                  {data.map((item, index) => {
+                  <Legend content={<CustomLegend />} />
+                  {sortedData.map((item, index) => {
                     const color = getSeriesColor(item.name, index);
                     return (
                       <Area 
@@ -946,8 +986,8 @@ function AreaChartCard({
                         strokeDasharray="6 4" 
                         fill={color} 
                         fillOpacity={0.15} 
-                        activeDot={{ r: 6, strokeWidth: 0, fill: color }} 
-                        dot={{ r: 4, fill: color, strokeWidth: 0 }}
+                        activeDot={<CustomActiveDot fill={color} />} 
+                        dot={<CustomDot fill={color} />}
                       />
                     );
                   })}
