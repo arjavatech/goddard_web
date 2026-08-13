@@ -11,12 +11,12 @@ import { useToast } from '../../contexts/ToastContext';
 import { useUserContext } from '../../contexts/UserContext';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip,
-  PieChart, Pie, Cell, CartesianGrid
+  PieChart, Pie, Cell, CartesianGrid, AreaChart, Area, Legend
 } from 'recharts';
 import {
   DollarSign, ShoppingBag, Clock, Play, CheckCircle2,
   TrendingUp, RefreshCw, Layers, Users, School,
-  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties
+  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter
 } from 'lucide-react';
 import { AdminLayout } from '../admin/AdminLayout';
 
@@ -94,6 +94,12 @@ export function SuperAdminExpenses() {
   const [ledgerView, setLedgerView] = useState<'cards' | 'table'>('table');
   const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
   const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [showFilters, setShowFilters] = useState(false);
+  const [ledgerSortConfig, setLedgerSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
+  const [ledgerScopeFilter, setLedgerScopeFilter] = useState<string>('all');
+  const [ledgerCategoryFilter, setLedgerCategoryFilter] = useState<string>('all');
+
+  const activeFilterCount = (ledgerSortConfig ? 1 : 0) + (ledgerScopeFilter !== 'all' ? 1 : 0) + (ledgerCategoryFilter !== 'all' ? 1 : 0);
 
   const loadData = async () => {
     setLoading(true);
@@ -160,12 +166,28 @@ export function SuperAdminExpenses() {
   const categorySpendingData  = (summary?.byCategory ?? []).map(i => ({ name: i.name, value: i.amount })).filter(i => i.value > 0);
   const schoolWideSpent = scopeSpendingData.filter(i => i.name === 'Entire School').reduce((s, i) => s + i.value, 0);
   const completedList = expenseData?.expenses ?? [];
-  const filteredCompletedList = completedList.filter(exp => 
-    exp.item.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) || 
-    exp.requesterName.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) ||
-    (exp.category && exp.category.toLowerCase().includes(ledgerSearchTerm.toLowerCase()))
-  );
+  
+  const searchedAndFilteredList = completedList.filter(exp => {
+    const matchesSearch = 
+      exp.item.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) || 
+      exp.requesterName.toLowerCase().includes(ledgerSearchTerm.toLowerCase()) ||
+      (exp.category && exp.category.toLowerCase().includes(ledgerSearchTerm.toLowerCase()));
+    
+    const matchesScope = ledgerScopeFilter === 'all' || exp.scope === ledgerScopeFilter;
+    const matchesCategory = ledgerCategoryFilter === 'all' || exp.category === ledgerCategoryFilter;
+    
+    return matchesSearch && matchesScope && matchesCategory;
+  });
 
+  const filteredCompletedList = [...searchedAndFilteredList].sort((a: any, b: any) => {
+    if (!ledgerSortConfig) return 0;
+    const { key, direction } = ledgerSortConfig;
+    const aVal = a[key] ?? '';
+    const bVal = b[key] ?? '';
+    if (aVal < bVal) return direction === 'asc' ? -1 : 1;
+    if (aVal > bVal) return direction === 'asc' ? 1 : -1;
+    return 0;
+  });
   const {
     currentPage: ledgerPage,
     totalPages: ledgerTotalPages,
@@ -173,6 +195,13 @@ export function SuperAdminExpenses() {
     itemsPerPage: ledgerItemsPerPage,
     setCurrentPage: setLedgerPage,
   } = usePagination({ data: filteredCompletedList, itemsPerPage: recordsPerPage });
+
+  const clearAllFilters = () => {
+    setLedgerSortConfig(null);
+    setLedgerScopeFilter('all');
+    setLedgerCategoryFilter('all');
+    setLedgerPage(1);
+  };
 
   const tooltipStyle = {
     contentStyle: {
@@ -268,7 +297,7 @@ export function SuperAdminExpenses() {
                 colorOffset={0}
               />
 
-              <DonutCard
+              <PieChartCard
                 title="Teacher-wise Spending"
                 icon={Users}
                 data={teacherSpendingData}
@@ -285,7 +314,7 @@ export function SuperAdminExpenses() {
                 tooltipLabel="Spending"
               />
 
-              <BarChartCard
+              <AreaChartCard
                 title="Requests by Role"
                 icon={Users}
                 data={[
@@ -300,58 +329,161 @@ export function SuperAdminExpenses() {
 
             </div>
 
-            {/* Ledger Table */}
-            <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white overflow-hidden">
-              <CardHeader className="px-4 sm:px-5 pt-5 pb-3 border-b border-slate-50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                  <ListCollapse className="w-4 h-4 text-[#0F2D52]" /> Spending Ledger
-                </CardTitle>
-                <div className="flex flex-col sm:flex-row w-full sm:w-auto items-start sm:items-center justify-between sm:justify-end gap-3 sm:gap-2 mt-3 sm:mt-0">
-                  <div className="relative w-full sm:w-48 lg:w-64">
-                    <input
-                      type="text"
-                      placeholder="Search ledger..."
-                      value={ledgerSearchTerm}
-                      onChange={e => setLedgerSearchTerm(e.target.value)}
-                      className="w-full px-3 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-lg focus:outline-none focus:border-[#0F2D52] transition-colors"
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={recordsPerPage}
-                      onChange={e => setRecordsPerPage(Number(e.target.value))}
-                      className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700"
+            {/* Ledger Section Header */}
+            <div className="flex items-center gap-2 mb-2 mt-8">
+              <ListCollapse className="w-5 h-5 text-[#0F2D52]" />
+              <h2 className="text-lg font-bold text-slate-900 tracking-tight">Spending Ledger</h2>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm mb-6 flex flex-col overflow-hidden">
+              <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+                <div className="relative w-full md:max-w-md">
+                  <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search ledger by item, requester or category..."
+                    value={ledgerSearchTerm}
+                    onChange={e => { setLedgerSearchTerm(e.target.value); setLedgerPage(1); }}
+                    className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
+                  />
+                  {ledgerSearchTerm && (
+                    <button
+                      onClick={() => { setLedgerSearchTerm(''); setLedgerPage(1); }}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none"
                     >
-                      <option value={10}>10 per page</option>
-                      <option value={20}>20 per page</option>
-                      <option value={50}>50 per page</option>
-                    </select>
-                    <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5" aria-label="Ledger view">
-                      <button
-                        type="button"
-                        onClick={() => setLedgerView('cards')}
-                        aria-label="Show card view"
-                        title="Card view"
-                        className={`rounded-md p-1.5 transition-colors ${ledgerView === 'cards' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        <LayoutGrid className="h-3.5 w-3.5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setLedgerView('table')}
-                        aria-label="Show table view"
-                        title="Table view"
-                        className={`rounded-md p-1.5 transition-colors ${ledgerView === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
-                      >
-                        <TableProperties className="h-3.5 w-3.5" />
-                      </button>
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowFilters(prev => !prev)}
+                    size="sm"
+                    className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all duration-200 relative font-bold text-xs px-3 sm:px-4 flex-shrink-0"
+                  >
+                    {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
+                    <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
+                    {!showFilters && activeFilterCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={loadData}
+                    disabled={loading}
+                    className="rounded-xl h-10 w-10 flex-shrink-0 border-slate-200 hover:bg-slate-50"
+                    title="Refresh list"
+                  >
+                    <RefreshCw className={`h-4 w-4 text-slate-600 ${loading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Collapsible Filter Area */}
+              {showFilters && (
+                <div className="p-4 border-t border-slate-50 bg-slate-50/50">
+                  {activeFilterCount > 0 && (
+                    <div className="flex items-center justify-between mb-4">
+                      <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">
+                        {activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied
+                      </span>
+                      <Button variant="outline" size="sm" onClick={clearAllFilters} className="h-8 rounded-lg bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs">
+                        <X className="h-3.5 w-3.5 mr-1" />
+                        Clear All
+                      </Button>
                     </div>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-full whitespace-nowrap">
-                      {filteredCompletedList.length} txns
-                    </span>
+                  )}
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-xs sm:text-sm font-medium text-slate-500">Sort By</label>
+                      <select
+                        value={ledgerSortConfig ? `${ledgerSortConfig.key}-${ledgerSortConfig.direction}` : 'default'}
+                        onChange={e => {
+                          if (e.target.value === 'default') {
+                            setLedgerSortConfig(null);
+                          } else {
+                            const [key, direction] = e.target.value.split('-');
+                            setLedgerSortConfig({ key, direction: direction as 'asc' | 'desc' });
+                          }
+                          setLedgerPage(1);
+                        }}
+                        className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52]"
+                      >
+                        <option value="default">Default Sort</option>
+                        <option value="purchaseDate-desc">Date (Newest)</option>
+                        <option value="purchaseDate-asc">Date (Oldest)</option>
+                        <option value="amountSpent-desc">Amount (High-Low)</option>
+                        <option value="amountSpent-asc">Amount (Low-High)</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
+                      <select
+                        value={ledgerScopeFilter}
+                        onChange={e => { setLedgerScopeFilter(e.target.value); setLedgerPage(1); }}
+                        className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                      >
+                        <option value="all">All Scopes</option>
+                        <option value="school">School-wise</option>
+                        <option value="classroom">Class-wise</option>
+                        <option value="teacher">Teacher-wise</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs sm:text-sm font-medium text-slate-500">Category</label>
+                      <select
+                        value={ledgerCategoryFilter}
+                        onChange={e => { setLedgerCategoryFilter(e.target.value); setLedgerPage(1); }}
+                        className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
+                      >
+                        <option value="all">All Categories</option>
+                        <option value="Classroom Supplies">Classroom Supplies</option>
+                        <option value="STEM & Toys">STEM & Toys</option>
+                        <option value="Books & Learning">Books & Learning</option>
+                        <option value="Office & Equipment">Office & Equipment</option>
+                        <option value="Play & Outdoor">Play & Outdoor</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
-              </CardHeader>
+              )}
+            </div>
+
+            {/* Count + View Toggle */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+              <div className="text-sm font-medium text-slate-600">
+                Showing <span className="font-bold text-slate-900">{filteredCompletedList.length}</span> txns
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <select value={recordsPerPage} onChange={e => { setRecordsPerPage(Number(e.target.value)); setLedgerPage(1); }}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-[#0F2D52] bg-white text-slate-700 h-9">
+                  <option value={10}>10 per page</option>
+                  <option value={20}>20 per page</option>
+                  <option value={50}>50 per page</option>
+                </select>
+                <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
+                  <button onClick={() => setLedgerView('cards')}
+                    className={`rounded-md p-1.5 transition-colors ${ledgerView === 'cards' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  <button onClick={() => setLedgerView('table')}
+                    className={`rounded-md p-1.5 transition-colors ${ledgerView === 'table' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}>
+                    <TableProperties className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Ledger Content */}
+            <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white overflow-hidden">
               <CardContent className={ledgerView === 'table' ? 'p-0 overflow-x-auto' : 'p-3 sm:p-4'}>
                 {filteredCompletedList.length === 0 ? (
                   <div className="py-16 text-center text-slate-400 text-xs">
@@ -651,6 +783,175 @@ function BarChartCard({
                     ))}
                   </Bar>
                 </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function PieChartCard({
+  title, icon: Icon, data, totalSpent, footer, colorOffset = 0
+}: {
+  title: string;
+  icon: React.ElementType;
+  data: { name: string; value: number }[];
+  totalSpent: number;
+  footer?: React.ReactNode;
+  colorOffset?: number;
+}) {
+  return (
+    <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white">
+      <CardHeader className="px-5 pt-5 pb-3 border-b border-slate-50">
+        <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[#0F2D52]" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-5">
+        {data.length === 0 ? (
+          <EmptyChart />
+        ) : (
+          <div className="flex flex-col items-center gap-6">
+            <div className="h-48 w-48 sm:h-52 sm:w-52 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={data} cx="50%" cy="50%" innerRadius={0} outerRadius={85} paddingAngle={0} dataKey="value">
+                    {data.map((_, i) => (
+                      <Cell key={i} fill={COLORS[(i + colorOffset) % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} contentStyle={{ borderRadius: '10px', fontSize: '12px', border: '1px solid #E2E8F0' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex-1 space-y-2.5 w-full">
+              {data.map((item, i) => {
+                const pct = totalSpent > 0 ? ((item.value / totalSpent) * 100).toFixed(1) : '0.0';
+                const color = COLORS[(i + colorOffset) % COLORS.length];
+                return (
+                  <div key={item.name}>
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                        <span className="font-medium text-slate-600 truncate" title={item.name}>{item.name}</span>
+                      </div>
+                      <span className="font-bold text-slate-700 ml-2">{pct}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {footer && (
+                <div className="pt-3 border-t border-slate-100 text-xs">{footer}</div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AreaChartCard({
+  title, icon: Icon, data, isCurrency = true, colorOffset = 0, tooltipLabel = 'Value'
+}: {
+  title: string;
+  icon: React.ElementType;
+  data: { name: string; value: number }[];
+  isCurrency?: boolean;
+  colorOffset?: number;
+  tooltipLabel?: string;
+}) {
+  const formattedData = data.map(item => {
+    const obj: any = { name: item.name };
+    data.forEach(d => {
+      obj[d.name] = item.name === d.name ? item.value : 0;
+    });
+    return obj;
+  });
+
+  const getSeriesColor = (name: string, index: number) => {
+    if (name === 'Employee') return '#3B82F6'; // Blue
+    if (name === 'Admin') return '#8B5CF6'; // Purple
+    if (name === 'Super Admin') return '#0D9488'; // Teal
+    return COLORS[(index + colorOffset) % COLORS.length];
+  };
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const activePayload = payload.find((p: any) => p.dataKey === label);
+      if (!activePayload) return null;
+      return (
+        <div style={{ backgroundColor: '#fff', borderRadius: '10px', padding: '10px 14px', border: '1px solid #E2E8F0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)' }}>
+          <p style={{ margin: 0, fontSize: '12px', fontWeight: 600, color: '#334155' }}>
+            {tooltipLabel}: {isCurrency ? '$' : ''}{Number(activePayload.value).toLocaleString('en-US', { minimumFractionDigits: isCurrency ? 2 : 0, maximumFractionDigits: isCurrency ? 2 : 0 })}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  return (
+    <Card className="border border-slate-100 rounded-2xl shadow-sm bg-white flex flex-col">
+      <CardHeader className="px-5 pt-5 pb-3 border-b border-slate-50 flex-shrink-0">
+        <CardTitle className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+          <Icon className="w-4 h-4 text-[#0F2D52]" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-5 flex-1 flex flex-col justify-center">
+        {data.length === 0 ? (
+          <EmptyChart />
+        ) : (
+          <div className="flex flex-col items-center gap-6">
+            <div className="w-full h-48 sm:h-52 flex-shrink-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={formattedData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fontSize: 10, fill: '#64748B', fontWeight: 600 }}
+                    tickFormatter={(val: any) => isCurrency ? `$${val}` : val}
+                  />
+                  <Tooltip
+                    cursor={{ fill: '#F8FAFC', strokeWidth: 1, strokeDasharray: '3 3' }}
+                    content={<CustomTooltip />}
+                  />
+                  <Legend 
+                    iconType="circle" 
+                    wrapperStyle={{ fontSize: '11px', fontWeight: 600, color: '#64748B', paddingTop: '10px' }} 
+                  />
+                  {data.map((item, index) => {
+                    const color = getSeriesColor(item.name, index);
+                    return (
+                      <Area 
+                        key={item.name}
+                        type="monotone" 
+                        dataKey={item.name} 
+                        name={item.name} 
+                        stroke={color} 
+                        strokeWidth={2} 
+                        strokeDasharray="6 4" 
+                        fill={color} 
+                        fillOpacity={0.15} 
+                        activeDot={{ r: 6, strokeWidth: 0, fill: color }} 
+                        dot={{ r: 4, fill: color, strokeWidth: 0 }}
+                      />
+                    );
+                  })}
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
