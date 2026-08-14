@@ -23,6 +23,7 @@ import { ParentManagement } from './pages/admin/ParentManagement';
 import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/StudentDueForms';
+import { FormsPendingApproval } from './pages/admin/FormsPendingApproval';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
@@ -125,6 +126,7 @@ export function AppRouter() {
               <Route path="/:schoolSlug/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
               <Route path="/:schoolSlug/admin/forms" element={<FormsManagement />} />
               <Route path="/:schoolSlug/admin/forms/due" element={<DueForms />} />
+              <Route path="/:schoolSlug/admin/forms/pending-approval" element={<FormsPendingApproval />} />
               <Route path="/:schoolSlug/admin/forms/view/:formId" element={<FormView />} />
               <Route path="/:schoolSlug/admin/form-assignments" element={<ClassroomFormAssignment />} />
               <Route path="/:schoolSlug/admin/parents" element={<ParentManagement />} />

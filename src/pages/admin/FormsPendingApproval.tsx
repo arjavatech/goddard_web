@@ -15,6 +15,24 @@ import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { useUserContext } from '../../contexts/UserContext';
+import { fetchFormTemplates } from '../../services/api/dashboard';
+import { fetchParentDetails } from '../../services/api/admin';
+
+const isInvalidFormId = (id: string | null | undefined): boolean => {
+  if (!id) return true;
+  const trimmed = id.trim().toLowerCase();
+  return (
+    trimmed === '' ||
+    trimmed === '#' ||
+    trimmed === 'test' ||
+    trimmed === 'undefined' ||
+    trimmed === 'null' ||
+    trimmed === 'placeholder' ||
+    trimmed === 'none' ||
+    trimmed === 'dummy' ||
+    (trimmed.length < 4 && !/^https?:\/\//i.test(trimmed))
+  );
+};
 
 type LocalDueForm = {
   id: string;
@@ -42,7 +60,6 @@ export function FormsPendingApproval() {
   const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
   const [formFilter, setFormFilter] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedForms, setSelectedForms] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [windowWidth, setWindowWidth] = useState(() => typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('formsPendingViewMode') as 'card' | 'table') || 'table');
@@ -164,27 +181,51 @@ export function FormsPendingApproval() {
         setLoading(true);
         if (!schoolId) return;
         
-        const response = await fetch(`${apiBaseUrl}/enrollments?school_id=${schoolId}`, {
-          method: 'GET',
-          headers: {
-            'X-API-Key': 'test-owner-key-2024',
-            'Content-Type': 'application/json'
-          }
-        });
+        const [response, templates, parentDetailsResponse] = await Promise.all([
+          fetch(`${apiBaseUrl}/enrollments?school_id=${schoolId}`, {
+            method: 'GET',
+            headers: {
+              'X-API-Key': 'test-owner-key-2024',
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetchFormTemplates(schoolId).catch(() => []),
+          fetchParentDetails(schoolId).catch(() => ({ activeParents: [], inactiveParents: [] }))
+        ]);
         
         if (response.ok) {
           const data = await response.json();
           const enrollments = data.enrollments || [];
           
+          const allParents = [...(parentDetailsResponse.activeParents || []), ...(parentDetailsResponse.inactiveParents || [])];
+          
           const mappedForms: LocalDueForm[] = [];
           
           enrollments.forEach((enrollment: any) => {
             Object.entries(enrollment.forms || {}).forEach(([formName, formData]: [string, any]) => {
-              const submittedStatuses = new Set(['submitted', 'received']);
+              const submittedStatuses = new Set(['submitted', 'received', 'in progress']);
               
               if (!formData.status || !submittedStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
                 return; // Only process forms that are submitted (Pending Approval)
               }
+
+              // Find template by matching form ID or name
+              const formId = formData.id || formData.form_id || formData.formId;
+              const template = templates.find(t => t.id === formId || t.formName === formName || (t as any).form_name === formName);
+
+              // Resolve exactly like ParentDetails.tsx
+              const filloutFormUrl = (!isInvalidFormId(formData.recent_edit_link) ? formData.recent_edit_link : null) ||
+                  (!isInvalidFormId(formData.fillout_form_id) ? formData.fillout_form_id : null) ||
+                  (!isInvalidFormId(formData.filloutFormId) ? formData.filloutFormId : null) ||
+                  template?.filloutFormUrl ||
+                  (template as any)?.fillout_form_url ||
+                  '#';
+
+              const filloutFormId = (!isInvalidFormId(formData.fillout_form_id) ? formData.fillout_form_id : null) ||
+                  (!isInvalidFormId(formData.filloutFormId) ? formData.filloutFormId : null) ||
+                  template?.filloutFormUrl ||
+                  (template as any)?.fillout_form_url ||
+                  '#';
               
               let parentName = `${enrollment.parent_first_name} ${enrollment.parent_last_name}`;
               let parentEmail = enrollment.primary_email;
@@ -196,6 +237,57 @@ export function FormsPendingApproval() {
                 }
               }
               
+              // Enhance formData with the resolved URLs so it is passed properly in state
+              const enhancedFormData = {
+                ...formData,
+                link: filloutFormUrl,
+                fillout_form_id: filloutFormId,
+                recent_edit_link: !isInvalidFormId(formData.recent_edit_link) ? formData.recent_edit_link : null
+              };
+
+              const extractIdFromUrl = (val: any): string | null => {
+                if (typeof val !== 'string') return null;
+                const trimmed = val.trim();
+                if (!trimmed || trimmed === '#') return null;
+                try {
+                  const paramsPart = trimmed.includes('?') ? trimmed.split('?')[1] : '';
+                  if (!paramsPart) return null;
+                  const urlParams = new URLSearchParams(paramsPart);
+                  return urlParams.get('student_form_assignment_id');
+                } catch {
+                  return null;
+                }
+              };
+
+              // Cross-reference with fetchParentDetails to find the proven Assignment ID
+              let actualAssignmentId: string | undefined;
+              if (allParents.length > 0) {
+                for (const parent of allParents) {
+                  const matchingChild = parent.children?.find(c => c.enrollmentId === enrollment.enrollment_id || c.childId === enrollment.child_id);
+                  if (matchingChild) {
+                    const matchingForm = matchingChild.forms?.find(f => 
+                      f.formName === formName || 
+                      (f.filloutFormId && f.filloutFormId === filloutFormId) ||
+                      (f.formId && f.formId === formData.id)
+                    );
+                    if (matchingForm?.studentFormAssignmentId) {
+                      actualAssignmentId = matchingForm.studentFormAssignmentId;
+                      break;
+                    }
+                  }
+                }
+              }
+
+              const resolvedAssignmentId = 
+                actualAssignmentId ||
+                formData.student_form_assignment_id || 
+                formData.studentFormAssignmentId || 
+                formData.assignment_id ||
+                extractIdFromUrl(enhancedFormData.recent_edit_link) ||
+                extractIdFromUrl(filloutFormUrl) ||
+                extractIdFromUrl(filloutFormId) ||
+                formData.id;
+
               mappedForms.push({
                 id: `${enrollment.enrollment_id}-${formName}`,
                 formName,
@@ -206,13 +298,13 @@ export function FormsPendingApproval() {
                 dueDate: formData.due_date || null,
                 status: 'submitted',
                 assignedDate: formData.assigned_at || '',
-                studentFormAssignmentId: formData.student_form_assignment_id || formData.id,
-                filloutFormId: formData.fillout_form_id,
-                recentEditLink: formData.recent_edit_link,
+                studentFormAssignmentId: resolvedAssignmentId,
+                filloutFormId: filloutFormId,
+                recentEditLink: enhancedFormData.recent_edit_link,
                 recentPdfLink: formData.recent_pdf_link,
                 childDob: enrollment.child_dob,
                 childGender: enrollment.child_gender,
-                rawFormData: formData
+                rawFormData: enhancedFormData
               });
             });
           });
@@ -324,26 +416,10 @@ export function FormsPendingApproval() {
     }
     return dateString;
   };
-
-  const handleSelectAll = (checked: boolean) => {
-    if (checked) {
-      setSelectedForms(filteredForms.map(form => form.id));
-    } else {
-      setSelectedForms([]);
-    }
-  };
-
-  const handleSelectForm = (formId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedForms(prev => [...prev, formId]);
-    } else {
-      setSelectedForms(prev => prev.filter(id => id !== formId));
-    }
-  };
   
   const handleViewForm = (form: LocalDueForm) => {
     const schoolPrefix = schoolSubdomain ? `/${schoolSubdomain}` : '';
-    navigate(`${schoolPrefix}/admin/forms/view/${form.filloutFormId || form.studentFormAssignmentId || form.id}`, {
+    navigate(`${schoolPrefix}/admin/forms/view/${encodeURIComponent(form.id)}`, {
       state: {
         form: {
           ...form.rawFormData,
@@ -356,10 +432,11 @@ export function FormsPendingApproval() {
         parentEmail: form.parentEmail,
         classDetails: form.classroomName,
         returnPath: location.pathname,
-        filloutFormId: form.filloutFormId,
-        recentEditLink: form.recentEditLink,
-        recentPdfLink: form.recentPdfLink,
-        studentFormAssignmentId: form.studentFormAssignmentId
+        filloutFormUrl: form.rawFormData?.link || form.rawFormData?.fillout_form_url || form.rawFormData?.url,
+        filloutFormId: form.filloutFormId || form.rawFormData?.fillout_form_id,
+        recentEditLink: form.recentEditLink || form.rawFormData?.recent_edit_link,
+        recentPdfLink: form.recentPdfLink || form.rawFormData?.recent_pdf_link,
+        studentFormAssignmentId: form.studentFormAssignmentId || form.rawFormData?.student_form_assignment_id
       }
     });
   };
@@ -461,7 +538,7 @@ export function FormsPendingApproval() {
                 </DropdownMenu>
               </div>
             </div>
-
+            
             {showFilters && (
               <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3 mt-3">
                 {activeFilterCount > 0 && (
@@ -551,24 +628,12 @@ export function FormsPendingApproval() {
               {/* Conditional Rendering of Views */}
               {viewMode === 'card' ? (
                 <div className="p-4 space-y-4">
-                  <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
-                    <Checkbox
-                      checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
-                      onCheckedChange={handleSelectAll}
-                    />
-                    <span className="text-xs font-bold text-slate-700">Select All</span>
-                  </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {paginatedForms.map(form => (
                       <Card key={form.id} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white flex flex-col justify-between hover:shadow-md transition-all duration-300 hover:-translate-y-1 space-y-4">
                         <div>
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <Checkbox
-                                checked={selectedForms.includes(form.id)}
-                                onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
-                                className="flex-shrink-0"
-                              />
                               <div className="w-9 h-9 rounded-xl bg-[#044ba0] text-white flex items-center justify-center font-extrabold text-xs flex-shrink-0 border border-slate-100">
                                 {form.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                               </div>
@@ -625,13 +690,6 @@ export function FormsPendingApproval() {
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="border-b border-slate-200 bg-slate-50/50">
-                          <th className="text-center py-3.5 px-3 w-12 border-y border-slate-200/85 bg-slate-50/80">
-                            <Checkbox
-                              checked={selectedForms.length === filteredForms.length && filteredForms.length > 0}
-                              indeterminate={selectedForms.length > 0 && selectedForms.length < filteredForms.length}
-                              onCheckedChange={handleSelectAll}
-                            />
-                          </th>
                           <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Form</th>
                           <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell">Student</th>
                           <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Classroom</th>
@@ -642,19 +700,13 @@ export function FormsPendingApproval() {
                       </thead>
                       <tbody>
                         {paginatedForms.map(form => (
-                          <tr key={form.id} className={`border-b border-slate-50 transition-all duration-150 ease-in-out cursor-pointer ${selectedForms.includes(form.id) ? 'bg-[#EFF5FB] hover:bg-[#e6f0f9]' : 'hover:bg-[#F8FAFC]'}`}
+                          <tr key={form.id} className="border-b border-slate-50 transition-all duration-150 ease-in-out cursor-pointer hover:bg-[#F8FAFC]"
                               onClick={() => handleViewForm(form)}>
-                            <td className="py-4 px-3 text-center" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedForms.includes(form.id)}
-                                onCheckedChange={(checked) => handleSelectForm(form.id, checked as boolean)}
-                              />
-                            </td>
                             <td className="py-4 px-3 max-w-xs">
                               <div className="font-bold text-slate-900 text-sm truncate">{form.formName}</div>
                               <div className="text-xs font-semibold text-slate-400 truncate sm:hidden mt-0.5">{form.studentName}</div>
                               <div className="text-xs font-semibold text-slate-400 truncate md:hidden">
-                                {form.parentName.split(' & ')[0]}
+                                {form.parentName}
                               </div>
                             </td>
                             <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden sm:table-cell max-w-0">
@@ -664,11 +716,17 @@ export function FormsPendingApproval() {
                               <div className="truncate">{form.classroomName}</div>
                             </td>
                             <td className="py-4 px-3 hidden md:table-cell">
-                              <div className="min-w-0 space-y-1.5">
-                                <div>
-                                  <div className="font-bold text-slate-800 block truncate text-sm">{form.parentName.split(' & ')[0]}</div>
-                                  <div className="whitespace-nowrap text-xs text-slate-400 font-medium mt-0.5">{form.parentEmail.split(', ')[0]}</div>
-                                </div>
+                              <div className="min-w-0 space-y-2">
+                                {form.parentName.split(' & ').map((name, idx) => {
+                                  const emails = form.parentEmail.split(', ');
+                                  const email = emails[idx] || '';
+                                  return (
+                                    <div key={idx}>
+                                      <div className="font-bold text-slate-800 block truncate text-sm">{name}</div>
+                                      {email && <div className="whitespace-nowrap text-xs text-slate-400 font-medium mt-0.5">{email}</div>}
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </td>
                             <td className="py-4 px-3 text-center">

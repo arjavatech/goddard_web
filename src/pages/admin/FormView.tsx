@@ -304,6 +304,15 @@ export function FormView() {
   const selectedUrl = getFormUrl();
   const embeddedResize = useEmbeddedFormResize(selectedUrl);
 
+  useEffect(() => {
+    // If we won't render either an iframe or a PDF, turn off the loading spinner
+    const willRenderPdf = recentPdfLink && (isApproved || !selectedUrl || selectedUrl === '#');
+    const willRenderIframe = selectedUrl && selectedUrl !== '#' && !willRenderPdf;
+    if (!willRenderPdf && !willRenderIframe) {
+      setIsFrameLoading(false);
+    }
+  }, [recentPdfLink, selectedUrl, isApproved]);
+
   if (!formData) {
     return <AdminLayout>
       <div className="space-y-6">
@@ -420,7 +429,7 @@ export function FormView() {
                 <Loading message="Loading..." size="md" />
               </div>
             )}
-            {isApproved && recentPdfLink ? (
+            {recentPdfLink && (isApproved || !selectedUrl || selectedUrl === '#') ? (
               <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
                   <Button
