@@ -65,7 +65,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
     if (normalizedItemPath === '/admin/forms') {
       if (isEmployeeFormView) return false;
-      return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due');
+      return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due' && currentPath !== '/admin/forms/pending-approval');
     }
 
     if (normalizedItemPath === '/admin/employee-forms') {
@@ -93,7 +93,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Student Enrollment',
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Due Forms', path: `${schoolPrefix}/admin/forms/due` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
+        ...(isSuperAdmin ? [{ icon: <CheckCircle className="w-[18px] h-[18px]" />, label: 'Forms Pending Approval', path: `${schoolPrefix}/admin/forms/pending-approval` }] : []),
       ],
     },
 
@@ -102,7 +103,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Due Forms', path: `${schoolPrefix}/admin/employee-forms/due` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
     ...(isSuperAdmin ? [{
