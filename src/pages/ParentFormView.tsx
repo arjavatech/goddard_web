@@ -14,6 +14,8 @@ type SiblingForm = {
   status: string;
   recentPdfLink?: string | null;
   recentEditLink?: string | null;
+  filloutFormId?: string | null;
+  studentFormAssignmentId?: string | null;
   childName?: string | null;
 };
 
@@ -54,10 +56,13 @@ export function ParentFormView() {
   const embeddedResize = useEmbeddedFormResize(viewUrl);
 
   const isReadOnly = status === 'Approved' || status === 'Submitted';
+  // The parent dashboard currently presents an in-progress submission as
+  // “Pending Approval”. Treat that state as submitted for post-form navigation.
+  const showSubmissionNavigation = showThankYou ||
+    status === 'Approved' || status === 'Submitted' || status === 'In Progress';
   const progressPct = totalForms ? Math.round(((completedCount ?? 0) / totalForms) * 100) : 0;
   const hasSidebar = siblingForms && siblingForms.length > 0;
 
-  // Current form index in sibling list
   const currentIndex = siblingForms
     ? siblingForms.findIndex(f => f.formId === decodeURIComponent(currentFormId ?? ''))
     : -1;
@@ -79,6 +84,16 @@ export function ParentFormView() {
       siblingViewUrl = sibling.recentPdfLink;
     } else if (sibling.recentEditLink) {
       siblingViewUrl = sibling.recentEditLink;
+    } else if (sibling.filloutFormId) {
+      const baseUrl = sibling.filloutFormId.startsWith('http')
+        ? sibling.filloutFormId
+        : `https://goddard.fillout.com/${sibling.filloutFormId}`;
+      const assignmentId = sibling.studentFormAssignmentId == null
+        ? null
+        : String(sibling.studentFormAssignmentId).trim();
+      siblingViewUrl = assignmentId && !baseUrl.includes('student_form_assignment_id')
+        ? `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}student_form_assignment_id=${encodeURIComponent(assignmentId)}`
+        : baseUrl;
     }
 
     if (siblingViewUrl) {
@@ -94,9 +109,6 @@ export function ParentFormView() {
           totalForms,
         },
       });
-    } else {
-      // No URL available — go back to dashboard so the user can open it from there
-      navigate(back);
     }
   };
 
@@ -425,13 +437,6 @@ export function ParentFormView() {
               <p className="text-sm text-slate-500 mb-8 text-center">
                 Thank you! Your response has been recorded.
               </p>
-              <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white px-8 h-12 text-sm font-semibold gap-2 transition-colors rounded-xl shadow-sm"
-                onClick={() => navigate(back, { state: { formCompleted: true } })}
-              >
-                <Home className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
             </div>
           ) : isReadOnly ? (
             /* ── Approved / read-only form view ── */
@@ -479,14 +484,18 @@ export function ParentFormView() {
                       .ndfHFb-c4YZDc-nJjxad-nK2kYb-i5oIFb { display: none !important; }
                     }
                   `}</style>
-                  <div ref={iframeContainerRef} className="w-full">
+                  <div ref={iframeContainerRef} className="w-full min-w-0 overflow-x-hidden">
                     <iframe
                       ref={embeddedResize.iframeRef}
                       src={viewUrl}
                       style={{
                         width: '100%',
+                        // Some form-builder pages report their current viewport
+                        // through the embed channel while also sending a larger
+                        // document-height message. Never shrink to the smaller
+                        // value or the dashboard footer will sit over the form.
                         height: embeddedResize.isDynamic
-                          ? `${embeddedResize.height ?? 700}px`
+                          ? `${Math.max(embeddedResize.height ?? 0, formHeight)}px`
                           : `${formHeight}px`,
                         border: 'none',
                         display: 'block',
@@ -507,45 +516,39 @@ export function ParentFormView() {
             </div>
           )}
 
-          {/* ── Bottom navigation bar ── */}
-          {!showThankYou && (
-            <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 flex items-center justify-between gap-3">
-              {/* Previous */}
-              {hasSidebar ? (
-                <Button
-                  variant="outline"
-                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 transition-colors ${
-                    prevSibling
-                      ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]'
-                      : 'text-slate-300 border-slate-200 cursor-not-allowed'
-                  }`}
-                  disabled={!prevSibling}
-                  onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Previous
-                </Button>
-              ) : (
-                <div />
-              )}
-
-              {/* Back to Dashboard — center, prominent */}
+          {/* Keep draft forms free of duplicate navigation. After submission,
+              offer form-to-form navigation alongside the dashboard exit. */}
+          <div className={`mt-8 shrink-0 border-t-2 border-slate-200 bg-white px-4 py-4 items-center gap-3 ${
+            showSubmissionNavigation ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
+          }`}>
+            {showSubmissionNavigation && (hasSidebar ? (
               <Button
+                variant="outline"
+                className={`justify-self-start h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                }`}
+                disabled={!prevSibling}
+                onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+            ) : <div aria-hidden="true" />)}
+            <Button
                 className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
-                onClick={handleBack}
+                onClick={() => showSubmissionNavigation
+                  ? navigate(back, { state: { formCompleted: true } })
+                  : handleBack()}
               >
                 <Home className="h-4 w-4" />
-                Back to Dashboard
-              </Button>
-
-              {/* Next */}
-              {hasSidebar ? (
+              Back to Dashboard
+            </Button>
+            {showSubmissionNavigation && (hasSidebar ? (
+              <div className="justify-self-end">
                 <Button
                   variant="outline"
-                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 transition-colors ${
-                    nextSibling
-                      ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]'
-                      : 'text-slate-300 border-slate-200 cursor-not-allowed'
+                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                    nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                   }`}
                   disabled={!nextSibling}
                   onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
@@ -553,11 +556,9 @@ export function ParentFormView() {
                   Next
                   <ChevronRight className="h-4 w-4" />
                 </Button>
-              ) : (
-                <div />
-              )}
-            </div>
-          )}
+              </div>
+            ) : <div aria-hidden="true" />)}
+          </div>
         </div>
       </main>
     </div>
