@@ -61,6 +61,7 @@ export function AdminRequests() {
     classroomName: '',
     teacherId: '',
     teacherName: '',
+    locationArea: 'General',
     productLink: '',
     notes: ''
   });
@@ -193,6 +194,7 @@ export function AdminRequests() {
       classroomName: '',
       teacherId: teachers[0]?.id || '',
       teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
+      locationArea: 'General',
       productLink: '',
       notes: ''
     });
@@ -211,6 +213,10 @@ export function AdminRequests() {
         ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Admin User'
         : 'Alice Johnson';
 
+      const finalNotes = formData.scope === 'school' && formData.locationArea && formData.locationArea !== 'General'
+        ? `[Location: ${formData.locationArea}] ${formData.notes || ''}`.trim()
+        : formData.notes || undefined;
+
       await RequestService.createRequest({
         schoolId: userData?.schoolId || 'school-1',
         requesterId: user?.id || '',
@@ -225,7 +231,7 @@ export function AdminRequests() {
         teacherId: formData.scope === 'teacher' ? formData.teacherId : undefined,
         teacherName: formData.scope === 'teacher' ? formData.teacherName : undefined,
         productLink: formData.productLink || undefined,
-        notes: formData.notes || undefined
+        notes: finalNotes
       }, imageFile || undefined);
 
       showToast('success', 'Admin request created successfully. Sent to Super Admin for validation.', 'Request Created');
@@ -297,6 +303,19 @@ export function AdminRequests() {
         return <Play className="w-3.5 h-3.5 animate-pulse" />;
       case 'Completed':
         return <CheckCircle2 className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getStatusLabel = (status: RequestStatus) => {
+    switch (status) {
+      case 'Pending':
+        return 'Submitted';
+      case 'In Progress':
+        return 'In Progress';
+      case 'Completed':
+        return 'Completed';
+      default:
+        return status;
     }
   };
 
@@ -416,16 +435,16 @@ export function AdminRequests() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Assignment Level</label>
                   <select
                     value={scopeFilter}
                     onChange={e => { setScopeFilter(e.target.value); setCurrentPage(1); }}
                     className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                   >
-                    <option value="all">All Scopes</option>
-                    <option value="school">School-wise</option>
-                    <option value="classroom">Class-wise</option>
-                    <option value="teacher">Teacher-wise</option>
+                    <option value="all">All Levels</option>
+                    <option value="school">Entire School</option>
+                    <option value="classroom">Specific Classroom</option>
+                    <option value="teacher">Specific Employee</option>
                   </select>
                 </div>
 
@@ -547,13 +566,13 @@ export function AdminRequests() {
                             <p className="text-slate-500">Qty: <span className="font-bold text-slate-700">{req.quantity}</span></p>
                             <p className="text-slate-500 flex items-center gap-1 truncate">
                               {req.scope === 'classroom' && (
-                                <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
+                                <>Target: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
                               )}
                               {req.scope === 'teacher' && (
-                                <>Scope: <span className="font-bold text-slate-700">Teacher Issue ({req.teacherName})</span></>
+                                <>Target: <span className="font-bold text-slate-700">Employee ({req.teacherName})</span></>
                               )}
                               {req.scope === 'school' && (
-                                <>Scope: <span className="font-bold text-slate-700">All Classrooms</span></>
+                                <>Target: <span className="font-bold text-slate-700">Entire School</span></>
                               )}
                             </p>
                           </div>
@@ -617,7 +636,7 @@ export function AdminRequests() {
                       </div>
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-700 transition-colors">
-                      Scope / Target
+                      Target Assignment
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
                       <div className="flex items-center gap-1.5">
@@ -665,13 +684,13 @@ export function AdminRequests() {
                       </td>
                       <td className="px-4 py-3.5 text-xs text-slate-600">
                         {req.scope === 'classroom' && (
-                          <>Scope: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
+                          <>Target: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
                         )}
                         {req.scope === 'teacher' && (
-                          <>Scope: <span className="font-bold text-slate-700">Teacher Issue ({req.teacherName})</span></>
+                          <>Target: <span className="font-bold text-slate-700">Employee ({req.teacherName})</span></>
                         )}
                         {req.scope === 'school' && (
-                          <>Scope: <span className="font-bold text-slate-700">All Classrooms</span></>
+                          <>Target: <span className="font-bold text-slate-700">Entire School</span></>
                         )}
                       </td>
                       <td className="px-4 py-3.5 font-semibold text-slate-700">
@@ -681,7 +700,7 @@ export function AdminRequests() {
                         <div className="flex flex-col items-start gap-1">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                             {getStatusIcon(req.status)}
-                            {req.status}
+                            {getStatusLabel(req.status)}
                           </span>
                         </div>
                       </td>
@@ -756,10 +775,10 @@ export function AdminRequests() {
 
           <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
             
-            {/* Scope Selection */}
+            {/* Target Assignment Selection */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Request Scope <span className="text-red-500">*</span>
+                Target Assignment <span className="text-red-500">*</span>
               </label>
               <div className="grid grid-cols-3 gap-2">
                 <button
@@ -772,8 +791,8 @@ export function AdminRequests() {
                   }`}
                 >
                   <School className="w-4 h-4" />
-                  <span>School-wise</span>
-                  <span className="text-[9px] font-medium opacity-60">All classrooms</span>
+                  <span>School</span>
+                  <span className="text-[9px] font-medium opacity-60">General campus</span>
                 </button>
                 <button
                   type="button"
@@ -785,8 +804,8 @@ export function AdminRequests() {
                   }`}
                 >
                   <GraduationCap className="w-4 h-4" />
-                  <span>Class-wise</span>
-                  <span className="text-[9px] font-medium opacity-60">Specific class</span>
+                  <span>Classroom</span>
+                  <span className="text-[9px] font-medium opacity-60">Target class</span>
                 </button>
                 <button
                   type="button"
@@ -798,8 +817,8 @@ export function AdminRequests() {
                   }`}
                 >
                   <User className="w-4 h-4" />
-                  <span>Teacher-wise</span>
-                  <span className="text-[9px] font-medium opacity-60">Specific teacher</span>
+                  <span>Employee</span>
+                  <span className="text-[9px] font-medium opacity-60">Target individual</span>
                 </button>
               </div>
             </div>
@@ -828,7 +847,7 @@ export function AdminRequests() {
             {formData.scope === 'teacher' && (
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Teacher Involved <span className="text-red-500">*</span>
+                  Employee Involved <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="teacherId"
@@ -841,6 +860,29 @@ export function AdminRequests() {
                   ))}
                 </select>
                 {formErrors.teacherId && <p className="text-xs text-red-600 font-semibold">{formErrors.teacherId}</p>}
+              </div>
+            )}
+
+            {/* Area/Location Selector (if scope is school) */}
+            {formData.scope === 'school' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Campus Area / Location <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="locationArea"
+                  value={formData.locationArea}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+                >
+                  <option value="General">General / Office</option>
+                  <option value="Kitchen">Kitchen</option>
+                  <option value="Playground">Playground</option>
+                  <option value="Parking">Parking Lot</option>
+                  <option value="Hallway">Hallways / Corridors</option>
+                  <option value="Bathroom">Restrooms</option>
+                  <option value="Other">Other</option>
+                </select>
               </div>
             )}
 

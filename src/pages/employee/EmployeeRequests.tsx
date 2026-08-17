@@ -213,7 +213,7 @@ export function EmployeeRequests() {
         notes: formData.notes || undefined
       }, imageFile || undefined);
 
-      showToast('success', 'Your request has been submitted with a Pending status.', 'Request Submitted');
+      showToast('success', 'Your request has been submitted successfully.', 'Request Submitted');
       setIsModalOpen(false);
       // Reload list
       const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1', 'employee', employeeId);
@@ -283,36 +283,57 @@ export function EmployeeRequests() {
     }
   };
 
+  const getStatusLabel = (status: RequestStatus) => {
+    switch (status) {
+      case 'Pending':
+        return 'Submitted';
+      case 'In Progress':
+        return 'In Progress';
+      case 'Completed':
+        return 'Completed';
+      default:
+        return status;
+    }
+  };
+
   return (
     <EmployeeLayout>
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-        {/* Banner Card */}
-        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white shadow-xl mb-8 mt-8">
-          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px] opacity-20" />
-          <div className="relative z-10 px-6 py-10 sm:px-12 sm:py-12 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
-            <div className="space-y-2">
-              <Link
-                to={`/${schoolSubdomain || 'goddard'}/employee/dashboard`}
-                className="group inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white shadow-sm backdrop-blur-sm transition-all hover:-translate-x-0.5 hover:border-white/35 hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60 focus:ring-offset-2 focus:ring-offset-[#0F2D52]"
-              >
-                <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
-                Back to Dashboard
-              </Link><br />
-              {/* <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 text-cyan-300 text-[10px] font-bold uppercase tracking-wider">
-                <ShoppingBag className="w-3.5 h-3.5" /> Procurement Portal
-              </div> */}
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight" style={{ color: '#ffffff' }}>Request Materials & Supplies</h1>
-              <p className="text-sm text-slate-200/90 max-w-xl">
-                Need items for your classroom? Submit a request here. Once approved, the admin will validate it and send it to the Super Admin for purchasing.
-              </p>
+        {/* Header Section */}
+        <div className="mb-8 mt-8">
+          <Link
+            to={`/${schoolSubdomain || 'goddard'}/employee/dashboard`}
+            className="group inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-[#0F2D52] transition-colors mb-4"
+          >
+            <div className="p-1.5 rounded-lg bg-slate-100 group-hover:bg-[#0F2D52]/10 transition-colors">
+              <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-0.5" />
+            </div>
+            Back to Dashboard
+          </Link>
+          
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
+            {/* Subtle decorative background */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#0F2D52]/5 to-transparent rounded-full blur-3xl pointer-events-none transform translate-x-1/2 -translate-y-1/2" />
+            
+            <div className="relative z-10 flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center shadow-md flex-shrink-0 border border-[#0F2D52]/20">
+                <ShoppingBag className="w-6 h-6 text-white/90" />
+              </div>
+              <div>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Material Requests</h1>
+                <p className="text-sm text-slate-500 font-medium mt-1">
+                  Submit and track supply requests for your classroom.
+                </p>
+              </div>
             </div>
 
             <button
               onClick={handleOpenModal}
-              className="flex items-center justify-center gap-2 px-5 py-3 h-12 bg-white text-[#0F2D52] hover:bg-slate-100 active:scale-[0.98] transition-all rounded-xl font-bold text-xs sm:text-sm shadow-md"
+              className="relative z-10 flex items-center justify-center gap-2 px-6 py-3 bg-[#0F2D52] hover:bg-[#163a66] text-white transition-all duration-200 rounded-xl font-bold text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/50 focus:ring-offset-2 w-full sm:w-auto"
             >
-              <Plus className="w-4 h-4" /> Create Request
+              <Plus className="w-4 h-4" /> 
+              Create Request
             </button>
           </div>
         </div>
@@ -417,7 +438,7 @@ export function EmployeeRequests() {
                     className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                   >
                     <option value="all">All Statuses</option>
-                    <option value="pending">Pending</option>
+                    <option value="pending">Submitted</option>
                     <option value="in progress">In Progress</option>
                     <option value="completed">Completed</option>
                   </select>
@@ -500,7 +521,7 @@ export function EmployeeRequests() {
                           </span>
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                             {getStatusIcon(req.status)}
-                            {req.status}
+                            {getStatusLabel(req.status)}
                           </span>
                         </div>
 
@@ -655,7 +676,7 @@ export function EmployeeRequests() {
                         <div className="flex flex-col items-start gap-1">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                             {getStatusIcon(req.status)}
-                            {req.status}
+                            {getStatusLabel(req.status)}
                           </span>
                           {req.status !== 'Completed' && (
                             <span className="text-[9px] font-medium text-slate-400">
