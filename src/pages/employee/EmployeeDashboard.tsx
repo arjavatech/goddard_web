@@ -4,7 +4,9 @@ import { EmployeeLayout } from './EmployeeLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
+import { RequestService } from '../../services/api/requests';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -13,6 +15,7 @@ import { cn } from '../../lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
 import { useToast } from '../../contexts/ToastContext';
+import { Label } from 'recharts';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
@@ -22,11 +25,13 @@ type EnrichedAssignment = EmployeeFormAssignment & {
 
 export function EmployeeDashboard() {
   const { userData, schoolSubdomain } = useUserContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [employee, setEmployee] = useState<import('../../services/api/employee').Employee | null>(null);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
@@ -72,8 +77,13 @@ export function EmployeeDashboard() {
         if (!isMounted) return;
         setEmployee(employee);
 
-        const rawAssignments = await EmployeeService.fetchEmployeeFormAssignments(employee.id);
+        const empId = employee.userId || user?.id || userData.email || '';
+        const [rawAssignments, allRequests] = await Promise.all([
+          EmployeeService.fetchEmployeeFormAssignments(employee.id),
+          RequestService.fetchRequests(userData.schoolId, 'employee', empId).catch(() => [] as import('../../services/api/requests').Request[]),
+        ]);
         if (!isMounted) return;
+        setPendingRequestsCount(allRequests.filter(r => r.status === 'Pending').length);
 
         const enriched = rawAssignments.map(assignment => ({
           ...assignment,
@@ -231,10 +241,10 @@ export function EmployeeDashboard() {
                     </div>
                     <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
-                        { label: 'Role', value: 'Employee' },
-                        { label: 'Phone number', value: employee?.phone || '—' },
-                        { label: 'Address', value: employee?.address || '—' },
+                        { label: 'Forms Completed', value: `${completedForms} completed` },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
+                        { label: 'Pending Requests', value: `${pendingRequestsCount} pending` },
+                        { label: 'Salary Date', value: employee?.salaryDate || '—' }
                       ].map(({ label, value }) => (
                         <div key={label} className="flex justify-between items-center">
                           <span className="text-[11px] font-semibold text-slate-400">{label}</span>

@@ -18,6 +18,7 @@ import {
   TrendingUp, RefreshCw, Layers, Users, School,
   PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter
 } from 'lucide-react';
+import { SuperAdminLayout } from './SuperAdminLayout';
 import { AdminLayout } from '../admin/AdminLayout';
 
 const COLORS = ['#0F2D52', '#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899'];
@@ -58,7 +59,7 @@ function StatCard({
 }
 
 const CATEGORIES = ['Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor', 'Health & Safety', 'Other'];
-const PAYMENT_METHODS = ['Credit Card', 'Purchase Order', 'Cash', 'Check', 'Bank Transfer'];
+const PAYMENT_METHODS = ['Credit Card','Debit Card',  'Cash', 'Check', 'Bank Transfer'];
 const SCOPES = ['classroom', 'teacher', 'school'] as const;
 
 type AddExpenseForm = {
@@ -213,10 +214,10 @@ export function SuperAdminExpenses() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto px-4 sm:px-6 py-8 space-y-8 mt-10">
+      <div className="mx-auto px-4 sm:px-6 py-8 space-y-8">
 
         {/* ── Header ── */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <div className="flex items-center gap-2.5 mb-1">
               <div className="w-8 h-8 rounded-lg bg-[#0F2D52] flex items-center justify-center">
@@ -862,7 +863,9 @@ function LollipopChartCard({
   title: string;
   icon: React.ElementType;
   data: { name: string; value: number }[];
+  isCurrency?: boolean;
   colorOffset?: number;
+  tooltipLabel?: string;
 }) {
   const roleOrder = ['Employee', 'Admin', 'Super Admin'];
   const sortedData = [...data].sort((a, b) => {

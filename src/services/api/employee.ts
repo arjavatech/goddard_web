@@ -16,6 +16,7 @@ export type Employee = {
   schoolId: string;
   status: 'active' | 'inactive';
   isVerified?: boolean;
+  salaryDate?: string;
 };
 
 export type EmployeeFormTemplate = {
@@ -73,6 +74,7 @@ function mapEmployee(raw: any): Employee {
     schoolId: raw.school_id ?? '',
     status: raw.is_active !== false ? 'active' : 'inactive',
     isVerified: raw.is_verified ?? undefined,
+    salaryDate: raw.salary_date ?? undefined,
   };
 }
 

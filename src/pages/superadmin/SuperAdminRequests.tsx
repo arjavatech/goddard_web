@@ -52,6 +52,11 @@ export function SuperAdminRequests() {
     setStatusFilter('all');
   };
 
+  // Start Processing modal state
+  const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
+  const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
+  const [startProcessingDate, setStartProcessingDate] = useState(new Date().toISOString().split('T')[0]);
+
   // Purchase modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
@@ -84,7 +89,7 @@ export function SuperAdminRequests() {
   // Detail modal state
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
 
-  const paymentMethods = ['Credit Card', 'Purchase Order', 'Bank Transfer', 'Check', 'Cash'];
+  const paymentMethods = ['Credit Card',  'Bank Transfer', 'Check', 'Cash'];
   const categories = ['Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor'];
 
   const loadData = async () => {
@@ -175,10 +180,19 @@ export function SuperAdminRequests() {
 
   // ── Start Processing (Pending → In Progress) ────────────────────────────────
 
-  const handleStartProcessing = async (req: Request) => {
+  const handleOpenStartProcessing = (req: Request) => {
+    setStartProcessingRequest(req);
+    setStartProcessingDate(new Date().toISOString().split('T')[0]);
+    setIsStartProcessingModalOpen(true);
+  };
+
+  const handleStartProcessing = async () => {
+    if (!startProcessingRequest) return;
+    const req = startProcessingRequest;
+    setIsStartProcessingModalOpen(false);
     setValidatingId(req.id);
     try {
-      await RequestService.validateRequest(req.id);
+      await RequestService.validateRequest(req.id, undefined, startProcessingDate);
       showToast('success', `"${req.item}" moved to In Progress.`, 'Status Updated');
       const reqList = await RequestService.fetchRequests();
       setRequests(reqList);
@@ -186,6 +200,7 @@ export function SuperAdminRequests() {
       showToast('error', 'Could not update request status.', 'Error');
     } finally {
       setValidatingId(null);
+      setStartProcessingRequest(null);
     }
   };
 
@@ -407,7 +422,7 @@ export function SuperAdminRequests() {
       return (
         <div className="flex justify-end">
           <Button
-            onClick={() => handleStartProcessing(req)}
+            onClick={() => handleOpenStartProcessing(req)}
             disabled={validatingId === req.id}
             className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
           >
@@ -444,7 +459,7 @@ export function SuperAdminRequests() {
       <div className="space-y-5 sm:space-y-6 mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
 
         {/* Header */}
-        <div className="mt-10 sm:mt-14 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
               <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Super Admin Requests Queue
@@ -714,6 +729,9 @@ export function SuperAdminRequests() {
                                 </p>
                               </div>
                               <p className="text-[10px] text-slate-400">Created on {new Date(req.createdAt).toLocaleString()}</p>
+                              {req.processingStartDate && (
+                                <p className="text-[10px] text-blue-500 font-semibold">Processing from: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -784,6 +802,9 @@ export function SuperAdminRequests() {
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[70px]">
                             <p className="text-slate-500 text-[7px] sm:text-[8px] md:text-xs whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</p>
+                            {req.processingStartDate && (
+                              <p className="text-[7px] sm:text-[8px] text-blue-500 font-semibold whitespace-nowrap">Start: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                            )}
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-[7px] sm:text-[8px] md:text-xs min-w-[90px] text-center">
                             {req.status === 'Completed' ? <span className="font-bold text-emerald-700">${req.amountSpent?.toFixed(2)}</span> : '-'}
@@ -880,6 +901,12 @@ export function SuperAdminRequests() {
                       <p className="text-sm font-bold text-slate-800">{new Date(req.createdAt).toLocaleDateString()}</p>
                       <p className="text-[10px] text-slate-400">{new Date(req.createdAt).toLocaleTimeString()}</p>
                     </div>
+                    {req.processingStartDate && (
+                      <div className="bg-blue-50 rounded-xl p-3 space-y-0.5 col-span-2">
+                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1"><Play className="w-3 h-3" /> Processing Start Date</p>
+                        <p className="text-sm font-bold text-blue-800">{new Date(req.processingStartDate).toLocaleDateString()}</p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Product link */}
@@ -946,7 +973,7 @@ export function SuperAdminRequests() {
                       className="rounded-xl h-10 text-xs font-semibold border-slate-200">Close</Button>
                     {req.status === 'Pending' && (
                       <Button
-                        onClick={() => { setDetailRequest(null); handleStartProcessing(req); }}
+                        onClick={() => { setDetailRequest(null); handleOpenStartProcessing(req); }}
                         disabled={validatingId === req.id}
                         className="h-10 rounded-xl border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
                         <ArrowRight className="w-4 h-4 mr-1.5" /> Start Processing
@@ -964,6 +991,48 @@ export function SuperAdminRequests() {
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Processing Date Modal */}
+      <Dialog open={isStartProcessingModalOpen} onOpenChange={setIsStartProcessingModalOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Start Processing
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Select the date this request will start being processed.
+            </DialogDescription>
+          </DialogHeader>
+          {startProcessingRequest && (
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1 my-2">
+              <p className="font-semibold text-slate-700">Item: <span className="font-extrabold text-slate-900">{startProcessingRequest.item}</span></p>
+              <p className="text-slate-500">Requested by: <span className="font-bold text-slate-700">{startProcessingRequest.requesterName}</span></p>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Processing Start Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={startProcessingDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => setStartProcessingDate(e.target.value)}
+              className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
+            />
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-50">
+            <Button type="button" variant="outline" onClick={() => setIsStartProcessingModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
+            <Button
+              onClick={handleStartProcessing}
+              disabled={!startProcessingDate}
+              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
+              <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

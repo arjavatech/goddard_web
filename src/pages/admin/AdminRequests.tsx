@@ -321,10 +321,10 @@ export function AdminRequests() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 mt-14 mx-auto px-4 py-6">
+      <div className="space-y-6 mx-auto px-4 py-6">
         
         {/* Upper Header Row */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
               <ShoppingBag className="w-6 h-6 text-[#0F2D52]" /> Procurement Request Board
@@ -344,7 +344,7 @@ export function AdminRequests() {
 
         {/* Filter and Search Bar */}
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm mb-6 flex flex-col overflow-hidden">
-          <div className="p-4 flex flex-col md:flex-row gap-4 justify-between items-center">
+          <div className="p-4 flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
             <div className="relative w-full md:max-w-md">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
@@ -364,7 +364,7 @@ export function AdminRequests() {
               )}
             </div>
 
-            <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center gap-2 w-full md:w-auto flex-shrink-0">
               <Button
                 variant="outline"
                 onClick={() => setShowFilters(prev => !prev)}
@@ -467,11 +467,11 @@ export function AdminRequests() {
         </div>
 
         {/* Count + View Toggle */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+        <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 mb-6">
           <div className="text-sm font-medium text-slate-600">
             Showing <span className="font-bold text-slate-900">{sortedRequests.length}</span> requests
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
             <select
               value={recordsPerPage}
               onChange={e => { setRecordsPerPage(Number(e.target.value)); setCurrentPage(1); }}
@@ -528,61 +528,70 @@ export function AdminRequests() {
                   transition={{ duration: 0.25, delay: idx * 0.03 }}
                 >
                   <Card className="border border-slate-100 bg-white hover:border-slate-200 transition-all rounded-2xl overflow-hidden shadow-sm h-full flex flex-col justify-between">
-                    <div className="p-5 space-y-4">
-                      {/* Top Meta info */}
-                      <div className="flex justify-between items-start gap-2">
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
-                            Category: {req.category || 'Supplies'}
-                          </p>
-                          <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                            <span className="font-semibold text-slate-700">{req.requesterName}</span>
-                            <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded font-bold uppercase">{req.requesterRole}</span>
-                          </p>
+                    <div className="p-4 space-y-3">
+                      {/* Top: status badge + category */}
+                      <div className="flex justify-between items-center gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate">{req.category || 'Supplies'}</span>
+                          <span className="text-slate-300">·</span>
+                          <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-bold uppercase flex-shrink-0">{req.requesterRole}</span>
                         </div>
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border flex-shrink-0 ${getStatusBadgeClass(req.status)}`}>
                           {getStatusIcon(req.status)}
                           {req.status}
                         </span>
                       </div>
 
-                      {/* Content block */}
-                      <div className="flex gap-4">
+                      {/* Image + Item name */}
+                      <div className="flex gap-3 items-start">
                         {req.productImage ? (
                           <img
                             src={req.productImage}
                             alt={req.item}
-                            className="w-20 h-20 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
+                            className="w-16 h-16 rounded-xl object-cover border border-slate-100 bg-slate-50 flex-shrink-0"
                           />
                         ) : (
-                          <div className="w-20 h-20 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
-                            <ImageIcon className="w-8 h-8" />
+                          <div className="w-16 h-16 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center flex-shrink-0 text-slate-300">
+                            <ImageIcon className="w-6 h-6" />
                           </div>
                         )}
-
-                        <div className="min-w-0 flex-1 space-y-1">
-                          <h3 className="font-bold text-slate-900 text-sm line-clamp-2 leading-snug">{req.item}</h3>
-                          <div className="flex items-center gap-4 text-xs">
-                            <p className="text-slate-500">Qty: <span className="font-bold text-slate-700">{req.quantity}</span></p>
-                            <p className="text-slate-500 flex items-center gap-1 truncate">
-                              {req.scope === 'classroom' && (
-                                <>Target: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
-                              )}
-                              {req.scope === 'teacher' && (
-                                <>Target: <span className="font-bold text-slate-700">Employee ({req.teacherName})</span></>
-                              )}
-                              {req.scope === 'school' && (
-                                <>Target: <span className="font-bold text-slate-700">Entire School</span></>
-                              )}
-                            </p>
-                          </div>
-                          <p className="text-[10px] text-slate-400">Submitted: {new Date(req.createdAt).toLocaleString()}</p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-bold text-slate-900 text-sm leading-snug mb-1">{req.item}</h3>
+                          <p className="text-[11px] text-slate-500">
+                            By <span className="font-semibold text-slate-700">{req.requesterName}</span>
+                          </p>
                         </div>
+                      </div>
+
+                      {/* Full details grid */}
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 pt-2 border-t border-slate-50">
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Quantity</p>
+                          <p className="text-xs font-bold text-slate-700 mt-0.5">{req.quantity}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Target</p>
+                          <p className="text-xs font-bold text-slate-700 mt-0.5">
+                            {req.scope === 'classroom' && `Classroom · ${req.classroomName}`}
+                            {req.scope === 'teacher' && `Employee · ${req.teacherName}`}
+                            {req.scope === 'school' && 'Entire School'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Submitted</p>
+                          <p className="text-xs font-semibold text-slate-600 mt-0.5">{new Date(req.createdAt).toLocaleDateString()}</p>
+                        </div>
+                        {req.processingStartDate && (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Processing From</p>
+                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{new Date(req.processingStartDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     {/* Bottom Actions section */}
-                    <div className="bg-slate-50/50 px-5 py-4 border-t border-slate-50 flex items-center justify-between gap-3">
+                    <div className="bg-slate-50/50 px-5 py-4 border-t border-slate-50 flex flex-wrap items-center justify-between gap-2">
                       <div>
                         {req.productLink && (
                           <a
@@ -607,8 +616,8 @@ export function AdminRequests() {
                         )}
 
                         {req.status === 'Pending' && (
-                          <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1">
-                            Pending Super Admin Approval
+                          <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 whitespace-nowrap">
+                            Pending Approval
                           </span>
                         )}
 
@@ -706,6 +715,9 @@ export function AdminRequests() {
                       </td>
                       <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
                         {new Date(req.createdAt).toLocaleDateString()}
+                        {req.processingStartDate && (
+                          <p className="text-[10px] text-blue-500 font-semibold">Start: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -717,7 +729,7 @@ export function AdminRequests() {
 
         {/* Pagination Controls */}
         {!loading && sortedRequests.length > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4 text-sm">
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
             <div className="text-slate-500">
               Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span> to <span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span> requests
             </div>
@@ -731,7 +743,7 @@ export function AdminRequests() {
               >
                 <ChevronLeft className="w-4 h-4 mr-1" /> Prev
               </Button>
-              <div className="hidden sm:flex items-center gap-1">
+              <div className="hidden md:flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                   .map((p, i, arr) => (

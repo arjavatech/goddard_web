@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useState, useRef, useEffect } from 'react';
 import { Home, Users, LogOut, Menu, X, Crown, School, LayoutDashboard, ShoppingBag, PieChart } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
@@ -15,6 +15,7 @@ interface SuperAdminLayoutProps {
 }
 
 export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -70,6 +71,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
 
+  useEffect(() => {
+    activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [location.pathname]);
+
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       <nav className="flex-1 px-3 pb-4 overflow-y-auto scrollbar-thin lg:mt-20 pt-4">
@@ -83,6 +88,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                   <Link
                     key={i}
                     to={item.path}
+                    ref={isActive ? activeNavRef : undefined}
                     onClick={() => setIsSidebarOpen(false)}
                     className={cn(
                       'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',

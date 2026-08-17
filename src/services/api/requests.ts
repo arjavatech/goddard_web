@@ -21,6 +21,7 @@ export type Request = {
   teacherName?: string;
   category?: string;
   status: RequestStatus;
+  processingStartDate?: string;
   source?: 'request' | 'manual';
   createdAt: string;
   amountSpent?: number;
@@ -98,6 +99,7 @@ function mapRequest(r: any): Request {
     teacherName: r.teacher_name ?? undefined,
     category: r.category ?? undefined,
     status: r.status as RequestStatus,
+    processingStartDate: r.processing_start_date ?? undefined,
     source: r.source ?? 'request',
     createdAt: r.created_at ?? new Date().toISOString(),
     amountSpent: r.amount_spent ?? undefined,
@@ -239,8 +241,12 @@ export const RequestService = {
   },
 
   /** Admin validation — moves employee request to In Progress */
-  async validateRequest(requestId: string, _schoolId?: string): Promise<Request> {
-    return RequestService.updateRequestStatus(requestId, 'In Progress');
+  async validateRequest(requestId: string, _schoolId?: string, processingStartDate?: string): Promise<Request> {
+    const data = await authedFetch(
+      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status: 'In Progress', processingStartDate } },
+      z.any()
+    );
+    return mapRequest(data);
   },
 
   /** POST /requests/:id/pay — mark as Completed and record payment */

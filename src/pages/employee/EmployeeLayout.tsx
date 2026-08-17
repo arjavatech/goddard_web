@@ -1,4 +1,4 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
   Home, LogOut, Menu, X, ShoppingBag, UserCog, User
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { Footer } from '../../components/layout/Footer';
 interface EmployeeLayoutProps { children: ReactNode; }
 
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -44,6 +45,10 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     document.body.style.overflow = isSidebarOpen ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
+
+  useEffect(() => {
+    activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [location.pathname]);
 
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/employee|\/profile)/, '');
 
@@ -114,6 +119,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
                           isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -170,6 +176,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
                           isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
