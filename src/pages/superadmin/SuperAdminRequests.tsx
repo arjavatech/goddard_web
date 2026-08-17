@@ -388,6 +388,8 @@ export function SuperAdminRequests() {
 
   // ── Status helpers ──────────────────────────────────────────────────────────
 
+  const getStatusLabel = (status: RequestStatus) => status === 'Pending' ? 'Submitted' : status;
+
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
       case 'Pending': return 'bg-amber-50 text-amber-700 border-amber-200';
@@ -431,8 +433,8 @@ export function SuperAdminRequests() {
             ) : (
               <ArrowRight className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
             )}
-            <span className="hidden sm:inline">Start Processing</span>
-            <span className="inline sm:hidden text-[7px]">Start</span>
+            <span className="hidden sm:inline">Processing</span>
+            <span className="inline sm:hidden text-[7px]">Processing</span>
           </Button>
         </div>
       );
@@ -707,7 +709,7 @@ export function SuperAdminRequests() {
                               </p>
                             </div>
                             <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                              {getStatusIcon(req.status)}{req.status}
+                              {getStatusIcon(req.status)}{getStatusLabel(req.status)}
                             </span>
                           </div>
                           <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
@@ -797,7 +799,7 @@ export function SuperAdminRequests() {
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-center min-w-[80px]">
                             <span className={`inline-flex items-center gap-0.5 text-[7px] sm:text-[8px] md:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${getStatusBadgeClass(req.status)}`}>
-                              {getStatusIcon(req.status)}<span className="hidden sm:inline">{req.status}</span>
+                              {getStatusIcon(req.status)}<span className="hidden sm:inline">{getStatusLabel(req.status)}</span>
                             </span>
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[70px]">
@@ -845,7 +847,7 @@ export function SuperAdminRequests() {
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-3">
                     <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                      {getStatusIcon(req.status)}{req.status}
+                      {getStatusIcon(req.status)}{getStatusLabel(req.status)}
                     </span>
                   </div>
                 </div>
@@ -870,7 +872,7 @@ export function SuperAdminRequests() {
                             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-extrabold border-2 ${done ? 'bg-[#0F2D52] border-[#0F2D52] text-white' : 'bg-white border-slate-200 text-slate-300'}`}>
                               {i + 1}
                             </div>
-                            <span className={`text-[9px] font-bold mt-1 whitespace-nowrap ${done ? 'text-[#0F2D52]' : 'text-slate-300'}`}>{s}</span>
+                            <span className={`text-[9px] font-bold mt-1 whitespace-nowrap ${done ? 'text-[#0F2D52]' : 'text-slate-300'}`}>{getStatusLabel(s as RequestStatus)}</span>
                           </div>
                           {i < 2 && <div className={`flex-1 h-0.5 mb-4 mx-1 ${i < current ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />}
                         </React.Fragment>
@@ -976,7 +978,7 @@ export function SuperAdminRequests() {
                         onClick={() => { setDetailRequest(null); handleOpenStartProcessing(req); }}
                         disabled={validatingId === req.id}
                         className="h-10 rounded-xl border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
-                        <ArrowRight className="w-4 h-4 mr-1.5" /> Start Processing
+                        <ArrowRight className="w-4 h-4 mr-1.5" /> Processing
                       </Button>
                     )}
                     {req.status === 'In Progress' && (
@@ -999,7 +1001,7 @@ export function SuperAdminRequests() {
         <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Start Processing
+              <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Processing
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Select the date this request will start being processed.
