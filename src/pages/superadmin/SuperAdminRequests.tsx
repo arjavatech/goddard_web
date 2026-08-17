@@ -89,7 +89,7 @@ export function SuperAdminRequests() {
   // Detail modal state
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
 
-  const paymentMethods = ['Credit Card',  'Bank Transfer', 'Check', 'Cash'];
+  const paymentMethods = ['Credit Card', 'Debit Card', 'Bank Transfer', 'Check', 'Cash'];
   const categories = ['Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor'];
 
   const loadData = async () => {
