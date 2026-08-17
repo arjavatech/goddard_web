@@ -165,10 +165,11 @@ function mapSummary(s: any, expenseRows: any[]): ExpenseSummary {
 
 export const RequestService = {
   /** GET /requests */
-  async fetchRequests(schoolId?: string, _userRole?: string, userId?: string): Promise<Request[]> {
+  async fetchRequests(schoolId?: string, userRole?: string, userId?: string): Promise<Request[]> {
     const params = new URLSearchParams();
     if (schoolId)  params.set('schoolId', schoolId);
     if (userId)    params.set('userId', userId);
+    if (userRole)  params.set('role', userRole);
     params.set('limit', '100');
 
     const data = await authedFetch(

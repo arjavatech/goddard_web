@@ -85,6 +85,15 @@ export function EmployeeRequests() {
     'Play & Outdoor'
   ];
 
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    if (e.target.value === '__new__') {
+      e.target.value = formData.category;
+      showToast('warning', 'Contact your admin to add new categories.', 'Connect to Admin');
+      return;
+    }
+    handleInputChange(e);
+  };
+
   const fetchClassroomList = async (schoolId: string) => {
     try {
       const data = await fetchClassrooms(schoolId);
@@ -323,21 +332,18 @@ export function EmployeeRequests() {
 
         {/* Header Section */}
         <div className="mb-8 mt-8">
-          
-          
+
+
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm relative overflow-hidden">
             {/* Subtle decorative background */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-[#0F2D52]/5 to-transparent rounded-full blur-3xl pointer-events-none transform translate-x-1/2 -translate-y-1/2" />
-            
+
             <div className="relative z-10 flex items-center gap-5">
               <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center shadow-md flex-shrink-0 border border-[#0F2D52]/20">
                 <ShoppingBag className="w-6 h-6 text-white/90" />
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight">Material Requests</h1>
-                <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-                  Submit and track supply requests for your classroom.
-                </p>
               </div>
             </div>
 
@@ -345,7 +351,7 @@ export function EmployeeRequests() {
               onClick={handleOpenModal}
               className="relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 bg-[#0F2D52] hover:bg-[#163a66] text-white transition-all duration-200 rounded-xl font-bold text-xs sm:text-sm shadow-md hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 active:scale-95 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/50 focus:ring-offset-2 w-full sm:w-auto"
             >
-              <Plus className="w-4 h-4" /> 
+              <Plus className="w-4 h-4" />
               Create Request
             </button>
           </div>
@@ -464,8 +470,8 @@ export function EmployeeRequests() {
                 <ShoppingBag className="w-3.5 h-3.5 text-white" />
               </div>
               <div>
-                <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white/70">My</p>
-                <h2 className="text-xs sm:text-sm font-bold text-white leading-tight">Requests</h2>
+                {/* <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-white/70">My</p> */}
+                <h2 className="text-xs sm:text-sm font-bold text-white leading-tight">My Requests</h2>
               </div>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
@@ -745,12 +751,13 @@ export function EmployeeRequests() {
                 <select
                   name="category"
                   value={formData.category}
-                  onChange={handleInputChange}
+                  onChange={handleCategoryChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
                 >
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
+                  <option value="__new__">+ New</option>
                 </select>
               </div>
             </div>

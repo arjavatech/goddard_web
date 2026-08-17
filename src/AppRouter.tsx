@@ -56,6 +56,7 @@ import { ProfilePage } from './pages/ProfilePage';
 // SuperAdmin Requests & Expense analytics pages
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
+import { Settings } from './pages/admin/Settings';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -146,6 +147,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<RequestsRouter />} />
+                  <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<SuperAdminOnly>
                     <SuperAdminExpenses />
                   </SuperAdminOnly>} />
@@ -163,6 +165,7 @@ export function AppRouter() {
                   <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
                   <Route path="/superadmin-arjava/requests" element={<SuperAdminRequests />} />
                   <Route path="/superadmin-arjava/expenses" element={<SuperAdminExpenses />} />
+                  <Route path="/superadmin-arjava/settings" element={<Settings />} />
                 </Route>
 
                 {/* 404 Catch-all */}

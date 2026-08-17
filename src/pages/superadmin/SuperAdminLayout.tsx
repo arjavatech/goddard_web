@@ -1,5 +1,5 @@
 import React, { ReactNode, useState, useRef, useEffect } from 'react';
-import { Home, Users, LogOut, Menu, X, Crown, School, LayoutDashboard, ShoppingBag, PieChart } from 'lucide-react';
+import { Home, Users, LogOut, Menu, X, Crown, School, LayoutDashboard, ShoppingBag, PieChart, SlidersHorizontal } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../services/auth/useAuth';
@@ -55,6 +55,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
       label: 'Administration',
       items: [
         { icon: <Crown className="w-[18px] h-[18px]" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: '/superadmin-arjava/settings' },
       ],
     },
   ];

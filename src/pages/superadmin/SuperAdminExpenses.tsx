@@ -432,9 +432,9 @@ export function SuperAdminExpenses() {
                         className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                       >
                         <option value="all">All Scopes</option>
-                        <option value="school">School-wise</option>
-                        <option value="classroom">Class-wise</option>
-                        <option value="teacher">Teacher-wise</option>
+                        <option value="school">School</option>
+                        <option value="classroom">Class</option>
+                        <option value="teacher">Employee</option>
                       </select>
                     </div>
 

@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -125,8 +125,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Administration',
       items: [
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
-    }] : []),
+    }] : [{
+      label: 'Administration',
+      items: [
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+      ],
+    }]),
   ];
 
   const initials = userData?.firstName && userData?.lastName

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminLayout } from './AdminLayout';
+import { getProcurementCategories, getProcurementLocations } from './Settings';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -27,6 +28,7 @@ export function AdminRequests() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   
   // States
+  const [activeTab, setActiveTab] = useState<'admin' | 'employee'>('admin');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -66,13 +68,8 @@ export function AdminRequests() {
     notes: ''
   });
 
-  const categories = [
-    'Classroom Supplies',
-    'STEM & Toys',
-    'Books & Learning',
-    'Office & Equipment',
-    'Play & Outdoor'
-  ];
+  const categories = getProcurementCategories();
+  const locationOptions = getProcurementLocations();
 
   const fetchTeacherList = async (schoolId: string) => {
     try {
@@ -188,13 +185,13 @@ export function AdminRequests() {
     setFormData({
       item: '',
       quantity: 1,
-      category: 'Classroom Supplies',
+      category: categories[0] || 'Classroom Supplies',
       scope: 'school',
       classroomId: '',
       classroomName: '',
       teacherId: teachers[0]?.id || '',
       teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
-      locationArea: 'General',
+      locationArea: locationOptions[0] || 'General',
       productLink: '',
       notes: ''
     });
@@ -247,12 +244,12 @@ export function AdminRequests() {
   };
 
   const searchedAndFiltered = requests.filter(req => {
-    if (req.requesterRole !== 'admin' && req.requesterRole !== 'superadmin') return false;
+    const matchesTab = activeTab === 'employee' ? req.requesterRole === 'employee' : (req.requesterRole === 'admin' || req.requesterRole === 'superadmin');
     const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesScope = scopeFilter === 'all' || req.scope === scopeFilter;
-    return matchesSearch && matchesStatus && matchesScope;
+    return matchesTab && matchesSearch && matchesStatus && matchesScope;
   });
 
   const sortedRequests = [...searchedAndFiltered].sort((a, b) => {
@@ -334,12 +331,44 @@ export function AdminRequests() {
             </p>
           </div>
 
-          <Button
-            onClick={handleOpenModal}
-            className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2"
+          {activeTab === 'admin' && (
+            <Button
+              onClick={handleOpenModal}
+              className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" /> Create Request
+            </Button>
+          )}
+        </div>
+
+        {/* Tabs */}
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-2">
+          <button
+            onClick={() => { setActiveTab('admin'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'admin' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
           >
-            <Plus className="w-4 h-4" /> Create Request
-          </Button>
+            My Requests
+            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              activeTab === 'admin' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
+            }`}>
+              {requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length}
+            </span>
+          </button>
+          <button
+            onClick={() => { setActiveTab('employee'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+              activeTab === 'employee' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            Employee Requests
+            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+              activeTab === 'employee' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
+            }`}>
+              {requests.filter(r => r.requesterRole === 'employee').length}
+            </span>
+          </button>
         </div>
 
         {/* Filter and Search Bar */}
@@ -887,13 +916,9 @@ export function AdminRequests() {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
                 >
-                  <option value="General">General / Office</option>
-                  <option value="Kitchen">Kitchen</option>
-                  <option value="Playground">Playground</option>
-                  <option value="Parking">Parking Lot</option>
-                  <option value="Hallway">Hallways / Corridors</option>
-                  <option value="Bathroom">Restrooms</option>
-                  <option value="Other">Other</option>
+                  {locationOptions.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
                 </select>
               </div>
             )}

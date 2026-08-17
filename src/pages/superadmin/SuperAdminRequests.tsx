@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import { AdminLayout } from '../admin/AdminLayout';
+import { getProcurementCategories, getProcurementLocations } from '../admin/Settings';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -82,6 +83,7 @@ export function SuperAdminRequests() {
     classroomName: '',
     teacherId: '',
     teacherName: '',
+    locationArea: 'General',
     productLink: '',
     notes: ''
   });
@@ -90,7 +92,8 @@ export function SuperAdminRequests() {
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
 
   const paymentMethods = ['Credit Card', 'Debit Card', 'Bank Transfer', 'Check', 'Cash'];
-  const categories = ['Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor'];
+  const categories = getProcurementCategories();
+  const locationOptions = getProcurementLocations();
 
   const loadData = async () => {
     setLoading(true);
@@ -242,7 +245,7 @@ export function SuperAdminRequests() {
       item: '', quantity: 1, category: 'Classroom Supplies', scope: 'school',
       classroomId: '', classroomName: '',
       teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
-      productLink: '', notes: ''
+      locationArea: 'General', productLink: '', notes: ''
     });
     setCreateImageFile(null);
     setCreateFormErrors({});
@@ -269,7 +272,9 @@ export function SuperAdminRequests() {
         teacherId: createFormData.scope === 'teacher' ? createFormData.teacherId : undefined,
         teacherName: createFormData.scope === 'teacher' ? createFormData.teacherName : undefined,
         productLink: createFormData.productLink || undefined,
-        notes: createFormData.notes || undefined,
+        notes: createFormData.scope === 'school' && createFormData.locationArea && createFormData.locationArea !== 'General'
+          ? `[Location: ${createFormData.locationArea}] ${createFormData.notes || ''}`.trim()
+          : createFormData.notes || undefined,
       }, createImageFile || undefined);
       showToast('success', 'Request created successfully.', 'Request Created');
       setIsCreateModalOpen(false);
@@ -599,9 +604,9 @@ export function SuperAdminRequests() {
                     className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                   >
                     <option value="all">All Scopes</option>
-                    <option value="school">School-wise</option>
-                    <option value="classroom">Class-wise</option>
-                    <option value="teacher">Teacher-wise</option>
+                    <option value="school">School</option>
+                    <option value="classroom">Class</option>
+                    <option value="teacher">Teacher</option>
                   </select>
                 </div>
 
@@ -1146,9 +1151,9 @@ export function SuperAdminRequests() {
               </label>
               <div className="grid grid-cols-3 gap-2">
                 {([
-                  { key: 'school', icon: <School className="w-4 h-4" />, label: 'School-wise', sub: 'All classrooms' },
-                  { key: 'classroom', icon: <GraduationCap className="w-4 h-4" />, label: 'Class-wise', sub: 'Specific class' },
-                  { key: 'teacher', icon: <User className="w-4 h-4" />, label: 'Teacher-wise', sub: 'Specific teacher' },
+                  { key: 'school', icon: <School className="w-4 h-4" />, label: 'School', sub: 'All classrooms' },
+                  { key: 'classroom', icon: <GraduationCap className="w-4 h-4" />, label: 'Class', sub: 'Specific class' },
+                  { key: 'teacher', icon: <User className="w-4 h-4" />, label: 'Employee', sub: 'Specific teacher' },
                 ] as const).map(s => (
                   <button key={s.key} type="button"
                     onClick={() => setCreateFormData(prev => ({
@@ -1166,6 +1171,20 @@ export function SuperAdminRequests() {
                 ))}
               </div>
             </div>
+            {/* Location selector (school scope) */}
+            {createFormData.scope === 'school' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Campus Area / Location <span className="text-red-500">*</span>
+                </label>
+                <select name="locationArea" value={createFormData.locationArea} onChange={handleCreateInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  {locationOptions.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                  ))}
+                </select>
+              </div>
+            )}
             {/* Classroom selector */}
             {createFormData.scope === 'classroom' && (
               <div className="space-y-1.5">
