@@ -338,7 +338,7 @@ export const RequestService = {
           requesterName: details.requesterName,
           requesterRole: details.requesterRole,
           item:          details.item,
-          quantity:      details.quantity,
+          quantity:      Number(details.quantity),
           category:      details.category,
           scope:         details.scope,
           classroomName: details.classroomName,
