@@ -215,7 +215,7 @@ export const RequestService = {
           requesterName:    req.requesterName,
           requesterRole:    req.requesterRole,
           item:             req.item,
-          quantity:         req.quantity,
+          quantity:         Number(req.quantity),
           category:         req.category,
           location:         req.location,
           scope:            req.scope,
@@ -277,7 +277,7 @@ export const RequestService = {
       {
         method: 'PATCH', url: `/requests/${requestId}`,
         body: {
-          item: request.item, quantity: request.quantity, category: request.category, location: request.location,
+          item: request.item, quantity: request.quantity != null ? Number(request.quantity) : undefined, category: request.category, location: request.location,
           scope: request.scope, classroomId: request.classroomId, classroomName: request.classroomName,
           teacherId: request.teacherId, teacherName: request.teacherName, productLink: request.productLink,
           productImage: request.productImage, notes: request.notes,
