@@ -19,7 +19,7 @@ import {
   ShoppingBag, Search, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign,
   LayoutGrid, TableProperties, Plus, Filter, School, User, GraduationCap, ArrowRight,
-  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote
+  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2
 } from 'lucide-react';
 
 export function SuperAdminRequests() {
@@ -92,6 +92,114 @@ export function SuperAdminRequests() {
 
   // Detail modal state
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
+
+  // Edit/Delete state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<Request | null>(null);
+  const [editImageFile, setEditImageFile] = useState<File | null>(null);
+  const [editFormErrors, setEditFormErrors] = useState<Record<string, string>>({});
+  const [editFormData, setEditFormData] = useState({
+    item: '',
+    quantity: 1,
+    category: 'Classroom Supplies',
+    scope: 'school' as 'school' | 'classroom' | 'teacher',
+    classroomId: '',
+    classroomName: '',
+    teacherId: '',
+    teacherName: '',
+    location: '',
+    productLink: '',
+    notes: ''
+  });
+  const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
+
+  const handleOpenEdit = (req: Request) => {
+    setEditingRequest(req);
+    setEditFormData({
+      item: req.item,
+      quantity: req.quantity,
+      category: req.category || '',
+      scope: req.scope,
+      classroomId: req.classroomId || '',
+      classroomName: req.classroomName || '',
+      teacherId: req.teacherId || '',
+      teacherName: req.teacherName || '',
+      location: req.location || '',
+      productLink: req.productLink || '',
+      notes: req.notes || '',
+    });
+    setEditImageFile(null);
+    setEditFormErrors({});
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    if (name === 'classroomId') {
+      const sel = classrooms.find(c => c.id === value);
+      setEditFormData(prev => ({ ...prev, classroomId: value, classroomName: sel?.name ?? '' }));
+    } else if (name === 'teacherId') {
+      const sel = teachers.find(t => t.id === value);
+      setEditFormData(prev => ({ ...prev, teacherId: value, teacherName: sel ? `${sel.firstName} ${sel.lastName}` : '' }));
+    } else {
+      setEditFormData(prev => ({ ...prev, [name]: value }));
+    }
+    if (editFormErrors[name]) setEditFormErrors(prev => { const c = { ...prev }; delete c[name]; return c; });
+  };
+
+  const validateEditForm = () => {
+    const errors: Record<string, string> = {};
+    if (!editFormData.item.trim()) errors.item = 'Request item name is required';
+    if (!editFormData.category) errors.category = 'Please select a category';
+    if (editFormData.scope === 'classroom' && !editFormData.classroomId) errors.classroomId = 'Please select a classroom';
+    if (editFormData.scope === 'teacher' && !editFormData.teacherId) errors.teacherId = 'Please select a teacher';
+    setEditFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRequest || !validateEditForm()) return;
+    setSubmitting(true);
+    try {
+      await RequestService.updateRequest(editingRequest.id, {
+        item: editFormData.item,
+        quantity: editFormData.quantity,
+        category: editFormData.category,
+        location: editFormData.location || undefined,
+        scope: editFormData.scope,
+        classroomId: editFormData.scope === 'classroom' ? editFormData.classroomId : undefined,
+        classroomName: editFormData.scope === 'classroom' ? editFormData.classroomName : undefined,
+        teacherId: editFormData.scope === 'teacher' ? editFormData.teacherId : undefined,
+        teacherName: editFormData.scope === 'teacher' ? editFormData.teacherName : undefined,
+        productLink: editFormData.productLink || undefined,
+        notes: editFormData.notes || undefined,
+      }, editImageFile || undefined);
+      showToast('success', 'Request updated successfully.', 'Request Updated');
+      setIsEditModalOpen(false);
+      setEditingRequest(null);
+      setRequests(await RequestService.fetchRequests());
+    } catch {
+      showToast('error', 'Could not update request. Please try again.', 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return;
+    setSubmitting(true);
+    try {
+      await RequestService.deleteRequest(requestToDelete.id);
+      setRequests(prev => prev.filter(r => r.id !== requestToDelete.id));
+      showToast('success', 'Request deleted successfully.', 'Request Deleted');
+      setRequestToDelete(null);
+    } catch {
+      showToast('error', 'Could not delete request. Only Pending requests can be deleted.', 'Delete Failed');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const paymentMethods = ['Credit Card', 'Debit Card', 'Bank Transfer', 'Check', 'Cash'];
   const [categories, setCategories] = useState<string[]>([]);
@@ -494,7 +602,7 @@ export function SuperAdminRequests() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
-              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Super Admin Requests Queue
+              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Requests Queue
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Validate, approve, and record payments for all procurement requests.
@@ -508,22 +616,27 @@ export function SuperAdminRequests() {
           </Button>
         </div>
 
+       
+
         {/* Tabs */}
         <div className="-mx-4 px-4 overflow-x-auto border-b border-slate-200">
           <div className="flex min-w-max">
             {([
-              { key: 'all', label: `All (${requests.length})` },
-              { key: 'employee', label: `Employee Requests (${requests.filter(r => r.requesterRole === 'employee').length})` },
-              { key: 'admin', label: `Admin Requests (${requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length})` },
+              { key: 'all', label: 'All', count: requests.length },
+              { key: 'employee', label: 'Employee request', count: requests.filter(r => r.requesterRole === 'employee').length },
+              { key: 'admin', label: 'Admin request', count: requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length },
             ] as const).map(tab => (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
-                className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold border-b-2 transition-all ${
+                onClick={() => { setActiveTab(tab.key); setCurrentPage(1); }}
+                className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === tab.key ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
                 }`}
               >
                 {tab.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === tab.key ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-100 text-slate-400'
+                }`}>{tab.count}</span>
               </button>
             ))}
           </div>
@@ -716,7 +829,16 @@ export function SuperAdminRequests() {
               <ShoppingBag className="w-8 h-8 text-slate-300" />
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-1">No requests found</h3>
-            <p className="text-sm text-slate-500 max-w-sm mx-auto">No matching procurement requests.</p>
+            <p className="text-sm text-slate-500 max-w-sm mx-auto mb-4">
+              {searchTerm || statusFilter !== 'all' || scopeFilter !== 'all'
+                ? 'Try adjusting your search or filter options.'
+                : 'No procurement requests yet.'}
+            </p>
+            {!searchTerm && statusFilter === 'all' && scopeFilter === 'all' && (
+              <Button onClick={handleOpenCreateModal} className="rounded-xl h-10 bg-[#0F2D52] text-white text-xs font-bold px-5">
+                <Plus className="w-4 h-4 mr-1.5" /> Create First Request
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
@@ -779,7 +901,13 @@ export function SuperAdminRequests() {
                               <span className="text-[11px] text-slate-400 italic">No product link</span>
                             )}
                           </div>
-                          <div className="w-full sm:w-auto flex sm:justify-end" onClick={e => e.stopPropagation()}>
+                          <div className="w-full sm:w-auto flex sm:justify-end items-center gap-1.5" onClick={e => e.stopPropagation()}>
+                            {req.status !== 'Completed' && (
+                              <>
+                                <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
+                                <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
+                              </>
+                            )}
                             <ActionCell req={req} />
                           </div>
                         </div>
@@ -800,50 +928,58 @@ export function SuperAdminRequests() {
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[80px]">Status</th>
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[70px]">Date</th>
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[90px]">Amount</th>
-                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[120px]"></th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[160px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {paginatedData.map(req => (
                         <tr key={req.id} onClick={() => setDetailRequest(req)} className="hover:bg-slate-50 transition-colors cursor-pointer align-middle">
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[100px]">
-                            <p className="font-semibold text-slate-800 line-clamp-1 text-[7px] sm:text-[8px] md:text-xs leading-tight">{req.item}</p>
-                            <p className="text-[6px] sm:text-[8px] text-slate-700 leading-tight">{req.category || 'Supplies'} • Qty: {req.quantity}</p>
+                          <td className="px-3 sm:px-4 py-3 text-left min-w-[120px]">
+                            <p className="font-semibold text-slate-800 line-clamp-1 text-xs leading-tight">{req.item}</p>
+                            <p className="text-[10px] text-slate-500 leading-tight mt-0.5">{req.category || 'Supplies'} · Qty {req.quantity}</p>
                             {req.productLink && (
-                              <a href={req.productLink} target="_blank" rel="noopener noreferrer"
-                                className="inline-flex items-center gap-0.5 text-[6px] sm:text-[8px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
-                                <Link2 className="w-2 h-2" /> Link
+                              <a href={req.productLink} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                                className="inline-flex items-center gap-0.5 text-[10px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold mt-0.5">
+                                <Link2 className="w-2.5 h-2.5" /> Link
                               </a>
                             )}
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[90px]">
-                            <p className="font-medium text-slate-700 text-[7px] sm:text-[8px] md:text-xs line-clamp-1 leading-tight">{req.requesterName}</p>
-                            <p className="text-[6px] sm:text-[7px] uppercase font-bold text-slate-400 tracking-wide leading-tight">{req.requesterRole}</p>
+                          <td className="px-3 sm:px-4 py-3 text-left min-w-[100px]">
+                            <p className="font-medium text-slate-700 text-xs line-clamp-1 leading-tight">{req.requesterName}</p>
+                            <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wide bg-slate-100 px-1.5 py-0.5 rounded mt-0.5 inline-block">{req.requesterRole}</span>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[90px]">
-                            <p className="text-[7px] sm:text-[10px] font-semibold text-slate-800 leading-tight capitalize">{req.scope === 'classroom' ? 'Classroom' : req.scope === 'teacher' ? 'Teacher' : 'School'}</p>
-                            <p className="text-[6px] sm:text-[10px] text-slate-700 leading-tight">
+                          <td className="px-3 sm:px-4 py-3 text-left min-w-[100px]">
+                            <p className="text-xs font-semibold text-slate-800 leading-tight capitalize">{req.scope === 'classroom' ? 'Classroom' : req.scope === 'teacher' ? 'Teacher' : 'School'}</p>
+                            <p className="text-[10px] text-slate-500 leading-tight">
                               {req.scope === 'classroom' && req.classroomName}
                               {req.scope === 'teacher' && req.teacherName}
                               {req.scope === 'school' && 'Entire School'}
                             </p>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-center min-w-[80px]">
-                            <span className={`inline-flex items-center gap-0.5 text-[7px] sm:text-[8px] md:text-[9px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full border whitespace-nowrap ${getStatusBadgeClass(req.status)}`}>
-                              {getStatusIcon(req.status)}<span className="hidden sm:inline">{getStatusLabel(req.status)}</span>
+                          <td className="px-3 sm:px-4 py-3 text-center min-w-[90px]">
+                            <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${getStatusBadgeClass(req.status)}`}>
+                              {getStatusIcon(req.status)}{getStatusLabel(req.status)}
                             </span>
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[70px]">
-                            <p className="text-slate-500 text-[7px] sm:text-[8px] md:text-xs whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</p>
+                          <td className="px-3 sm:px-4 py-3 text-left min-w-[80px]">
+                            <p className="text-slate-500 text-xs whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</p>
                             {req.expectedCompletionDate && (
-                              <p className="text-[7px] sm:text-[8px] text-blue-500 font-semibold whitespace-nowrap">Expected: {new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
+                              <p className="text-[10px] text-blue-500 font-semibold whitespace-nowrap">Due: {new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
                             )}
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-[7px] sm:text-[8px] md:text-xs min-w-[90px] text-center">
-                            {req.status === 'Completed' ? <span className="font-bold text-emerald-700">${req.amountSpent?.toFixed(2)}</span> : '-'}
+                          <td className="px-3 sm:px-4 py-3 text-xs min-w-[90px] text-center">
+                            {req.status === 'Completed' ? <span className="font-bold text-emerald-700">${req.amountSpent?.toFixed(2)}</span> : <span className="text-slate-300">—</span>}
                           </td>
-                          <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-right min-w-[120px]" onClick={e => e.stopPropagation()}>
-                            <ActionCell req={req} />
+                          <td className="px-3 sm:px-4 py-3 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1.5">
+                              {req.status !== 'Completed' && (
+                                <>
+                                  <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
+                                  <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
+                                </>
+                              )}
+                              <ActionCell req={req} />
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1047,8 +1183,16 @@ export function SuperAdminRequests() {
                 </div>
 
                 {/* Footer actions */}
-                {req.status !== 'Completed' && (
-                  <div className="px-6 pb-5 pt-2 border-t border-slate-50 flex justify-end gap-3" onClick={e => e.stopPropagation()}>
+                <div className="px-6 pb-5 pt-2 border-t border-slate-50 flex justify-between gap-3" onClick={e => e.stopPropagation()}>
+                  <div className="flex items-center gap-2">
+                    {req.status !== 'Completed' && (
+                      <>
+                        <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); handleOpenEdit(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold border-slate-200"><Pencil className="w-3.5 h-3.5 mr-1.5" />Edit</Button>
+                        <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); setRequestToDelete(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete</Button>
+                      </>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => setDetailRequest(null)}
                       className="rounded-xl h-10 text-xs font-semibold border-slate-200">Close</Button>
                     {req.status === 'Pending' && (
@@ -1067,7 +1211,7 @@ export function SuperAdminRequests() {
                       </Button>
                     )}
                   </div>
-                )}
+                </div>
               </>
             );
           })()}
@@ -1354,6 +1498,149 @@ export function SuperAdminRequests() {
           </form>
         </DialogContent>
       </Dialog>
+      {/* Edit Request Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={open => { setIsEditModalOpen(open); if (!open) setEditingRequest(null); }}>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">Edit Request</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Editing: <span className="font-semibold text-slate-700">{editingRequest?.item}</span>
+              {editingRequest && (
+                <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(editingRequest.status)}`}>
+                  {getStatusIcon(editingRequest.status)}{getStatusLabel(editingRequest.status)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Requested Item <span className="text-red-500">*</span></label>
+              <input type="text" name="item" value={editFormData.item} onChange={handleEditInputChange}
+                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+              {editFormErrors.item && <p className="text-xs text-red-600 font-semibold">{editFormErrors.item}</p>}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity <span className="text-red-500">*</span></label>
+                <input type="text" name="quantity" value={editFormData.quantity} onChange={handleEditInputChange}
+                  onBlur={e => { if (e.target.value === '') setEditFormData(prev => ({ ...prev, quantity: 1 })); }}
+                  className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
+                <select name="category" value={editFormData.category} onChange={handleEditInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                {editFormErrors.category && <p className="text-xs text-red-600 font-semibold">{editFormErrors.category}</p>}
+              </div>
+            </div>
+            {editFormData.scope === 'classroom' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Classroom <span className="text-red-500">*</span></label>
+                <select name="classroomId" value={editFormData.classroomId} onChange={handleEditInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+                {editFormErrors.classroomId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.classroomId}</p>}
+              </div>
+            )}
+            {editFormData.scope === 'teacher' && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Teacher <span className="text-red-500">*</span></label>
+                <select name="teacherId" value={editFormData.teacherId} onChange={handleEditInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  {teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeType})</option>)}
+                </select>
+                {editFormErrors.teacherId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.teacherId}</p>}
+              </div>
+            )}
+            {editFormData.scope === 'school' && locationOptions.length > 0 && (
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</label>
+                <select name="location" value={editFormData.location} onChange={handleEditInputChange}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  <option value="">Select location</option>
+                  {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                </select>
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Link (Optional)</label>
+              <input type="url" name="productLink" placeholder="https://example.com/product" value={editFormData.productLink} onChange={handleEditInputChange}
+                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Image (Optional)</label>
+              {!editImageFile && editingRequest?.productImage ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img src={editingRequest.productImage} alt={editingRequest.item} className="w-full h-full object-cover" />
+                  </div>
+                  <label className="cursor-pointer text-[10px] font-semibold text-[#1a6fc4] hover:text-[#0F2D52]">
+                    Replace image
+                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f && f.size <= 2*1024*1024) setEditImageFile(f); else if (f) showToast('error', 'Image must be under 2 MB.', 'File Too Large'); }} className="hidden" />
+                  </label>
+                </div>
+              ) : editImageFile ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img src={URL.createObjectURL(editImageFile)} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-700 truncate">{editImageFile.name}</p>
+                    <button type="button" onClick={() => setEditImageFile(null)} className="text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                  <ImageIcon className="w-5 h-5 text-slate-300 mb-1" />
+                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
+                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f && f.size <= 2*1024*1024) setEditImageFile(f); else if (f) showToast('error', 'Image must be under 2 MB.', 'File Too Large'); }} className="hidden" />
+                </label>
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Notes (Optional)</label>
+              <textarea name="notes" placeholder="Any additional context..." value={editFormData.notes}
+                onChange={e => setEditFormData(prev => ({ ...prev, notes: e.target.value }))} rows={2}
+                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
+              <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingRequest(null); }}
+                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold">Cancel</Button>
+              <Button type="submit" disabled={submitting}
+                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Modal */}
+      <Dialog open={!!requestToDelete} onOpenChange={open => { if (!open) setRequestToDelete(null); }}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+          <div className="flex items-start gap-4 mb-4">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <DialogHeader>
+                <DialogTitle className="text-base font-bold text-slate-900">Delete Request?</DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-1">
+                  You're about to delete <span className="font-semibold text-slate-700">"{requestToDelete?.item}"</span>. This action cannot be undone.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-100">
+            <Button type="button" variant="outline" onClick={() => setRequestToDelete(null)} disabled={submitting} className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
+            <Button type="button" onClick={handleDeleteRequest} disabled={submitting} className="w-full sm:w-auto rounded-xl h-10 bg-red-600 text-white hover:bg-red-700 text-xs font-bold">{submitting ? 'Deleting...' : 'Yes, Delete'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </AdminLayout>
   );
 }
