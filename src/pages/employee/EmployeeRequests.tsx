@@ -145,7 +145,7 @@ export function EmployeeRequests() {
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: name === 'quantity' ? parseInt(value) || 1 : value
+        [name]: value
       }));
     }
 
@@ -163,7 +163,7 @@ export function EmployeeRequests() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item is required';
-    if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+
     if (!formData.category) errors.category = 'Please select a category';
     if (!formData.classroomId) errors.classroomId = 'Please select a classroom';
 
@@ -605,12 +605,8 @@ export function EmployeeRequests() {
                         )}
                         <div className="flex items-center gap-1.5">
                           <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setSelectedRequest(req); }} className="h-7 px-2 text-[10px]"><Eye className="w-3 h-3 mr-1" />View</Button>
-                          {req.status === 'Pending' && (
-                            <>
-                              <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); handleOpenEdit(req); }} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                              <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setRequestToDelete(req); }} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
-                            </>
-                          )}
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={e => { e.stopPropagation(); handleOpenEdit(req); }} className="h-7 px-2 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={e => { e.stopPropagation(); setRequestToDelete(req); }} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
                         </div>
                       </div>
                     </div>
@@ -691,12 +687,8 @@ export function EmployeeRequests() {
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         <div className="flex items-center gap-1">
                           <Button variant="outline" size="sm" onClick={() => setSelectedRequest(req)} className="h-7 px-2 text-[10px]"><Eye className="w-3 h-3 mr-1" />View</Button>
-                          {req.status === 'Pending' && (
-                            <>
-                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                              <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3" /></Button>
-                            </>
-                          )}
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>
                         </div>
                       </td>
                     )}
@@ -793,11 +785,11 @@ export function EmployeeRequests() {
                   Quantity <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="quantity"
-                  min="1"
                   value={formData.quantity}
                   onChange={handleInputChange}
+                  onBlur={e => { if (e.target.value === '') setFormData(prev => ({ ...prev, quantity: 1 })); }}
                   className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
                 />
                 {formErrors.quantity && <p className="text-xs text-red-600 font-semibold">{formErrors.quantity}</p>}
@@ -1061,12 +1053,10 @@ export function EmployeeRequests() {
 
                 {/* Footer */}
                 <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
-                  {req.status === 'Pending' ? (
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(null); handleOpenEdit(req); }} className="h-8 px-3 text-xs rounded-xl"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                      <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(null); setRequestToDelete(req); }} className="h-8 px-3 text-xs rounded-xl text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
-                    </div>
-                  ) : <div />}
+                  <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => { setSelectedRequest(null); handleOpenEdit(req); }} className="h-8 px-3 text-xs rounded-xl disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                    <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => { setSelectedRequest(null); setRequestToDelete(req); }} className="h-8 px-3 text-xs rounded-xl text-red-600 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                  </div>
                   <Button variant="outline" onClick={() => setSelectedRequest(null)} className="h-8 px-4 text-xs rounded-xl font-semibold">Close</Button>
                 </div>
               </>

@@ -156,7 +156,7 @@ export function AdminRequests() {
     } else {
       setFormData(prev => ({
         ...prev,
-        [name]: name === 'quantity' ? parseInt(value) || 1 : value
+        [name]: value
       }));
     }
 
@@ -173,7 +173,7 @@ export function AdminRequests() {
   const validateForm = () => {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item name is required';
-    if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+
     if (!formData.category) errors.category = 'Please select a category';
     
     if (formData.scope === 'classroom' && !formData.classroomId) {
@@ -659,18 +659,14 @@ export function AdminRequests() {
                     <div className="bg-slate-50/50 px-4 py-3 border-t border-slate-50 flex flex-col gap-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
                         <div className="flex items-center gap-2 flex-wrap">
-                          {req.status === 'Pending' && (
-                            <>
-                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 rounded-lg text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                              <Button variant="outline" size="sm" onClick={() => handleDelete(req)} className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
-                            </>
-                          )}
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-8 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleDelete(req)} className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
                           {req.productLink && (
                             <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
                               <Link2 className="w-3.5 h-3.5" /> Product Page <ExternalLink className="w-2.5 h-2.5" />
                             </a>
                           )}
-                          {!req.productLink && req.status !== 'Pending' && <span className="text-[11px] text-slate-400 italic">No product link</span>}
+                          {!req.productLink && <span className="text-[11px] text-slate-400 italic">No product link</span>}
                         </div>
                         <div>
                           {req.status === 'Completed' && (
@@ -813,14 +809,10 @@ export function AdminRequests() {
                         )}
                       </td>
                       <td className="px-2 py-3.5">
-                        {req.status === 'Pending' ? (
-                          <div className="flex items-center gap-1.5">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs"><Pencil className="w-3 h-3" /></Button>
-                            <Button variant="outline" size="sm" onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3 h-3" /></Button>
-                          </div>
-                        ) : (
-                          <span className="text-slate-300 text-xs">—</span>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3" /></Button>
+                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1025,11 +1017,11 @@ export function AdminRequests() {
                   Quantity <span className="text-red-500">*</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
                   name="quantity"
-                  min="1"
                   value={formData.quantity}
                   onChange={handleInputChange}
+                  onBlur={e => { if (e.target.value === '') setFormData(prev => ({ ...prev, quantity: 1 })); }}
                   className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
                 />
                 {formErrors.quantity && <p className="text-xs text-red-600 font-semibold">{formErrors.quantity}</p>}

@@ -243,7 +243,7 @@ export function SuperAdminRequests() {
       const sel = teachers.find(t => t.id === value);
       setCreateFormData(prev => ({ ...prev, teacherId: value, teacherName: sel ? `${sel.firstName} ${sel.lastName}` : '' }));
     } else {
-      setCreateFormData(prev => ({ ...prev, [name]: name === 'quantity' ? parseInt(value) || 1 : value }));
+      setCreateFormData(prev => ({ ...prev, [name]: value }));
     }
     if (createFormErrors[name]) setCreateFormErrors(prev => { const c = { ...prev }; delete c[name]; return c; });
   };
@@ -258,7 +258,7 @@ export function SuperAdminRequests() {
   const validateCreateForm = () => {
     const errors: Record<string, string> = {};
     if (!createFormData.item.trim()) errors.item = 'Request item name is required';
-    if (createFormData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+
     if (!createFormData.category) errors.category = 'Please select a category';
     if (createFormData.scope === 'classroom' && !createFormData.classroomId) errors.classroomId = 'Please select a classroom';
     if (createFormData.scope === 'teacher' && !createFormData.teacherId) errors.teacherId = 'Please select a teacher';
@@ -1293,7 +1293,8 @@ export function SuperAdminRequests() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity <span className="text-red-500">*</span></label>
-                <input type="number" name="quantity" min="1" value={createFormData.quantity} onChange={handleCreateInputChange}
+                <input type="text" name="quantity" value={createFormData.quantity} onChange={handleCreateInputChange}
+                  onBlur={e => { if (e.target.value === '') setCreateFormData(prev => ({ ...prev, quantity: 1 })); }}
                   className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
               </div>
               <div className="space-y-1.5">
