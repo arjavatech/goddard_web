@@ -1,81 +1,68 @@
 import { authedFetch, z } from './common';
 
-export type SettingItem = {
-  id: string;
-  name: string;
-  schoolId: string;
+export type RequestSetting = 'request_categories' | 'location';
+export type RequestSettingOption = { id: string; label: string };
+export type RequestSettingOperation = {
+  operation: 'add' | 'update' | 'delete';
+  setting: RequestSetting;
+  optionId?: string;
+  label?: string;
 };
 
-const settingItemSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  school_id: z.string(),
-});
+export type RequestSettings = {
+  schoolId: string;
+  requestCategories: RequestSettingOption[];
+  location: RequestSettingOption[];
+  csvFields: string[];
+};
 
-const settingListSchema = z.array(settingItemSchema);
+const optionSchema = z.object({ id: z.string(), label: z.string() });
+const requestSettingsSchema = z.object({
+  // Production returns camelCase. Keep snake_case support while environments
+  // transition to the current response contract.
+  schoolId: z.string().optional(),
+  school_id: z.string().optional(),
+  requestCategories: z.array(optionSchema).optional(),
+  request_categories: z.array(optionSchema).optional(),
+  location: z.array(optionSchema),
+  csvFields: z.array(z.string()).optional(),
+  csv_fields: z.array(z.string()).optional(),
+}).superRefine((data, context) => {
+  if (!data.schoolId && !data.school_id) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'Missing school ID' });
+  }
+  if (!data.requestCategories && !data.request_categories) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'Missing request categories' });
+  }
+  if (!data.csvFields && !data.csv_fields) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: 'Missing CSV fields' });
+  }
+}).transform((data): RequestSettings => ({
+  schoolId: data.schoolId ?? data.school_id ?? '',
+  requestCategories: data.requestCategories ?? data.request_categories ?? [],
+  location: data.location,
+  csvFields: data.csvFields ?? data.csv_fields ?? [],
+}));
 
-function mapItem(r: any): SettingItem {
-  return {
-    id: r.id,
-    name: r.name,
-    schoolId: r.school_id,
-  };
-}
-
-// ─── Categories ───────────────────────────────────────────────────────────────
-
-export async function fetchCategories(schoolId: string): Promise<SettingItem[]> {
+export async function fetchRequestSettings(schoolId: string): Promise<RequestSettings> {
   const data = await authedFetch(
-    { method: 'GET', url: `/settings/categories?school_id=${encodeURIComponent(schoolId)}` },
-    settingListSchema
+    { method: 'GET', url: `/schools/${encodeURIComponent(schoolId)}/request-settings` },
+    requestSettingsSchema,
   );
-  return data.map(mapItem);
+  return data;
 }
 
-export async function createCategory(schoolId: string, name: string): Promise<SettingItem> {
-  const data = await authedFetch(
-    {
-      method: 'POST',
-      url: '/settings/categories',
-      body: { school_id: schoolId, name },
-    },
-    settingItemSchema
-  );
-  return mapItem(data);
-}
-
-export async function deleteCategory(id: string): Promise<void> {
-  await authedFetch(
-    { method: 'DELETE', url: `/settings/categories/${encodeURIComponent(id)}` },
-    z.any()
-  );
-}
-
-// ─── Locations ────────────────────────────────────────────────────────────────
-
-export async function fetchLocations(schoolId: string): Promise<SettingItem[]> {
-  const data = await authedFetch(
-    { method: 'GET', url: `/settings/locations?school_id=${encodeURIComponent(schoolId)}` },
-    settingListSchema
-  );
-  return data.map(mapItem);
-}
-
-export async function createLocation(schoolId: string, name: string): Promise<SettingItem> {
+export async function updateRequestSettings(
+  schoolId: string,
+  operations: RequestSettingOperation[],
+): Promise<RequestSettings> {
   const data = await authedFetch(
     {
-      method: 'POST',
-      url: '/settings/locations',
-      body: { school_id: schoolId, name },
+      method: 'PATCH',
+      url: `/schools/${encodeURIComponent(schoolId)}/request-settings`,
+      body: { operations },
     },
-    settingItemSchema
+    requestSettingsSchema,
   );
-  return mapItem(data);
-}
-
-export async function deleteLocation(id: string): Promise<void> {
-  await authedFetch(
-    { method: 'DELETE', url: `/settings/locations/${encodeURIComponent(id)}` },
-    z.any()
-  );
+  return data;
 }

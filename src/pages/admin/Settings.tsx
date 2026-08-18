@@ -1,245 +1,147 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Tag, MapPin } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Pencil, Plus, Tag, Trash2, MapPin } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useToast } from '../../contexts/ToastContext';
 import { useUserContext } from '../../contexts/UserContext';
 import {
-  fetchCategories, createCategory, deleteCategory,
-  fetchLocations, createLocation, deleteLocation,
-  type SettingItem,
+  fetchRequestSettings,
+  updateRequestSettings,
+  type RequestSetting,
+  type RequestSettingOption,
 } from '../../services/api/settings';
 
-const DEFAULT_CATEGORIES = [
-  'Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor',
-];
-
-const DEFAULT_LOCATIONS = [
-  'General / Office', 'Kitchen', 'Playground', 'Parking Lot', 'Hallways / Corridors', 'Restrooms', 'Other',
-];
-
-function ListEditor({
-  title,
-  icon,
-  items,
-  onAdd,
-  onDelete,
-  placeholder,
-  loading,
-}: {
+type ListEditorProps = {
   title: string;
   icon: React.ReactNode;
-  items: SettingItem[];
-  onAdd: (name: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-  placeholder: string;
+  setting: RequestSetting;
+  items: RequestSettingOption[];
   loading: boolean;
-}) {
+  onAdd: (setting: RequestSetting, label: string) => Promise<void>;
+  onUpdate: (setting: RequestSetting, item: RequestSettingOption, label: string) => Promise<void>;
+  onDelete: (setting: RequestSetting, item: RequestSettingOption) => Promise<void>;
+  placeholder: string;
+};
+
+function ListEditor({ title, icon, setting, items, loading, onAdd, onUpdate, onDelete, placeholder }: ListEditorProps) {
+  const { showToast } = useToast();
   const [newItem, setNewItem] = useState('');
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState<RequestSettingOption | null>(null);
+  const [editLabel, setEditLabel] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const { showToast } = useToast();
 
   const add = async () => {
-    const trimmed = newItem.trim();
-    if (!trimmed) return;
-    if (items.some(i => i.name.toLowerCase() === trimmed.toLowerCase())) {
-      showToast('error', 'This item already exists.', 'Duplicate');
-      return;
-    }
+    const label = newItem.trim();
+    if (!label) return;
     setSaving(true);
     try {
-      await onAdd(trimmed);
+      await onAdd(setting, label);
       setNewItem('');
       showToast('success', `Added to ${title}.`, 'Added');
-    } catch {
-      showToast('error', 'Failed to add item.', 'Error');
-    } finally {
-      setSaving(false);
-    }
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Failed to add item.', 'Error');
+    } finally { setSaving(false); }
   };
 
-  const remove = async (id: string) => {
-    setDeletingId(id);
+  const saveEdit = async () => {
+    if (!editing || !editLabel.trim()) return;
+    setSaving(true);
     try {
-      await onDelete(id);
-      showToast('success', 'Item removed.', 'Removed');
-    } catch {
-      showToast('error', 'Failed to remove item.', 'Error');
-    } finally {
-      setDeletingId(null);
-    }
+      await onUpdate(setting, editing, editLabel.trim());
+      setEditing(null);
+      showToast('success', 'Item updated.', 'Updated');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Failed to update item.', 'Error');
+    } finally { setSaving(false); }
   };
 
-  return (
+  const remove = async (item: RequestSettingOption) => {
+    setDeletingId(item.id);
+    try {
+      await onDelete(setting, item);
+      showToast('success', 'Item removed and matching request values cleared.', 'Removed');
+    } catch (error) {
+      showToast('error', error instanceof Error ? error.message : 'Failed to remove item.', 'Error');
+    } finally { setDeletingId(null); }
+  };
+
+  return <>
     <Card className="border border-slate-100 rounded-2xl shadow-sm">
       <CardHeader className="pb-3 border-b border-slate-50">
         <CardTitle className="text-sm font-bold text-slate-800 flex items-center gap-2">
-          {icon}
-          {title}
-          <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-            {items.length}
-          </span>
+          {icon}{title}
+          <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{items.length}</span>
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-4 space-y-3">
         <div className="flex gap-2">
-          <input
-            type="text"
-            value={newItem}
-            onChange={e => setNewItem(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), add())}
-            placeholder={placeholder}
-            className="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] text-slate-800 placeholder:text-slate-400"
-          />
-          <Button
-            type="button"
-            onClick={add}
-            disabled={!newItem.trim() || saving}
-            className="h-9 px-3 rounded-xl bg-[#0F2D52] text-white text-xs font-bold hover:bg-[#1E4B83] flex items-center gap-1.5 disabled:opacity-40"
-          >
-            {saving ? <span className="animate-spin rounded-full border-2 border-white border-t-transparent h-3 w-3" /> : <Plus className="w-3.5 h-3.5" />}
-            Add
+          <input value={newItem} onChange={event => setNewItem(event.target.value)} onKeyDown={event => event.key === 'Enter' && (event.preventDefault(), add())}
+            placeholder={placeholder} className="flex-1 px-3 py-2 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+          <Button type="button" onClick={add} disabled={!newItem.trim() || saving}
+            className="h-9 px-3 rounded-xl bg-[#0F2D52] text-white text-xs font-bold hover:bg-[#1E4B83]">
+            <Plus className="w-3.5 h-3.5 mr-1" /> Add
           </Button>
         </div>
-
-        {loading ? (
-          <p className="text-xs text-slate-400 text-center py-4">Loading...</p>
-        ) : items.length === 0 ? (
-          <p className="text-xs text-slate-400 text-center py-4 italic">No items yet. Add one above.</p>
-        ) : (
-          <ul className="space-y-1.5">
-            {items.map(item => (
-              <li
-                key={item.id}
-                className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 group"
-              >
-                <span className="text-xs font-medium text-slate-700">{item.name}</span>
-                <button
-                  onClick={() => remove(item.id)}
-                  disabled={deletingId === item.id}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-50"
-                  title="Remove"
-                >
-                  {deletingId === item.id
-                    ? <span className="animate-spin rounded-full border-2 border-slate-400 border-t-transparent h-3 w-3 inline-block" />
-                    : <Trash2 className="w-3.5 h-3.5" />}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {!loading && items.length > 0 && (
-          <p className="text-[10px] text-slate-400 text-right">Hover an item to remove it</p>
-        )}
+        {loading ? <p className="text-xs text-slate-400 text-center py-4">Loading...</p> : items.length === 0 ?
+          <p className="text-xs text-slate-400 text-center py-4 italic">No items yet. Add one above.</p> :
+          <ul className="space-y-1.5">{items.map(item => <li key={item.id} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-100 group">
+            <span className="text-xs font-medium text-slate-700">{item.label}</span>
+            <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+              <button onClick={() => { setEditing(item); setEditLabel(item.label); }} className="p-1 rounded-lg text-slate-400 hover:text-[#0F2D52] hover:bg-slate-100" title="Edit"><Pencil className="w-3.5 h-3.5" /></button>
+              <button onClick={() => remove(item)} disabled={deletingId === item.id} className="p-1 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50" title="Remove">
+                {deletingId === item.id ? <span className="animate-spin rounded-full border-2 border-slate-400 border-t-transparent h-3 w-3 inline-block" /> : <Trash2 className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </li>)}</ul>}
       </CardContent>
     </Card>
-  );
+    <Dialog open={!!editing} onOpenChange={open => !open && setEditing(null)}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
+        <DialogHeader><DialogTitle>Edit {title}</DialogTitle><DialogDescription>Update this value for future and matching existing requests.</DialogDescription></DialogHeader>
+        <input autoFocus value={editLabel} onChange={event => setEditLabel(event.target.value)} onKeyDown={event => event.key === 'Enter' && (event.preventDefault(), saveEdit())}
+          className="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+        <DialogFooter><Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button><Button onClick={saveEdit} disabled={!editLabel.trim() || saving} className="bg-[#0F2D52] text-white">Save</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </>;
 }
 
 export function Settings() {
   const { userData } = useUserContext();
   const { showToast } = useToast();
   const schoolId = userData?.schoolId ?? '';
+  const [categories, setCategories] = useState<RequestSettingOption[]>([]);
+  const [locations, setLocations] = useState<RequestSettingOption[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [categories, setCategories] = useState<SettingItem[]>([]);
-  const [locations, setLocations] = useState<SettingItem[]>([]);
-  const [loadingCat, setLoadingCat] = useState(true);
-  const [loadingLoc, setLoadingLoc] = useState(true);
-
-  useEffect(() => {
+  const applySettings = (settings: Awaited<ReturnType<typeof fetchRequestSettings>>) => {
+    setCategories(settings.requestCategories);
+    setLocations(settings.location);
+  };
+  const loadSettings = async () => {
     if (!schoolId) return;
-    setLoadingCat(true);
-    fetchCategories(schoolId)
-      .then(setCategories)
-      .catch(() => {
-        showToast('error', 'Failed to load categories.', 'Error');
-        setCategories(DEFAULT_CATEGORIES.map((name, i) => ({ id: String(i), name, schoolId })));
-      })
-      .finally(() => setLoadingCat(false));
-  }, [schoolId]);
-
-  useEffect(() => {
-    if (!schoolId) return;
-    setLoadingLoc(true);
-    fetchLocations(schoolId)
-      .then(setLocations)
-      .catch(() => {
-        showToast('error', 'Failed to load locations.', 'Error');
-        setLocations(DEFAULT_LOCATIONS.map((name, i) => ({ id: String(i), name, schoolId })));
-      })
-      .finally(() => setLoadingLoc(false));
-  }, [schoolId]);
-
-  const handleAddCategory = async (name: string) => {
-    const item = await createCategory(schoolId, name);
-    setCategories(prev => [...prev, item]);
+    setLoading(true);
+    try { applySettings(await fetchRequestSettings(schoolId)); }
+    catch (error) { showToast('error', error instanceof Error ? error.message : 'Failed to load request settings.', 'Error'); }
+    finally { setLoading(false); }
   };
+  useEffect(() => { loadSettings(); }, [schoolId]);
 
-  const handleDeleteCategory = async (id: string) => {
-    await deleteCategory(id);
-    setCategories(prev => prev.filter(c => c.id !== id));
+  const mutate = async (operation: Parameters<typeof updateRequestSettings>[1][number]) => {
+    applySettings(await updateRequestSettings(schoolId, [operation]));
   };
-
-  const handleAddLocation = async (name: string) => {
-    const item = await createLocation(schoolId, name);
-    setLocations(prev => [...prev, item]);
-  };
-
-  const handleDeleteLocation = async (id: string) => {
-    await deleteLocation(id);
-    setLocations(prev => prev.filter(l => l.id !== id));
-  };
-
-  return (
-    <AdminLayout>
-      <div className="mx-auto space-y-6 px-4 sm:px-6 py-6 mt-14">
-        <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6">
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Settings</h1>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <ListEditor
-            title="Procurement Categories"
-            icon={<Tag className="w-4 h-4 text-[#0F2D52]" />}
-            items={categories}
-            onAdd={handleAddCategory}
-            onDelete={handleDeleteCategory}
-            placeholder="e.g. Art Supplies"
-            loading={loadingCat}
-          />
-          <ListEditor
-            title="Campus Locations"
-            icon={<MapPin className="w-4 h-4 text-[#0F2D52]" />}
-            items={locations}
-            onAdd={handleAddLocation}
-            onDelete={handleDeleteLocation}
-            placeholder="e.g. Library"
-            loading={loadingLoc}
-          />
-        </div>
+  return <AdminLayout>
+    <div className="mx-auto space-y-6 px-4 sm:px-6 py-6 mt-14">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-6"><h1 className="text-xl font-bold text-slate-900 tracking-tight">Settings</h1></div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <ListEditor title="Procurement Categories" icon={<Tag className="w-4 h-4 text-[#0F2D52]" />} setting="request_categories" items={categories} loading={loading} placeholder="e.g. Art Supplies"
+          onAdd={(setting, label) => mutate({ operation: 'add', setting, label })} onUpdate={(setting, item, label) => mutate({ operation: 'update', setting, optionId: item.id, label })} onDelete={(setting, item) => mutate({ operation: 'delete', setting, optionId: item.id })} />
+        <ListEditor title="Campus Locations" icon={<MapPin className="w-4 h-4 text-[#0F2D52]" />} setting="location" items={locations} loading={loading} placeholder="e.g. Library"
+          onAdd={(setting, label) => mutate({ operation: 'add', setting, label })} onUpdate={(setting, item, label) => mutate({ operation: 'update', setting, optionId: item.id, label })} onDelete={(setting, item) => mutate({ operation: 'delete', setting, optionId: item.id })} />
       </div>
-    </AdminLayout>
-  );
-}
-
-// Export helpers so request forms can read the live lists (localStorage fallback)
-export function getProcurementCategories(): string[] {
-  try {
-    const stored = localStorage.getItem('procurement_categories');
-    return stored ? JSON.parse(stored) : DEFAULT_CATEGORIES;
-  } catch {
-    return DEFAULT_CATEGORIES;
-  }
-}
-
-export function getProcurementLocations(): string[] {
-  try {
-    const stored = localStorage.getItem('procurement_locations');
-    return stored ? JSON.parse(stored) : DEFAULT_LOCATIONS;
-  } catch {
-    return DEFAULT_LOCATIONS;
-  }
+    </div>
+  </AdminLayout>;
 }

@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Papa from 'papaparse';
 import { AdminLayout } from '../admin/AdminLayout';
-import { getProcurementCategories, getProcurementLocations } from '../admin/Settings';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -11,6 +10,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
+import { fetchRequestSettings } from '../../services/api/settings';
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { Pagination } from '../../components/ui/pagination';
@@ -56,7 +56,9 @@ export function SuperAdminRequests() {
   // Start Processing modal state
   const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
   const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
-  const [startProcessingDate, setStartProcessingDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [dateEditRequest, setDateEditRequest] = useState<Request | null>(null);
+  const [isDateEditOpen, setIsDateEditOpen] = useState(false);
 
   // Purchase modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -83,7 +85,7 @@ export function SuperAdminRequests() {
     classroomName: '',
     teacherId: '',
     teacherName: '',
-    locationArea: 'General',
+    location: '',
     productLink: '',
     notes: ''
   });
@@ -92,18 +94,21 @@ export function SuperAdminRequests() {
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
 
   const paymentMethods = ['Credit Card', 'Debit Card', 'Bank Transfer', 'Check', 'Cash'];
-  const categories = getProcurementCategories();
-  const locationOptions = getProcurementLocations();
+  const [categories, setCategories] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const [reqList, classroomList] = await Promise.all([
+      const [reqList, classroomList, requestSettings] = await Promise.all([
         RequestService.fetchRequests(),
         userData?.schoolId ? fetchClassrooms(userData.schoolId) : Promise.resolve([]),
+        userData?.schoolId ? fetchRequestSettings(userData.schoolId) : Promise.resolve(null),
       ]);
       setRequests(reqList);
       setClassrooms(classroomList);
+      setCategories(requestSettings?.requestCategories.map(item => item.label) ?? []);
+      setLocationOptions(requestSettings?.location.map(item => item.label) ?? []);
 
       if (userData?.schoolId) {
         try {
@@ -185,7 +190,7 @@ export function SuperAdminRequests() {
 
   const handleOpenStartProcessing = (req: Request) => {
     setStartProcessingRequest(req);
-    setStartProcessingDate(new Date().toISOString().split('T')[0]);
+    setExpectedCompletionDate(new Date().toISOString().split('T')[0]);
     setIsStartProcessingModalOpen(true);
   };
 
@@ -195,7 +200,7 @@ export function SuperAdminRequests() {
     setIsStartProcessingModalOpen(false);
     setValidatingId(req.id);
     try {
-      await RequestService.validateRequest(req.id, undefined, startProcessingDate);
+      await RequestService.validateRequest(req.id, undefined, expectedCompletionDate);
       showToast('success', `"${req.item}" moved to In Progress.`, 'Status Updated');
       const reqList = await RequestService.fetchRequests();
       setRequests(reqList);
@@ -205,6 +210,26 @@ export function SuperAdminRequests() {
       setValidatingId(null);
       setStartProcessingRequest(null);
     }
+  };
+
+  const handleSaveExpectedCompletionDate = async () => {
+    if (!dateEditRequest || !expectedCompletionDate) return;
+    setSubmitting(true);
+    try {
+      const updatedRequest = await RequestService.updateExpectedCompletionDate(dateEditRequest.id, expectedCompletionDate);
+      setRequests(currentRequests => currentRequests.map(request =>
+        request.id === updatedRequest.id ? updatedRequest : request,
+      ));
+      setDetailRequest(currentRequest =>
+        currentRequest?.id === updatedRequest.id ? updatedRequest : currentRequest,
+      );
+      showToast('success', 'Expected completion date updated.', 'Date Updated');
+      setIsDateEditOpen(false);
+      setDateEditRequest(null);
+      setRequests(await RequestService.fetchRequests());
+    } catch {
+      showToast('error', 'Could not update expected completion date.', 'Error');
+    } finally { setSubmitting(false); }
   };
 
   // ── Create request modal ────────────────────────────────────────────────────
@@ -245,7 +270,7 @@ export function SuperAdminRequests() {
       item: '', quantity: 1, category: 'Classroom Supplies', scope: 'school',
       classroomId: '', classroomName: '',
       teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
-      locationArea: 'General', productLink: '', notes: ''
+      location: locationOptions[0] || '', productLink: '', notes: ''
     });
     setCreateImageFile(null);
     setCreateFormErrors({});
@@ -266,15 +291,14 @@ export function SuperAdminRequests() {
         item: createFormData.item,
         quantity: createFormData.quantity,
         category: createFormData.category,
+        location: createFormData.location || undefined,
         scope: createFormData.scope,
         classroomId: createFormData.scope === 'classroom' ? createFormData.classroomId : undefined,
         classroomName: createFormData.scope === 'classroom' ? createFormData.classroomName : undefined,
         teacherId: createFormData.scope === 'teacher' ? createFormData.teacherId : undefined,
         teacherName: createFormData.scope === 'teacher' ? createFormData.teacherName : undefined,
         productLink: createFormData.productLink || undefined,
-        notes: createFormData.scope === 'school' && createFormData.locationArea && createFormData.locationArea !== 'General'
-          ? `[Location: ${createFormData.locationArea}] ${createFormData.notes || ''}`.trim()
-          : createFormData.notes || undefined,
+        notes: createFormData.notes || undefined,
       }, createImageFile || undefined);
       showToast('success', 'Request created successfully.', 'Request Created');
       setIsCreateModalOpen(false);
@@ -386,7 +410,7 @@ export function SuperAdminRequests() {
         </tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <script>window.onload=()=>{window.print();}<\/script>
+      <script>window.onload=()=>{window.print();}</script>
       </body></html>`);
     win.document.close();
   };
@@ -736,8 +760,9 @@ export function SuperAdminRequests() {
                                 </p>
                               </div>
                               <p className="text-[10px] text-slate-400">Created on {new Date(req.createdAt).toLocaleString()}</p>
-                              {req.processingStartDate && (
-                                <p className="text-[10px] text-blue-500 font-semibold">Processing from: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                              {req.location && <p className="text-[10px] text-slate-500">Location: <span className="font-semibold">{req.location}</span></p>}
+                              {req.expectedCompletionDate && (
+                                <p className="text-[10px] text-blue-500 font-semibold">Expected completion: {new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
                               )}
                             </div>
                           </div>
@@ -809,8 +834,8 @@ export function SuperAdminRequests() {
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-left min-w-[70px]">
                             <p className="text-slate-500 text-[7px] sm:text-[8px] md:text-xs whitespace-nowrap">{new Date(req.createdAt).toLocaleDateString()}</p>
-                            {req.processingStartDate && (
-                              <p className="text-[7px] sm:text-[8px] text-blue-500 font-semibold whitespace-nowrap">Start: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                            {req.expectedCompletionDate && (
+                              <p className="text-[7px] sm:text-[8px] text-blue-500 font-semibold whitespace-nowrap">Expected: {new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
                             )}
                           </td>
                           <td className="px-3 sm:px-4 py-2 sm:py-2.5 font-medium text-[7px] sm:text-[8px] md:text-xs min-w-[90px] text-center">
@@ -908,10 +933,10 @@ export function SuperAdminRequests() {
                       <p className="text-sm font-bold text-slate-800">{new Date(req.createdAt).toLocaleDateString()}</p>
                       <p className="text-[10px] text-slate-400">{new Date(req.createdAt).toLocaleTimeString()}</p>
                     </div>
-                    {req.processingStartDate && (
+                    {req.expectedCompletionDate && (
                       <div className="bg-blue-50 rounded-xl p-3 space-y-0.5 col-span-2">
-                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1"><Play className="w-3 h-3" /> Processing Start Date</p>
-                        <p className="text-sm font-bold text-blue-800">{new Date(req.processingStartDate).toLocaleDateString()}</p>
+                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1"><Play className="w-3 h-3" /> Expected Completion Date</p>
+                        <div className="flex items-center justify-between"><p className="text-sm font-bold text-blue-800">{new Date(req.expectedCompletionDate).toLocaleDateString()}</p><Button variant="outline" size="sm" onClick={() => { setDateEditRequest(req); setExpectedCompletionDate(req.expectedCompletionDate || ''); setIsDateEditOpen(true); }} className="h-7 text-[10px]">Edit</Button></div>
                       </div>
                     )}
                   </div>
@@ -1009,7 +1034,7 @@ export function SuperAdminRequests() {
               <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Processing
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
-              Select the date this request will start being processed.
+              Set the date this request is expected to be completed.
             </DialogDescription>
           </DialogHeader>
           {startProcessingRequest && (
@@ -1020,13 +1045,13 @@ export function SuperAdminRequests() {
           )}
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-              Processing Start Date <span className="text-red-500">*</span>
+              Expected Completion Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
-              value={startProcessingDate}
+              value={expectedCompletionDate}
               min={new Date().toISOString().split('T')[0]}
-              onChange={e => setStartProcessingDate(e.target.value)}
+              onChange={e => setExpectedCompletionDate(e.target.value)}
               className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
             />
           </div>
@@ -1035,11 +1060,20 @@ export function SuperAdminRequests() {
               className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
             <Button
               onClick={handleStartProcessing}
-              disabled={!startProcessingDate}
+              disabled={!expectedCompletionDate}
               className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
               <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDateEditOpen} onOpenChange={setIsDateEditOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
+          <DialogHeader><DialogTitle>Update Expected Completion</DialogTitle><DialogDescription>Choose the revised expected completion date for this request.</DialogDescription></DialogHeader>
+          <input type="date" value={expectedCompletionDate} min={new Date().toISOString().split('T')[0]} onChange={event => setExpectedCompletionDate(event.target.value)}
+            className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+          <DialogFooter><Button variant="outline" onClick={() => setIsDateEditOpen(false)}>Cancel</Button><Button onClick={handleSaveExpectedCompletionDate} disabled={!expectedCompletionDate || submitting} className="bg-[#0F2D52] text-white">Save Date</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1177,9 +1211,9 @@ export function SuperAdminRequests() {
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                   Campus Area / Location <span className="text-red-500">*</span>
                 </label>
-                <select name="locationArea" value={createFormData.locationArea} onChange={handleCreateInputChange}
+                <select name="location" value={createFormData.location} onChange={handleCreateInputChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
-                  {locationOptions.map(loc => (
+                  <option value="">Select location</option>{locationOptions.map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>

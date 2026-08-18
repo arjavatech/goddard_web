@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AdminLayout } from './AdminLayout';
-import { getProcurementCategories, getProcurementLocations } from './Settings';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
@@ -9,12 +8,13 @@ import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
 import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
+import { fetchRequestSettings } from '../../services/api/settings';
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
-  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -53,6 +53,7 @@ export function AdminRequests() {
 
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<Request | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     item: '',
@@ -63,13 +64,13 @@ export function AdminRequests() {
     classroomName: '',
     teacherId: '',
     teacherName: '',
-    locationArea: 'General',
+    location: '',
     productLink: '',
     notes: ''
   });
 
-  const categories = getProcurementCategories();
-  const locationOptions = getProcurementLocations();
+  const [categories, setCategories] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
 
   const fetchTeacherList = async (schoolId: string) => {
     try {
@@ -114,13 +115,16 @@ export function AdminRequests() {
     if (!userData?.schoolId) return;
     setLoading(true);
     try {
-      const [, classroomList, reqList] = await Promise.all([
+      const [, classroomList, reqList, requestSettings] = await Promise.all([
         fetchTeacherList(userData.schoolId),
         fetchClassrooms(userData.schoolId),
         RequestService.fetchRequests(userData.schoolId, 'admin'),
+        fetchRequestSettings(userData.schoolId),
       ]);
       setClassrooms(classroomList);
       setRequests(reqList);
+      setCategories(requestSettings.requestCategories.map(item => item.label));
+      setLocationOptions(requestSettings.location.map(item => item.label));
     } catch (e) {
       showToast('error', 'Failed to load requests data. Please refresh.', 'Error Loading Data');
     } finally {
@@ -191,13 +195,24 @@ export function AdminRequests() {
       classroomName: '',
       teacherId: teachers[0]?.id || '',
       teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '',
-      locationArea: locationOptions[0] || 'General',
+      location: locationOptions[0] || '',
       productLink: '',
       notes: ''
     });
     setImageFile(null);
     setFormErrors({});
     setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (request: Request) => {
+    setEditingRequest(request);
+    setFormData({
+      item: request.item, quantity: request.quantity, category: request.category || '', scope: request.scope,
+      classroomId: request.classroomId || '', classroomName: request.classroomName || '',
+      teacherId: request.teacherId || '', teacherName: request.teacherName || '', location: request.location || '',
+      productLink: request.productLink || '', notes: request.notes || '',
+    });
+    setImageFile(null); setFormErrors({}); setIsModalOpen(true);
   };
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -210,11 +225,7 @@ export function AdminRequests() {
         ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Admin User'
         : 'Alice Johnson';
 
-      const finalNotes = formData.scope === 'school' && formData.locationArea && formData.locationArea !== 'General'
-        ? `[Location: ${formData.locationArea}] ${formData.notes || ''}`.trim()
-        : formData.notes || undefined;
-
-      await RequestService.createRequest({
+      const requestPayload = {
         schoolId: userData?.schoolId || 'school-1',
         requesterId: user?.id || '',
         requesterName,
@@ -222,17 +233,24 @@ export function AdminRequests() {
         item: formData.item,
         quantity: formData.quantity,
         category: formData.category,
+        location: formData.location || undefined,
         scope: formData.scope,
         classroomId: formData.scope === 'classroom' ? formData.classroomId : undefined,
         classroomName: formData.scope === 'classroom' ? formData.classroomName : undefined,
         teacherId: formData.scope === 'teacher' ? formData.teacherId : undefined,
         teacherName: formData.scope === 'teacher' ? formData.teacherName : undefined,
         productLink: formData.productLink || undefined,
-        notes: finalNotes
-      }, imageFile || undefined);
+        notes: formData.notes || undefined,
+      };
+      if (editingRequest) {
+        await RequestService.updateRequest(editingRequest.id, requestPayload, imageFile || undefined);
+      } else {
+        await RequestService.createRequest(requestPayload, imageFile || undefined);
+      }
 
-      showToast('success', 'Admin request created successfully. Sent to Super Admin for validation.', 'Request Created');
+      showToast('success', editingRequest ? 'Request updated successfully.' : 'Admin request created successfully. Sent to Super Admin for validation.', editingRequest ? 'Request Updated' : 'Request Created');
       setIsModalOpen(false);
+      setEditingRequest(null);
       
       const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1', 'admin');
       setRequests(reqList);
@@ -610,10 +628,16 @@ export function AdminRequests() {
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Submitted</p>
                           <p className="text-xs font-semibold text-slate-600 mt-0.5">{new Date(req.createdAt).toLocaleDateString()}</p>
                         </div>
-                        {req.processingStartDate && (
+                        {req.location && (
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Processing From</p>
-                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{new Date(req.processingStartDate).toLocaleDateString()}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Location</p>
+                            <p className="text-xs font-semibold text-slate-600 mt-0.5">{req.location}</p>
+                          </div>
+                        )}
+                        {req.expectedCompletionDate && (
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Expected Completion</p>
+                            <p className="text-xs font-semibold text-blue-600 mt-0.5">{new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
                           </div>
                         )}
                       </div>
@@ -621,7 +645,8 @@ export function AdminRequests() {
 
                     {/* Bottom Actions section */}
                     <div className="bg-slate-50/50 px-5 py-4 border-t border-slate-50 flex flex-wrap items-center justify-between gap-2">
-                      <div>
+                      <div className="flex items-center gap-2">
+                        {(req.status === 'Pending' || req.status === 'In Progress') && <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 rounded-lg text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>}
                         {req.productLink && (
                           <a
                             href={req.productLink}
@@ -665,23 +690,32 @@ export function AdminRequests() {
         ) : (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-sm min-w-[900px]">
+              <table className="w-full min-w-[960px] table-fixed text-left border-collapse text-sm">
+                <colgroup>
+                  <col className="w-[31%]" />
+                  <col className="w-[16%]" />
+                  <col className="w-[6%]" />
+                  <col className="w-[12%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[14%]" />
+                  <col className="w-[11%]" />
+                </colgroup>
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors w-2/5" onClick={() => requestSort('item')}>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('item')}>
                       <div className="flex items-center gap-1.5">
                         Item {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors">
-                      Target Assignment
+                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors leading-5">
+                      Target<br />Assignment
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
                       <div className="flex items-center gap-1.5">
                         Qty {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('status')}>
+                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap" onClick={() => requestSort('status')}>
                       <div className="flex items-center gap-1.5">
                         Status {sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
                       </div>
@@ -691,6 +725,8 @@ export function AdminRequests() {
                         Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
                       </div>
                     </th>
+                    <th className="px-4 py-3 font-semibold text-slate-700 leading-5">Expected<br />Completion</th>
+                    <th className="px-2 py-3 font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -734,7 +770,7 @@ export function AdminRequests() {
                       <td className="px-4 py-3.5 font-semibold text-slate-700">
                         {req.quantity}
                       </td>
-                      <td className="px-4 py-3.5">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
                         <div className="flex flex-col items-start gap-1">
                           <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
                             {getStatusIcon(req.status)}
@@ -744,10 +780,15 @@ export function AdminRequests() {
                       </td>
                       <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
                         {new Date(req.createdAt).toLocaleDateString()}
-                        {req.processingStartDate && (
-                          <p className="text-[10px] text-blue-500 font-semibold">Start: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                      </td>
+                      <td className="px-4 py-3.5 text-xs font-semibold whitespace-nowrap">
+                        {req.expectedCompletionDate ? (
+                          <span className="text-blue-600">{new Date(req.expectedCompletionDate).toLocaleDateString()}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
                         )}
                       </td>
+                      <td className="px-2 py-3.5">{(req.status === 'Pending' || req.status === 'In Progress') && <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -808,7 +849,7 @@ export function AdminRequests() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
             </DialogDescription>
@@ -824,8 +865,9 @@ export function AdminRequests() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'school', classroomId: '', classroomName: '', teacherId: '', teacherName: '' }))}
-                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
+                  disabled={!!editingRequest}
+                  onClick={() => { if (!editingRequest) setFormData(prev => ({ ...prev, scope: 'school', classroomId: '', classroomName: '', teacherId: '', teacherName: '' })); }}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-70 ${
                     formData.scope === 'school'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -837,8 +879,9 @@ export function AdminRequests() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'classroom', classroomId: classrooms[0]?.id || '', classroomName: classrooms[0]?.name || '', teacherId: '', teacherName: '' }))}
-                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
+                  disabled={!!editingRequest}
+                  onClick={() => { if (!editingRequest) setFormData(prev => ({ ...prev, scope: 'classroom', classroomId: classrooms[0]?.id || '', classroomName: classrooms[0]?.name || '', teacherId: '', teacherName: '' })); }}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-70 ${
                     formData.scope === 'classroom'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -850,8 +893,9 @@ export function AdminRequests() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFormData(prev => ({ ...prev, scope: 'teacher', classroomId: '', classroomName: '', teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '' }))}
-                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all ${
+                  disabled={!!editingRequest}
+                  onClick={() => { if (!editingRequest) setFormData(prev => ({ ...prev, scope: 'teacher', classroomId: '', classroomName: '', teacherId: teachers[0]?.id || '', teacherName: teachers[0] ? `${teachers[0].firstName} ${teachers[0].lastName}` : '' })); }}
+                  className={`flex flex-col items-center justify-center gap-1 p-3 border rounded-xl text-xs font-bold transition-all disabled:cursor-not-allowed disabled:opacity-70 ${
                     formData.scope === 'teacher'
                       ? 'border-[#0F2D52] bg-[#0F2D52]/5 text-[#0F2D52]'
                       : 'border-slate-200 bg-white text-slate-500 hover:bg-slate-50'
@@ -862,6 +906,7 @@ export function AdminRequests() {
                   <span className="text-[9px] font-medium opacity-60">Target individual</span>
                 </button>
               </div>
+              {editingRequest && <p className="text-[11px] text-slate-500">Target assignment cannot be changed after a request is created.</p>}
             </div>
 
             {/* Classroom Selector (if scope is classroom) */}
@@ -911,12 +956,12 @@ export function AdminRequests() {
                   Campus Area / Location <span className="text-red-500">*</span>
                 </label>
                 <select
-                  name="locationArea"
-                  value={formData.locationArea}
+                  name="location"
+                  value={formData.location}
                   onChange={handleInputChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
                 >
-                  {locationOptions.map(loc => (
+                  <option value="">Select location</option>{locationOptions.map(loc => (
                     <option key={loc} value={loc}>{loc}</option>
                   ))}
                 </select>
@@ -968,7 +1013,7 @@ export function AdminRequests() {
                   onChange={handleInputChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
                 >
-                  {categories.map(cat => (
+                <option value="">Select category</option>{categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
@@ -995,19 +1040,7 @@ export function AdminRequests() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Product Image (Optional)
               </label>
-              {!imageFile ? (
-                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
-                  <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
-                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
-                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP up to 2MB</span>
-                  <input
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    onChange={handleImageFileChange}
-                    className="hidden"
-                  />
-                </label>
-              ) : (
+              {imageFile ? (
                 <div className="flex items-center gap-3">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
                     <img
@@ -1028,6 +1061,41 @@ export function AdminRequests() {
                     </button>
                   </div>
                 </div>
+              ) : editingRequest?.productImage ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img
+                      src={editingRequest.productImage}
+                      alt={editingRequest.item}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700">Current product image</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">This image is already attached to the request.</p>
+                    <label className="inline-flex mt-2 cursor-pointer text-[10px] font-semibold text-[#1a6fc4] hover:text-[#0F2D52]">
+                      Replace image
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/gif,image/webp"
+                        onChange={handleImageFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                  <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
+                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
+                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP up to 2MB</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    onChange={handleImageFileChange}
+                    className="hidden"
+                  />
+                </label>
               )}
             </div>
 
@@ -1050,7 +1118,7 @@ export function AdminRequests() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => { setIsModalOpen(false); setEditingRequest(null); }}
                 className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
               >
                 Cancel
@@ -1060,7 +1128,7 @@ export function AdminRequests() {
                 disabled={submitting}
                 className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
               >
-                {submitting ? (imageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
+                {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
               </Button>
             </DialogFooter>
           </form>

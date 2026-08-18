@@ -13,7 +13,7 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, List, ArrowUp, ArrowDown, X
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, List, ArrowUp, ArrowDown, X, Pencil, Trash2
 } from 'lucide-react';
 
 export function EmployeeRequests() {
@@ -64,11 +64,13 @@ export function EmployeeRequests() {
 
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<Request | null>(null);
+  const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     item: '',
     quantity: 1,
-    category: 'Classroom Supplies',
+    category: '',
     classroomId: '',
     classroomName: '',
     productLink: '',
@@ -76,23 +78,7 @@ export function EmployeeRequests() {
     notes: ''
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-
-  const categories = [
-    'Classroom Supplies',
-    'STEM & Toys',
-    'Books & Learning',
-    'Office & Equipment',
-    'Play & Outdoor'
-  ];
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    if (e.target.value === '__new__') {
-      e.target.value = formData.category;
-      showToast('warning', 'Contact your admin to add new categories.', 'Connect to Admin');
-      return;
-    }
-    handleInputChange(e);
-  };
+  const categories = userData?.schoolData?.requestCategories?.map(category => category.label) ?? [];
 
   const fetchClassroomList = async (schoolId: string) => {
     try {
@@ -133,7 +119,6 @@ export function EmployeeRequests() {
       // Load classrooms
       await fetchClassroomList(userData.schoolId);
 
-      // Load requests for this user
       const reqList = await RequestService.fetchRequests(userData.schoolId, 'employee', empId);
       setRequests(reqList);
     } catch (e) {
@@ -179,6 +164,7 @@ export function EmployeeRequests() {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item is required';
     if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+    if (categories.length > 0 && !formData.category) errors.category = 'Please select a category';
     if (!formData.classroomId) errors.classroomId = 'Please select a classroom';
 
     setFormErrors(errors);
@@ -203,15 +189,33 @@ export function EmployeeRequests() {
   };
 
   const handleOpenModal = () => {
+    setEditingRequest(null);
     setFormData({
       item: '',
       quantity: 1,
-      category: 'Classroom Supplies',
+      category: categories[0] || '',
       classroomId: classrooms[0]?.id || '',
       classroomName: classrooms[0]?.name || '',
       productLink: '',
       productImage: '',
       notes: ''
+    });
+    setImageFile(null);
+    setFormErrors({});
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (request: Request) => {
+    setEditingRequest(request);
+    setFormData({
+      item: request.item,
+      quantity: request.quantity,
+      category: request.category || '',
+      classroomId: request.classroomId || '',
+      classroomName: request.classroomName || '',
+      productLink: request.productLink || '',
+      productImage: request.productImage || '',
+      notes: request.notes || '',
     });
     setImageFile(null);
     setFormErrors({});
@@ -228,7 +232,7 @@ export function EmployeeRequests() {
         ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Employee'
         : 'Sarah Jenkins';
 
-      await RequestService.createRequest({
+      const requestPayload = {
         schoolId: userData?.schoolId || 'school-1',
         requesterId: employeeId,
         requesterName,
@@ -241,15 +245,36 @@ export function EmployeeRequests() {
         classroomName: formData.classroomName,
         productLink: formData.productLink || undefined,
         notes: formData.notes || undefined
-      }, imageFile || undefined);
+      };
+      if (editingRequest) {
+        await RequestService.updateRequest(editingRequest.id, requestPayload, imageFile || undefined);
+      } else {
+        await RequestService.createRequest(requestPayload, imageFile || undefined);
+      }
 
-      showToast('success', 'Your request has been submitted successfully.', 'Request Submitted');
+      showToast('success', editingRequest ? 'Your request has been updated successfully.' : 'Your request has been submitted successfully.', editingRequest ? 'Request Updated' : 'Request Submitted');
       setIsModalOpen(false);
+      setEditingRequest(null);
       // Reload list
       const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1', 'employee', employeeId);
       setRequests(reqList);
     } catch (err) {
       showToast('error', 'Could not save request. Please try again.', 'Error Submitting Request');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteRequest = async () => {
+    if (!requestToDelete) return;
+    setSubmitting(true);
+    try {
+      await RequestService.deleteRequest(requestToDelete.id);
+      setRequests(currentRequests => currentRequests.filter(request => request.id !== requestToDelete.id));
+      showToast('success', 'Your Pending request has been deleted.', 'Request Deleted');
+      setRequestToDelete(null);
+    } catch {
+      showToast('error', 'Could not delete this request. Only Pending requests can be deleted.', 'Delete Failed');
     } finally {
       setSubmitting(false);
     }
@@ -561,19 +586,27 @@ export function EmployeeRequests() {
                       <div className="min-w-0 space-y-0.5">
                         <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">Classroom: {req.classroomName || '—'}</p>
                         <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium">Submitted: {new Date(req.createdAt).toLocaleDateString()}</p>
-                        {req.processingStartDate && (
-                          <p className="text-[10px] sm:text-[11px] text-blue-500 font-semibold">Processing from: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                        {req.expectedCompletionDate && (
+                          <p className="text-[10px] sm:text-[11px] text-blue-500 font-semibold">Expected completion: {new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
                         )}
                         {req.status === 'Completed' && req.amountSpent !== undefined && (
                           <p className="text-[10px] sm:text-[11px] text-emerald-600 font-bold">Spent: ${req.amountSpent.toFixed(2)} via {req.paymentMethod}</p>
                         )}
                       </div>
-                      {req.productLink && (
-                        <a href={req.productLink} target="_blank" rel="noopener noreferrer"
-                          className="shrink-0 inline-flex items-center gap-1 text-[9px] sm:text-[10px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
-                          <Link2 className="w-3 h-3" /> Link
-                        </a>
-                      )}
+                      <div className="shrink-0 flex flex-col items-end gap-2">
+                        {req.productLink && (
+                          <a href={req.productLink} target="_blank" rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-[9px] sm:text-[10px] text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
+                            <Link2 className="w-3 h-3" /> View Product <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                        {req.status === 'Pending' && (
+                          <div className="flex items-center gap-1.5">
+                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                            <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -582,7 +615,7 @@ export function EmployeeRequests() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-100 bg-white overflow-x-auto shadow-sm -mx-0">
-            <table className="w-full min-w-[480px] text-xs">
+            <table className="w-full min-w-[800px] text-xs">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
                   <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px] cursor-pointer" onClick={() => requestSort('item')}>
@@ -598,6 +631,8 @@ export function EmployeeRequests() {
                   <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px] cursor-pointer" onClick={() => requestSort('createdAt')}>
                     <div className="flex items-center gap-1">Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0F2D52]" /> : <ArrowDown className="w-3 h-3 text-[#0F2D52]" />) : null}</div>
                   </th>
+                  <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px] leading-4">Expected<br />Completion</th>
+                  <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -617,7 +652,7 @@ export function EmployeeRequests() {
                           <p className="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase tracking-wide">{req.category || 'Supplies'}</p>
                           {req.productLink && (
                             <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="text-[#1a6fc4] hover:text-[#0F2D52] inline-flex items-center gap-0.5 text-[10px] font-medium">
-                              <Link2 className="w-2.5 h-2.5" /> Link
+                              <Link2 className="w-2.5 h-2.5" /> View Product <ExternalLink className="w-2 h-2" />
                             </a>
                           )}
                         </div>
@@ -637,8 +672,20 @@ export function EmployeeRequests() {
                     </td>
                     <td className="px-3 py-2.5 text-slate-500 text-[10px] sm:text-[11px] whitespace-nowrap">
                       {new Date(req.createdAt).toLocaleDateString()}
-                      {req.processingStartDate && (
-                        <p className="text-[9px] sm:text-[10px] text-blue-500 font-semibold">Start: {new Date(req.processingStartDate).toLocaleDateString()}</p>
+                    </td>
+                    <td className="px-3 py-2.5 text-[10px] sm:text-[11px] font-semibold whitespace-nowrap">
+                      {req.expectedCompletionDate ? (
+                        <span className="text-blue-600">{new Date(req.expectedCompletionDate).toLocaleDateString()}</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap">
+                      {req.status === 'Pending' && (
+                        <div className="flex items-center gap-1">
+                          <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                          <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3" /></Button>
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -681,10 +728,10 @@ export function EmployeeRequests() {
       </div>
 
       {/* New Request Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+      <Dialog open={isModalOpen} onOpenChange={open => { setIsModalOpen(open); if (!open) setEditingRequest(null); }}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
           <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
             <DialogDescription className="text-[10px] sm:text-xs text-slate-500">
               Submit a request for supplies or equipment. The administrators will review it before purchase.
             </DialogDescription>
@@ -751,14 +798,16 @@ export function EmployeeRequests() {
                 <select
                   name="category"
                   value={formData.category}
-                  onChange={handleCategoryChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+                  onChange={handleInputChange}
+                  disabled={categories.length === 0}
+                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                 >
+                  <option value="" disabled>{categories.length > 0 ? 'Select category' : 'No categories configured'}</option>
                   {categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
-                  <option value="__new__">+ New</option>
                 </select>
+                {formErrors.category && <p className="text-xs text-red-600 font-semibold">{formErrors.category}</p>}
               </div>
             </div>
 
@@ -782,7 +831,31 @@ export function EmployeeRequests() {
               <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Product Image (Optional)
               </label>
-              {!imageFile ? (
+              {imageFile ? (
+                <div className="flex items-center gap-3">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
+                    <button type="button" onClick={handleClearImage} className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
+                  </div>
+                </div>
+              ) : editingRequest?.productImage ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                    <img src={editingRequest.productImage} alt={editingRequest.item} className="w-full h-full object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-700">Current product image</p>
+                    <label className="inline-flex mt-2 cursor-pointer text-[10px] font-semibold text-[#1a6fc4] hover:text-[#0F2D52]">
+                      Replace image
+                      <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleImageFileChange} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+              ) : (
                 <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
                   <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
                   <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
@@ -794,27 +867,6 @@ export function EmployeeRequests() {
                     className="hidden"
                   />
                 </label>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
-                    <img
-                      src={URL.createObjectURL(imageFile)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
-                    <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
-                    <button
-                      type="button"
-                      onClick={handleClearImage}
-                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
               )}
             </div>
 
@@ -847,10 +899,23 @@ export function EmployeeRequests() {
                 disabled={submitting}
                 className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
               >
-                {submitting ? (imageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
+                {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!requestToDelete} onOpenChange={open => { if (!open) setRequestToDelete(null); }}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">Delete Pending Request?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">Delete “{requestToDelete?.item}”? This cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3">
+            <Button type="button" variant="outline" onClick={() => setRequestToDelete(null)} disabled={submitting}>Cancel</Button>
+            <Button type="button" onClick={handleDeleteRequest} disabled={submitting} className="bg-red-600 text-white hover:bg-red-700">{submitting ? 'Deleting...' : 'Delete Request'}</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </EmployeeLayout>

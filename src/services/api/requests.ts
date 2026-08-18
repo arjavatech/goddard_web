@@ -20,8 +20,9 @@ export type Request = {
   teacherId?: string;
   teacherName?: string;
   category?: string;
+  location?: string;
   status: RequestStatus;
-  processingStartDate?: string;
+  expectedCompletionDate?: string;
   source?: 'request' | 'manual';
   createdAt: string;
   amountSpent?: number;
@@ -98,8 +99,9 @@ function mapRequest(r: any): Request {
     teacherId: r.teacher_id ?? undefined,
     teacherName: r.teacher_name ?? undefined,
     category: r.category ?? undefined,
+    location: r.location ?? undefined,
     status: r.status as RequestStatus,
-    processingStartDate: r.processing_start_date ?? undefined,
+    expectedCompletionDate: r.expected_completion_date ?? undefined,
     source: r.source ?? 'request',
     createdAt: r.created_at ?? new Date().toISOString(),
     amountSpent: r.amount_spent ?? undefined,
@@ -215,6 +217,7 @@ export const RequestService = {
           item:             req.item,
           quantity:         req.quantity,
           category:         req.category,
+          location:         req.location,
           scope:            req.scope,
           classroomId:      req.classroomId,
           classroomName:    req.classroomName,
@@ -233,19 +236,57 @@ export const RequestService = {
   },
 
   /** PATCH /requests/:id/status */
-  async updateRequestStatus(requestId: string, status: RequestStatus): Promise<Request> {
+  async updateRequestStatus(requestId: string, status: RequestStatus, expectedCompletionDate?: string): Promise<Request> {
     const data = await authedFetch(
-      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status } },
+      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status, expectedCompletionDate } },
       z.any()
     );
     return mapRequest(data);
   },
 
   /** Admin validation — moves employee request to In Progress */
-  async validateRequest(requestId: string, _schoolId?: string, processingStartDate?: string): Promise<Request> {
+  async validateRequest(requestId: string, _schoolId?: string, expectedCompletionDate?: string): Promise<Request> {
     const data = await authedFetch(
-      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status: 'In Progress', processingStartDate } },
+      { method: 'PATCH', url: `/requests/${requestId}/status`, body: { status: 'In Progress', expectedCompletionDate } },
       z.any()
+    );
+    return mapRequest(data);
+  },
+
+  async updateExpectedCompletionDate(requestId: string, expectedCompletionDate: string): Promise<Request> {
+    const data = await authedFetch(
+      { method: 'PATCH', url: `/requests/${requestId}/expected-completion-date`, body: { expectedCompletionDate } },
+      z.any(),
+    );
+    return mapRequest(data);
+  },
+
+  async updateRequest(requestId: string, request: Partial<Pick<Request,
+    'item' | 'quantity' | 'category' | 'location' | 'scope' | 'classroomId' | 'classroomName' |
+    'teacherId' | 'teacherName' | 'productLink' | 'productImage' | 'notes'>>, imageFile?: File): Promise<Request> {
+    let imageBase64: string | undefined;
+    if (imageFile) {
+      imageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+    }
+    const data = await authedFetch(
+      {
+        method: 'PATCH', url: `/requests/${requestId}`,
+        body: {
+          item: request.item, quantity: request.quantity, category: request.category, location: request.location,
+          scope: request.scope, classroomId: request.classroomId, classroomName: request.classroomName,
+          teacherId: request.teacherId, teacherName: request.teacherName, productLink: request.productLink,
+          productImage: request.productImage, notes: request.notes,
+          imageBase64,
+          imageName: imageFile?.name,
+          imageContentType: imageFile?.type,
+        },
+      },
+      z.any(),
     );
     return mapRequest(data);
   },
