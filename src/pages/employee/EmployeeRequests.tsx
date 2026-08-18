@@ -1,23 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
 import { EmployeeLayout } from './EmployeeLayout';
-import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
 import { useAuth } from '../../services/auth/useAuth';
-import { RequestService, type Request, type RequestStatus } from '../../services/api/requests';
+import { RequestService, type Request, type RequestStatus, type RequestScope } from '../../services/api/requests';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowLeft, LayoutGrid, List, ArrowUp, ArrowDown, X, Pencil, Trash2
+  ExternalLink, Link2, ImageIcon, RefreshCw, LayoutGrid, List, ArrowUp, ArrowDown, X, Pencil, Trash2,
+  CalendarClock, DollarSign, MapPin, Tag, Hash, FileText, Receipt, Eye
 } from 'lucide-react';
 
 export function EmployeeRequests() {
-  const { userData, schoolSubdomain } = useUserContext();
+  const { userData } = useUserContext();
   const { showToast } = useToast();
   const { user } = useAuth();
   const [requests, setRequests] = useState<Request[]>([]);
@@ -33,7 +32,7 @@ export function EmployeeRequests() {
   const [userOverride, setUserOverride] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [recordsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
   const handleViewModeChange = (mode: 'card' | 'table') => {
@@ -66,6 +65,7 @@ export function EmployeeRequests() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<Request | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     item: '',
@@ -164,7 +164,7 @@ export function EmployeeRequests() {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item is required';
     if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
-    if (categories.length > 0 && !formData.category) errors.category = 'Please select a category';
+    if (!formData.category) errors.category = 'Please select a category';
     if (!formData.classroomId) errors.classroomId = 'Please select a classroom';
 
     setFormErrors(errors);
@@ -236,11 +236,11 @@ export function EmployeeRequests() {
         schoolId: userData?.schoolId || 'school-1',
         requesterId: employeeId,
         requesterName,
-        requesterRole: 'employee',
+        requesterRole: 'employee' as const,
         item: formData.item,
         quantity: formData.quantity,
         category: formData.category,
-        scope: 'classroom',
+        scope: 'classroom' as RequestScope,
         classroomId: formData.classroomId,
         classroomName: formData.classroomName,
         productLink: formData.productLink || undefined,
@@ -556,7 +556,10 @@ export function EmployeeRequests() {
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.25, delay: idx * 0.04 }}
                 >
-                  <div className="rounded-2xl border border-slate-100 bg-white flex flex-col hover:border-slate-200 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200">
+                  <div
+                    className="rounded-2xl border border-slate-100 bg-white flex flex-col hover:border-slate-200 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200 cursor-pointer"
+                    onClick={() => setSelectedRequest(req)}
+                  >
                     {/* Card body */}
                     <div className="p-4 flex items-start gap-3 flex-1">
                       <div className="w-9 h-9 rounded-xl flex-shrink-0 overflow-hidden border border-slate-100">
@@ -600,12 +603,15 @@ export function EmployeeRequests() {
                             <Link2 className="w-3 h-3" /> View Product <ExternalLink className="w-2.5 h-2.5" />
                           </a>
                         )}
-                        {req.status === 'Pending' && (
-                          <div className="flex items-center gap-1.5">
-                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                            <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setSelectedRequest(req); }} className="h-7 px-2 text-[10px]"><Eye className="w-3 h-3 mr-1" />View</Button>
+                          {req.status === 'Pending' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); handleOpenEdit(req); }} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                              <Button variant="outline" size="sm" onClick={e => { e.stopPropagation(); setRequestToDelete(req); }} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -615,6 +621,7 @@ export function EmployeeRequests() {
           </div>
         ) : (
           <div className="rounded-2xl border border-slate-100 bg-white overflow-x-auto shadow-sm -mx-0">
+            {(() => { const hasActions = true; return (
             <table className="w-full min-w-[800px] text-xs">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/60">
@@ -632,7 +639,7 @@ export function EmployeeRequests() {
                     <div className="flex items-center gap-1">Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0F2D52]" /> : <ArrowDown className="w-3 h-3 text-[#0F2D52]" />) : null}</div>
                   </th>
                   <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px] leading-4">Expected<br />Completion</th>
-                  <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">Actions</th>
+                  {hasActions && <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -680,18 +687,24 @@ export function EmployeeRequests() {
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap">
-                      {req.status === 'Pending' && (
+                    {hasActions && (
+                      <td className="px-3 py-2.5 whitespace-nowrap">
                         <div className="flex items-center gap-1">
-                          <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
-                          <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3" /></Button>
+                          <Button variant="outline" size="sm" onClick={() => setSelectedRequest(req)} className="h-7 px-2 text-[10px]"><Eye className="w-3 h-3 mr-1" />View</Button>
+                          {req.status === 'Pending' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px]"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                              <Button variant="outline" size="sm" onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3" /></Button>
+                            </>
+                          )}
                         </div>
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
+            );})()} 
           </div>
         )}
 
@@ -792,9 +805,25 @@ export function EmployeeRequests() {
 
               {/* Category */}
               <div className="space-y-1.5">
-                <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Category
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Category {categories.length > 0 && <span className="text-red-500">*</span>}
+                  </label>
+                  <div className="group relative">
+                    <button
+                      type="button"
+                      className="flex items-center gap-0.5 text-[9px] sm:text-[10px] font-bold text-[#1a6fc4] hover:text-[#0F2D52] transition-colors"
+                    >
+                      <Plus className="w-3 h-3" /> New
+                    </button>
+                    <div className="pointer-events-none absolute right-0 bottom-full mb-2 z-[200] w-52 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <div className="relative bg-[#1e293b] rounded-lg px-3 py-2 shadow-lg">
+                        <p className="text-[10px] leading-relaxed text-slate-200">To add a new category, please contact your administrator.</p>
+                        <div className="absolute -bottom-1.5 right-3 w-3 h-3 bg-[#1e293b] rotate-45" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
                 <select
                   name="category"
                   value={formData.category}
@@ -903,6 +932,146 @@ export function EmployeeRequests() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Request Detail Modal */}
+      <Dialog open={!!selectedRequest} onOpenChange={open => { if (!open) setSelectedRequest(null); }}>
+        <DialogContent className="w-[95vw] max-w-lg rounded-2xl bg-white p-0 overflow-hidden max-h-[90vh] flex flex-col">
+          {selectedRequest && (() => {
+            const req = selectedRequest;
+            return (
+              <>
+                {/* Header with status color */}
+                <div className={`px-6 pt-6 pb-4 border-b border-slate-100 ${
+                  req.status === 'Completed' ? 'bg-emerald-50/60' :
+                  req.status === 'In Progress' ? 'bg-blue-50/60' : 'bg-amber-50/40'
+                }`}>
+                  <div className="flex items-start gap-4">
+                    <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-200 flex-shrink-0 bg-white shadow-sm">
+                      {req.productImage ? (
+                        <img src={req.productImage} alt={req.item} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center">
+                          <ImageIcon className="h-6 w-6 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <DialogTitle className="text-sm sm:text-base font-bold text-slate-900 leading-snug">{req.item}</DialogTitle>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                          {getStatusIcon(req.status)}
+                          {getStatusLabel(req.status)}
+                        </span>
+                        {req.category && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                            <Tag className="w-3 h-3" />{req.category}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Body */}
+                <div className="overflow-y-auto flex-1 px-6 py-4 space-y-4 no-scrollbar">
+
+                  {/* Key details grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Hash className="w-3 h-3" />Quantity</p>
+                      <p className="text-sm font-bold text-slate-800">{req.quantity}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><MapPin className="w-3 h-3" />Classroom</p>
+                      <p className="text-sm font-bold text-slate-800">{req.classroomName || '—'}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Clock className="w-3 h-3" />Submitted</p>
+                      <p className="text-sm font-bold text-slate-800">{new Date(req.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                    <div className={`rounded-xl p-3 ${req.expectedCompletionDate ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50'}`}>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 flex items-center gap-1"><CalendarClock className="w-3 h-3" />Expected Completion</p>
+                      {req.expectedCompletionDate ? (
+                        <p className="text-sm font-bold text-blue-700">{new Date(req.expectedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      ) : (
+                        <p className="text-sm font-medium text-slate-400">Not set yet</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Completion / Payment details */}
+                  {req.status === 'Completed' && req.amountSpent !== undefined && (
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 space-y-2">
+                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider flex items-center gap-1"><Receipt className="w-3 h-3" />Payment Details</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[10px] text-slate-500 font-medium">Amount Spent</p>
+                          <p className="text-base font-bold text-emerald-700">${req.amountSpent.toFixed(2)}</p>
+                        </div>
+                        {req.paymentMethod && (
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-medium">Payment Method</p>
+                            <p className="text-sm font-bold text-slate-800">{req.paymentMethod}</p>
+                          </div>
+                        )}
+                        {req.purchaseDate && (
+                          <div>
+                            <p className="text-[10px] text-slate-500 font-medium">Purchase Date</p>
+                            <p className="text-sm font-bold text-slate-800">{new Date(req.purchaseDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          </div>
+                        )}
+                        {req.paymentNotes && (
+                          <div className="col-span-2">
+                            <p className="text-[10px] text-slate-500 font-medium">Payment Notes</p>
+                            <p className="text-xs text-slate-700">{req.paymentNotes}</p>
+                          </div>
+                        )}
+                      </div>
+                      {req.billImageUrl && (
+                        <a href={req.billImageUrl} target="_blank" rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 mt-1">
+                          <Receipt className="w-3.5 h-3.5" /> View Receipt <ExternalLink className="w-3 h-3" />
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Product link */}
+                  {req.productLink && (
+                    <div className="flex items-center gap-2 bg-slate-50 rounded-xl px-4 py-3">
+                      <Link2 className="w-4 h-4 text-[#1a6fc4] flex-shrink-0" />
+                      <a href={req.productLink} target="_blank" rel="noopener noreferrer"
+                        className="text-xs font-semibold text-[#1a6fc4] hover:text-[#0F2D52] truncate flex-1">
+                        {req.productLink}
+                      </a>
+                      <ExternalLink className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    </div>
+                  )}
+
+                  {/* Notes */}
+                  {req.notes && (
+                    <div className="bg-slate-50 rounded-xl p-4">
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1"><FileText className="w-3 h-3" />Notes</p>
+                      <p className="text-xs text-slate-700 leading-relaxed">{req.notes}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  {req.status === 'Pending' ? (
+                    <div className="flex items-center gap-2">
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(null); handleOpenEdit(req); }} className="h-8 px-3 text-xs rounded-xl"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setSelectedRequest(null); setRequestToDelete(req); }} className="h-8 px-3 text-xs rounded-xl text-red-600 hover:text-red-700"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                    </div>
+                  ) : <div />}
+                  <Button variant="outline" onClick={() => setSelectedRequest(null)} className="h-8 px-4 text-xs rounded-xl font-semibold">Close</Button>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 

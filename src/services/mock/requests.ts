@@ -152,7 +152,7 @@ const INITIAL_MOCK_REQUESTS: Request[] = [
     status: 'Completed',
     createdAt: '2026-08-05T14:20:00Z',
     amountSpent: 84.50,
-    paymentMethod: 
+    paymentMethod: 'Credit Card',
     purchaseDate: '2026-08-06',
     paymentNotes: 'Staples PO #55431',
     productLink: 'https://www.amazon.com'

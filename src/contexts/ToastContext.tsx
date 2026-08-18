@@ -3,13 +3,13 @@ import { Toast } from '../components/ui/toast'
 
 interface ToastState {
   id: string
-  type: 'success' | 'error' | 'warning'
+  type: 'success' | 'error' | 'warning' | 'info'
   title?: string
   message: string
 }
 
 interface ToastContextType {
-  showToast: (type: 'success' | 'error' | 'warning', message: string, title?: string) => void
+  showToast: (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -17,7 +17,7 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastState[]>([])
 
-  const showToast = (type: 'success' | 'error' | 'warning', message: string, title?: string) => {
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
     const id = Date.now().toString()
     setToasts(prev => [...prev, {
       id,

@@ -14,7 +14,7 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
-  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -174,6 +174,7 @@ export function AdminRequests() {
     const errors: Record<string, string> = {};
     if (!formData.item.trim()) errors.item = 'Request item name is required';
     if (formData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+    if (!formData.category) errors.category = 'Please select a category';
     
     if (formData.scope === 'classroom' && !formData.classroomId) {
       errors.classroomId = 'Please select a classroom';
@@ -215,6 +216,17 @@ export function AdminRequests() {
     setImageFile(null); setFormErrors({}); setIsModalOpen(true);
   };
 
+  const handleDelete = async (req: Request) => {
+    if (!confirm(`Delete "${req.item}"? This cannot be undone.`)) return;
+    try {
+      await RequestService.deleteRequest(req.id);
+      showToast('success', 'Request deleted successfully.', 'Request Deleted');
+      setRequests(prev => prev.filter(r => r.id !== req.id));
+    } catch {
+      showToast('error', 'Could not delete request. Please try again.', 'Error');
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -229,7 +241,7 @@ export function AdminRequests() {
         schoolId: userData?.schoolId || 'school-1',
         requesterId: user?.id || '',
         requesterName,
-        requesterRole: 'admin',
+        requesterRole: 'admin' as const,
         item: formData.item,
         quantity: formData.quantity,
         category: formData.category,
@@ -360,7 +372,7 @@ export function AdminRequests() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit mb-2">
+        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit mb-2">
           <button
             onClick={() => { setActiveTab('admin'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
@@ -514,11 +526,11 @@ export function AdminRequests() {
         </div>
 
         {/* Count + View Toggle */}
-        <div className="flex flex-col xs:flex-row justify-between items-start xs:items-center gap-3 mb-6">
+        <div className="flex flex-row justify-between items-center gap-3 mb-6">
           <div className="text-sm font-medium text-slate-600">
             Showing <span className="font-bold text-slate-900">{sortedRequests.length}</span> requests
           </div>
-          <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
+          <div className="flex items-center gap-2">
             <select
               value={recordsPerPage}
               onChange={e => { setRecordsPerPage(Number(e.target.value)); setCurrentPage(1); }}
@@ -564,7 +576,7 @@ export function AdminRequests() {
             </p>
           </div>
         ) : viewMode === 'card' ? (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
               {paginatedRequests.map((req, idx) => (
                 <motion.div
@@ -644,42 +656,40 @@ export function AdminRequests() {
                     </div>
 
                     {/* Bottom Actions section */}
-                    <div className="bg-slate-50/50 px-5 py-4 border-t border-slate-50 flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        {(req.status === 'Pending' || req.status === 'In Progress') && <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 rounded-lg text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>}
-                        {req.productLink && (
-                          <a
-                            href={req.productLink}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold"
-                          >
-                            <Link2 className="w-3.5 h-3.5" /> Product Page <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        )}
-                        {!req.productLink && <span className="text-[11px] text-slate-400 italic">No product link provided</span>}
-                      </div>
-
-                      {/* Action buttons */}
-                      <div>
-                        {req.status === 'Completed' && (
-                          <div className="text-right text-[11px]">
-                            <span className="font-semibold text-slate-400">Spent:</span>{' '}
-                            <span className="font-extrabold text-emerald-700 text-xs">${req.amountSpent?.toFixed(2)}</span>
-                          </div>
-                        )}
-
-                        {req.status === 'Pending' && (
-                          <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 whitespace-nowrap">
-                            Pending Approval
-                          </span>
-                        )}
-
-                        {req.status === 'In Progress' && (
-                          <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
-                            <ArrowRight className="w-3 h-3" /> In Progress
-                          </span>
-                        )}
+                    <div className="bg-slate-50/50 px-4 py-3 border-t border-slate-50 flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {req.status === 'Pending' && (
+                            <>
+                              <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 rounded-lg text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
+                              <Button variant="outline" size="sm" onClick={() => handleDelete(req)} className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3 h-3 mr-1" />Delete</Button>
+                            </>
+                          )}
+                          {req.productLink && (
+                            <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold">
+                              <Link2 className="w-3.5 h-3.5" /> Product Page <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
+                          )}
+                          {!req.productLink && req.status !== 'Pending' && <span className="text-[11px] text-slate-400 italic">No product link</span>}
+                        </div>
+                        <div>
+                          {req.status === 'Completed' && (
+                            <div className="text-right text-[11px]">
+                              <span className="font-semibold text-slate-400">Spent:</span>{' '}
+                              <span className="font-extrabold text-emerald-700 text-xs">${req.amountSpent?.toFixed(2)}</span>
+                            </div>
+                          )}
+                          {req.status === 'Pending' && (
+                            <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 whitespace-nowrap">
+                              Pending Approval
+                            </span>
+                          )}
+                          {req.status === 'In Progress' && (
+                            <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
+                              <ArrowRight className="w-3 h-3" /> In Progress
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </Card>
@@ -692,13 +702,14 @@ export function AdminRequests() {
             <div className="overflow-x-auto">
               <table className="w-full min-w-[960px] table-fixed text-left border-collapse text-sm">
                 <colgroup>
-                  <col className="w-[31%]" />
-                  <col className="w-[16%]" />
-                  <col className="w-[6%]" />
-                  <col className="w-[12%]" />
-                  <col className="w-[10%]" />
+                  <col className="w-[18%]" />
                   <col className="w-[14%]" />
+                  <col className="w-[5%]" />
+                  <col className="w-[10%]" />
+                  <col className="w-[9%]" />
+                  <col className="w-[10%]" />
                   <col className="w-[11%]" />
+                  <col className="w-[10%]" />
                 </colgroup>
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
@@ -726,6 +737,7 @@ export function AdminRequests() {
                       </div>
                     </th>
                     <th className="px-4 py-3 font-semibold text-slate-700 leading-5">Expected<br />Completion</th>
+                    <th className="px-2 py-3 font-semibold text-slate-700">Amount</th>
                     <th className="px-2 py-3 font-semibold text-slate-700">Actions</th>
                   </tr>
                 </thead>
@@ -788,7 +800,28 @@ export function AdminRequests() {
                           <span className="text-slate-400">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-3.5">{(req.status === 'Pending' || req.status === 'In Progress') && <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-8 text-xs"><Pencil className="w-3 h-3 mr-1" />Edit</Button>}</td>
+                   
+                      <td className="px-2 py-3.5">
+                        {req.status === 'Completed' && req.amountSpent !== undefined ? (
+                          <div className="text-xs">
+                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount Spent</p>
+                            <span className="font-extrabold text-emerald-700">${req.amountSpent.toFixed(2)}</span>
+                            {req.paymentMethod && <p className="text-[10px] text-slate-400 mt-0.5">{req.paymentMethod}</p>}
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
+                      <td className="px-2 py-3.5">
+                        {req.status === 'Pending' ? (
+                          <div className="flex items-center gap-1.5">
+                            <Button variant="outline" size="sm" onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs"><Pencil className="w-3 h-3" /></Button>
+                            <Button variant="outline" size="sm" onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3 h-3" /></Button>
+                          </div>
+                        ) : (
+                          <span className="text-slate-300 text-xs">—</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -800,10 +833,10 @@ export function AdminRequests() {
         {/* Pagination Controls */}
         {!loading && sortedRequests.length > 0 && (
           <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
-            <div className="text-slate-500">
-              Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span> to <span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span> requests
+            <div className="text-slate-500 text-xs sm:text-sm">
+              Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span>–<span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
@@ -811,19 +844,19 @@ export function AdminRequests() {
                 disabled={currentPage === 1}
                 className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
               >
-                <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+                <ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline ml-1">Prev</span>
               </Button>
-              <div className="hidden md:flex items-center gap-1">
+              <div className="flex items-center gap-1">
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                   .map((p, i, arr) => (
                     <React.Fragment key={p}>
                       {i > 0 && arr[i - 1] !== p - 1 && (
-                        <span className="px-2 text-slate-400">...</span>
+                        <span className="px-1 text-slate-400 text-xs">…</span>
                       )}
                       <button
                         onClick={() => setCurrentPage(p)}
-                        className={`w-9 h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-colors ${currentPage === p ? 'bg-[#0F2D52] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
+                        className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-colors ${currentPage === p ? 'bg-[#0F2D52] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
                       >
                         {p}
                       </button>
@@ -837,7 +870,7 @@ export function AdminRequests() {
                 disabled={currentPage === totalPages}
                 className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
               >
-                Next <ChevronRight className="w-4 h-4 ml-1" />
+                <span className="hidden sm:inline mr-1">Next</span><ChevronRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
@@ -1005,7 +1038,7 @@ export function AdminRequests() {
               {/* Category */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Category
+                  Category <span className="text-red-500">*</span>
                 </label>
                 <select
                   name="category"
@@ -1017,6 +1050,7 @@ export function AdminRequests() {
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+                {formErrors.category && <p className="text-xs text-red-600 font-semibold">{formErrors.category}</p>}
               </div>
             </div>
 

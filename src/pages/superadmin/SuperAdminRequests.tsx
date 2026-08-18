@@ -259,6 +259,7 @@ export function SuperAdminRequests() {
     const errors: Record<string, string> = {};
     if (!createFormData.item.trim()) errors.item = 'Request item name is required';
     if (createFormData.quantity < 1) errors.quantity = 'Quantity must be at least 1';
+    if (!createFormData.category) errors.category = 'Please select a category';
     if (createFormData.scope === 'classroom' && !createFormData.classroomId) errors.classroomId = 'Please select a classroom';
     if (createFormData.scope === 'teacher' && !createFormData.teacherId) errors.teacherId = 'Please select a teacher';
     setCreateFormErrors(errors);
@@ -934,9 +935,56 @@ export function SuperAdminRequests() {
                       <p className="text-[10px] text-slate-400">{new Date(req.createdAt).toLocaleTimeString()}</p>
                     </div>
                     {req.expectedCompletionDate && (
-                      <div className="bg-blue-50 rounded-xl p-3 space-y-0.5 col-span-2">
-                        <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1"><Play className="w-3 h-3" /> Expected Completion Date</p>
-                        <div className="flex items-center justify-between"><p className="text-sm font-bold text-blue-800">{new Date(req.expectedCompletionDate).toLocaleDateString()}</p><Button variant="outline" size="sm" onClick={() => { setDateEditRequest(req); setExpectedCompletionDate(req.expectedCompletionDate || ''); setIsDateEditOpen(true); }} className="h-7 text-[10px]">Edit</Button></div>
+                      <div className="col-span-2">
+                        {isDateEditOpen && dateEditRequest?.id === req.id ? (
+                          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 space-y-3">
+                            <p className="text-[9px] font-bold text-blue-500 uppercase tracking-wider flex items-center gap-1">
+                              <CalendarDays className="w-3 h-3" /> Update Expected Completion
+                            </p>
+                            <input
+                              type="date"
+                              value={expectedCompletionDate}
+                              min={new Date().toISOString().split('T')[0]}
+                              onChange={e => setExpectedCompletionDate(e.target.value)}
+                              className="w-full px-3 py-2 text-xs text-slate-900 border border-blue-200 rounded-lg focus:outline-none focus:border-[#0F2D52] bg-white"
+                            />
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => { setIsDateEditOpen(false); setDateEditRequest(null); }}
+                                className="flex-1 h-8 rounded-lg text-[10px] font-semibold border-slate-200"
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={handleSaveExpectedCompletionDate}
+                                disabled={!expectedCompletionDate || submitting}
+                                className="flex-1 h-8 rounded-lg text-[10px] font-bold bg-[#0F2D52] text-white hover:bg-[#1E4B83]"
+                              >
+                                {submitting ? 'Saving...' : 'Save Date'}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="bg-blue-50 rounded-xl p-3 space-y-0.5">
+                            <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                              <Play className="w-3 h-3" /> Expected Completion Date
+                            </p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm font-bold text-blue-800">{new Date(req.expectedCompletionDate).toLocaleDateString()}</p>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => { setDateEditRequest(req); setExpectedCompletionDate(req.expectedCompletionDate || ''); setIsDateEditOpen(true); }}
+                                className="h-7 text-[10px] rounded-lg border-blue-200 text-blue-600 hover:bg-blue-100"
+                              >
+                                Edit
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1068,14 +1116,7 @@ export function SuperAdminRequests() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDateEditOpen} onOpenChange={setIsDateEditOpen}>
-        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
-          <DialogHeader><DialogTitle>Update Expected Completion</DialogTitle><DialogDescription>Choose the revised expected completion date for this request.</DialogDescription></DialogHeader>
-          <input type="date" value={expectedCompletionDate} min={new Date().toISOString().split('T')[0]} onChange={event => setExpectedCompletionDate(event.target.value)}
-            className="w-full px-4 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
-          <DialogFooter><Button variant="outline" onClick={() => setIsDateEditOpen(false)}>Cancel</Button><Button onClick={handleSaveExpectedCompletionDate} disabled={!expectedCompletionDate || submitting} className="bg-[#0F2D52] text-white">Save Date</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+
 
       {/* Record Purchase Modal */}
       <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
@@ -1256,11 +1297,12 @@ export function SuperAdminRequests() {
                   className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category</label>
+                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
                 <select name="category" value={createFormData.category} onChange={handleCreateInputChange}
                   className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
+                {createFormErrors.category && <p className="text-xs text-red-600 font-semibold">{createFormErrors.category}</p>}
               </div>
             </div>
             {/* Product Link */}
