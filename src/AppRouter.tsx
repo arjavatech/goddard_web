@@ -57,6 +57,10 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
+import { DeviceManagement } from './pages/admin/DeviceManagement';
+import { TapTimeEmployeeManagement } from './pages/admin/TapTimeEmployeeManagement';
+import { TapTimeReportSummary } from './pages/admin/TapTimeReportSummary';
+import { TapTimeReportSettings } from './pages/admin/TapTimeReportSettings';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -147,6 +151,18 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<RequestsRouter />} />
+                  <Route path="/:schoolSlug/admin/devices" element={<SuperAdminOnly>
+                    <DeviceManagement />
+                  </SuperAdminOnly>} />
+                  <Route path="/:schoolSlug/admin/tap-time-employees" element={<SuperAdminOnly>
+                    <TapTimeEmployeeManagement />
+                  </SuperAdminOnly>} />
+                  <Route path="/:schoolSlug/admin/tap-time-reports" element={<SuperAdminOnly>
+                    <TapTimeReportSummary />
+                  </SuperAdminOnly>} />
+                  <Route path="/:schoolSlug/admin/tap-time-report-settings" element={<SuperAdminOnly>
+                    <TapTimeReportSettings />
+                  </SuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<SuperAdminOnly>
                     <SuperAdminExpenses />
@@ -164,6 +180,10 @@ export function AppRouter() {
                   <Route path="/superadmin-arjava/csv-upload" element={<SuperAdminCSVUploadPage />} />
                   <Route path="/superadmin-arjava/subscription" element={<SubscriptionManagement />} />
                   <Route path="/superadmin-arjava/requests" element={<SuperAdminRequests />} />
+                  <Route path="/superadmin-arjava/devices" element={<DeviceManagement />} />
+                  <Route path="/superadmin-arjava/tap-time-employees" element={<TapTimeEmployeeManagement />} />
+                  <Route path="/superadmin-arjava/tap-time-reports" element={<TapTimeReportSummary />} />
+                  <Route path="/superadmin-arjava/tap-time-report-settings" element={<TapTimeReportSettings />} />
                   <Route path="/superadmin-arjava/expenses" element={<SuperAdminExpenses />} />
                   <Route path="/superadmin-arjava/settings" element={<Settings />} />
                 </Route>

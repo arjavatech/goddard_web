@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Tablet
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -121,13 +121,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     },
 
-    ...(isSuperAdmin ? [{
-      label: 'Administration',
-      items: [
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
-        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
-      ],
-    }] : [{
+    ...(isSuperAdmin ? [
+      {
+        label: 'Administration',
+        items: [
+          { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+          { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+        ],
+      },
+      {
+        label: 'Management',
+        items: [
+          { icon: <Tablet className="w-[18px] h-[18px]" />, label: 'Devices', path: `${schoolPrefix}/admin/devices` },
+          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Staff Management', path: `${schoolPrefix}/admin/tap-time-employees` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Attendance Reports', path: `/superadmin-arjava/tap-time-reports` },
+          { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Attendance Report Settings', path: `/superadmin-arjava/tap-time-report-settings` },
+        ],
+      }
+    ] : [{
       label: 'Administration',
       items: [
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
