@@ -1,4 +1,5 @@
 import { authedFetch, z } from './common';
+import { emailHistoryService } from '../emailHistoryService';
 
 
 export type Classroom = {
@@ -578,7 +579,37 @@ export async function inviteParent(schoolId: string, parentData: {
       url: '/enrollments/parent-invite',
       body
     }, z.union([z.object({}), z.string()]));
+
+    // Log email history on success
+    emailHistoryService.create({
+      schoolId,
+      recipientName: `${parentData.parentFirstName} ${parentData.parentLastName}`.trim(),
+      recipientEmail: parentData.parentEmail,
+      emailType: 'Parent Invitation',
+      subject: 'Welcome to Goddard',
+      status: 'sent',
+      attemptCount: 1,
+      queuedAt: new Date().toISOString(),
+      processingAt: new Date().toISOString(),
+      sentAt: new Date().toISOString()
+    }).catch(console.error);
+
   } catch (error: any) {
+    // Log email history on failure
+    emailHistoryService.create({
+      schoolId,
+      recipientName: `${parentData.parentFirstName} ${parentData.parentLastName}`.trim(),
+      recipientEmail: parentData.parentEmail,
+      emailType: 'Parent Invitation',
+      subject: 'Welcome to Goddard',
+      status: 'failed',
+      attemptCount: 1,
+      queuedAt: new Date().toISOString(),
+      processingAt: new Date().toISOString(),
+      failedAt: new Date().toISOString(),
+      failureReason: error?.message || 'Unknown API Error'
+    }).catch(console.error);
+
     // Check for email bounce error (external service error) - 502 indicates email was suppressed
     if (error?.status === 502 || error?.code === 'EXTERNAL_SERVICE_ERROR') {
       const bounceError = new Error('External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.');
@@ -597,7 +628,7 @@ export async function inviteParent(schoolId: string, parentData: {
     throw error;
   }
 }
-export async function resendParentConfirmation(parentId: string): Promise<void> {
+export async function resendParentConfirmation(parentId: string, schoolId?: string, parentEmail?: string): Promise<void> {
   try {
     await authedFetch({
       method: 'POST',
@@ -606,7 +637,36 @@ export async function resendParentConfirmation(parentId: string): Promise<void> 
         parent_id: parentId
       }
     }, z.any());
+
+    if (schoolId && parentEmail) {
+      emailHistoryService.create({
+        schoolId,
+        recipientEmail: parentEmail,
+        emailType: 'Parent Reminder',
+        subject: 'Reminder: Welcome to Goddard',
+        status: 'sent',
+        attemptCount: 1,
+        queuedAt: new Date().toISOString(),
+        processingAt: new Date().toISOString(),
+        sentAt: new Date().toISOString()
+      }).catch(console.error);
+    }
   } catch (error: any) {
+    if (schoolId && parentEmail) {
+      emailHistoryService.create({
+        schoolId,
+        recipientEmail: parentEmail,
+        emailType: 'Parent Reminder',
+        subject: 'Reminder: Welcome to Goddard',
+        status: 'failed',
+        attemptCount: 1,
+        queuedAt: new Date().toISOString(),
+        processingAt: new Date().toISOString(),
+        failedAt: new Date().toISOString(),
+        failureReason: error?.message || 'Unknown API Error'
+      }).catch(console.error);
+    }
+
     // Check for email bounce error (external service error) - 502 indicates email was suppressed
     if (error?.status === 502 || error?.code === 'EXTERNAL_SERVICE_ERROR') {
       const bounceError = new Error('External service error: Email was suppressed by the mail provider. The address may have previously bounced — please ask the recipient to check with their IT or try a different address.');

@@ -57,6 +57,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
+import { EmailHistory } from './pages/admin/EmailHistory';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -148,6 +149,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<RequestsRouter />} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
+                  <Route path="/:schoolSlug/admin/email-history" element={<EmailHistory />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<SuperAdminOnly>
                     <SuperAdminExpenses />
                   </SuperAdminOnly>} />

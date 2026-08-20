@@ -126,11 +126,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+        { icon: <Mail className="w-[18px] h-[18px]" />, label: 'Email History', path: `${schoolPrefix}/admin/email-history` },
       ],
     }] : [{
       label: 'Administration',
       items: [
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+        { icon: <Mail className="w-[18px] h-[18px]" />, label: 'Email History', path: `${schoolPrefix}/admin/email-history` },
       ],
     }]),
   ];

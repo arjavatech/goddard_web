@@ -634,7 +634,7 @@ export function ParentManagement() {
     // console.log('BACKEND CALL - Sending parentId to resendParentConfirmation API:', parentId);
     setResendingParentId(parentId);
     try {
-      await resendParentConfirmation(parentId);
+      await resendParentConfirmation(parentId, schoolId, parentEmail);
       showToast('success', `Confirmation email resent to ${parentEmail}`);
     } catch (error: any) {
       console.error('Resend confirmation error:', error);

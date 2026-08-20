@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { AdminLayout } from './AdminLayout';
+import { emailHistoryService } from '../../services/emailHistoryService';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -400,6 +401,23 @@ export function DueForms() {
 
       if (response.status === 502) {
         showToast('error', 'Email delivery failed. Please try again later or use a different email address.');
+        
+        reminders.forEach(reminder => {
+          emailHistoryService.create({
+            schoolId,
+            recipientName: reminder.parent_name,
+            recipientEmail: reminder.parent_email,
+            emailType: 'Form Notification',
+            subject: `Reminder: ${reminder.form_name}`,
+            status: 'failed',
+            attemptCount: 1,
+            queuedAt: new Date().toISOString(),
+            processingAt: new Date().toISOString(),
+            failedAt: new Date().toISOString(),
+            failureReason: '502 Bad Gateway / Email Suppressed'
+          }).catch(console.error);
+        });
+        
         return;
       }
 
@@ -407,6 +425,22 @@ export function DueForms() {
         const data = await response.json();
         const { total_sent, total_failed, failed_emails, message } = data;
         
+        reminders.forEach(reminder => {
+          const isFailed = failed_emails && failed_emails.includes(reminder.parent_email);
+          emailHistoryService.create({
+            schoolId,
+            recipientName: reminder.parent_name,
+            recipientEmail: reminder.parent_email,
+            emailType: 'Form Notification',
+            subject: `Reminder: ${reminder.form_name}`,
+            status: isFailed ? 'failed' : 'sent',
+            attemptCount: 1,
+            queuedAt: new Date().toISOString(),
+            processingAt: new Date().toISOString(),
+            ...(isFailed ? { failedAt: new Date().toISOString(), failureReason: 'Failed in bulk send' } : { sentAt: new Date().toISOString() })
+          }).catch(console.error);
+        });
+
         if (total_failed > 0) {
           const failedEmailsList = failed_emails.filter((email: string) => email).join(', ');
           showToast('error', `${message}. Failed emails: ${failedEmailsList}`);
