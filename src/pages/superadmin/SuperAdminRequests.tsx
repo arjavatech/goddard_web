@@ -195,7 +195,7 @@ export function SuperAdminRequests() {
       showToast('success', 'Request deleted successfully.', 'Request Deleted');
       setRequestToDelete(null);
     } catch {
-      showToast('error', 'Could not delete request. Only Pending requests can be deleted.', 'Delete Failed');
+      showToast('error', 'Could not delete request. Please try again.', 'Delete Failed');
     } finally {
       setSubmitting(false);
     }
@@ -602,7 +602,7 @@ export function SuperAdminRequests() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
             <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
-              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Requests Queue
+              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Requests 
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Validate, approve, and record payments for all procurement requests.
@@ -902,12 +902,10 @@ export function SuperAdminRequests() {
                             )}
                           </div>
                           <div className="w-full sm:w-auto flex sm:justify-end items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                            {req.status !== 'Completed' && (
                               <>
                                 <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
                                 <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
                               </>
-                            )}
                             <ActionCell req={req} />
                           </div>
                         </div>
@@ -972,12 +970,10 @@ export function SuperAdminRequests() {
                           </td>
                           <td className="px-3 sm:px-4 py-3 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
-                              {req.status !== 'Completed' && (
                                 <>
                                   <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
                                   <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
                                 </>
-                              )}
                               <ActionCell req={req} />
                             </div>
                           </td>
@@ -1185,12 +1181,10 @@ export function SuperAdminRequests() {
                 {/* Footer actions */}
                 <div className="px-6 pb-5 pt-2 border-t border-slate-50 flex justify-between gap-3" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
-                    {req.status !== 'Completed' && (
                       <>
                         <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); handleOpenEdit(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold border-slate-200"><Pencil className="w-3.5 h-3.5 mr-1.5" />Edit</Button>
                         <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); setRequestToDelete(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete</Button>
                       </>
-                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => setDetailRequest(null)}
