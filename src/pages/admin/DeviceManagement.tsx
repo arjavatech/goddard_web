@@ -397,7 +397,7 @@ export function DeviceManagement() {
           
           <div className="p-5 space-y-5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                 Device Name <span className="text-red-500">*</span>
               </label>
               <Input
@@ -416,7 +416,7 @@ export function DeviceManagement() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                 Time Zone
               </label>
               <Select value={timezone} onValueChange={setTimezone}>

@@ -94,6 +94,16 @@ class TapTimeReportStorageService {
     return newRecord;
   }
 
+  updateAttendanceRecord(id: string, updates: Partial<TapTimeAttendanceRecord>): TapTimeAttendanceRecord | null {
+    const records = this.getAttendanceRecords();
+    const index = records.findIndex(r => r.id === id);
+    if (index === -1) return null;
+    
+    records[index] = { ...records[index], ...updates };
+    localStorage.setItem(ATTENDANCE_STORAGE_KEY, JSON.stringify(records));
+    return records[index];
+  }
+
   // --- Seeder ---
   private seedAttendanceDataIfEmpty() {
     if (localStorage.getItem(SEED_FLAG_KEY)) {

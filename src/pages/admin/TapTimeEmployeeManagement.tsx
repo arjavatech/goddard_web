@@ -414,7 +414,7 @@ export function TapTimeEmployeeManagement() {
           <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                   First Name <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -430,7 +430,7 @@ export function TapTimeEmployeeManagement() {
                 {formErrors.firstName && <p className="text-xs text-red-600 mt-1.5 font-bold">{formErrors.firstName}</p>}
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                   Last Name <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -448,7 +448,7 @@ export function TapTimeEmployeeManagement() {
 
             <div className="grid grid-cols-1 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                   Phone <span className="text-red-500">*</span>
                 </label>
                 <PhoneInput
@@ -471,7 +471,7 @@ export function TapTimeEmployeeManagement() {
               </div>
               
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                   PIN <span className="text-red-500">*</span>
                 </label>
                 <Input

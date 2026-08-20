@@ -340,7 +340,7 @@ export function TapTimeReportSettings() {
           
           <div className="p-5 space-y-5">
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1.5">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-1.5">
                 Email Address <span className="text-red-500">*</span>
               </label>
               <Input
@@ -357,7 +357,7 @@ export function TapTimeReportSettings() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">
                 Report Frequency (Max 2) <span className="text-red-500">*</span>
               </label>
               <div className="flex flex-wrap gap-2">
