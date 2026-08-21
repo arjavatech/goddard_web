@@ -44,8 +44,8 @@ const schoolDataSchema = z.object({
   name: z.string().optional(),
   subdomain: z.string().optional(),
   settings: schoolSettingsSchema.optional(),
-  request_categories: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
-  location: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  request_categories: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
+  location: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
