@@ -7,6 +7,7 @@ import { Badge } from '../components/ui/badge';
 import { Header } from '../components/layout/Header';
 import { Footer } from '../components/layout/Footer';
 import { AdminLayout } from './admin/AdminLayout';
+import { EmployeeLayout } from './employee/EmployeeLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
@@ -113,7 +114,7 @@ function ProfileContent() {
           <div className="absolute top-4 right-16 w-16 h-16 rounded-full bg-white/5" />
           <div className="absolute -bottom-4 left-1/3 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute bottom-2 left-8 w-10 h-10 rounded-full bg-[#FF9900]/20" />
-          {!isAdmin && (
+          {/* {!isAdmin && (
             <button
               onClick={() => navigate(dashboardPath)}
               className="absolute top-3 left-4 flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/20 transition-all duration-200"
@@ -121,7 +122,7 @@ function ProfileContent() {
               <ChevronLeft className="w-3.5 h-3.5" />
               Back to Dashboard
             </button>
-          )}
+          )} */}
         </div>
 
         <CardContent className="px-6 pb-6 pt-0">
@@ -274,6 +275,7 @@ export function ProfilePage() {
   const { userData } = useUserContext();
   const role = userData?.role?.toLowerCase() ?? '';
   const isAdmin = role === 'admin' || role === 'superadmin';
+  const isEmployee = role === 'employee';
 
   if (isAdmin) {
     return (
@@ -285,12 +287,23 @@ export function ProfilePage() {
     );
   }
 
+  if (isEmployee) {
+    return (
+      <EmployeeLayout>
+        <div className="max-w-2xl mx-auto w-full">
+          <ProfileContent />
+        </div>
+      </EmployeeLayout>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Header />
       <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
         <ProfileContent />
       </main>
+      {/* Keeping Header/Footer for parents/others since they don't have a layout yet */}
       <Footer />
     </div>
   );

@@ -105,7 +105,7 @@ export function CSVUploadPageContent() {
   const allValid = result !== null && result.failed.length === 0 && result.successful.length > 0;
 
   return (
-    <div className="container mx-auto px-2 sm:px-4 py-6 max-w-7xl space-y-6 mt-8">
+    <div className="container mx-auto px-2 sm:px-4 py-6  space-y-6 mt-8">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">CSV Upload</h1>

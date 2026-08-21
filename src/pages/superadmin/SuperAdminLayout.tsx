@@ -1,5 +1,5 @@
-import React, { ReactNode, useState } from 'react';
-import { Home, Users, LogOut, Menu, X, Crown, School, LayoutDashboard } from 'lucide-react';
+import React, { ReactNode, useState, useRef, useEffect } from 'react';
+import { Home, Users, LogOut, Menu, X, Crown, School, LayoutDashboard, ShoppingBag, PieChart, SlidersHorizontal } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../services/auth/useAuth';
@@ -15,6 +15,7 @@ interface SuperAdminLayoutProps {
 }
 
 export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -46,15 +47,21 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Schools', path: '/superadmin-arjava/schools' },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Clients', path: '/superadmin-arjava/clients' },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: '/superadmin-arjava/csv-upload' },
+        { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests Queue', path: '/superadmin-arjava/requests' },
+        { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: '/superadmin-arjava/expenses' },
       ],
     },
     {
       label: 'Administration',
       items: [
         { icon: <Crown className="w-[18px] h-[18px]" />, label: 'Subscription', path: '/superadmin-arjava/subscription' },
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: '/superadmin-arjava/settings' },
       ],
     },
   ];
+
+  const allNavItems = navGroups.flatMap(g => g.items);
+  const activeNavItem = allNavItems.find(item => currentPath === item.path);
 
   const initials = userData?.firstName && userData?.lastName
     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase()
@@ -64,6 +71,10 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
     document.body.style.overflow = isSidebarOpen ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
+
+  useEffect(() => {
+    activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [location.pathname]);
 
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
@@ -78,6 +89,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
                   <Link
                     key={i}
                     to={item.path}
+                    ref={isActive ? activeNavRef : undefined}
                     onClick={() => setIsSidebarOpen(false)}
                     className={cn(
                       'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
@@ -170,7 +182,7 @@ export function SuperAdminLayout({ children }: SuperAdminLayoutProps) {
               </button>
               <div className="min-w-0">
                 <h1 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight leading-none truncate">
-                  Super Admin Portal
+                  {activeNavItem?.label ?? 'Super Admin Portal'}
                 </h1>
                 <p className="hidden sm:block text-[11px] text-slate-400 mt-0.5 truncate">System Administration</p>
               </div>

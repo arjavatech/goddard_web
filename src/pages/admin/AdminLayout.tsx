@@ -1,9 +1,9 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -22,6 +22,7 @@ import { cn } from '../../lib/utils';
 interface AdminLayoutProps { children: ReactNode; }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -32,7 +33,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
-  const isSuperAdmin = userData?.role === 'SuperAdmin';
+  const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -52,6 +53,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     document.body.style.overflow = isSidebarOpen ? 'hidden' : 'unset';
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
+
+  useEffect(() => {
+    activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [location.pathname]);
 
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
@@ -87,37 +92,36 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
+        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+        { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+        ...(isSuperAdmin ? [
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
+        ] : []),
+
       ],
     },
     {
-      label: 'Student Enrollment',
+      label: 'Forms',
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-      ],
-    },
-
-    {
-      label: 'Employee Enrollment',
-      items: [
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
+         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
+
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: [
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
-
-    }] : []),
-    // ...(isSuperAdmin ? [{
-    //   label: 'Super Administration',
-    //   items: [
-    //     { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
-    //   ],
-    // }] : []),
+    }] : [{
+      label: 'Administration',
+      items: [
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+      ],
+    }]),
   ];
 
   const initials = userData?.firstName && userData?.lastName
@@ -167,6 +171,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
                           isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -191,7 +196,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-500 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
@@ -224,6 +228,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
                           isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
@@ -248,7 +253,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-400 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => setShowLogoutModal(true)}
@@ -318,13 +322,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <DropdownMenuContent align="end" className="w-auto min-w-[15rem] p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
-                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400`}>{userData?.email}</div></div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{userData?.firstName} {userData?.lastName}</p>
+                          <div className="whitespace-nowrap text-xs text-slate-400">{userData?.email}</div>
                           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
                         </div>
                       </div>
@@ -373,7 +377,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* ── Footer (outside main flex) ── */}
       <footer className="w-full bg-[#1a3a5c]">
         {/* Main body */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
             {/* ── Brand column ── */}
@@ -483,7 +487,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* ── Bottom bar ── */}
           <div className="border-t border-white/10 mt-3">
-            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
               <p className="text-xs text-slate-400 text-center sm:text-left">
                 © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
               </p>

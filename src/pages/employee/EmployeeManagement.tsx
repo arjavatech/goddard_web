@@ -16,7 +16,7 @@ import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function EmployeeManagement() {
@@ -54,6 +54,98 @@ export function EmployeeManagement() {
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
     localStorage.setItem('employeeMgmtViewMode', mode);
+  };
+
+  // Bulk upload states
+  const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
+  const [bulkStep, setBulkStep] = useState<'upload' | 'review'>('upload');
+  const [csvRows, setCsvRows] = useState<any[]>([]);
+  const [csvErrors, setCsvErrors] = useState<Record<number, string[]>>({});
+  const [isBulkSubmitting, setIsBulkSubmitting] = useState(false);
+
+  const CSV_HEADERS = ['first_name', 'last_name', 'email', 'phone', 'address', 'joined_on'];
+  const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const validateCsvRows = (rows: any[]) => {
+    const errors: Record<number, string[]> = {};
+    rows.forEach((row, i) => {
+      const rowErrors: string[] = [];
+      if (!row.first_name?.trim()) rowErrors.push('First name required');
+      if (!row.last_name?.trim()) rowErrors.push('Last name required');
+      if (!row.email?.trim()) rowErrors.push('Email required');
+      else if (!EMAIL_RE.test(row.email.trim())) rowErrors.push('Invalid email');
+      if (!row.joined_on?.trim()) rowErrors.push('Joined on date required');
+      else if (isNaN(Date.parse(row.joined_on.trim()))) rowErrors.push('Invalid date format (use YYYY-MM-DD)');
+      if (rowErrors.length) errors[i] = rowErrors;
+    });
+    return errors;
+  };
+
+  const handleCsvFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) { setCsvRows([]); setCsvErrors({ 0: ['CSV file is empty or has no data rows'] }); return; }
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      const missing = CSV_HEADERS.filter(h => !['phone', 'address'].includes(h) && !headers.includes(h));
+      if (missing.length) { setCsvRows([]); setCsvErrors({ 0: [`Missing columns: ${missing.join(', ')}`] }); return; }
+      const rows = lines.slice(1).map(line => {
+        const vals = line.split(',').map(v => v.trim());
+        return Object.fromEntries(headers.map((h, i) => [h, vals[i] ?? '']));
+      });
+      setCsvRows(rows);
+      setCsvErrors(validateCsvRows(rows));
+      setBulkStep('review');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleBulkSubmit = async () => {
+    if (!userData?.schoolId || Object.keys(csvErrors).length > 0) return;
+    setIsBulkSubmitting(true);
+    let successCount = 0;
+    const newErrors: Record<number, string[]> = {};
+    for (let i = 0; i < csvRows.length; i++) {
+      const row = csvRows[i];
+      try {
+        await EmployeeService.inviteEmployee({
+          firstName: row.first_name.trim(),
+          lastName: row.last_name.trim(),
+          email: row.email.trim(),
+          phone: row.phone?.trim() || '',
+          address: row.address?.trim() || '',
+          employeeType: 'Full Time',
+          joinedOn: row.joined_on.trim(),
+          schoolId: userData.schoolId,
+        });
+        successCount++;
+      } catch (err: any) {
+        newErrors[i] = [err.message || 'Failed to invite'];
+      }
+    }
+    setIsBulkSubmitting(false);
+    if (Object.keys(newErrors).length) {
+      setCsvErrors(newErrors);
+      showToast('error', `${successCount} invited, ${Object.keys(newErrors).length} failed`);
+    } else {
+      showToast('success', `${successCount} employees invited successfully`);
+      setIsBulkUploadOpen(false);
+      setBulkStep('upload');
+      setCsvRows([]);
+      setCsvErrors({});
+      const data = await EmployeeService.fetchEmployees(userData.schoolId);
+      setEmployees(data);
+    }
+  };
+
+  const downloadSampleCsv = () => {
+    const sample = 'first_name,last_name,email,phone,address,joined_on\nJohn,Doe,john@example.com,+1234567890,123 Main St,2024-01-15';
+    const blob = new Blob([sample], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'employee_bulk_upload_sample.csv'; a.click();
+    URL.revokeObjectURL(url);
   };
 
 
@@ -246,7 +338,7 @@ export function EmployeeManagement() {
   if (isLoading && employees.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12  mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading employees...</p>
@@ -258,7 +350,7 @@ export function EmployeeManagement() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-2 sm:px-4 py-0 sm:pt-6 max-w-7xl space-y-6 pb-12">
+      <div className="container mx-auto px-2 sm:px-4 py-0 sm:pt-6  space-y-6 pb-12">
 
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
@@ -268,7 +360,16 @@ export function EmployeeManagement() {
               Manage and assign forms to employees.
             </p>
           </div>
-          <div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              className="border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52] hover:text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2"
+              size="sm"
+              onClick={() => { setBulkStep('upload'); setCsvRows([]); setCsvErrors({}); setIsBulkUploadOpen(true); }}
+            >
+              <Upload className="w-4 h-4 mr-1" />
+              Bulk Upload
+            </Button>
             <Button
               className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2"
               size="sm"
@@ -653,6 +754,113 @@ export function EmployeeManagement() {
               <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
                 {isUpdating ? 'Updating...' : 'Update'}
               </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Bulk Upload Modal */}
+        <Dialog open={isBulkUploadOpen} onOpenChange={(open) => { if (!open) { setIsBulkUploadOpen(false); setBulkStep('upload'); setCsvRows([]); setCsvErrors({}); } }}>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-lg font-bold text-slate-900">
+                {bulkStep === 'upload' ? 'Bulk Upload Employees' : `Review ${csvRows.length} Employees`}
+              </DialogTitle>
+            </DialogHeader>
+
+            {bulkStep === 'upload' ? (
+              <div className="space-y-5">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 space-y-1">
+                  <p className="font-semibold text-slate-700">CSV Format Requirements:</p>
+                  <p>Required columns: <span className="font-mono text-xs bg-white border border-slate-200 px-1 rounded">first_name, last_name, email, joined_on</span></p>
+                  <p>Optional columns: <span className="font-mono text-xs bg-white border border-slate-200 px-1 rounded">phone, address</span></p>
+                  <p className="text-xs text-slate-400">Date format: YYYY-MM-DD (e.g. 2024-01-15)</p>
+                </div>
+                <button
+                  onClick={downloadSampleCsv}
+                  className="flex items-center gap-2 text-xs font-semibold text-[#0F2D52] hover:underline"
+                >
+                  <Download className="w-3.5 h-3.5" /> Download sample CSV
+                </button>
+                <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-slate-300 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-all">
+                  <Upload className="w-8 h-8 text-slate-400 mb-2" />
+                  <span className="text-sm font-semibold text-slate-600">Click to upload CSV file</span>
+                  <span className="text-xs text-slate-400 mt-1">.csv files only</span>
+                  <input type="file" accept=".csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleCsvFile(f); e.target.value = ''; }} />
+                </label>
+                {csvErrors[0] && (
+                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    {csvErrors[0].join(', ')}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-slate-500">
+                      <span className="text-emerald-600">{csvRows.length - Object.keys(csvErrors).length} valid</span>
+                      {Object.keys(csvErrors).length > 0 && <span className="text-red-500 ml-2">{Object.keys(csvErrors).length} errors</span>}
+                    </span>
+                  </div>
+                  <button onClick={() => { setBulkStep('upload'); setCsvRows([]); setCsvErrors({}); }} className="text-xs font-semibold text-[#0F2D52] hover:underline">
+                    ← Re-upload
+                  </button>
+                </div>
+                <div className="rounded-xl border border-slate-100 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">#</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">Name</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">Email</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">Phone</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">Joined On</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-500">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {csvRows.map((row, i) => {
+                        const hasError = !!csvErrors[i];
+                        return (
+                          <tr key={i} className={hasError ? 'bg-red-50' : 'hover:bg-slate-50'}>
+                            <td className="px-3 py-2 text-slate-400">{i + 1}</td>
+                            <td className="px-3 py-2 font-medium text-slate-800">{row.first_name} {row.last_name}</td>
+                            <td className="px-3 py-2 text-slate-600">{row.email}</td>
+                            <td className="px-3 py-2 text-slate-500">{row.phone || '—'}</td>
+                            <td className="px-3 py-2 text-slate-500">{row.joined_on}</td>
+                            <td className="px-3 py-2">
+                              {hasError ? (
+                                <div className="flex items-start gap-1 text-red-600">
+                                  <AlertCircle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                                  <span>{csvErrors[i].join(', ')}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-emerald-600">
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  <span>Valid</span>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="mt-6">
+              <Button variant="outline" onClick={() => { setIsBulkUploadOpen(false); setBulkStep('upload'); setCsvRows([]); setCsvErrors({}); }}>Cancel</Button>
+              {bulkStep === 'review' && (
+                <Button
+                  onClick={handleBulkSubmit}
+                  disabled={isBulkSubmitting || csvRows.length === 0 || Object.keys(csvErrors).length > 0}
+                  className="bg-[#0F2D52] hover:bg-[#1c477c] text-white"
+                >
+                  {isBulkSubmitting ? 'Uploading...' : `Upload ${csvRows.length - Object.keys(csvErrors).length} Employees`}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>

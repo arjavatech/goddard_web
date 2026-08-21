@@ -113,7 +113,7 @@ export function SuperAdminDashboard() {
 
   return (
     <SuperAdminLayout>
-      <div className="container mx-auto px-0 py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
+      <div className="container mx-auto px-0 py-0 sm:pt-12  space-y-6 pb-12">
 
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">
