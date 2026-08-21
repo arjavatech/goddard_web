@@ -23,6 +23,7 @@ import { ParentManagement } from './pages/admin/ParentManagement';
 import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/StudentDueForms';
+import { FormReviewQueue } from './pages/admin/FormReviewQueue';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
@@ -132,6 +133,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/classrooms/:classroomId" element={<ClassroomDetails />} />
                   <Route path="/:schoolSlug/admin/forms" element={<FormsManagement />} />
                   <Route path="/:schoolSlug/admin/forms/due" element={<DueForms />} />
+                  <Route path="/:schoolSlug/admin/forms/review" element={<FormReviewQueue kind="student" />} />
                   <Route path="/:schoolSlug/admin/forms/view/:formId" element={<FormView />} />
                   <Route path="/:schoolSlug/admin/form-assignments" element={<ClassroomFormAssignment />} />
                   <Route path="/:schoolSlug/admin/parents" element={<ParentManagement />} />
@@ -141,6 +143,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employees/:employeeId" element={<EmployeeDetails />} />
                   <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
                   <Route path="/:schoolSlug/admin/employee-forms/due" element={<EmployeeDueForms />} />
+                  <Route path="/:schoolSlug/admin/employee-forms/review" element={<FormReviewQueue kind="employee" />} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
