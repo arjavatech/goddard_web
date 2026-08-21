@@ -7,6 +7,10 @@ import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { Pagination, MobilePagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
+import { usePagination } from '../../hooks/usePagination';
+import { usePageSize } from '../../hooks/usePageSize';
 import { useUserContext } from '../../contexts/UserContext';
 import { fetchEmployeeFormReviewQueue, fetchStudentFormReviewQueue, type ReviewQueueItem } from '../../services/api/formReviewQueue';
 
@@ -30,6 +34,7 @@ export function FormReviewQueue({ kind }: Props) {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [showFilters, setShowFilters] = useState(false);
   const [view, setView] = useState<'table' | 'card'>(() => (localStorage.getItem(storageKey) as 'table' | 'card') || 'table');
+  const [itemsPerPage, setItemsPerPage] = usePageSize(`${kind}FormReviewQueue`, 10);
 
   useEffect(() => {
     if (!schoolId) return;
@@ -69,6 +74,12 @@ export function FormReviewQueue({ kind }: Props) {
     });
     return next;
   }, [allItems, search, formId, classroomId, sortBy, sortDirection, kind]);
+  const {
+    currentPage,
+    totalPages,
+    paginatedData: paginatedItems,
+    setCurrentPage,
+  } = usePagination({ data: filteredItems, itemsPerPage });
   const items = filteredItems;
   const activeFilters = Number(Boolean(formId)) + Number(kind === 'student' && Boolean(classroomId));
   const title = kind === 'student' ? 'Student Forms to Review' : 'Employee Forms to Review';
@@ -107,11 +118,12 @@ export function FormReviewQueue({ kind }: Props) {
     </CardContent></div>
 
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300"><CardHeader className="flex flex-col gap-3 pb-3 border-b border-slate-50 bg-slate-50/50 px-5"><div className="flex flex-wrap items-center justify-between gap-2"><CardTitle className="text-sm font-bold text-slate-900">Forms to Review ({items.length})</CardTitle><div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs"><button type="button" onClick={() => setViewMode('table')} className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500'}`}><List className="h-3.5 w-3.5" /><span className="hidden sm:inline">Table View</span></button><button type="button" onClick={() => setViewMode('card')} className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${view === 'card' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500'}`}><LayoutGrid className="h-3.5 w-3.5" /><span className="hidden sm:inline">Card View</span></button></div></div></CardHeader>
+      <div className="flex justify-end items-center px-4 py-3 border-b border-slate-50 bg-slate-50/20"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={setItemsPerPage} options={[10, 25, 50, 100]} /></div>
       <CardContent className="p-0">
         {loading ? <div className="py-14 text-center text-slate-500"><div className="mx-auto mb-3 h-6 w-6 animate-spin rounded-full border-2 border-[#0F2D52] border-t-transparent" />Refreshing forms...</div>
           : items.length === 0 ? <div className="py-14 text-center text-slate-500"><SlidersHorizontal className="mx-auto mb-3 h-8 w-8 text-slate-300" />No forms are ready for review.</div>
-          : view === 'table' ? <div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50/60 border-b border-slate-100 text-left text-[10px] uppercase tracking-wider font-bold text-slate-400"><tr><th className="p-4">{kind === 'student' ? 'Student / Parent' : 'Employee'}</th><th className="p-4">Form</th>{kind === 'student' && <th className="p-4">Class</th>}<th className="p-4">Submitted</th><th className="p-4" /></tr></thead><tbody>{items.map(item => <tr key={item.assignmentId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/40"><td className="p-4"><div className="font-bold text-slate-800">{kind === 'student' ? item.studentName : item.employeeName}</div><div className="text-xs font-medium text-slate-400">{kind === 'student' ? `${item.parentName} · ${item.parentEmail}` : item.employeeEmail}</div></td><td className="p-4 font-semibold text-slate-700">{item.formName}</td>{kind === 'student' && <td className="p-4 text-slate-600">{item.classroomName}</td>}<td className="p-4 whitespace-nowrap text-xs text-slate-500">{displayDate(item.submittedAt)}</td><td className="p-4 text-right"><Link to={`${reviewPath}/${item.assignmentId}`} state={reviewState(item)}><Button size="sm" variant="outline" className="h-8 px-3 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 hover:text-white border border-[#0F2D52] transition-all duration-200 font-bold"><Eye className="mr-1 h-3.5 w-3.5" />Review</Button></Link></td></tr>)}</tbody></table></div>
-          : <div className="p-4 space-y-4"><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{items.map(item => {
+          : view === 'table' ? <><div className="overflow-x-auto"><table className="w-full text-sm"><thead className="bg-slate-50/60 border-b border-slate-100 text-left text-[10px] uppercase tracking-wider font-bold text-slate-400"><tr><th className="p-4">{kind === 'student' ? 'Student / Parent' : 'Employee'}</th><th className="p-4">Form</th>{kind === 'student' && <th className="p-4">Class</th>}<th className="p-4">Submitted</th><th className="p-4" /></tr></thead><tbody>{paginatedItems.map(item => <tr key={item.assignmentId} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/40"><td className="p-4"><div className="font-bold text-slate-800">{kind === 'student' ? item.studentName : item.employeeName}</div><div className="text-xs font-medium text-slate-400">{kind === 'student' ? `${item.parentName} · ${item.parentEmail}` : item.employeeEmail}</div></td><td className="p-4 font-semibold text-slate-700">{item.formName}</td>{kind === 'student' && <td className="p-4 text-slate-600">{item.classroomName}</td>}<td className="p-4 whitespace-nowrap text-xs text-slate-500">{displayDate(item.submittedAt)}</td><td className="p-4 text-right"><Link to={`${reviewPath}/${item.assignmentId}`} state={reviewState(item)}><Button size="sm" variant="outline" className="h-8 px-3 text-xs rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 hover:text-white border border-[#0F2D52] transition-all duration-200 font-bold"><Eye className="mr-1 h-3.5 w-3.5" />Review</Button></Link></td></tr>)}</tbody></table></div><div className="px-5 py-4 border-t border-slate-50"><Pagination currentPage={currentPage} totalPages={totalPages} totalItems={items.length} itemsPerPage={itemsPerPage} onPageSizeChange={setItemsPerPage} onPageChange={setCurrentPage} className="flex" /></div></>
+          : <div className="p-4 space-y-4"><div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">{paginatedItems.map(item => {
             const subjectName = kind === 'student' ? item.studentName : item.employeeName;
             return <Card key={item.assignmentId} className="p-5 rounded-2xl border border-slate-100 shadow-xs bg-white flex flex-col justify-between hover:shadow-md transition-all duration-300 hover:-translate-y-1 space-y-4"><CardContent className="p-0">
               <div className="flex items-start gap-2.5 min-w-0 flex-1 pb-3 border-b border-slate-100">
@@ -124,7 +136,7 @@ export function FormReviewQueue({ kind }: Props) {
               </div>
               <div className="pt-3 border-t border-slate-100 mt-4"><Link to={`${reviewPath}/${item.assignmentId}`} state={reviewState(item)}><Button variant="outline" className="w-full h-9 text-xs font-bold rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:opacity-90 hover:text-white border border-[#0F2D52] transition-all duration-200" size="sm"><Eye className="mr-1 h-4 w-4" />Review Form</Button></Link></div>
             </CardContent></Card>;
-          })}</div></div>}
+          })}</div><MobilePagination currentPage={currentPage} totalPages={totalPages} totalItems={items.length} itemsPerPage={itemsPerPage} onPageSizeChange={setItemsPerPage} onPageChange={setCurrentPage} /></div>}
       </CardContent>
     </div>
   </motion.div></AdminLayout>;
