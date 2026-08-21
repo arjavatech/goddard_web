@@ -122,7 +122,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         label: 'Management',
         items: [
           { icon: <Tablet className="w-[18px] h-[18px]" />, label: 'Devices', path: `${schoolPrefix}/admin/devices` },
-          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Staff Management', path: `${schoolPrefix}/admin/tap-time-employees` },
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Attendance Reports', path: `/superadmin-arjava/tap-time-reports` },
           { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Attendance Report Settings', path: `/superadmin-arjava/tap-time-report-settings` },
         ],

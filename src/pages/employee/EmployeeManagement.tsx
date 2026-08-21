@@ -552,9 +552,10 @@ export function EmployeeManagement() {
               tableLayout="auto"
               columns={[
                 { header: 'Employee', className: 'w-auto min-w-[200px]' },
-                { header: 'Type', className: 'w-1/5' },
-                { header: 'Status', className: 'w-1/5' },
-                { header: 'Actions', className: 'w-1/5' },
+                { header: 'Type', className: 'w-[15%]' },
+                { header: 'Phone & PIN', className: 'w-1/5' },
+                { header: 'Status', className: 'w-[15%]' },
+                { header: 'Actions', className: 'w-[15%]' },
               ]}
               rows={paginatedEmployees.map((emp) => {
                 const initials = `${emp.firstName?.[0] || ''}${emp.lastName?.[0] || ''}`.toUpperCase();
@@ -573,6 +574,14 @@ export function EmployeeManagement() {
                       <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200/50">
                         {emp.employeeType}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-slate-700">{emp.phone || '-'}</span>
+                        {emp.phone && (
+                          <span className="text-[11px] text-slate-500 font-medium">PIN: {emp.phone.replace(/\D/g, '').slice(-4)}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
@@ -653,6 +662,17 @@ export function EmployeeManagement() {
                   error={!!phoneError}
                 />
                 {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">PIN</label>
+                  <Input 
+                    value={empPhone ? empPhone.replace(/\D/g, '').slice(-4) : ''} 
+                    disabled 
+                    placeholder="Auto-generated" 
+                    className="w-full h-10 rounded-xl bg-slate-50 text-slate-500" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">PIN is automatically generated from the last 4 digits of the phone number.</p>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
@@ -729,6 +749,17 @@ export function EmployeeManagement() {
                   error={!!phoneError}
                 />
                 {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">PIN</label>
+                  <Input 
+                    value={empPhone ? empPhone.replace(/\D/g, '').slice(-4) : ''} 
+                    disabled 
+                    placeholder="Auto-generated" 
+                    className="w-full h-10 rounded-xl bg-slate-50 text-slate-500" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">PIN is automatically generated from the last 4 digits of the phone number.</p>
+                </div>
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>

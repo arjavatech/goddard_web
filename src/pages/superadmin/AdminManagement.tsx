@@ -15,6 +15,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
 
 interface NetworkError {
@@ -43,6 +44,8 @@ export function AdminManagement() {
   const [adminLastName, setAdminLastName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
+  const [adminPhoneCountry, setAdminPhoneCountry] = useState('US');
+  const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -144,7 +147,8 @@ export function AdminManagement() {
         adminEmail.trim(),
         adminFirstName.trim(),
         adminLastName.trim(),
-        userData.schoolId
+        userData.schoolId,
+        adminPhone.trim() || undefined
       );
       
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
@@ -205,8 +209,10 @@ export function AdminManagement() {
     setAdminFirstName(admin.first_name);
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
-    setAdminPhone(''); // Phone not available in current data
-    setEmailError(''); // Clear any existing email errors
+    setAdminPhone(admin.phone_number || '');
+    setAdminPhoneCountry('US');
+    setEmailError('');
+    setPhoneError('');
     setIsEditDialogOpen(true);
   };
 
@@ -223,7 +229,7 @@ export function AdminManagement() {
       
       setAdmins(admins.map(admin => 
         admin.id === selectedAdmin.id 
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim() }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || undefined }
           : admin
       ));
       
@@ -266,7 +272,9 @@ export function AdminManagement() {
     setAdminLastName('');
     setAdminEmail('');
     setAdminPhone('');
+    setAdminPhoneCountry('US');
     setEmailError('');
+    setPhoneError('');
   };
 
   if (isLoading && admins.length === 0) {
@@ -548,10 +556,11 @@ export function AdminManagement() {
               onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
-                { header: 'Administrator', className: 'w-2/5' },
-                { header: 'Role', className: 'w-1/5' },
-                { header: 'Status', className: 'w-1/5' },
-                { header: 'Actions', className: 'w-1/5' },
+                { header: 'Administrator', className: 'w-auto min-w-[200px]' },
+                { header: 'Role', className: 'w-[15%]' },
+                { header: 'Phone & PIN', className: 'w-1/5' },
+                { header: 'Status', className: 'w-[15%]' },
+                { header: 'Actions', className: 'w-[15%]' },
               ]}
               rows={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
@@ -581,6 +590,14 @@ export function AdminManagement() {
                       }`}>
                         {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
                       </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-semibold text-slate-700">{admin.phone_number || '-'}</span>
+                        {admin.phone_number && (
+                          <span className="text-[10px] text-slate-400 font-medium">PIN: {admin.phone_number.replace(/\D/g, '').slice(-4)}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-4 px-4">
                       <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
@@ -685,6 +702,38 @@ export function AdminManagement() {
                   <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>
                 )}
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+                <PhoneInput
+                  value={adminPhone}
+                  country={adminPhoneCountry}
+                  onCountryChange={(val) => {
+                    setAdminPhoneCountry(val);
+                  }}
+                  onChange={(val) => {
+                    setAdminPhone(val);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  onBlur={() => {
+                    if (adminPhone && !validatePhoneNumber(adminPhone)) {
+                      setPhoneError('Please enter a valid phone number');
+                    }
+                  }}
+                  error={!!phoneError}
+                />
+                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">PIN</label>
+                  <Input 
+                    value={adminPhone ? adminPhone.replace(/\D/g, '').slice(-4) : ''} 
+                    disabled 
+                    placeholder="Auto-generated" 
+                    className="w-full h-10 rounded-xl bg-slate-50 text-slate-500 border border-slate-200" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">PIN is automatically generated from the last 4 digits of the phone number.</p>
+                </div>
+              </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button 
@@ -751,13 +800,35 @@ export function AdminManagement() {
               </div>
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
+                <PhoneInput
                   value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  country={adminPhoneCountry}
+                  onCountryChange={(val) => {
+                    setAdminPhoneCountry(val);
+                  }}
+                  onChange={(val) => {
+                    setAdminPhone(val);
+                    if (phoneError) setPhoneError('');
+                  }}
+                  onBlur={() => {
+                    if (adminPhone && !validatePhoneNumber(adminPhone)) {
+                      setPhoneError('Please enter a valid phone number');
+                    }
+                  }}
+                  error={!!phoneError}
                 />
+                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                
+                <div className="mt-3">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">PIN</label>
+                  <Input 
+                    value={adminPhone ? adminPhone.replace(/\D/g, '').slice(-4) : ''} 
+                    disabled 
+                    placeholder="Auto-generated" 
+                    className="w-full h-10 rounded-xl bg-slate-50 text-slate-500 border border-slate-100" 
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">PIN is automatically generated from the last 4 digits of the phone number.</p>
+                </div>
               </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
