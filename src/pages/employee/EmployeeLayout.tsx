@@ -33,6 +33,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       localStorage.clear();
       sessionStorage.setItem('explicit_logout', 'true');
       await signOut();
+      navigate('/', { replace: true });
     } catch (err) {
       console.error('Logout error:', err);
     } finally {

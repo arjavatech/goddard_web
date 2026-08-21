@@ -100,12 +100,11 @@ export function AppRouter() {
                 <Route element={<SubdomainGuard />}>
                   <Route path="/:schoolSlug/dashboard" element={<App />} />
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
+                  <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
                   <Route path="/:schoolSlug/employee/requests" element={<EmployeeRequests />} />
                 </Route>
-                {/* Dev-accessible employee dashboard (no auth guard) */}
-                <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
-                <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
+                <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}
                 <Route path="/:schoolSlug/profile" element={<ProfilePage />} />
                 <Route path="/:schoolSlug/admin/profile" element={<ProfilePage />} />
