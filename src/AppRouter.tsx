@@ -57,6 +57,9 @@ import { ProfilePage } from './pages/ProfilePage';
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
+import { NewsPad } from './pages/NewsPad';
+import { SuperAdminNewsPad } from './pages/superadmin/SuperAdminNewsPad';
+import { AdminNewsPad } from './pages/admin/AdminNewsPad';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -100,6 +103,7 @@ export function AppRouter() {
                 <Route element={<SubdomainGuard />}>
                   <Route path="/:schoolSlug/dashboard" element={<App />} />
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
+                  <Route path="/:schoolSlug/news-pad" element={<NewsPad />} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
                   <Route path="/:schoolSlug/employee/requests" element={<EmployeeRequests />} />
                 </Route>
@@ -148,6 +152,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<RequestsRouter />} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
+                  <Route path="/:schoolSlug/admin/news-pad" element={<AdminNewsPad />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<SuperAdminOnly>
                     <SuperAdminExpenses />
                   </SuperAdminOnly>} />
@@ -166,6 +171,7 @@ export function AppRouter() {
                   <Route path="/superadmin-arjava/requests" element={<SuperAdminRequests />} />
                   <Route path="/superadmin-arjava/expenses" element={<SuperAdminExpenses />} />
                   <Route path="/superadmin-arjava/settings" element={<Settings />} />
+                  <Route path="/superadmin-arjava/news-pad" element={<SuperAdminNewsPad />} />
                 </Route>
 
                 {/* 404 Catch-all */}

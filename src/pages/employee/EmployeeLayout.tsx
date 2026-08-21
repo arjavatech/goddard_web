@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
-  Home, LogOut, Menu, X, ShoppingBag, UserCog, User
+  Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Newspaper
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -67,6 +67,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard` },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
+        { icon: <Newspaper className="w-[18px] h-[18px]" />, label: 'News Pad', path: `${schoolPrefix}/news-pad` },
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
       ],
     }

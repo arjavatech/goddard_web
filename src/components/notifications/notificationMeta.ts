@@ -40,6 +40,8 @@ export const NOTIFICATION_META: Record<string, NotificationMeta> = {
   classroom_deleted:    { icon: Trash2,       accentClass: 'bg-slate-100 text-slate-600' },
   form_template_added:  { icon: FileText,     accentClass: 'bg-blue-100 text-blue-600' },
   form_template_deleted:{ icon: Trash2,       accentClass: 'bg-slate-100 text-slate-600' },
+  newsletter_published: { icon: FileText,     accentClass: 'bg-blue-100 text-blue-600' },
+  newsletter_reminder:  { icon: Clock,        accentClass: 'bg-amber-100 text-amber-600' },
 };
 
 const FALLBACK: NotificationMeta = {

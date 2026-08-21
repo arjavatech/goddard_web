@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, User, ChevronDown, School, ShoppingBag } from 'lucide-react';
+import { LogOut, User, ChevronDown, School, ShoppingBag, Newspaper } from 'lucide-react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
@@ -61,6 +61,7 @@ export function Header() {
         </div>
       </div>
       <div className="p-2 space-y-0.5">
+        <Link to={`/${schoolSubdomain || 'goddard'}/news-pad`} className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"><Newspaper className="w-4 h-4 text-slate-400" /> News Pad</Link>
         <Link
           to={profilePath}
           className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
@@ -153,6 +154,7 @@ export function Header() {
 
           {/* Right side — desktop only */}
           <div className="flex items-center gap-2 flex-shrink-0">
+            <Link to={`/${schoolSubdomain || 'goddard'}/news-pad`} className="hidden md:flex items-center gap-1.5 text-sm font-semibold text-[#0F2D52] hover:text-[#1a6fc4]"><Newspaper className="w-4 h-4" />News Pad</Link>
             <NotificationBell enabled={!!userData} />
 
             <DropdownMenu>

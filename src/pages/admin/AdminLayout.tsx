@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Newspaper
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -94,6 +94,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+        { icon: <Newspaper className="w-[18px] h-[18px]" />, label: 'News Pad', path: `${schoolPrefix}/admin/news-pad` },
         ...(isSuperAdmin ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
         ] : []),
