@@ -3,7 +3,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -54,7 +54,7 @@ const getStatusBadgeClass = (status: FormStatus): string => {
 
 const getStatusDisplay = (status: FormStatus) => {
   switch (status) {
-    case 'school_default': return 'School Default';
+    case 'school_default': return 'Default';
     default: return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
@@ -77,6 +77,7 @@ export function EmployeeFormsManagement() {
   const [isAddingForm, setIsAddingForm] = useState(false);
 
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
@@ -186,6 +187,17 @@ export function EmployeeFormsManagement() {
     }
   };
 
+  const handleAssignToAllEmployees = async () => {
+    if (!selectedFormForAssign || !schoolId) return;
+    try {
+      const response = await EmployeeService.assignFormToAllEmployees(schoolId, selectedFormForAssign.id, true);
+      showToast('success', `Form assigned to ${response.newlyAssigned} employee${response.newlyAssigned === 1 ? '' : 's'} successfully!`);
+      setIsAssignToAllDialogOpen(false);
+    } catch (error: any) {
+      showToast('error', error.message || 'Failed to assign form to all employees');
+    }
+  };
+
   const resetForm = () => {
     setFormName('');
     setFormLink('');
@@ -268,6 +280,11 @@ export function EmployeeFormsManagement() {
             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openEditDialog(form)}>
               <Edit className="h-4 w-4 mr-2 text-slate-400" /> Edit Form
             </DropdownMenuItem>
+            {form.status !== 'inactive' && (
+              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSelectedFormForAssign(form); setIsAssignToAllDialogOpen(true); }}>
+                <School className="h-4 w-4 mr-2 text-slate-400" /> Assign to All Employees
+              </DropdownMenuItem>
+            )}
             {form.status !== 'inactive' && (
               <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openAssignDialog(form)}>
                 <UserPlus className="h-4 w-4 mr-2 text-slate-400" /> Assign to Employee
@@ -449,6 +466,11 @@ export function EmployeeFormsManagement() {
                           <Edit className="h-4 w-4 mr-2 text-slate-400" /> Edit Form
                         </DropdownMenuItem>
                         {form.status !== 'inactive' && (
+                          <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSelectedFormForAssign(form); setIsAssignToAllDialogOpen(true); }}>
+                            <School className="h-4 w-4 mr-2 text-slate-400" /> Assign to All Employees
+                          </DropdownMenuItem>
+                        )}
+                        {form.status !== 'inactive' && (
                           <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openAssignDialog(form)}>
                             <UserPlus className="h-4 w-4 mr-2 text-slate-400" /> Assign to Employee
                           </DropdownMenuItem>
@@ -548,6 +570,27 @@ export function EmployeeFormsManagement() {
             </Button>
             <Button onClick={handleAssignToEmployee} disabled={!selectedEmployeeId} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
               Assign Form
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All Employees</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Assign <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong> to every active employee in this school? Employees who already have this form will be skipped.
+            </p>
+          </div>
+          <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
+              Cancel
+            </Button>
+            <Button onClick={handleAssignToAllEmployees} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
+              Assign to All Employees
             </Button>
           </DialogFooter>
         </DialogContent>

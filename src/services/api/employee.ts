@@ -57,6 +57,14 @@ export type EmployeeFormAssignment = {
   employeeLastName?: string;
 };
 
+export type AssignEmployeeFormToSchoolResponse = {
+  schoolId: string;
+  employeeFormTemplateId: string;
+  totalActiveEmployees: number;
+  employeesAlreadyAssigned: number;
+  newlyAssigned: number;
+};
+
 // ─── Mappers ─────────────────────────────────────────────────────────────────
 
 function mapEmployee(raw: any): Employee {
@@ -336,6 +344,32 @@ export const EmployeeService = {
       z.any(),
     );
     return mapAssignment(data);
+  },
+
+  async assignFormToAllEmployees(
+    schoolId: string,
+    formTemplateId: string,
+    isRequired = true,
+  ): Promise<AssignEmployeeFormToSchoolResponse> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/employee-form-assignments/assign-to-school',
+        body: {
+          school_id: schoolId,
+          employee_form_template_id: formTemplateId,
+          is_required: isRequired,
+        },
+      },
+      z.any(),
+    );
+    return {
+      schoolId: data.school_id,
+      employeeFormTemplateId: data.employee_form_template_id,
+      totalActiveEmployees: data.total_active_employees,
+      employeesAlreadyAssigned: data.employees_already_assigned,
+      newlyAssigned: data.newly_assigned,
+    };
   },
 
   async reviewEmployeeForm(
