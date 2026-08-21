@@ -16,7 +16,7 @@ import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function EmployeeManagement() {
@@ -32,6 +32,7 @@ export function EmployeeManagement() {
 
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [resendingEmployeeId, setResendingEmployeeId] = useState<string | null>(null);
 
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
@@ -309,6 +310,16 @@ export function EmployeeManagement() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleResendInvite = async (emp: Employee) => {
+    if (!userData?.schoolId) return;
+    setResendingEmployeeId(emp.id);
+    try {
+      const result = await EmployeeService.resendEmployeeInvite(emp.id, userData.schoolId);
+      showToast(result.emailSent ? 'success' : 'error', result.emailSent ? `Invitation resent to ${emp.email}` : result.message);
+    } catch (error: any) { showToast('error', error.message || 'Failed to resend invitation'); }
+    finally { setResendingEmployeeId(null); }
+  };
+
   const confirmDeleteEmployee = async () => {
     if (!employeeToDelete) return;
     try {
@@ -520,6 +531,9 @@ export function EmployeeManagement() {
                             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleEditEmployee(emp)}>
                               <Edit className="w-4 h-4 mr-2" /> Edit Employee
                             </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={() => handleResendInvite(emp)}>
+                              <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer text-xs text-red-600 focus:text-red-650" onClick={() => handleDeleteEmployee(emp)}>
                               <Trash2 className="w-4 h-4 mr-2" /> Deactivate
                             </DropdownMenuItem>
@@ -592,6 +606,9 @@ export function EmployeeManagement() {
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleEditEmployee(emp); }}>
                             <Edit className="w-4 h-4 mr-2" /> Edit Employee
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={(e) => { e.stopPropagation(); handleResendInvite(emp); }}>
+                            <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-xs text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(emp); }}>
                             <Trash2 className="w-4 h-4 mr-2" /> Deactivate

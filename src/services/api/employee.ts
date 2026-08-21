@@ -221,6 +221,11 @@ export const EmployeeService = {
     return mapEmployee(data);
   },
 
+  async resendEmployeeInvite(employeeId: string, schoolId: string): Promise<{ emailSent: boolean; message: string }> {
+    const data = await authedFetch({ method: 'POST', url: `/employees/${employeeId}/resend-invite`, body: { school_id: schoolId } }, z.any());
+    return { emailSent: data.email_sent, message: data.message };
+  },
+
   async deactivateEmployee(id: string, schoolId: string): Promise<void> {
     await authedFetch(
       { method: 'DELETE', url: `/employees/${id}?school_id=${schoolId}` },
