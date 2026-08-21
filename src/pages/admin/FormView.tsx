@@ -139,6 +139,7 @@ export function FormView() {
     formData?.status === 'submitted';
   const isApproved = formData?.status === 'Approved' || formData?.status === 'approved';
   const childName = location.state?.childName;
+  const employeeName = location.state?.employeeName;
   const childDob = location.state?.childDob;
   const childGender = location.state?.childGender;
   const parentEmail = location.state?.parentEmail;
@@ -162,10 +163,10 @@ export function FormView() {
   })();
 
   useEffect(() => {
-    if (studentFormAssignmentId && usesResumeLink) {
+    if (studentFormAssignmentId && usesResumeLink && !isEmployeeForm) {
       getFormResumeLink(studentFormAssignmentId).then(setResolvedResumeLink);
     }
-  }, [studentFormAssignmentId, usesResumeLink]);
+  }, [studentFormAssignmentId, usesResumeLink, isEmployeeForm]);
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
@@ -334,15 +335,15 @@ export function FormView() {
             <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <div className="flex items-center min-w-0 flex-1">
-            {childName && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
+            {(childName || employeeName) && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
               <div className="flex items-center gap-1 sm:gap-2 min-w-0">
                 <User className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-sm sm:text-base truncate">{childName}</span>
+                <span className="text-sm sm:text-base truncate">{childName || employeeName}</span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              {childName && <div className="flex items-center gap-1 sm:gap-2 min-w-0">
                 <School className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span className="text-sm sm:text-base truncate">{classDetails}</span>
-              </div>
+              </div>}
             </div>}
           </div>
         </div>

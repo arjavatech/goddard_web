@@ -70,7 +70,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
     if (normalizedItemPath === '/admin/forms') {
       if (isEmployeeFormView) return false;
-      return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due');
+      return currentPath === '/admin/forms' || (
+        currentPath.startsWith('/admin/forms/') &&
+        currentPath !== '/admin/forms/due' &&
+        currentPath !== '/admin/forms/review'
+      );
     }
 
     if (normalizedItemPath === '/admin/employee-forms') {
@@ -105,8 +109,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
       ],
     },
 
@@ -179,7 +185,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
                       </Link>
                     );
                   })}
@@ -236,7 +242,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
                       </Link>
                     );
                   })}
