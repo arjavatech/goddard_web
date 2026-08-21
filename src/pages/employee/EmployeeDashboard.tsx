@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Header } from '../../components/layout/Header';
-import { Footer } from '../../components/layout/Footer';
+import { EmployeeLayout } from './EmployeeLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
+import { RequestService } from '../../services/api/requests';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -14,6 +15,7 @@ import { cn } from '../../lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
 import { useToast } from '../../contexts/ToastContext';
+import { Label } from 'recharts';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
   formTitle: string;
@@ -23,11 +25,13 @@ type EnrichedAssignment = EmployeeFormAssignment & {
 
 export function EmployeeDashboard() {
   const { userData, schoolSubdomain } = useUserContext();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [employee, setEmployee] = useState<import('../../services/api/employee').Employee | null>(null);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
@@ -73,8 +77,13 @@ export function EmployeeDashboard() {
         if (!isMounted) return;
         setEmployee(employee);
 
-        const rawAssignments = await EmployeeService.fetchEmployeeFormAssignments(employee.id);
+        const empId = employee.userId || user?.id || userData.email || '';
+        const [rawAssignments, allRequests] = await Promise.all([
+          EmployeeService.fetchEmployeeFormAssignments(employee.id),
+          RequestService.fetchRequests(userData.schoolId, 'employee', empId).catch(() => [] as import('../../services/api/requests').Request[]),
+        ]);
         if (!isMounted) return;
+        setPendingRequestsCount(allRequests.filter(r => r.status === 'Pending').length);
 
         const enriched = rawAssignments.map(assignment => ({
           ...assignment,
@@ -129,9 +138,8 @@ export function EmployeeDashboard() {
     : 'Demo Employee';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
-      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+    <EmployeeLayout>
+      <div className="w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -153,7 +161,7 @@ export function EmployeeDashboard() {
             className="space-y-4"
           >
             {/* Top row: Progress (left) + Employee Info (right) */}
-            <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 sm:gap-5 mt-4">
+            <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 sm:gap-5 mt-16">
               {/* Progress Card */}
               <div className="lg:col-span-7 animate-fade-in-up" style={{ animationDelay: '0.06s' }}>
                 <Card className="border-slate-100 shadow-sm rounded-2xl overflow-hidden bg-white h-full">
@@ -233,10 +241,10 @@ export function EmployeeDashboard() {
                     </div>
                     <div className="space-y-2.5 border-t border-slate-50 pt-3">
                       {[
-                        { label: 'Role', value: 'Employee' },
-                        { label: 'Phone number', value: employee?.phone || '—' },
-                        { label: 'Address', value: employee?.address || '—' },
+                        { label: 'Forms Completed', value: `${completedForms} completed` },
                         { label: 'Forms Due', value: `${pendingForms} pending` },
+                        { label: 'Pending Requests', value: `${pendingRequestsCount} pending` },
+                        { label: 'Salary Date', value: employee?.salaryDate || '—' }
                       ].map(({ label, value }) => (
                         <div key={label} className="flex justify-between items-center">
                           <span className="text-[11px] font-semibold text-slate-400">{label}</span>
@@ -453,8 +461,7 @@ export function EmployeeDashboard() {
             </div>
           </motion.div>
         )}
-      </main>
-      <Footer />
+      </div>
 
       <Dialog open={showGuide} onOpenChange={setShowGuide}>
         <DialogContent className="w-[95vw] max-w-lg rounded-2xl max-h-[85vh] overflow-y-auto">
@@ -467,6 +474,6 @@ export function EmployeeDashboard() {
           <EmployeeGuideContent />
         </DialogContent>
       </Dialog>
-    </div>
+    </EmployeeLayout>
   );
 }

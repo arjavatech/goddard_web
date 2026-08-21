@@ -27,7 +27,7 @@ export function ForgotPassword() {
     } catch (err) {
       const msg = (err as any)?.message || '';
       if (msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('no user') || (err as any)?.status === 404) {
-        setEmailError('No account found with this email address.');
+        showToast('error', 'No account found with this email address.');
       } else {
         showToast('error', msg);
       }

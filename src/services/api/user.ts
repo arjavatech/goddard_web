@@ -1,5 +1,7 @@
 import { authedFetch, z } from './common';
 
+export type SchoolRequestSettingOption = { id: string; label: string };
+
 export type SchoolData = {
   id?: string;
   name?: string;
@@ -12,6 +14,8 @@ export type SchoolData = {
     enrollment_capacity?: number;
     age_groups?: string[];
   };
+  requestCategories?: SchoolRequestSettingOption[];
+  location?: SchoolRequestSettingOption[];
 };
 
 export type UserContext = {
@@ -40,6 +44,8 @@ const schoolDataSchema = z.object({
   name: z.string().optional(),
   subdomain: z.string().optional(),
   settings: schoolSettingsSchema.optional(),
+  request_categories: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+  location: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -86,7 +92,11 @@ export async function fetchUserContext(): Promise<UserContext> {
       lastName: data.last_name || data.lastName,
       phone: data.phone || data.phone_number,
       address: data.address,
-      schoolData: data.school_data || null,
+      schoolData: data.school_data ? {
+        ...data.school_data,
+        requestCategories: data.school_data.request_categories ?? [],
+        location: data.school_data.location ?? [],
+      } : null,
     };
 
     if (!result.parentId && data.email) {

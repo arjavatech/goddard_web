@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, FileText, User } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { Header } from '../../components/layout/Header';
+import { EmployeeLayout } from './EmployeeLayout';
 import { useUserContext } from '../../contexts/UserContext';
 import type { EmployeeFormAssignment } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
@@ -199,9 +199,8 @@ export function EmployeeFormView() {
     || 'Employee';
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] flex flex-col">
-      <Header />
-      <main ref={mainRef} className="flex-1 flex flex-col min-h-0 relative overflow-y-auto">
+    <EmployeeLayout>
+      <div ref={mainRef} className="flex-1 flex flex-col min-h-0 relative overflow-y-auto -mx-3 sm:-mx-4 md:-mx-6  mt-10">
 
         {/* Title Bar */}
         <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm">
@@ -294,7 +293,7 @@ export function EmployeeFormView() {
             />
           )}
         </div>
-      </main>
-    </div>
+      </div>
+    </EmployeeLayout>
   );
 }
