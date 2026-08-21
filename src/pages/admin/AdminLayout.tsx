@@ -92,32 +92,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-      ],
-    },
-    {
-      label: 'Student Enrollment',
-      items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-      ],
-    },
-
-    {
-      label: 'Employee Enrollment',
-      items: [
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
-      ],
-    },
-
-    {
-      label: 'Procurement',
-      items: [
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
         ...(isSuperAdmin ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
         ] : []),
+
+      ],
+    },
+    {
+      label: 'Forms',
+      items: [
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
+         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
 
