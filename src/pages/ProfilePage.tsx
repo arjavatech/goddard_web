@@ -72,7 +72,7 @@ function ProfileContent() {
 
   if (loadingExtra) {
     return (
-      <div className="max-w-2xl mx-auto px-2 mt-14 py-6 space-y-5">
+      <div className="max-w-4xl mx-auto px-2 mt-14 py-6 space-y-5">
         <div className="rounded-2xl overflow-hidden shadow-md bg-white">
           <div className="h-28 bg-gradient-to-br from-[#0F2D52] via-[#1a4a8a] to-[#1a6fc4] animate-pulse" />
           <div className="px-6 pb-6 pt-0">
@@ -103,7 +103,7 @@ function ProfileContent() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-5 py-6 px-2 mt-14 animate-fade-in">
+    <div className="max-w-4xl mx-auto space-y-5 py-6 px-2 mt-14 animate-fade-in">
 
       {/* Hero Card */}
       <Card className="rounded-2xl overflow-hidden shadow-md border-0">
@@ -280,7 +280,7 @@ export function ProfilePage() {
   if (isAdmin) {
     return (
       <AdminLayout>
-        <div className="max-w-2xl">
+        <div className="max-w-4xl mx-auto w-full">
           <ProfileContent />
         </div>
       </AdminLayout>
@@ -290,7 +290,7 @@ export function ProfilePage() {
   if (isEmployee) {
     return (
       <EmployeeLayout>
-        <div className="max-w-2xl mx-auto w-full">
+        <div className="max-w-4xl mx-auto w-full">
           <ProfileContent />
         </div>
       </EmployeeLayout>
