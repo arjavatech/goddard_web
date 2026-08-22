@@ -155,7 +155,17 @@ export function EmployeeFormView() {
       }
       if (!isSubmitted && typeof event.data === 'string') {
         const lower = event.data.toLowerCase();
-        if ((lower.includes('submit') || lower.includes('complete')) && (lower.includes('submission') || lower.includes('success'))) isSubmitted = true;
+        // Stricter check: avoid triggering on "navigate", "next", "prev", or "step" events
+        if (
+          !lower.includes('navigate') && 
+          !lower.includes('step') && 
+          !lower.includes('next') && 
+          !lower.includes('prev') &&
+          (lower.includes('submit') || lower.includes('complete')) && 
+          (lower.includes('submission') || lower.includes('success'))
+        ) {
+          isSubmitted = true;
+        }
       }
       if (isSubmitted) handleSubmission();
     };
@@ -461,9 +471,7 @@ export function EmployeeFormView() {
             
             <Button
               className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
-              onClick={() => showSubmissionNavigation
-                ? navigate(back, { state: { formCompleted: true } })
-                : navigate(back)}
+              onClick={() => navigate(back)}
             >
               <Home className="h-4 w-4" />
               Back to Dashboard
