@@ -61,7 +61,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const isFromStudents = location.state?.fromStudents === true;
-  const isEmployeeFormView = currentPath.startsWith('/admin/forms/view') && !!location.state?.employeeId;
+  const isEmployeeFormView = currentPath.startsWith('/admin/forms/view') && !!location.state?.isEmployeeForm;
 
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/admin') return currentPath === '/admin';
@@ -73,12 +73,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       return currentPath === '/admin/forms' || (
         currentPath.startsWith('/admin/forms/') &&
         currentPath !== '/admin/forms/due' &&
-        currentPath !== '/admin/forms/review'
+        currentPath !== '/admin/forms/review' &&
+        !isEmployeeFormView
       );
     }
 
     if (normalizedItemPath === '/admin/employee-forms') {
-      if (isEmployeeFormView || currentPath === '/admin/employee-forms/due') return false;
+      if (isEmployeeFormView) return true;
+      if (currentPath === '/admin/employee-forms/due') return false;
       return currentPath === '/admin/employee-forms';
     }
 
