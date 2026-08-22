@@ -1,14 +1,22 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { ChevronLeft, FileText, User } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, User, CheckCircle2, LayoutList, X, Home } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { EmployeeLayout } from './EmployeeLayout';
+import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
 import type { EmployeeFormAssignment } from '../../services/api/employee';
+
+type EnrichedAssignment = EmployeeFormAssignment & {
+  formTitle: string;
+  formDescription: string;
+  normalizedStatus: string;
+};
 import { useToast } from '../../contexts/ToastContext';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
+import { StatusBadge } from '../../components/dashboard/StatusBadge';
+
 
 export function EmployeeFormView() {
   const location = useLocation();
@@ -17,8 +25,11 @@ export function EmployeeFormView() {
   const { userData } = useUserContext();
   const { showToast } = useToast();
 
-  const { assignment } = (location.state ?? {}) as {
-    assignment?: EmployeeFormAssignment & { formTitle: string; formDescription: string };
+  const { assignment, assignments, completedCount, totalForms } = (location.state ?? {}) as {
+    assignment?: EnrichedAssignment;
+    assignments?: EnrichedAssignment[];
+    completedCount?: number;
+    totalForms?: number;
   };
 
   const back = `/${schoolSlug}/employee/dashboard`;
@@ -27,7 +38,33 @@ export function EmployeeFormView() {
   const [viewUrl, setViewUrl] = useState<string | null>(null);
   const iframeContainerRef = useRef<HTMLDivElement>(null);
   const isSubmittingRef = useRef(false);
-  const mainRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
+
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const hasSidebar = assignments && assignments.length > 0;
+  const progressPct = totalForms ? Math.round(((completedCount ?? 0) / totalForms) * 100) : 0;
+
+  const currentIndex = assignments
+    ? assignments.findIndex(a => a.id === assignment?.id)
+    : -1;
+  const prevSibling = currentIndex > 0 ? assignments![currentIndex - 1] : null;
+  const nextSibling = assignments && currentIndex >= 0 && currentIndex < assignments.length - 1
+    ? assignments[currentIndex + 1]
+    : null;
+
+  const handleNavigateToSibling = (sibling: EnrichedAssignment) => {
+    setDrawerOpen(false);
+    if (sibling.id === assignment?.id) return;
+    navigate(`/${schoolSlug}/employee/form/${sibling.id}`, {
+      state: {
+        assignment: sibling,
+        assignments,
+        completedCount,
+        totalForms,
+      },
+    });
+  };
 
   useIframeScrollLock();
   const embeddedResize = useEmbeddedFormResize(viewUrl);
@@ -198,102 +235,258 @@ export function EmployeeFormView() {
     || [assignment.employeeFirstName, assignment.employeeLastName].filter(Boolean).join(' ')
     || 'Employee';
 
-  return (
-    <EmployeeLayout>
-      <div ref={mainRef} className="flex-1 flex flex-col min-h-0 relative overflow-y-auto -mx-3 sm:-mx-4 md:-mx-6  mt-10">
+  const isReadOnly = assignment.normalizedStatus === 'Approved' || assignment.normalizedStatus === 'Submitted';
+  const showSubmissionNavigation = isReadOnly || assignment.normalizedStatus === 'In Progress';
 
-        {/* Title Bar */}
-        <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm">
-          <div className="flex-1 flex items-center justify-start">
+
+  return (
+    <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
+      <Header />
+      <main className="flex-1 flex min-h-0 relative">
+        
+        {/* Mobile drawer backdrop */}
+        {hasSidebar && drawerOpen && (
+          <div
+            className="absolute inset-0 z-40 bg-black/40 lg:hidden backdrop-blur-sm"
+            onClick={() => setDrawerOpen(false)}
+          />
+        )}
+
+        {/* Sidebar */}
+        {hasSidebar && (
+          <aside className={`
+            absolute top-0 left-0 h-full z-50 flex flex-col w-72 shadow-2xl
+            transition-transform duration-300
+            ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
+            lg:static lg:h-full lg:overflow-y-auto lg:translate-x-0 lg:shadow-none lg:w-64 lg:shrink-0
+            bg-[#0F2D52] border-r border-[#1a3a60]
+          `}>
+            {/* Header */}
+            <div className="px-4 py-4 flex items-center justify-between border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-white" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-bold uppercase tracking-widest text-white/50">Employee</p>
+                  <p className="text-xs font-bold text-white leading-tight">Forms Overview</p>
+                </div>
+              </div>
+              <button
+                className="lg:hidden w-7 h-7 flex items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                onClick={() => setDrawerOpen(false)}
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+
+            {/* Enrollment ratio */}
+            <div className="px-4 py-4 border-b border-white/10">
+              <div className="flex items-end justify-between mb-2">
+                <div>
+                  <span className="text-2xl font-extrabold text-white">{completedCount ?? 0}</span>
+                  <span className="text-sm font-semibold text-white/50"> / {totalForms ?? 0}</span>
+                </div>
+                {progressPct === 100
+                  ? <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  : <span className="text-xs font-bold text-white/40">{progressPct}%</span>
+                }
+              </div>
+              <p className="text-[10px] text-white/50 font-semibold uppercase tracking-wider mb-2">
+                {progressPct === 100 ? 'All forms completed!' : 'Forms completed'}
+              </p>
+              <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-emerald-400 transition-all duration-500"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Forms list */}
+            <nav className="flex-1 overflow-y-auto no-scrollbar py-2">
+              {assignments!.map((f, idx) => {
+                const isCurrent = assignment?.id === f.id;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => handleNavigateToSibling(f)}
+                    className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-l-2 ${
+                      isCurrent
+                        ? 'border-white bg-white/10'
+                        : 'border-transparent hover:bg-white/5 cursor-pointer'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
+                      isCurrent ? 'bg-white text-[#0F2D52]' : 'bg-white/15 text-white/60'
+                    }`}>
+                      {idx + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-[11px] font-semibold leading-snug ${
+                        isCurrent ? 'text-white' : 'text-white/70'
+                      }`}>
+                        {f.formTitle}
+                      </p>
+                      <StatusBadge
+                        status={f.normalizedStatus as any}
+                        className="mt-1 text-[9px] px-1.5 py-0.5 gap-0.5 opacity-90"
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* Sidebar footer */}
+            <div className="shrink-0 px-4 py-4 border-t border-white/10">
+              <button
+                onClick={() => navigate(back)}
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-xs font-semibold"
+              >
+                <Home className="w-4 h-4" />
+                Back to Dashboard
+              </button>
+            </div>
+          </aside>
+        )}
+
+        <div ref={mainRef} className="flex-1 flex flex-col min-w-0 bg-white relative overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
+          
+          {/* Title Bar */}
+          <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
+            <div className="flex items-center justify-start min-w-[2rem]">
+              {hasSidebar && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="lg:hidden h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
+                  onClick={() => setDrawerOpen(true)}
+                >
+                  <LayoutList className="h-3.5 w-3.5" />
+                  Forms
+                </Button>
+              )}
+            </div>
+            <div className="flex-1 flex items-center justify-center min-w-0 px-2">
+              <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate max-w-full text-center">
+                {assignment.formTitle}
+              </h2>
+            </div>
+            <div className="flex items-center justify-end min-w-[2rem]" />
+          </div>
+
+          {/* Info Bar */}
+          <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                <User className="w-3.5 h-3.5 text-[#0F2D52]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
+                <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
+              </div>
+            </div>
+
+            <div className="h-8 w-px bg-slate-100 shrink-0" />
+
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
+                <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
+              </div>
+            </div>
+
+            {assignment.dueDate && (
+              <>
+                <div className="h-8 w-px bg-slate-100 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
+                  <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Iframe Container */}
+          <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative">
+            {(!viewUrl || isFrameLoading) && (
+              <div className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm" style={{ height: `${formHeight}px` }}>
+                <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
+                <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
+              </div>
+            )}
+
+            {viewUrl && (
+              <iframe
+                ref={embeddedResize.iframeRef}
+                src={viewUrl}
+                title={assignment.formTitle}
+                style={{
+                  width: '100%',
+                  height: embeddedResize.isDynamic
+                    ? `${embeddedResize.height ?? formHeight}px`
+                    : `${formHeight}px`,
+                  border: 'none',
+                  display: 'block',
+                  opacity: isFrameLoading ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out',
+                }}
+                onLoad={() => { embeddedResize.handleLoad(); setIsFrameLoading(false); }}
+                allow="camera; microphone; geolocation"
+              />
+            )}
+          </div>
+
+          {/* Footer Navigation */}
+          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-4 py-4 items-center gap-3 ${
+            hasSidebar ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
+          }`}>
+            {hasSidebar ? (
+              <Button
+                variant="outline"
+                className={`justify-self-start h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                }`}
+                disabled={!prevSibling}
+                onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+            ) : <div aria-hidden="true" />}
+            
             <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2 gap-1 text-xs font-semibold text-slate-600 hover:text-slate-900 lg:hidden"
-              onClick={() => navigate(back)}
+              className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
+              onClick={() => showSubmissionNavigation
+                ? navigate(back, { state: { formCompleted: true } })
+                : navigate(back)}
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden lg:flex h-8 px-3 gap-1.5 text-xs font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-50 border-slate-200"
-              onClick={() => navigate(back)}
-            >
-              <ChevronLeft className="h-3.5 w-3.5" />
+              <Home className="h-4 w-4" />
               Back to Dashboard
             </Button>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <h2 className="text-sm font-semibold text-slate-900 truncate text-center">{assignment.formTitle}</h2>
-          </div>
-          <div className="flex-1" />
-        </div>
 
-        {/* Info Bar */}
-        <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
-              <User className="w-3.5 h-3.5 text-[#0F2D52]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
-              <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
-            </div>
-          </div>
-
-          <div className="h-8 w-px bg-slate-100 shrink-0" />
-
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
-              <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
-              <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
-            </div>
-          </div>
-
-          {assignment.dueDate && (
-            <>
-              <div className="h-8 w-px bg-slate-100 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
-                <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
+            {hasSidebar ? (
+              <div className="justify-self-end">
+                <Button
+                  variant="outline"
+                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                    nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                  }`}
+                  disabled={!nextSibling}
+                  onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
-            </>
-          )}
+            ) : <div aria-hidden="true" />}
+          </div>
         </div>
-
-        {/* Iframe Container */}
-        <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative">
-          {(!viewUrl || isFrameLoading) && (
-            <div className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm" style={{ height: `${formHeight}px` }}>
-              <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
-              <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
-            </div>
-          )}
-
-          {viewUrl && (
-            <iframe
-              ref={embeddedResize.iframeRef}
-              src={viewUrl}
-              title={assignment.formTitle}
-              style={{
-                width: '100%',
-                height: embeddedResize.isDynamic
-                  ? `${embeddedResize.height ?? formHeight}px`
-                  : `${formHeight}px`,
-                border: 'none',
-                display: 'block',
-                opacity: isFrameLoading ? 0 : 1,
-                transition: 'opacity 0.3s ease-in-out',
-              }}
-              onLoad={() => { embeddedResize.handleLoad(); setIsFrameLoading(false); }}
-              allow="camera; microphone; geolocation"
-            />
-          )}
-        </div>
-      </div>
-    </EmployeeLayout>
+      </main>
+    </div>
   );
 }

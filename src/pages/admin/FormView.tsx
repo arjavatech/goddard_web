@@ -361,58 +361,6 @@ export function FormView() {
         <CardContent className="p-6">
           <div className="mb-4 flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
             <h2 className="text-lg sm:text-xl font-bold truncate">{formData.title}</h2>
-            {isApproved || isViewOnly ? (
-              <div className="flex items-center gap-2 text-green-600">
-              </div>
-            ) : (
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <Textarea
-                  placeholder="Add notes..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="min-h-[60px] w-full sm:w-64 text-sm"
-                  rows={2}
-                />
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button
-                    onClick={handleApprove}
-                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                    size="sm"
-                    disabled={!isReviewable || isApproving || isRejecting}
-                  >
-                    {isApproving ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-1" />
-                        Approve
-                      </>
-                    )}
-                  </Button>
-                  <Button
-                    onClick={handleReject}
-                    variant="destructive"
-                    size="sm"
-                    disabled={!isReviewable || isApproving || isRejecting}
-                  >
-                    {isRejecting ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
           </div>
           {/* Form container with dynamic height */}
           <div className="mt-6 relative min-h-[480px]">
@@ -513,6 +461,61 @@ export function FormView() {
                 </div>
               );
             })()}
+          </div>
+
+          <div className="mt-8 flex justify-end pt-6 border-t border-slate-100">
+            {isApproved || isViewOnly ? (
+              <div className="flex items-center gap-2 text-green-600">
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Textarea
+                  placeholder="Add notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[60px] w-full sm:w-64 text-sm"
+                  rows={2}
+                />
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={handleApprove}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isApproving ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleReject}
+                    variant="destructive"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isRejecting ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
