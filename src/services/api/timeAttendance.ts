@@ -9,6 +9,11 @@ export type TimeReport = {
   timeWorked?: string;
   pendingCheckout: boolean;
 };
+export type TimeReportPerson = {
+  externalEmployeeId: string;
+  internalEmployeeId: string;
+  employeeName: string;
+};
 export type TimeReportSetting = {
   settingId: string;
   reporterEmail: string;
@@ -64,6 +69,13 @@ export type SalaryPeriod = {
   endDate: string;
   employeeCount: number;
   workedMinutes: number;
+};
+export type ConsolidatedTimeReport = {
+  externalEmployeeId: string;
+  internalEmployeeId: string;
+  employeeName: string;
+  workedMinutes: number;
+  totalTimeWorked: string;
 };
 export type DayTrend = TimeReportOverview;
 export type TwoDayReport = {
@@ -193,6 +205,13 @@ const salaryPeriod = z.object({
   employee_count: z.number(),
   worked_minutes: z.number(),
 });
+const consolidatedReport = z.object({
+  external_employee_id: z.string(),
+  internal_employee_id: z.string(),
+  employee_name: z.string(),
+  worked_minutes: z.number(),
+  total_time_worked: z.string(),
+});
 const mapOverview = (value: z.infer<typeof overview>): TimeReportOverview => ({
   reportDate: value.report_date,
   employeeCount: value.employee_count,
@@ -207,6 +226,15 @@ const mapSalary = (value: z.infer<typeof salaryPeriod>): SalaryPeriod => ({
   endDate: value.end_date,
   employeeCount: value.employee_count,
   workedMinutes: value.worked_minutes,
+});
+const mapConsolidated = (
+  value: z.infer<typeof consolidatedReport>,
+): ConsolidatedTimeReport => ({
+  externalEmployeeId: value.external_employee_id,
+  internalEmployeeId: value.internal_employee_id,
+  employeeName: value.employee_name,
+  workedMinutes: value.worked_minutes,
+  totalTimeWorked: value.total_time_worked,
 });
 
 export const TimeAttendanceService = {
@@ -224,6 +252,60 @@ export const TimeAttendanceService = {
         z.array(report),
       )
     ).map(map);
+  },
+  async consolidatedReports(
+    schoolId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<ConsolidatedTimeReport[]> {
+    const params = new URLSearchParams({
+      school_id: schoolId,
+      start_date: startDate,
+      end_date: endDate,
+    });
+    return (
+      await authedFetch(
+        { method: "GET", url: `/time-attendance/consolidated?${params}` },
+        z.array(consolidatedReport),
+      )
+    ).map(mapConsolidated);
+  },
+  async reportPeople(schoolId: string): Promise<TimeReportPerson[]> {
+    return (
+      await authedFetch(
+        { method: "GET", url: `/time-attendance/report-people?school_id=${schoolId}` },
+        z.array(z.object({
+          external_employee_id: z.string(),
+          internal_employee_id: z.string(),
+          employee_name: z.string(),
+        })),
+      )
+    ).map((person) => ({
+      externalEmployeeId: person.external_employee_id,
+      internalEmployeeId: person.internal_employee_id,
+      employeeName: person.employee_name,
+    }));
+  },
+  async createReport(
+    schoolId: string,
+    payload: { externalEmployeeId: string; reportDate: string; checkInTime: string; checkOutTime?: string; reason: string },
+  ) {
+    return map(
+      await authedFetch(
+        {
+          method: "POST",
+          url: `/time-attendance/reports?school_id=${schoolId}`,
+          body: {
+            external_employee_id: payload.externalEmployeeId,
+            report_date: payload.reportDate,
+            check_in_time: payload.checkInTime,
+            check_out_time: payload.checkOutTime,
+            reason: payload.reason,
+          },
+        },
+        report,
+      ),
+    );
   },
   async overview(schoolId: string, reportDate?: string) {
     return mapOverview(
@@ -371,7 +453,7 @@ export const TimeAttendanceService = {
   async updateReport(
     schoolId: string,
     reportId: string,
-    payload: { checkOutTime?: string; timeWorked?: string; reason: string },
+    payload: { checkInTime: string; checkOutTime?: string; reason: string },
   ) {
     return map(
       await authedFetch(
@@ -379,8 +461,8 @@ export const TimeAttendanceService = {
           method: "PATCH",
           url: `/time-attendance/reports/${reportId}?school_id=${schoolId}`,
           body: {
+            check_in_time: payload.checkInTime,
             check_out_time: payload.checkOutTime,
-            time_worked: payload.timeWorked,
             reason: payload.reason,
           },
         },

@@ -18,9 +18,9 @@ import { useUserContext } from "../../contexts/UserContext";
 import {
   TimeAttendanceService,
   type ConsolidatedReportSetting,
-  type DayTrend,
-  type SalaryPeriod,
+  type ConsolidatedTimeReport,
   type TimeReport,
+  type TimeReportPerson,
   type TimeReportSetting,
   type TimeReportSettingInput,
 } from "../../services/api/timeAttendance";
@@ -71,13 +71,50 @@ const frequencyOptions = [
   "Monthly",
   "Bimonthly",
 ];
-type ReportView = "daily" | "range" | "salary" | "trends" | "pending";
+type ReportView = "daily" | "range" | "salary" | "pending";
 type ViewMode = "table" | "card";
+type SalaryReportType = "Weekly" | "Biweekly" | "Monthly" | "Bimonthly";
 
-const formatDateTime = (value?: string) =>
-  value ? new Date(value).toLocaleString() : "—";
+const toIsoDate = (value: Date) =>
+  `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+const weeksInMonth = (year: number, month: number) => {
+  const lastDay = new Date(year, month, 0);
+  const current = new Date(year, month - 1, 1);
+  while (current.getDay() !== 1 && current <= lastDay) current.setDate(current.getDate() + 1);
+  const weeks: { label: string; startDate: string; endDate: string }[] = [];
+  while (current <= lastDay) {
+    const start = new Date(current);
+    const end = new Date(current);
+    end.setDate(end.getDate() + 6);
+    const actualEnd = end > lastDay ? lastDay : end;
+    weeks.push({
+      label: `Week ${weeks.length + 1}: ${start.getDate()} ${start.toLocaleString("default", { month: "short" })} – ${actualEnd.getDate()} ${actualEnd.toLocaleString("default", { month: "short" })}`,
+      startDate: toIsoDate(start),
+      endDate: toIsoDate(actualEnd),
+    });
+    current.setDate(current.getDate() + 7);
+  }
+  return weeks;
+};
+
+const formatTime = (value?: string) =>
+  value
+    ? new Date(value).toLocaleTimeString([], {
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "—";
+const toTimeInput = (value?: string) => (value ? value.slice(11, 16) : "");
+const toReportDateTime = (reportDate: string, time: string) =>
+  `${reportDate}T${time}:00`;
 const formatHours = (minutes = 0) =>
   `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+const formatWorkedTime = (value?: string) => {
+  if (!value) return "—";
+  const [hours, minutes] = value.split(":");
+  if (hours === undefined || minutes === undefined) return value;
+  return `${hours.padStart(2, "0")}:${minutes.padStart(2, "0")}`;
+};
 const frequencies = (value: TimeReportSetting | TimeReportSettingInput) =>
   scheduleFields.filter(([key]) => value[key]).map(([, label]) => label);
 const consolidatedLabel = (value?: string) =>
@@ -667,11 +704,17 @@ export function TimeAttendance() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reports, setReports] = useState<TimeReport[]>([]);
-  const [salary, setSalary] = useState<SalaryPeriod[]>([]);
-  const [trends, setTrends] = useState<DayTrend[]>([]);
+  const [consolidatedReports, setConsolidatedReports] = useState<ConsolidatedTimeReport[]>([]);
+  const [rangeLoaded, setRangeLoaded] = useState(false);
+  const [salaryLoaded, setSalaryLoaded] = useState(false);
+  const [salaryType, setSalaryType] = useState<SalaryReportType>("Weekly");
+  const [salaryYear, setSalaryYear] = useState(new Date().getFullYear());
+  const [salaryMonth, setSalaryMonth] = useState(new Date().getMonth() + 1);
+  const [salaryWeekIndex, setSalaryWeekIndex] = useState(0);
+  const [salaryHalf, setSalaryHalf] = useState<"first" | "second">("first");
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("date");
+  const [sortBy, setSortBy] = useState("checkIn");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [viewMode, setViewMode] = useState<ViewMode>(
     () =>
@@ -683,30 +726,42 @@ export function TimeAttendance() {
     10,
   );
   const [editing, setEditing] = useState<TimeReport>();
-  const [workTime, setWorkTime] = useState("");
+  const [editReportDate, setEditReportDate] = useState("");
+  const [checkInTime, setCheckInTime] = useState("");
+  const [checkOutTime, setCheckOutTime] = useState("");
   const [reason, setReason] = useState("");
   const [deleting, setDeleting] = useState<TimeReport>();
+  const [reportPeople, setReportPeople] = useState<TimeReportPerson[]>([]);
+  const [createDialog, setCreateDialog] = useState(false);
+  const [newPersonId, setNewPersonId] = useState("");
+  const [newReportDate, setNewReportDate] = useState(today());
+  const [newCheckInTime, setNewCheckInTime] = useState("");
+  const [newCheckOutTime, setNewCheckOutTime] = useState("");
+  const [newReason, setNewReason] = useState("");
   const [saving, setSaving] = useState(false);
+  const availableWeeks = useMemo(() => weeksInMonth(salaryYear, salaryMonth), [salaryYear, salaryMonth]);
+  const salaryRange = useMemo(() => {
+    if (salaryType === "Biweekly") {
+      const end = new Date();
+      const start = new Date(end);
+      start.setDate(start.getDate() - 13);
+      return { startDate: toIsoDate(start), endDate: toIsoDate(end) };
+    }
+    if (salaryType === "Weekly") return availableWeeks[salaryWeekIndex];
+    const lastDay = new Date(salaryYear, salaryMonth, 0).getDate();
+    if (salaryType === "Monthly") return { startDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-01`, endDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}` };
+    return salaryHalf === "first"
+      ? { startDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-01`, endDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-15` }
+      : { startDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-16`, endDate: `${salaryYear}-${String(salaryMonth).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}` };
+  }, [salaryType, salaryYear, salaryMonth, salaryWeekIndex, salaryHalf, availableWeeks]);
   const loadReports = async () => {
     if (!schoolId) return;
     setLoading(true);
     try {
-      if (view === "salary")
-        setSalary(await TimeAttendanceService.salary(schoolId, reportDate));
-      else if (view === "trends")
-        setTrends(
-          await TimeAttendanceService.dayTrends(
-            schoolId,
-            startDate || undefined,
-            endDate || undefined,
-          ),
-        );
-      else
+      if (["daily", "pending"].includes(view))
         setReports(
           await TimeAttendanceService.reports(schoolId, {
             report_date: view === "daily" ? reportDate : undefined,
-            start_date: view === "range" ? startDate || undefined : undefined,
-            end_date: view === "range" ? endDate || undefined : undefined,
             pending_checkout: view === "pending" ? "true" : undefined,
           }),
         );
@@ -717,10 +772,27 @@ export function TimeAttendance() {
     }
   };
   useEffect(() => {
-    if (tab === "summary") void loadReports();
-  }, [schoolId, tab, view, reportDate, startDate, endDate]);
-  const rawData =
-    view === "salary" ? salary : view === "trends" ? trends : reports;
+    if (tab === "summary" && ["daily", "pending"].includes(view)) void loadReports();
+  }, [schoolId, tab, view, reportDate]);
+  const loadConsolidated = async (period: { startDate: string; endDate: string }, kind: "range" | "salary") => {
+    if (!schoolId || !period.startDate || !period.endDate) return;
+    if (period.startDate > period.endDate) {
+      showToast("error", "End date must be on or after the start date.");
+      return;
+    }
+    setLoading(true);
+    try {
+      setConsolidatedReports(await TimeAttendanceService.consolidatedReports(schoolId, period.startDate, period.endDate));
+      if (kind === "range") setRangeLoaded(true);
+      else setSalaryLoaded(true);
+      setCurrentPage(1);
+    } catch {
+      showToast("error", "Unable to load the consolidated report.");
+    } finally {
+      setLoading(false);
+    }
+  };
+  const rawData = ["salary", "range"].includes(view) ? consolidatedReports : reports;
   const filtered = useMemo(
     () =>
       sortItems(
@@ -731,8 +803,12 @@ export function TimeAttendance() {
         sortOrder,
         (item, key) =>
           key === "name"
-            ? item.employeeName || item.label || item.reportDate || ""
-            : item.date || item.reportDate || item.label || "",
+            ? item.employeeName || ""
+            : key === "checkIn"
+              ? item.checkInTime || ""
+              : key === "hours"
+                ? item.workedMinutes || 0
+                : item.date || "",
       ),
     [rawData, search, sortBy, sortOrder],
   );
@@ -743,11 +819,27 @@ export function TimeAttendance() {
     setViewMode(mode);
   };
   const editReport = async () => {
-    if (!schoolId || !editing || !reason.trim()) return;
+    if (!schoolId || !editing || !checkInTime || !reason.trim()) return;
+    const selectedReportDate = editReportDate || editing.date || reportDate;
+    const checkInDateTime = toReportDateTime(selectedReportDate, checkInTime);
+    const checkOutDateTime = checkOutTime
+      ? toReportDateTime(selectedReportDate, checkOutTime)
+      : undefined;
+    if (
+      checkOutDateTime &&
+      new Date(checkOutDateTime).getTime() - new Date(checkInDateTime).getTime() < 60_000
+    ) {
+      showToast(
+        "error",
+        "Check-out time must be at least one minute later than check-in time.",
+      );
+      return;
+    }
     setSaving(true);
     try {
       await TimeAttendanceService.updateReport(schoolId, editing.reportId, {
-        timeWorked: workTime,
+        checkInTime: checkInDateTime,
+        checkOutTime: checkOutDateTime,
         reason,
       });
       showToast("success", "Time report updated.");
@@ -777,6 +869,49 @@ export function TimeAttendance() {
       setSaving(false);
     }
   };
+  const openCreateReport = async () => {
+    if (!schoolId) return;
+    try {
+      const people = await TimeAttendanceService.reportPeople(schoolId);
+      setReportPeople(people);
+      setNewPersonId(people[0]?.externalEmployeeId || "");
+      setNewReportDate(view === "daily" ? reportDate : today());
+      setNewCheckInTime("");
+      setNewCheckOutTime("");
+      setNewReason("");
+      setCreateDialog(true);
+    } catch {
+      showToast("error", "Unable to load people for a new report.");
+    }
+  };
+  const createReport = async () => {
+    if (!schoolId || !newPersonId || !newCheckInTime || !newReason.trim()) return;
+    const checkInDateTime = toReportDateTime(newReportDate, newCheckInTime);
+    const checkOutDateTime = newCheckOutTime
+      ? toReportDateTime(newReportDate, newCheckOutTime)
+      : undefined;
+    if (checkOutDateTime && new Date(checkOutDateTime).getTime() - new Date(checkInDateTime).getTime() < 60_000) {
+      showToast("error", "Check-out time must be at least one minute later than check-in time.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await TimeAttendanceService.createReport(schoolId, {
+        externalEmployeeId: newPersonId,
+        reportDate: newReportDate,
+        checkInTime: checkInDateTime,
+        checkOutTime: checkOutDateTime,
+        reason: newReason,
+      });
+      showToast("success", "Time report created.");
+      setCreateDialog(false);
+      await loadReports();
+    } catch {
+      showToast("error", "Unable to create this time report.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const reportActions = (item: TimeReport) => (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -792,7 +927,9 @@ export function TimeAttendance() {
         <DropdownMenuItem
           onClick={() => {
             setEditing(item);
-            setWorkTime(item.timeWorked || "");
+            setEditReportDate(item.date || reportDate);
+            setCheckInTime(toTimeInput(item.checkInTime));
+            setCheckOutTime(toTimeInput(item.checkOutTime));
             setReason("");
           }}
         >
@@ -826,7 +963,7 @@ export function TimeAttendance() {
     {
       id: "in",
       header: "Check In",
-      cell: (item) => formatDateTime(item.checkInTime),
+      cell: (item) => formatTime(item.checkInTime),
     },
     {
       id: "out",
@@ -835,10 +972,14 @@ export function TimeAttendance() {
         item.pendingCheckout ? (
           <span className="font-semibold text-amber-700">Pending</span>
         ) : (
-          formatDateTime(item.checkOutTime)
+          formatTime(item.checkOutTime)
         ),
     },
-    { id: "hours", header: "Hours", cell: (item) => item.timeWorked || "—" },
+    {
+      id: "hours",
+      header: "Hours",
+      cell: (item) => formatWorkedTime(item.timeWorked),
+    },
     {
       id: "actions",
       header: "Actions",
@@ -847,63 +988,18 @@ export function TimeAttendance() {
       cell: reportActions,
     },
   ];
-  const genericColumns: ColumnDef<any>[] =
-    view === "salary"
-      ? [
-          {
-            id: "period",
-            header: "Salary Period",
-            cell: (item) => (
-              <span className="font-semibold text-slate-800">{item.label}</span>
-            ),
-          },
-          {
-            id: "dates",
-            header: "Date Range",
-            cell: (item) => `${item.startDate} – ${item.endDate}`,
-          },
-          {
-            id: "employees",
-            header: "Employees",
-            cell: (item) => item.employeeCount,
-          },
-          {
-            id: "hours",
-            header: "Hours Worked",
-            cell: (item) => formatHours(item.workedMinutes),
-          },
-        ]
-      : [
-          {
-            id: "date",
-            header: "Date",
-            cell: (item) => (
-              <span className="font-semibold text-slate-800">
-                {item.reportDate}
-              </span>
-            ),
-          },
-          {
-            id: "employees",
-            header: "Employees",
-            cell: (item) => item.employeeCount,
-          },
-          {
-            id: "records",
-            header: "Records",
-            cell: (item) => item.recordCount,
-          },
-          {
-            id: "hours",
-            header: "Hours Worked",
-            cell: (item) => formatHours(item.workedMinutes),
-          },
-          {
-            id: "pending",
-            header: "Pending",
-            cell: (item) => item.pendingCheckoutCount,
-          },
-        ];
+  const consolidatedColumns: ColumnDef<ConsolidatedTimeReport>[] = [
+    {
+      id: "employee",
+      header: "Employee",
+      cell: (item) => <span className="font-semibold text-slate-800">{item.employeeName}</span>,
+    },
+    {
+      id: "hours",
+      header: "Total Time Worked",
+      cell: (item) => <span className="font-semibold text-[#2563eb]">{formatWorkedTime(item.totalTimeWorked)}</span>,
+    },
+  ];
   return (
     <AdminLayout>
       <main className="p-4 sm:p-6 lg:p-8">
@@ -944,8 +1040,7 @@ export function TimeAttendance() {
                 [
                   ["daily", "Daily"],
                   ["range", "Date Range"],
-                  ["salary", "Salary"],
-                  ["trends", "Day Trends"],
+                  ["salary", "Salaried Report"],
                   ["pending", "Pending Checkouts"],
                 ] as [ReportView, string][]
               ).map(([key, label]) => (
@@ -954,6 +1049,8 @@ export function TimeAttendance() {
                   variant="ghost"
                   onClick={() => {
                     setView(key);
+                    setSortBy(key === "daily" ? "checkIn" : "name");
+                    setSortOrder("desc");
                     setCurrentPage(1);
                   }}
                   className={`rounded-xl px-4 ${view === key ? "bg-[#0F2D52] text-white hover:bg-[#163c69] hover:text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
@@ -963,9 +1060,21 @@ export function TimeAttendance() {
               ))}
             </div>
             <Card className="rounded-2xl border-slate-100 p-5 shadow-sm">
-              <div className="mb-5 grid gap-3 md:grid-cols-3">
-                {["daily", "salary"].includes(view) && (
-                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              {view === "range" && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-extrabold text-[#0F2D52]">Date Range Report</h2>
+                  <p className="mt-1 text-sm text-slate-500">View consolidated employee working hours for a selected period.</p>
+                </div>
+              )}
+              {view === "salary" && (
+                <div className="mb-6">
+                  <h2 className="text-xl font-extrabold text-[#0F2D52]">{salaryType} Report</h2>
+                  <p className="mt-1 text-sm text-slate-500">Select a report type and view consolidated employee hours.</p>
+                </div>
+              )}
+              <div className="mb-7">
+                {view === "daily" && (
+                  <label className="block w-full max-w-[260px] text-xs font-bold uppercase tracking-wider text-slate-500">
                     Report Date
                     <Input
                       className="mt-1.5 h-10 rounded-xl"
@@ -975,31 +1084,53 @@ export function TimeAttendance() {
                     />
                   </label>
                 )}
-                {["range", "trends"].includes(view) && (
-                  <>
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {view === "range" && (
+                  <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       Start Date
                       <Input
                         className="mt-1.5 h-10 rounded-xl"
                         type="date"
-                        value={startDate}
-                        onChange={(event) => setStartDate(event.target.value)}
+                      value={startDate}
+                        onChange={(event) => { setStartDate(event.target.value); setRangeLoaded(false); setConsolidatedReports([]); }}
                       />
                     </label>
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
                       End Date
                       <Input
                         className="mt-1.5 h-10 rounded-xl"
                         type="date"
-                        value={endDate}
-                        onChange={(event) => setEndDate(event.target.value)}
+                      value={endDate}
+                        onChange={(event) => { setEndDate(event.target.value); setRangeLoaded(false); setConsolidatedReports([]); }}
                       />
                     </label>
-                  </>
+                    <Button disabled={loading || !startDate || !endDate} onClick={() => void loadConsolidated({ startDate, endDate }, "range")} className="h-10 rounded-xl bg-[#0F2D52] text-white hover:bg-[#163c69]">
+                      {loading ? "Loading..." : "Load Report"}
+                    </Button>
+                  </div>
+                )}
+                {view === "salary" && (
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Report Type</p>
+                      <div className="mt-2 grid grid-cols-2 gap-3 md:grid-cols-4">
+                        {(["Weekly", "Biweekly", "Monthly", "Bimonthly"] as SalaryReportType[]).map((type) => (
+                          <Button key={type} variant="outline" onClick={() => { setSalaryType(type); setSalaryLoaded(false); setConsolidatedReports([]); }} className={`h-10 rounded-xl ${salaryType === type ? "border-[#0F2D52] bg-[#0F2D52] text-white hover:bg-[#163c69] hover:text-white" : "border-slate-200"}`}>{type}</Button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      {salaryType !== "Biweekly" && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Year<select value={salaryYear} onChange={(event) => { setSalaryYear(Number(event.target.value)); setSalaryLoaded(false); setConsolidatedReports([]); }} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">{Array.from({ length: 5 }, (_, index) => new Date().getFullYear() - index).map((year) => <option key={year} value={year}>{year}</option>)}</select></label>}
+                      {salaryType !== "Biweekly" && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Month<select value={salaryMonth} onChange={(event) => { setSalaryMonth(Number(event.target.value)); setSalaryWeekIndex(0); setSalaryLoaded(false); setConsolidatedReports([]); }} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">{Array.from({ length: 12 }, (_, index) => <option key={index + 1} value={index + 1}>{new Date(2000, index, 1).toLocaleString("default", { month: "long" })}</option>)}</select></label>}
+                      {salaryType === "Weekly" && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Week<select value={salaryWeekIndex} onChange={(event) => { setSalaryWeekIndex(Number(event.target.value)); setSalaryLoaded(false); setConsolidatedReports([]); }} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">{availableWeeks.map((week, index) => <option key={week.startDate} value={index}>{week.label}</option>)}</select></label>}
+                      {salaryType === "Bimonthly" && <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">Period<select value={salaryHalf} onChange={(event) => { setSalaryHalf(event.target.value as "first" | "second"); setSalaryLoaded(false); setConsolidatedReports([]); }} className="mt-1.5 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="first">First Half (1–15)</option><option value="second">Second Half (16–end)</option></select></label>}
+                    </div>
+                    <Button disabled={loading || !salaryRange} onClick={() => salaryRange && void loadConsolidated(salaryRange, "salary")} className="h-10 rounded-xl bg-[#0F2D52] text-white hover:bg-[#163c69]">{loading ? "Loading..." : "Load Report"}</Button>
+                  </div>
                 )}
               </div>
-              <div className="mb-5 flex flex-col gap-3 lg:flex-row">
-                <div className="relative flex-1">
+              <div className={`mb-5 flex flex-wrap items-center gap-3 ${((view === "range" && !rangeLoaded) || (view === "salary" && !salaryLoaded)) ? "hidden" : ""}`}>
+                <div className="relative w-full min-w-[260px] flex-1 lg:max-w-md">
                   <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <Input
                     value={search}
@@ -1011,11 +1142,24 @@ export function TimeAttendance() {
                     className="h-10 rounded-xl border-slate-200 pl-9"
                   />
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap items-center gap-3 lg:ml-auto">
+                  {["daily", "pending"].includes(view) && (
+                    <Button
+                      onClick={() => void openCreateReport()}
+                      className="h-10 rounded-xl bg-[#0F2D52] text-white hover:bg-[#163c69]"
+                    >
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Report
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     disabled={loading}
-                    onClick={() => void loadReports()}
+                    onClick={() => {
+                      if (view === "range") void loadConsolidated({ startDate, endDate }, "range");
+                      else if (view === "salary" && salaryRange) void loadConsolidated(salaryRange, "salary");
+                      else void loadReports();
+                    }}
                     className="h-10 rounded-xl"
                   >
                     <RefreshCw
@@ -1026,25 +1170,22 @@ export function TimeAttendance() {
                   <SortDropdown
                     currentSortBy={sortBy}
                     currentSortOrder={sortOrder}
-                    options={[
-                      {
-                        label: "Date (Recent First)",
-                        sortBy: "date",
-                        sortOrder: "desc",
-                      },
-                      {
-                        label: "Date (Recent Last)",
-                        sortBy: "date",
-                        sortOrder: "asc",
-                      },
-                      { label: "Name (A–Z)", sortBy: "name", sortOrder: "asc" },
-                      {
-                        label: "Name (Z–A)",
-                        sortBy: "name",
-                        sortOrder: "desc",
-                      },
-                    ]}
-                    labels={{ date: "Date", name: "Name" }}
+                    options={
+                      view === "daily"
+                        ? [
+                            { label: "Check-In Time (Earliest First)", sortBy: "checkIn", sortOrder: "asc" },
+                            { label: "Check-In Time (Latest First)", sortBy: "checkIn", sortOrder: "desc" },
+                            { label: "Name (A–Z)", sortBy: "name", sortOrder: "asc" },
+                            { label: "Name (Z–A)", sortBy: "name", sortOrder: "desc" },
+                          ]
+                        : [
+                            { label: "Name (A–Z)", sortBy: "name", sortOrder: "asc" },
+                            { label: "Name (Z–A)", sortBy: "name", sortOrder: "desc" },
+                            { label: "Hours (Highest First)", sortBy: "hours", sortOrder: "desc" },
+                            { label: "Hours (Lowest First)", sortBy: "hours", sortOrder: "asc" },
+                          ]
+                    }
+                    labels={{ checkIn: "Check-In Time", date: "Date", name: "Name", hours: "Hours" }}
                     onSort={(by, order) => {
                       setSortBy(by);
                       setSortOrder(order);
@@ -1055,12 +1196,17 @@ export function TimeAttendance() {
                   <ViewToggle viewMode={viewMode} onChange={setMode} />
                 </div>
               </div>
-              <DataGrid
+              {(view === "range" && !rangeLoaded) || (view === "salary" && !salaryLoaded) ? (
+                <div className="flex min-h-64 flex-col items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-6 text-center">
+                  <CalendarDays className="mb-3 h-10 w-10 text-slate-400" />
+                  <p className="text-sm font-semibold text-slate-700">{view === "range" ? "Select dates above and click Load Report to view data." : "Select report options above and click Load Report to view data."}</p>
+                </div>
+              ) : <DataGrid
                 data={paginatedData}
                 columns={
-                  ["daily", "range", "pending"].includes(view)
+                  ["daily", "pending"].includes(view)
                     ? reportColumns
-                    : genericColumns
+                    : consolidatedColumns
                 }
                 viewMode={viewMode}
                 loading={loading}
@@ -1079,24 +1225,26 @@ export function TimeAttendance() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-bold text-slate-900">
-                          {item.employeeName || item.label || item.reportDate}
+                          {item.employeeName}
                         </p>
                         <p className="mt-1 text-sm text-slate-500">
-                          {item.date ||
-                            (item.startDate
-                              ? `${item.startDate} – ${item.endDate}`
-                              : "")}
+                          {item.date || ""}
                         </p>
                       </div>
-                      {item.reportId && reportActions(item)}
+                      {item.reportId && ["daily", "pending"].includes(view) && reportActions(item)}
                     </div>
                     <div className="mt-4 space-y-2 text-sm text-slate-600">
                       {item.timeWorked && (
                         <p>
                           Hours:{" "}
                           <span className="font-semibold text-slate-800">
-                            {item.timeWorked}
+                            {formatWorkedTime(item.timeWorked)}
                           </span>
+                        </p>
+                      )}
+                      {item.totalTimeWorked && (
+                        <p>
+                          Total Time Worked: <span className="font-semibold text-[#2563eb]">{formatWorkedTime(item.totalTimeWorked)}</span>
                         </p>
                       )}
                       {typeof item.workedMinutes === "number" && (
@@ -1118,10 +1266,46 @@ export function TimeAttendance() {
                     </div>
                   </Card>
                 )}
-              />
+              />}
             </Card>
           </section>
         )}
+        <Dialog open={createDialog} onOpenChange={(open) => !saving && setCreateDialog(open)}>
+          <DialogContent className="w-[95vw] max-w-md rounded-2xl bg-white p-6">
+            <DialogHeader>
+              <DialogTitle>Add Time Report</DialogTitle>
+              <DialogDescription>Create a completed report or a pending check-out entry.</DialogDescription>
+            </DialogHeader>
+            <div className="mt-4 space-y-4">
+              <label className="block text-sm font-semibold text-slate-700">
+                Person
+                <select value={newPersonId} onChange={(event) => setNewPersonId(event.target.value)} className="mt-2 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">
+                  {reportPeople.map((person) => <option key={person.externalEmployeeId} value={person.externalEmployeeId}>{person.employeeName}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Report Date
+                <Input required type="date" value={newReportDate} onChange={(event) => setNewReportDate(event.target.value)} className="mt-2 h-10 rounded-xl" />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Check-In Time
+                <Input required type="time" step="60" value={newCheckInTime} onChange={(event) => setNewCheckInTime(event.target.value)} className="mt-2 h-10 rounded-xl" />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Check-Out Time <span className="font-normal text-slate-400">(optional)</span>
+                <Input type="time" step="60" value={newCheckOutTime} onChange={(event) => setNewCheckOutTime(event.target.value)} className="mt-2 h-10 rounded-xl" />
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">
+                Reason
+                <textarea required value={newReason} onChange={(event) => setNewReason(event.target.value)} className="mt-2 min-h-24 w-full rounded-xl border border-slate-200 p-3 text-sm" />
+              </label>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button variant="outline" disabled={saving} onClick={() => setCreateDialog(false)}>Cancel</Button>
+              <Button disabled={saving || !newPersonId || !newCheckInTime || !newReason.trim()} onClick={() => void createReport()} className="bg-[#0F2D52] text-white hover:bg-[#163c69]">Create Report</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
         <Dialog
           open={!!editing}
           onOpenChange={(open) => !open && !saving && setEditing(undefined)}
@@ -1135,10 +1319,33 @@ export function TimeAttendance() {
               </DialogDescription>
             </DialogHeader>
             <label className="mt-4 block text-sm font-semibold text-slate-700">
-              Working Hours
+              Report Date
               <Input
-                value={workTime}
-                onChange={(event) => setWorkTime(event.target.value)}
+                required
+                type="date"
+                value={editReportDate}
+                onChange={(event) => setEditReportDate(event.target.value)}
+                className="mt-2 h-10 rounded-xl"
+              />
+            </label>
+            <label className="mt-4 block text-sm font-semibold text-slate-700">
+              Check-In Time
+              <Input
+                required
+                type="time"
+                step="60"
+                value={checkInTime}
+                onChange={(event) => setCheckInTime(event.target.value)}
+                className="mt-2 h-10 rounded-xl"
+              />
+            </label>
+            <label className="mt-4 block text-sm font-semibold text-slate-700">
+              Check-Out Time
+              <Input
+                type="time"
+                step="60"
+                value={checkOutTime}
+                onChange={(event) => setCheckOutTime(event.target.value)}
                 className="mt-2 h-10 rounded-xl"
               />
             </label>
@@ -1160,7 +1367,7 @@ export function TimeAttendance() {
                 Cancel
               </Button>
               <Button
-                disabled={saving || !reason.trim()}
+                disabled={saving || !checkInTime || !reason.trim()}
                 onClick={() => void editReport()}
                 className="bg-[#0F2D52] text-white hover:bg-[#163c69]"
               >
