@@ -55,6 +55,31 @@ export type SyncResult = {
   failed: number;
   outcomes: SyncOutcome[];
 };
+export type TapTimeRoleLinkSummary = { total: number; linked: number };
+export type TapTimeLinkedPerson = {
+  entityId: string;
+  entityType: string;
+  role: string;
+  personName: string;
+  email: string;
+  phoneNumber?: string;
+  tapEmployeeId: string;
+  tapEmployeeName?: string;
+  syncStatus: string;
+  linkedAt?: string;
+};
+export type TapTimeIntegrationDashboard = {
+  overview: {
+    tapTimePeopleTotal: number;
+    employees: TapTimeRoleLinkSummary;
+    admins: TapTimeRoleLinkSummary;
+    superAdmins: TapTimeRoleLinkSummary;
+    needsReview: number;
+    failedSyncs: number;
+  };
+  linkedPeople: TapTimeLinkedPerson[];
+  suggestions: ReconciliationProposal[];
+};
 export type TimeReportOverview = {
   reportDate: string;
   employeeCount: number;
@@ -161,6 +186,20 @@ const syncResult = z.object({
   failed: z.number(),
   outcomes: z.array(syncOutcome),
 });
+const roleLinkSummary = z.object({ total: z.number(), linked: z.number() });
+const linkedPerson = z.object({
+  entity_id: z.string(), entity_type: z.string(), role: z.string(), person_name: z.string(), email: z.string(),
+  phone_number: z.string().nullable().optional(), tap_employee_id: z.string(), tap_employee_name: z.string().nullable().optional(),
+  sync_status: z.string(), linked_at: z.string().nullable().optional(),
+});
+const integrationDashboard = z.object({
+  overview: z.object({
+    tap_time_people_total: z.number(), employees: roleLinkSummary, admins: roleLinkSummary, super_admins: roleLinkSummary,
+    needs_review: z.number(), failed_syncs: z.number(),
+  }),
+  linked_people: z.array(linkedPerson),
+  suggestions: z.array(reconciliation),
+});
 const mapConnection = (
   value: z.infer<typeof connection>,
 ): TapTimeConnection => ({
@@ -189,6 +228,22 @@ const mapSyncOutcome = (value: z.infer<typeof syncOutcome>): SyncOutcome => ({
   entityName: value.entity_name,
   status: value.status,
   error: value.error || undefined,
+});
+const mapDashboard = (value: z.infer<typeof integrationDashboard>): TapTimeIntegrationDashboard => ({
+  overview: {
+    tapTimePeopleTotal: value.overview.tap_time_people_total,
+    employees: value.overview.employees,
+    admins: value.overview.admins,
+    superAdmins: value.overview.super_admins,
+    needsReview: value.overview.needs_review,
+    failedSyncs: value.overview.failed_syncs,
+  },
+  linkedPeople: value.linked_people.map(person => ({
+    entityId: person.entity_id, entityType: person.entity_type, role: person.role, personName: person.person_name,
+    email: person.email, phoneNumber: person.phone_number || undefined, tapEmployeeId: person.tap_employee_id,
+    tapEmployeeName: person.tap_employee_name || undefined, syncStatus: person.sync_status, linkedAt: person.linked_at || undefined,
+  })),
+  suggestions: value.suggestions.map(mapReconciliation),
 });
 const overview = z.object({
   report_date: z.string(),
@@ -576,6 +631,12 @@ export const TimeAttendanceService = {
         z.array(reconciliation),
       )
     ).map(mapReconciliation);
+  },
+  async dashboard(schoolId: string): Promise<TapTimeIntegrationDashboard> {
+    return mapDashboard(await authedFetch(
+      { method: "GET", url: `/tap-time/connections/${schoolId}/dashboard` },
+      integrationDashboard,
+    ));
   },
   async confirmReconciliation(schoolId: string, value: ReconciliationProposal) {
     await authedFetch(
