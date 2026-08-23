@@ -11,10 +11,12 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageLoader } from '../../components/ui/page-loader';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, type AdminUser } from '../../services/api/admin';
+import { TimeAttendanceService } from '../../services/api/timeAttendance';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
+import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
 
 interface NetworkError {
@@ -43,6 +45,8 @@ export function AdminManagement() {
   const [adminLastName, setAdminLastName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
   const [adminPhone, setAdminPhone] = useState('');
+  const [adminPhoneCountry, setAdminPhoneCountry] = useState('US');
+  const [phoneError, setPhoneError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [isInviting, setIsInviting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,6 +59,19 @@ export function AdminManagement() {
 
   const [resendingAdminId, setResendingAdminId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [adminPins, setAdminPins] = useState<Record<string, string>>({});
+  const [pinAdmin, setPinAdmin] = useState<AdminUser | null>(null);
+  const [tapTimePin, setTapTimePin] = useState('');
+  const [isSavingPin, setIsSavingPin] = useState(false);
+
+  React.useEffect(() => {
+    if (!userData?.schoolId) { setAdminPins({}); return; }
+    let cancelled = false;
+    TimeAttendanceService.pins(userData.schoolId)
+      .then(pins => { if (!cancelled) setAdminPins(pins); })
+      .catch(() => { if (!cancelled) setAdminPins({}); });
+    return () => { cancelled = true; };
+  }, [userData?.schoolId]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -119,10 +136,10 @@ export function AdminManagement() {
     }
   };
 
-  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
+  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && adminPhone.trim() && !emailError && !phoneError && validatePhoneNumber(adminPhone);
 
   const handleInviteAdmin = async () => {
-    if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError) {
+    if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError || !adminPhone.trim() || !validatePhoneNumber(adminPhone)) {
       showToast('error', 'Please fill in all required fields with valid information');
       return;
     }
@@ -144,8 +161,12 @@ export function AdminManagement() {
         adminEmail.trim(),
         adminFirstName.trim(),
         adminLastName.trim(),
-        userData.schoolId
+        userData.schoolId,
+        adminPhone.trim()
       );
+      // The invitation creates the Goddard user first; sync the connected
+      // Tap-Time company in the background so this Admin receives is_admin=1.
+      void TimeAttendanceService.retrySync(userData.schoolId);
       
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
       setIsAddDialogOpen(false);
@@ -205,13 +226,24 @@ export function AdminManagement() {
     setAdminFirstName(admin.first_name);
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
-    setAdminPhone(''); // Phone not available in current data
+    setAdminPhone(admin.phone_number || '');
     setEmailError(''); // Clear any existing email errors
     setIsEditDialogOpen(true);
   };
 
+  const handleSaveTapTimePin = async () => {
+    if (!pinAdmin || !userData?.schoolId || !/^\d{4}$/.test(tapTimePin)) return;
+    setIsSavingPin(true);
+    try { await TimeAttendanceService.setAdminPin(userData.schoolId, pinAdmin.id, tapTimePin); setAdminPins(current => ({ ...current, [pinAdmin.id]: tapTimePin })); showToast('success', 'Tap-Time PIN updated.'); setPinAdmin(null); setTapTimePin(''); }
+    catch (error: any) { showToast('error', error?.message || 'Unable to update the Tap-Time PIN. Confirm this administrator has been synced.'); }
+    finally { setIsSavingPin(false); }
+  };
+
   const handleUpdateAdmin = async () => {
-    if (!selectedAdmin || !adminFirstName.trim() || !adminLastName.trim()) return;
+    if (!selectedAdmin || !adminFirstName.trim() || !adminLastName.trim() || !adminPhone.trim() || !validatePhoneNumber(adminPhone)) {
+      setPhoneError('A valid phone number is required');
+      return;
+    }
     
     try {
       await updateAdmin(
@@ -220,10 +252,11 @@ export function AdminManagement() {
         adminLastName.trim(),
         adminPhone.trim() || undefined
       );
+      if (userData?.schoolId) void TimeAttendanceService.retrySync(userData.schoolId);
       
       setAdmins(admins.map(admin => 
         admin.id === selectedAdmin.id 
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim() }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() }
           : admin
       ));
       
@@ -252,6 +285,7 @@ export function AdminManagement() {
     
     try {
       await deleteAdmin(adminToDelete.id);
+      if (userData?.schoolId) void TimeAttendanceService.retrySync(userData.schoolId);
       setAdmins(admins.filter(admin => admin.id !== adminToDelete.id));
       showToast('success', 'Admin deleted successfully');
       setIsDeleteDialogOpen(false);
@@ -266,6 +300,8 @@ export function AdminManagement() {
     setAdminLastName('');
     setAdminEmail('');
     setAdminPhone('');
+    setAdminPhoneCountry('US');
+    setPhoneError('');
     setEmailError('');
   };
 
@@ -473,6 +509,8 @@ export function AdminManagement() {
                               )}
                             </div>
                             <p className="text-xs text-slate-400 font-semibold mt-0.5 break-all">{admin.email}</p>
+                            <p className="text-xs text-slate-500 font-medium mt-1">{admin.phone_number || 'Phone not set'}</p>
+                            <p className="mt-2 text-xs font-semibold text-slate-600">Tap-Time PIN: <span className="font-mono text-slate-900">{adminPins[admin.id] || 'Not set'}</span></p>
                           </div>
                         </div>
                         <DropdownMenu>
@@ -487,6 +525,9 @@ export function AdminManagement() {
                             </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
                               <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => { setPinAdmin(admin); setTapTimePin(adminPins[admin.id] || ''); }}>
+                              <Clock className="w-4 h-4 mr-2 text-slate-400" /> Update Tap-Time PIN
                             </DropdownMenuItem>
                             {!admin.is_verified && (
                               <DropdownMenuItem
@@ -548,10 +589,12 @@ export function AdminManagement() {
               onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
-                { header: 'Administrator', className: 'w-2/5' },
-                { header: 'Role', className: 'w-1/5' },
-                { header: 'Status', className: 'w-1/5' },
-                { header: 'Actions', className: 'w-1/5' },
+                { header: 'Administrator', className: 'w-1/4' },
+                { header: 'Role', className: 'w-1/6' },
+                { header: 'Phone Number', className: 'w-1/5' },
+                { header: 'Tap-Time PIN', className: 'w-1/6' },
+                { header: 'Status', className: 'w-1/6' },
+                { header: 'Actions', className: 'w-1/6' },
               ]}
               rows={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
@@ -582,6 +625,8 @@ export function AdminManagement() {
                         {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
                       </span>
                     </td>
+                    <td className="py-4 px-4 text-sm text-slate-700">{admin.phone_number || 'Phone not set'}</td>
+                    <td className="py-4 px-4 text-sm text-slate-800">{adminPins[admin.id] ? <span className="font-mono">{adminPins[admin.id]}</span> : 'Not set'}</td>
                     <td className="py-4 px-4">
                       <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
                         {admin.is_verified ? 'Approved' : 'Pending'}
@@ -600,6 +645,9 @@ export function AdminManagement() {
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
                             <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => { setPinAdmin(admin); setTapTimePin(adminPins[admin.id] || ''); }}>
+                            <Clock className="w-4 h-4 mr-2 text-slate-400" /> Update Tap-Time PIN
                           </DropdownMenuItem>
                           {!admin.is_verified && (
                             <DropdownMenuItem
@@ -685,6 +733,19 @@ export function AdminManagement() {
                   <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>
                 )}
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number</label>
+                <PhoneInput
+                  value={adminPhone}
+                  country={adminPhoneCountry}
+                  onCountryChange={setAdminPhoneCountry}
+                  onChange={(value) => { setAdminPhone(value); if (phoneError) setPhoneError(''); }}
+                  onBlur={() => { if (!adminPhone || !validatePhoneNumber(adminPhone)) setPhoneError('Please enter a valid phone number'); }}
+                  error={!!phoneError}
+                  usePortal
+                />
+                {phoneError && <p className="text-red-500 text-xs mt-1 font-semibold">{phoneError}</p>}
+              </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
               <Button 
@@ -750,14 +811,17 @@ export function AdminManagement() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number</label>
+                <PhoneInput
                   value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  country={adminPhoneCountry}
+                  onCountryChange={setAdminPhoneCountry}
+                  onChange={(value) => { setAdminPhone(value); if (phoneError) setPhoneError(''); }}
+                  onBlur={() => { if (!adminPhone || !validatePhoneNumber(adminPhone)) setPhoneError('Please enter a valid phone number'); }}
+                  error={!!phoneError}
+                  usePortal
                 />
+                {phoneError && <p className="text-red-500 text-xs mt-1 font-semibold">{phoneError}</p>}
               </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
@@ -864,6 +928,14 @@ export function AdminManagement() {
                 Delete Admin
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={!!pinAdmin} onOpenChange={(open) => { if (!open) { setPinAdmin(null); setTapTimePin(''); } }}>
+          <DialogContent className="w-[95vw] max-w-md p-6">
+            <DialogHeader><DialogTitle>Update Tap-Time PIN</DialogTitle></DialogHeader>
+            <p className="text-sm text-slate-500">Current PIN for {pinAdmin?.first_name} {pinAdmin?.last_name} is shown below. Update it with a new four-digit clock-in PIN when needed.</p>
+            <Input autoFocus inputMode="numeric" maxLength={4} value={tapTimePin} onChange={e => setTapTimePin(e.target.value.replace(/\D/g, ''))} placeholder="4-digit PIN" className="mt-3" />
+            <DialogFooter className="mt-5"><Button variant="outline" onClick={() => setPinAdmin(null)}>Cancel</Button><Button disabled={isSavingPin || !/^\d{4}$/.test(tapTimePin)} onClick={() => void handleSaveTapTimePin()} className="bg-[#0F2D52] text-white">{isSavingPin ? 'Updating...' : 'Update PIN'}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

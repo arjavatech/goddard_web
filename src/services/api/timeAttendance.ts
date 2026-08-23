@@ -1,0 +1,497 @@
+import { authedFetch, z } from "./common";
+
+export type TimeReport = {
+  reportId: string;
+  employeeName: string;
+  date?: string;
+  checkInTime: string;
+  checkOutTime?: string;
+  timeWorked?: string;
+  pendingCheckout: boolean;
+};
+export type TimeReportSetting = {
+  settingId: string;
+  reporterEmail: string;
+  isDailyReportActive: boolean;
+  isWeeklyReportActive: boolean;
+  isBiWeeklyReportActive: boolean;
+  isMonthlyReportActive: boolean;
+  isBiMonthlyReportActive: boolean;
+};
+export type TimeReportSettingInput = Omit<TimeReportSetting, "settingId">;
+export type TapTimeConnection = {
+  schoolId: string;
+  tapCompanyId: string;
+  tapCompanyName: string;
+  status: string;
+  lastError?: string;
+};
+export type ReconciliationProposal = {
+  employeeId: string;
+  employeeName: string;
+  entityType: string;
+  role: string;
+  matchType: "phone" | "email";
+  matchValue: string;
+  tapEmployeeId: string;
+  tapEmployeeName: string;
+  normalizedPhone: string;
+};
+export type SyncOutcome = {
+  entityId: string;
+  entityType: string;
+  entityName: string;
+  status: string;
+  error?: string;
+};
+export type SyncResult = {
+  processed: number;
+  succeeded: number;
+  failed: number;
+  outcomes: SyncOutcome[];
+};
+export type TimeReportOverview = {
+  reportDate: string;
+  employeeCount: number;
+  recordCount: number;
+  completedCount: number;
+  pendingCheckoutCount: number;
+  workedMinutes: number;
+};
+export type SalaryPeriod = {
+  label: string;
+  startDate: string;
+  endDate: string;
+  employeeCount: number;
+  workedMinutes: number;
+};
+export type DayTrend = TimeReportOverview;
+export type TwoDayReport = {
+  current: TimeReportOverview;
+  previous: TimeReportOverview;
+};
+export type TapTimePins = Record<string, string>;
+const report = z.object({
+  report_id: z.string(),
+  employee_name: z.string(),
+  date: z.string().nullable().optional(),
+  check_in_time: z.string(),
+  check_out_time: z.string().nullable().optional(),
+  time_worked: z.string().nullable().optional(),
+  pending_checkout: z.boolean(),
+});
+const map = (value: z.infer<typeof report>): TimeReport => ({
+  reportId: value.report_id,
+  employeeName: value.employee_name,
+  date: value.date || undefined,
+  checkInTime: value.check_in_time,
+  checkOutTime: value.check_out_time || undefined,
+  timeWorked: value.time_worked || undefined,
+  pendingCheckout: value.pending_checkout,
+});
+const reportSetting = z.object({
+  setting_id: z.string(),
+  reporter_email: z.string(),
+  is_daily_report_active: z.boolean(),
+  is_weekly_report_active: z.boolean(),
+  is_bi_weekly_report_active: z.boolean(),
+  is_monthly_report_active: z.boolean(),
+  is_bi_monthly_report_active: z.boolean(),
+});
+const mapSetting = (
+  value: z.infer<typeof reportSetting>,
+): TimeReportSetting => ({
+  settingId: value.setting_id,
+  reporterEmail: value.reporter_email,
+  isDailyReportActive: value.is_daily_report_active,
+  isWeeklyReportActive: value.is_weekly_report_active,
+  isBiWeeklyReportActive: value.is_bi_weekly_report_active,
+  isMonthlyReportActive: value.is_monthly_report_active,
+  isBiMonthlyReportActive: value.is_bi_monthly_report_active,
+});
+const settingPayload = (value: TimeReportSettingInput) => ({
+  reporter_email: value.reporterEmail,
+  is_daily_report_active: value.isDailyReportActive,
+  is_weekly_report_active: value.isWeeklyReportActive,
+  is_bi_weekly_report_active: value.isBiWeeklyReportActive,
+  is_monthly_report_active: value.isMonthlyReportActive,
+  is_bi_monthly_report_active: value.isBiMonthlyReportActive,
+});
+const connection = z.object({
+  school_id: z.string(),
+  tap_company_id: z.string(),
+  tap_company_name: z.string(),
+  status: z.string(),
+  last_error: z.string().nullable().optional(),
+});
+const reconciliation = z.object({
+  employee_id: z.string(),
+  employee_name: z.string(),
+  entity_type: z.string(),
+  role: z.string(),
+  match_type: z.enum(["phone", "email"]),
+  match_value: z.string(),
+  tap_employee_id: z.string(),
+  tap_employee_name: z.string(),
+  normalized_phone: z.string(),
+});
+const syncOutcome = z.object({
+  entity_id: z.string(),
+  entity_type: z.string(),
+  entity_name: z.string(),
+  status: z.string(),
+  error: z.string().nullable().optional(),
+});
+const syncResult = z.object({
+  processed: z.number(),
+  succeeded: z.number(),
+  failed: z.number(),
+  outcomes: z.array(syncOutcome),
+});
+const mapConnection = (
+  value: z.infer<typeof connection>,
+): TapTimeConnection => ({
+  schoolId: value.school_id,
+  tapCompanyId: value.tap_company_id,
+  tapCompanyName: value.tap_company_name,
+  status: value.status,
+  lastError: value.last_error || undefined,
+});
+const mapReconciliation = (
+  value: z.infer<typeof reconciliation>,
+): ReconciliationProposal => ({
+  employeeId: value.employee_id,
+  employeeName: value.employee_name,
+  entityType: value.entity_type,
+  role: value.role,
+  matchType: value.match_type,
+  matchValue: value.match_value,
+  tapEmployeeId: value.tap_employee_id,
+  tapEmployeeName: value.tap_employee_name,
+  normalizedPhone: value.normalized_phone,
+});
+const mapSyncOutcome = (value: z.infer<typeof syncOutcome>): SyncOutcome => ({
+  entityId: value.entity_id,
+  entityType: value.entity_type,
+  entityName: value.entity_name,
+  status: value.status,
+  error: value.error || undefined,
+});
+const overview = z.object({
+  report_date: z.string(),
+  employee_count: z.number(),
+  record_count: z.number(),
+  completed_count: z.number(),
+  pending_checkout_count: z.number(),
+  worked_minutes: z.number(),
+});
+const salaryPeriod = z.object({
+  label: z.string(),
+  start_date: z.string(),
+  end_date: z.string(),
+  employee_count: z.number(),
+  worked_minutes: z.number(),
+});
+const mapOverview = (value: z.infer<typeof overview>): TimeReportOverview => ({
+  reportDate: value.report_date,
+  employeeCount: value.employee_count,
+  recordCount: value.record_count,
+  completedCount: value.completed_count,
+  pendingCheckoutCount: value.pending_checkout_count,
+  workedMinutes: value.worked_minutes,
+});
+const mapSalary = (value: z.infer<typeof salaryPeriod>): SalaryPeriod => ({
+  label: value.label,
+  startDate: value.start_date,
+  endDate: value.end_date,
+  employeeCount: value.employee_count,
+  workedMinutes: value.worked_minutes,
+});
+
+export const TimeAttendanceService = {
+  async reports(
+    schoolId: string,
+    query: Record<string, string | undefined> = {},
+  ) {
+    const params = new URLSearchParams({
+      school_id: schoolId,
+      ...Object.fromEntries(Object.entries(query).filter(([, v]) => v)),
+    });
+    return (
+      await authedFetch(
+        { method: "GET", url: `/time-attendance/reports?${params}` },
+        z.array(report),
+      )
+    ).map(map);
+  },
+  async overview(schoolId: string, reportDate?: string) {
+    return mapOverview(
+      await authedFetch(
+        {
+          method: "GET",
+          url: `/time-attendance/overview?school_id=${schoolId}${reportDate ? `&report_date=${reportDate}` : ""}`,
+        },
+        overview,
+      ),
+    );
+  },
+  async twoDay(schoolId: string, reportDate?: string) {
+    const value = await authedFetch(
+      {
+        method: "GET",
+        url: `/time-attendance/two-day?school_id=${schoolId}${reportDate ? `&report_date=${reportDate}` : ""}`,
+      },
+      z.object({ current: overview, previous: overview }),
+    );
+    return {
+      current: mapOverview(value.current),
+      previous: mapOverview(value.previous),
+    };
+  },
+  async salary(schoolId: string, anchorDate?: string) {
+    return (
+      await authedFetch(
+        {
+          method: "GET",
+          url: `/time-attendance/salary?school_id=${schoolId}${anchorDate ? `&anchor_date=${anchorDate}` : ""}`,
+        },
+        z.array(salaryPeriod),
+      )
+    ).map(mapSalary);
+  },
+  async dayTrends(schoolId: string, startDate?: string, endDate?: string) {
+    const params = new URLSearchParams({
+      school_id: schoolId,
+      ...(startDate ? { start_date: startDate } : {}),
+      ...(endDate ? { end_date: endDate } : {}),
+    });
+    return (
+      await authedFetch(
+        { method: "GET", url: `/time-attendance/day-trends?${params}` },
+        z.array(overview),
+      )
+    ).map(mapOverview);
+  },
+  async myDaily(reportDate?: string) {
+    return (
+      await authedFetch(
+        {
+          method: "GET",
+          url: `/me/time-attendance/daily${reportDate ? `?report_date=${reportDate}` : ""}`,
+        },
+        z.array(report),
+      )
+    ).map(map);
+  },
+  async setMyPin(pin: string) {
+    await authedFetch(
+      { method: "POST", url: "/me/time-attendance/pin", body: { pin } },
+      z.any(),
+    );
+  },
+  async myPin() {
+    return (
+      (
+        await authedFetch(
+          { method: "GET", url: "/me/time-attendance/pin" },
+          z.object({ pin: z.string().nullable().optional() }),
+        )
+      ).pin || undefined
+    );
+  },
+  async setEmployeePin(schoolId: string, employeeId: string, pin: string) {
+    await authedFetch(
+      {
+        method: "POST",
+        url: `/employees/${employeeId}/tap-time-pin`,
+        body: { school_id: schoolId, pin },
+      },
+      z.any(),
+    );
+  },
+  async employeePin(schoolId: string, employeeId: string) {
+    return (
+      (
+        await authedFetch(
+          {
+            method: "GET",
+            url: `/employees/${employeeId}/tap-time-pin?school_id=${schoolId}`,
+          },
+          z.object({ pin: z.string().nullable().optional() }),
+        )
+      ).pin || undefined
+    );
+  },
+  async setAdminPin(schoolId: string, userId: string, pin: string) {
+    await authedFetch(
+      {
+        method: "POST",
+        url: `/admins/${userId}/tap-time-pin`,
+        body: { school_id: schoolId, pin },
+      },
+      z.any(),
+    );
+  },
+  async adminPin(schoolId: string, userId: string) {
+    return (
+      (
+        await authedFetch(
+          {
+            method: "GET",
+            url: `/admins/${userId}/tap-time-pin?school_id=${schoolId}`,
+          },
+          z.object({ pin: z.string().nullable().optional() }),
+        )
+      ).pin || undefined
+    );
+  },
+  async pins(schoolId: string): Promise<TapTimePins> {
+    return (
+      await authedFetch(
+        { method: "GET", url: `/tap-time/pins?school_id=${schoolId}` },
+        z.object({ pins: z.record(z.string(), z.string()) }),
+      )
+    ).pins;
+  },
+  async updateReport(
+    schoolId: string,
+    reportId: string,
+    payload: { checkOutTime?: string; timeWorked?: string; reason: string },
+  ) {
+    return map(
+      await authedFetch(
+        {
+          method: "PATCH",
+          url: `/time-attendance/reports/${reportId}?school_id=${schoolId}`,
+          body: {
+            check_out_time: payload.checkOutTime,
+            time_worked: payload.timeWorked,
+            reason: payload.reason,
+          },
+        },
+        report,
+      ),
+    );
+  },
+  async deleteReport(schoolId: string, reportId: string, reason: string) {
+    await authedFetch(
+      {
+        method: "DELETE",
+        url: `/time-attendance/reports/${reportId}?school_id=${schoolId}&reason=${encodeURIComponent(reason)}`,
+      },
+      z.any(),
+    );
+  },
+  async reportSettings(schoolId: string) {
+    return (
+      await authedFetch(
+        {
+          method: "GET",
+          url: `/time-attendance/report-settings?school_id=${schoolId}`,
+        },
+        z.array(reportSetting),
+      )
+    ).map(mapSetting);
+  },
+  async createReportSetting(schoolId: string, payload: TimeReportSettingInput) {
+    return mapSetting(
+      await authedFetch(
+        {
+          method: "POST",
+          url: `/time-attendance/report-settings?school_id=${schoolId}`,
+          body: settingPayload(payload),
+        },
+        reportSetting,
+      ),
+    );
+  },
+  async updateReportSetting(
+    schoolId: string,
+    settingId: string,
+    payload: TimeReportSettingInput,
+  ) {
+    return mapSetting(
+      await authedFetch(
+        {
+          method: "PATCH",
+          url: `/time-attendance/report-settings/${settingId}?school_id=${schoolId}`,
+          body: settingPayload(payload),
+        },
+        reportSetting,
+      ),
+    );
+  },
+  async deleteReportSetting(schoolId: string, settingId: string) {
+    await authedFetch(
+      {
+        method: "DELETE",
+        url: `/time-attendance/report-settings/${settingId}?school_id=${schoolId}`,
+      },
+      z.any(),
+    );
+  },
+  async connection(schoolId: string) {
+    const result = await authedFetch(
+      { method: "GET", url: `/tap-time/connections?school_id=${schoolId}` },
+      connection.nullable(),
+    );
+    return result ? mapConnection(result) : null;
+  },
+  async connect(schoolId: string, connectionCode: string) {
+    return mapConnection(
+      await authedFetch(
+        {
+          method: "POST",
+          url: "/tap-time/connections",
+          body: { school_id: schoolId, connection_code: connectionCode },
+        },
+        connection,
+      ),
+    );
+  },
+  async disconnect(schoolId: string) {
+    return mapConnection(
+      await authedFetch(
+        { method: "DELETE", url: `/tap-time/connections/${schoolId}` },
+        connection,
+      ),
+    );
+  },
+  async retrySync(schoolId: string): Promise<SyncResult> {
+    const result = await authedFetch(
+      { method: "POST", url: `/tap-time/connections/${schoolId}/retry-sync` },
+      syncResult,
+    );
+    return {
+      processed: result.processed,
+      succeeded: result.succeeded,
+      failed: result.failed,
+      outcomes: result.outcomes.map(mapSyncOutcome),
+    };
+  },
+  async reconciliation(schoolId: string) {
+    return (
+      await authedFetch(
+        {
+          method: "GET",
+          url: `/tap-time/connections/${schoolId}/reconciliation`,
+        },
+        z.array(reconciliation),
+      )
+    ).map(mapReconciliation);
+  },
+  async confirmReconciliation(schoolId: string, value: ReconciliationProposal) {
+    await authedFetch(
+      {
+        method: "POST",
+        url: `/tap-time/connections/${schoolId}/reconciliation`,
+        body: {
+          employee_id: value.employeeId,
+          tap_employee_id: value.tapEmployeeId,
+          entity_type: value.entityType,
+        },
+      },
+      z.any(),
+    );
+  },
+};

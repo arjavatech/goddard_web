@@ -11,6 +11,7 @@ import { EmployeeLayout } from './employee/EmployeeLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
+import { TimeAttendanceService } from '../services/api/timeAttendance';
 
 function ProfileContent() {
   const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
@@ -35,6 +36,23 @@ function ProfileContent() {
   const [parentExtraInfo, setParentExtraInfo] = useState<{ phone?: string | null; address?: string | null; relationType?: string | null } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const { user } = useAuth();
+  const [tapTimePin, setTapTimePin] = useState<string | undefined>();
+  const [newPin, setNewPin] = useState('');
+  const [pinError, setPinError] = useState('');
+  const [savingPin, setSavingPin] = useState(false);
+
+  useEffect(() => {
+    if (!isEmployee && !isAdmin) return;
+    TimeAttendanceService.myPin().then(setTapTimePin).catch(() => setTapTimePin(undefined));
+  }, [isEmployee, isAdmin]);
+
+  const updatePin = async () => {
+    if (!/^\d{4}$/.test(newPin)) { setPinError('PIN must be exactly four digits.'); return; }
+    setSavingPin(true); setPinError('');
+    try { await TimeAttendanceService.setMyPin(newPin); setTapTimePin(newPin); setNewPin(''); }
+    catch (error: any) { setPinError(error?.message || 'Unable to update Tap-Time PIN.'); }
+    finally { setSavingPin(false); }
+  };
 
   useEffect(() => {
     if (isEmployee && userData?.schoolId) {
@@ -173,6 +191,18 @@ function ProfileContent() {
               {employeeDetails.phone && <InfoRow icon={<Phone className="w-4 h-4" />} label="Phone" value={employeeDetails.phone} />}
               {employeeDetails.address && <InfoRow icon={<MapPin className="w-4 h-4" />} label="Address" value={employeeDetails.address} className="sm:col-span-2" />}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {(isEmployee || isAdmin) && (
+        <Card className="rounded-2xl shadow-sm border border-slate-100">
+          <CardContent className="px-6 py-5">
+            <div className="flex items-center gap-2 mb-4"><div className="w-7 h-7 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center"><Shield className="w-4 h-4 text-[#0F2D52]" /></div><h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">Tap-Time PIN</h2></div>
+            <p className="text-sm font-semibold text-slate-800">Current PIN: <span className="font-mono">{tapTimePin || 'Not set'}</span></p>
+            <p className="mt-1 text-xs text-slate-500">Use a four-digit PIN for clock-in and clock-out.</p>
+            {pinError && <p className="mt-3 text-sm text-red-600">{pinError}</p>}
+            <div className="mt-4 flex flex-col sm:flex-row gap-2"><input inputMode="numeric" maxLength={4} value={newPin} onChange={event => setNewPin(event.target.value.replace(/\D/g, ''))} placeholder="New 4-digit PIN" className="h-10 flex-1 rounded-lg border border-slate-200 px-3 text-sm" /><button type="button" disabled={savingPin || !/^\d{4}$/.test(newPin)} onClick={() => void updatePin()} className="h-10 rounded-lg bg-[#0F2D52] px-4 text-sm font-semibold text-white disabled:opacity-50">{savingPin ? 'Updating…' : 'Update PIN'}</button></div>
           </CardContent>
         </Card>
       )}

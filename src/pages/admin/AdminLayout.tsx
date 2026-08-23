@@ -99,6 +99,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Time & Attendance', path: `${schoolPrefix}/admin/time-attendance` },
+        ...(isSuperAdmin ? [
+          { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Tap-Time Setup', path: `${schoolPrefix}/admin/tap-time` },
+        ] : []),
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
         ...(isSuperAdmin ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },

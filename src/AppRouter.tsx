@@ -52,12 +52,15 @@ import { EmployeeDueForms } from './pages/employee/EmployeeDueForms';
 import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
+import { MyDailyHours } from './pages/employee/MyDailyHours';
 import { ProfilePage } from './pages/ProfilePage';
 
 // SuperAdmin Requests & Expense analytics pages
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
+import { TimeAttendance } from './pages/admin/TimeAttendance';
+import { TapTimeIntegration } from './pages/admin/TapTimeIntegration';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -104,6 +107,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
                   <Route path="/:schoolSlug/employee/requests" element={<EmployeeRequests />} />
+                  <Route path="/:schoolSlug/employee/time-attendance" element={<MyDailyHours />} />
                 </Route>
                 <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}
@@ -140,6 +144,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/parents/:parentId" element={<ParentDetails />} />
                   <Route path="/:schoolSlug/admin/students" element={<StudentManagement />} />
                   <Route path="/:schoolSlug/admin/employees" element={<EmployeeManagement />} />
+                  <Route path="/:schoolSlug/admin/time-attendance" element={<TimeAttendance />} />
+                  <Route path="/:schoolSlug/admin/tap-time" element={<TapTimeIntegration />} />
                   <Route path="/:schoolSlug/admin/employees/:employeeId" element={<EmployeeDetails />} />
                   <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
                   <Route path="/:schoolSlug/admin/employee-forms/due" element={<EmployeeDueForms />} />

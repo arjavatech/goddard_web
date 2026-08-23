@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, type Employee } from '../../services/api/employee';
+import { TimeAttendanceService } from '../../services/api/timeAttendance';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
@@ -33,6 +34,9 @@ export function EmployeeManagement() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [resendingEmployeeId, setResendingEmployeeId] = useState<string | null>(null);
+  const [pinEmployee, setPinEmployee] = useState<Employee | null>(null);
+  const [tapTimePin, setTapTimePin] = useState('');
+  const [isSavingPin, setIsSavingPin] = useState(false);
 
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
@@ -156,6 +160,16 @@ export function EmployeeManagement() {
   const { userData, schoolSubdomain } = useUserContext();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employeePins, setEmployeePins] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!userData?.schoolId) { setEmployeePins({}); return; }
+    let cancelled = false;
+    TimeAttendanceService.pins(userData.schoolId)
+      .then(pins => { if (!cancelled) setEmployeePins(pins); })
+      .catch(() => { if (!cancelled) setEmployeePins({}); });
+    return () => { cancelled = true; };
+  }, [userData?.schoolId]);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -263,6 +277,14 @@ export function EmployeeManagement() {
     setEmailError('');
     setPhoneError('');
     setIsEditDialogOpen(true);
+  };
+
+  const handleSaveTapTimePin = async () => {
+    if (!pinEmployee || !userData?.schoolId || !/^\d{4}$/.test(tapTimePin)) return;
+    setIsSavingPin(true);
+    try { await TimeAttendanceService.setEmployeePin(userData.schoolId, pinEmployee.id, tapTimePin); setEmployeePins(current => ({ ...current, [pinEmployee.id]: tapTimePin })); showToast('success', 'Tap-Time PIN updated.'); setPinEmployee(null); setTapTimePin(''); }
+    catch (error: any) { showToast('error', error?.message || 'Unable to update the Tap-Time PIN. Confirm this employee has been synced.'); }
+    finally { setIsSavingPin(false); }
   };
 
   const handleUpdateEmployee = async () => {
@@ -531,6 +553,9 @@ export function EmployeeManagement() {
                             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleEditEmployee(emp)}>
                               <Edit className="w-4 h-4 mr-2" /> Edit Employee
                             </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setPinEmployee(emp); setTapTimePin(''); }}>
+                              <Clock className="w-4 h-4 mr-2" /> Set Tap-Time PIN
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={() => handleResendInvite(emp)}>
                               <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                             </DropdownMenuItem>
@@ -546,6 +571,7 @@ export function EmployeeManagement() {
                           {emp.status === 'active' ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
+                      <p className="mt-3 text-xs font-semibold text-slate-600">Tap-Time PIN: <span className="font-mono text-slate-900">{employeePins[emp.id] || 'Not set'}</span></p>
                     </div>
                   </Card>
                 );
@@ -567,6 +593,7 @@ export function EmployeeManagement() {
               columns={[
                 { header: 'Employee', className: 'w-auto min-w-[200px]' },
                 { header: 'Type', className: 'w-1/5' },
+                { header: 'Tap-Time PIN', className: 'w-1/6' },
                 { header: 'Status', className: 'w-1/5' },
                 { header: 'Actions', className: 'w-1/5' },
               ]}
@@ -588,6 +615,7 @@ export function EmployeeManagement() {
                         {emp.employeeType}
                       </span>
                     </td>
+                    <td className="py-4 px-4 text-sm text-slate-800">{employeePins[emp.id] ? <span className="font-mono">{employeePins[emp.id]}</span> : 'Not set'}</td>
                     <td className="py-4 px-4">
                       <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
                         {emp.status === 'active' ? 'Active' : 'Inactive'}
@@ -606,6 +634,9 @@ export function EmployeeManagement() {
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleEditEmployee(emp); }}>
                             <Edit className="w-4 h-4 mr-2" /> Edit Employee
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); setPinEmployee(emp); setTapTimePin(''); }}>
+                            <Clock className="w-4 h-4 mr-2" /> Set Tap-Time PIN
                           </DropdownMenuItem>
                           <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={(e) => { e.stopPropagation(); handleResendInvite(emp); }}>
                             <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
@@ -893,6 +924,15 @@ export function EmployeeManagement() {
               <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>Cancel</Button>
               <Button variant="destructive" onClick={confirmDeleteEmployee}>Deactivate</Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={!!pinEmployee} onOpenChange={(open) => !open && setPinEmployee(null)}>
+          <DialogContent className="w-[95vw] max-w-md p-6">
+            <DialogHeader><DialogTitle>Set Tap-Time PIN</DialogTitle></DialogHeader>
+            <p className="text-sm text-slate-500">Set a new four-digit clock-in PIN for {pinEmployee?.firstName} {pinEmployee?.lastName}. It is sent directly to Tap-Time and is not stored in Goddard.</p>
+            <Input autoFocus inputMode="numeric" maxLength={4} value={tapTimePin} onChange={e => setTapTimePin(e.target.value.replace(/\D/g, ''))} placeholder="4-digit PIN" className="mt-3" />
+            <DialogFooter className="mt-5"><Button variant="outline" onClick={() => setPinEmployee(null)}>Cancel</Button><Button disabled={isSavingPin || !/^\d{4}$/.test(tapTimePin)} onClick={() => void handleSaveTapTimePin()} className="bg-[#0F2D52] text-white">{isSavingPin ? 'Updating...' : 'Update PIN'}</Button></DialogFooter>
           </DialogContent>
         </Dialog>
 
