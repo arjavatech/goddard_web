@@ -71,6 +71,7 @@ export type TwoDayReport = {
   previous: TimeReportOverview;
 };
 export type TapTimePins = Record<string, string>;
+export type ConsolidatedReportSetting = { reportType?: string };
 const report = z.object({
   report_id: z.string(),
   employee_name: z.string(),
@@ -271,6 +272,20 @@ export const TimeAttendanceService = {
         z.array(overview),
       )
     ).map(mapOverview);
+  },
+  async consolidatedReportSetting(schoolId: string): Promise<ConsolidatedReportSetting> {
+    const value = await authedFetch(
+      { method: "GET", url: `/time-attendance/consolidated-report-setting?school_id=${schoolId}` },
+      z.object({ report_type: z.string().nullable().optional() }),
+    );
+    return { reportType: value.report_type || undefined };
+  },
+  async updateConsolidatedReportSetting(schoolId: string, reportType: string): Promise<ConsolidatedReportSetting> {
+    const value = await authedFetch(
+      { method: "PUT", url: `/time-attendance/consolidated-report-setting?school_id=${schoolId}`, body: { report_type: reportType } },
+      z.object({ report_type: z.string().nullable().optional() }),
+    );
+    return { reportType: value.report_type || undefined };
   },
   async myDaily(reportDate?: string) {
     return (
