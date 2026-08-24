@@ -88,6 +88,26 @@ export function EmployeeFormView() {
         url = appendFilloutUserParams(url, filloutCtx);
       }
 
+      const isReadOnly = assignment.normalizedStatus === 'Approved' || assignment.normalizedStatus === 'Submitted';
+      if (!isReadOnly && url && url !== '#') {
+        const empName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ');
+        if (empName) {
+          const empNameTitled = empName.replace(/\b\w/g, c => c.toUpperCase());
+          const empNameUpper = empName.toUpperCase();
+          
+          const prefill: Record<string, string> = {
+            "Employee's Name": empNameTitled,
+            "Print Name": empNameUpper,
+          };
+          
+          const paramStr = Object.entries(prefill)
+            .map(([k, v]) => `${encodeURIComponent(k).replace(/'/g, '%27')}=${encodeURIComponent(v).replace(/'/g, '%27')}`)
+            .join('&');
+            
+          url += `${url.includes('?') ? '&' : '?'}${paramStr}`;
+        }
+      }
+
       setViewUrl(url);
     })();
   }, [assignment, userData]);
