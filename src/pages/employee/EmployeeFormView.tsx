@@ -452,45 +452,45 @@ export function EmployeeFormView() {
           </div>
 
           {/* Footer Navigation */}
-          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-3 sm:px-4 py-3 sm:py-4 items-center gap-2 sm:gap-3 ${
-            hasSidebar ? 'grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
+          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-2 min-[420px]:px-3 sm:px-4 py-2.5 sm:py-4 items-center gap-1.5 min-[420px]:gap-2 sm:gap-3 ${
+            hasSidebar ? 'grid grid-cols-[auto_minmax(0,1fr)_auto]' : 'flex justify-center'
           }`}>
             {hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start w-full sm:w-auto h-10 sm:h-11 px-2.5 sm:px-5 gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                className={`justify-self-start w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                   prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                 }`}
                 disabled={!prevSibling}
                 onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
               >
-                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <ChevronLeft className="h-3 w-3 min-[420px]:h-3.5 min-[420px]:w-3.5 sm:h-4 sm:w-4" />
                 Previous
               </Button>
             ) : <div aria-hidden="true" />}
             
             <Button
-              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-9 sm:h-12 px-2.5 sm:px-7 text-[11px] sm:text-sm font-semibold gap-1 sm:gap-2 transition-colors shadow-sm rounded-lg sm:rounded-xl ${
-                hasSidebar ? 'col-span-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 order-first sm:order-none justify-self-center' : ''
+              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold gap-1 min-[420px]:gap-1.5 sm:gap-2 transition-colors shadow-sm rounded-lg sm:rounded-xl ${
+                hasSidebar ? 'justify-self-center' : ''
               }`}
               onClick={() => navigate(back)}
             >
-              <Home className="h-3 w-3 sm:h-4 sm:w-4" />
+              <Home className="h-3 w-3 min-[420px]:h-3.5 min-[420px]:w-3.5 sm:h-4 sm:w-4" />
               Back to Dashboard
             </Button>
 
             {hasSidebar ? (
-              <div className="justify-self-end w-full sm:w-auto">
+              <div className="justify-self-end w-auto">
                 <Button
                   variant="outline"
-                  className={`w-full sm:w-auto h-10 sm:h-11 px-2.5 sm:px-5 gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  className={`w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                     nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                   }`}
                   disabled={!nextSibling}
                   onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
                 >
                   Next
-                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <ChevronRight className="h-3 w-3 min-[420px]:h-3.5 min-[420px]:w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             ) : <div aria-hidden="true" />}
