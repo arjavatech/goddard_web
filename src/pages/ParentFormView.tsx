@@ -396,13 +396,16 @@ export function ParentFormView() {
             {/* Left: mobile Forms drawer toggle */}
             <div className="flex items-center justify-start min-w-[2rem]">
               {hasSidebar && (
-                <Button
+                  <Button
                   variant="ghost"
                   size="sm"
                   className="lg:hidden h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
                   onClick={() => setDrawerOpen(true)}
+                  aria-expanded={drawerOpen}
+                  aria-controls="parent-forms-navigation"
                 >
                   <LayoutList className="h-3.5 w-3.5" />
+                 
                   Forms
                 </Button>
               )}

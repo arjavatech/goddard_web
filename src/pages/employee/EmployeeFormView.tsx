@@ -157,11 +157,11 @@ export function EmployeeFormView() {
         const lower = event.data.toLowerCase();
         // Stricter check: avoid triggering on "navigate", "next", "prev", or "step" events
         if (
-          !lower.includes('navigate') && 
-          !lower.includes('step') && 
-          !lower.includes('next') && 
+          !lower.includes('navigate') &&
+          !lower.includes('step') &&
+          !lower.includes('next') &&
           !lower.includes('prev') &&
-          (lower.includes('submit') || lower.includes('complete')) && 
+          (lower.includes('submit') || lower.includes('complete')) &&
           (lower.includes('submission') || lower.includes('success'))
         ) {
           isSubmitted = true;
@@ -253,7 +253,7 @@ export function EmployeeFormView() {
     <div className="h-screen h-dvh bg-[#F7F9FC] flex flex-col overflow-hidden">
       <Header />
       <main className="flex-1 flex min-h-0 relative">
-        
+
         {/* Mobile drawer backdrop */}
         {hasSidebar && drawerOpen && (
           <div
@@ -321,21 +321,18 @@ export function EmployeeFormView() {
                   <button
                     key={f.id}
                     onClick={() => handleNavigateToSibling(f)}
-                    className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-l-2 ${
-                      isCurrent
+                    className={`w-full text-left flex items-start gap-3 px-4 py-3 transition-colors border-l-2 ${isCurrent
                         ? 'border-white bg-white/10'
                         : 'border-transparent hover:bg-white/5 cursor-pointer'
-                    }`}
+                      }`}
                   >
-                    <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${
-                      isCurrent ? 'bg-white text-[#0F2D52]' : 'bg-white/15 text-white/60'
-                    }`}>
+                    <div className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-bold ${isCurrent ? 'bg-white text-[#0F2D52]' : 'bg-white/15 text-white/60'
+                      }`}>
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[10px] sm:text-[11px] font-semibold leading-snug ${
-                        isCurrent ? 'text-white' : 'text-white/70'
-                      }`}>
+                      <p className={`text-[10px] sm:text-[11px] font-semibold leading-snug ${isCurrent ? 'text-white' : 'text-white/70'
+                        }`}>
                         {f.formTitle}
                       </p>
                       <StatusBadge
@@ -362,7 +359,7 @@ export function EmployeeFormView() {
         )}
 
         <div ref={mainRef} className="flex-1 flex flex-col min-w-0 bg-white relative overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
-          
+
           {/* Title Bar */}
           <div className="shrink-0 z-30 flex items-center px-3 sm:px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
             <div className="flex items-center justify-start min-w-[2rem]">
@@ -370,10 +367,14 @@ export function EmployeeFormView() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden h-7 sm:h-8 px-2 sm:px-2.5 gap-1 text-[11px] sm:text-xs font-semibold text-[#0F2D52]"
+                  // className="lg:hidden h-7 sm:h-8 px-2 sm:px-2.5 gap-1 text-[11px] sm:text-xs font-semibold text-[#0F2D52]"
+                  className="lg:hidden h-10 px-3 gap-2 rounded-xl border border-[#0F2D52]/20 bg-[#EFF5FB] text-sm font-bold text-[#0F2D52] shadow-sm hover:bg-[#DCEAF7] active:scale-[0.98]"
                   onClick={() => setDrawerOpen(true)}
+                  aria-expanded={drawerOpen}
+                  aria-controls="employee-forms-navigation"
                 >
-                  <LayoutList className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                  {/* <LayoutList className="h-3 w-3 sm:h-3.5 sm:w-3.5" /> */}
+                  <LayoutList className="h-4 w-4" />
                   Forms
                 </Button>
               )}
@@ -452,15 +453,13 @@ export function EmployeeFormView() {
           </div>
 
           {/* Footer Navigation */}
-          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-2 min-[420px]:px-3 sm:px-4 py-2.5 sm:py-4 items-center gap-1.5 min-[420px]:gap-2 sm:gap-3 ${
-            hasSidebar ? 'grid grid-cols-[auto_minmax(0,1fr)_auto]' : 'flex justify-center'
-          }`}>
+          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-2 min-[420px]:px-3 sm:px-4 py-2.5 sm:py-4 items-center gap-1.5 min-[420px]:gap-2 sm:gap-3 ${hasSidebar ? 'grid grid-cols-[auto_minmax(0,1fr)_auto]' : 'flex justify-center'
+            }`}>
             {hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
-                  prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
-                }`}
+                className={`justify-self-start w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                  }`}
                 disabled={!prevSibling}
                 onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
               >
@@ -468,11 +467,10 @@ export function EmployeeFormView() {
                 Previous
               </Button>
             ) : <div aria-hidden="true" />}
-            
+
             <Button
-              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold gap-1 min-[420px]:gap-1.5 sm:gap-2 transition-colors shadow-sm rounded-lg sm:rounded-xl ${
-                hasSidebar ? 'justify-self-center' : ''
-              }`}
+              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold gap-1 min-[420px]:gap-1.5 sm:gap-2 transition-colors shadow-sm rounded-lg sm:rounded-xl ${hasSidebar ? 'justify-self-center' : ''
+                }`}
               onClick={() => navigate(back)}
             >
               <Home className="h-3 w-3 min-[420px]:h-3.5 min-[420px]:w-3.5 sm:h-4 sm:w-4" />
@@ -483,9 +481,8 @@ export function EmployeeFormView() {
               <div className="justify-self-end w-auto">
                 <Button
                   variant="outline"
-                  className={`w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
-                    nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
-                  }`}
+                  className={`w-auto h-9 min-[420px]:h-10 sm:h-11 px-2 min-[420px]:px-2.5 sm:px-5 gap-1 min-[420px]:gap-1.5 sm:gap-2 text-[10px] min-[420px]:text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                    }`}
                   disabled={!nextSibling}
                   onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
                 >
