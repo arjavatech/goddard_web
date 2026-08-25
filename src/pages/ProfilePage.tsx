@@ -114,15 +114,15 @@ function ProfileContent() {
           <div className="absolute top-4 right-16 w-16 h-16 rounded-full bg-white/5" />
           <div className="absolute -bottom-4 left-1/3 w-24 h-24 rounded-full bg-white/5" />
           <div className="absolute bottom-2 left-8 w-10 h-10 rounded-full bg-[#FF9900]/20" />
-          {/* {!isAdmin && (
+          {!isAdmin && !isEmployee && (
             <button
               onClick={() => navigate(dashboardPath)}
-              className="absolute top-3 left-4 flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1.5 rounded-full border border-white/20 transition-all duration-200"
+              className="absolute top-3 left-4 flex items-center gap-1.5 bg-white/15 hover:bg-white/25 backdrop-blur-sm text-white text-xs font-semibold px-3 py-2 rounded-full border border-white/20 transition-all duration-200"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
               Back to Dashboard
             </button>
-          )} */}
+          )}
         </div>
 
         <CardContent className="px-6 pb-6 pt-0">
