@@ -102,16 +102,21 @@ export function EmployeeDashboard() {
     return () => { isMounted = false; };
   }, [userData?.schoolId, location.key]);
 
-  const handleOpenForm = (assignment: EnrichedAssignment) => {
-    navigate(`/${schoolSubdomain}/employee/form/${assignment.id}`, {
-      state: { assignment }
-    });
-  };
-
   const totalForms = assignments.length;
   const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved' || a.normalizedStatus === 'Submitted').length;
   const pendingForms = assignments.filter(a => a.normalizedStatus !== 'Approved' && a.normalizedStatus !== 'Submitted').length;
   const progress = totalForms > 0 ? Math.round((completedForms / totalForms) * 100) : 0;
+
+  const handleOpenForm = (assignment: EnrichedAssignment) => {
+    navigate(`/${schoolSubdomain}/employee/form/${assignment.id}`, {
+      state: {
+        assignment,
+        assignments,
+        completedCount: completedForms,
+        totalForms,
+      }
+    });
+  };
 
   const handleDownload = async (a: EnrichedAssignment) => {
     if (!a.recentPdfLink) return;
