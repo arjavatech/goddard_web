@@ -250,7 +250,7 @@ export function EmployeeFormView() {
 
 
   return (
-    <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
+    <div className="h-screen h-dvh bg-[#F7F9FC] flex flex-col overflow-hidden">
       <Header />
       <main className="flex-1 flex min-h-0 relative">
         
@@ -265,7 +265,7 @@ export function EmployeeFormView() {
         {/* Sidebar */}
         {hasSidebar && (
           <aside className={`
-            absolute top-0 left-0 h-full z-50 flex flex-col w-72 shadow-2xl
+            absolute top-0 left-0 h-full z-50 flex flex-col w-[calc(100vw-2rem)] max-w-72 shadow-2xl
             transition-transform duration-300
             ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
             lg:static lg:h-full lg:overflow-y-auto lg:translate-x-0 lg:shadow-none lg:w-64 lg:shrink-0
@@ -333,7 +333,7 @@ export function EmployeeFormView() {
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className={`text-[11px] font-semibold leading-snug ${
+                      <p className={`text-[10px] sm:text-[11px] font-semibold leading-snug ${
                         isCurrent ? 'text-white' : 'text-white/70'
                       }`}>
                         {f.formTitle}
@@ -352,7 +352,7 @@ export function EmployeeFormView() {
             <div className="shrink-0 px-4 py-4 border-t border-white/10">
               <button
                 onClick={() => navigate(back)}
-                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-xs font-semibold"
+                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-[11px] sm:text-xs font-semibold"
               >
                 <Home className="w-4 h-4" />
                 Back to Dashboard
@@ -364,13 +364,13 @@ export function EmployeeFormView() {
         <div ref={mainRef} className="flex-1 flex flex-col min-w-0 bg-white relative overflow-y-auto" style={{ scrollBehavior: 'smooth' }}>
           
           {/* Title Bar */}
-          <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
+          <div className="shrink-0 z-30 flex items-center px-3 sm:px-4 py-3 bg-white border-b border-slate-100 shadow-sm relative">
             <div className="flex items-center justify-start min-w-[2rem]">
               {hasSidebar && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
+                  className="lg:hidden h-8 px-2.5 gap-1.5 text-[11px] sm:text-xs font-semibold text-[#0F2D52]"
                   onClick={() => setDrawerOpen(true)}
                 >
                   <LayoutList className="h-3.5 w-3.5" />
@@ -387,7 +387,7 @@ export function EmployeeFormView() {
           </div>
 
           {/* Info Bar */}
-          <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">
+          <div className="bg-white border-b border-slate-200 px-4 sm:px-6 py-3 grid grid-cols-1 min-[420px]:grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-6 shrink-0 z-20">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
                 <User className="w-3.5 h-3.5 text-[#0F2D52]" />
@@ -398,7 +398,7 @@ export function EmployeeFormView() {
               </div>
             </div>
 
-            <div className="h-8 w-px bg-slate-100 shrink-0" />
+            <div className="hidden sm:block h-8 w-px bg-slate-100 shrink-0" />
 
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
@@ -412,8 +412,8 @@ export function EmployeeFormView() {
 
             {assignment.dueDate && (
               <>
-                <div className="h-8 w-px bg-slate-100 shrink-0" />
-                <div className="min-w-0">
+                <div className="hidden sm:block h-8 w-px bg-slate-100 shrink-0" />
+                <div className="min-w-0 min-[420px]:col-span-2 sm:col-auto">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
                   <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
                 </div>
@@ -452,13 +452,13 @@ export function EmployeeFormView() {
           </div>
 
           {/* Footer Navigation */}
-          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-4 py-4 items-center gap-3 ${
-            hasSidebar ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
+          <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-3 sm:px-4 py-3 sm:py-4 items-center gap-2 sm:gap-3 ${
+            hasSidebar ? 'grid grid-cols-2 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
           }`}>
             {hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                className={`justify-self-start w-full sm:w-auto h-11 px-3 sm:px-5 gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                   prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                 }`}
                 disabled={!prevSibling}
@@ -470,7 +470,9 @@ export function EmployeeFormView() {
             ) : <div aria-hidden="true" />}
             
             <Button
-              className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
+              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-4 sm:px-7 text-xs sm:text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl ${
+                hasSidebar ? 'col-span-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 order-first sm:order-none justify-self-center' : ''
+              }`}
               onClick={() => navigate(back)}
             >
               <Home className="h-4 w-4" />
@@ -478,10 +480,10 @@ export function EmployeeFormView() {
             </Button>
 
             {hasSidebar ? (
-              <div className="justify-self-end">
+              <div className="justify-self-end w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  className={`w-full sm:w-auto h-11 px-3 sm:px-5 gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                     nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                   }`}
                   disabled={!nextSibling}
