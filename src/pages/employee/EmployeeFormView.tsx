@@ -352,9 +352,9 @@ export function EmployeeFormView() {
             <div className="shrink-0 px-4 py-4 border-t border-white/10">
               <button
                 onClick={() => navigate(back)}
-                className="w-full flex items-center justify-center gap-2 h-11 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-[11px] sm:text-xs font-semibold"
+                className="w-full flex items-center justify-center gap-1.5 h-9 sm:h-11 rounded-lg sm:rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-white text-[10px] sm:text-xs font-semibold"
               >
-                <Home className="w-4 h-4" />
+                <Home className="w-3 h-3 sm:w-4 sm:h-4" />
                 Back to Dashboard
               </button>
             </div>
@@ -370,10 +370,10 @@ export function EmployeeFormView() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="lg:hidden h-8 px-2.5 gap-1.5 text-[11px] sm:text-xs font-semibold text-[#0F2D52]"
+                  className="lg:hidden h-7 sm:h-8 px-2 sm:px-2.5 gap-1 text-[11px] sm:text-xs font-semibold text-[#0F2D52]"
                   onClick={() => setDrawerOpen(true)}
                 >
-                  <LayoutList className="h-3.5 w-3.5" />
+                  <LayoutList className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   Forms
                 </Button>
               )}
@@ -458,24 +458,24 @@ export function EmployeeFormView() {
             {hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start w-full sm:w-auto h-11 px-3 sm:px-5 gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                className={`justify-self-start w-full sm:w-auto h-10 sm:h-11 px-2.5 sm:px-5 gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                   prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                 }`}
                 disabled={!prevSibling}
                 onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Previous
               </Button>
             ) : <div aria-hidden="true" />}
             
             <Button
-              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-4 sm:px-7 text-xs sm:text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl ${
+              className={`bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-9 sm:h-12 px-2.5 sm:px-7 text-[11px] sm:text-sm font-semibold gap-1 sm:gap-2 transition-colors shadow-sm rounded-lg sm:rounded-xl ${
                 hasSidebar ? 'col-span-2 sm:col-span-1 sm:col-start-2 sm:row-start-1 order-first sm:order-none justify-self-center' : ''
               }`}
               onClick={() => navigate(back)}
             >
-              <Home className="h-4 w-4" />
+              <Home className="h-3 w-3 sm:h-4 sm:w-4" />
               Back to Dashboard
             </Button>
 
@@ -483,14 +483,14 @@ export function EmployeeFormView() {
               <div className="justify-self-end w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className={`w-full sm:w-auto h-11 px-3 sm:px-5 gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  className={`w-full sm:w-auto h-10 sm:h-11 px-2.5 sm:px-5 gap-1.5 sm:gap-2 text-xs sm:text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                     nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                   }`}
                   disabled={!nextSibling}
                   onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
                 >
                   Next
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </Button>
               </div>
             ) : <div aria-hidden="true" />}
