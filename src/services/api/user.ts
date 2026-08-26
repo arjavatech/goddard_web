@@ -6,6 +6,7 @@ export type SchoolData = {
   id?: string;
   name?: string;
   subdomain?: string;
+  timezone?: string;
   settings?: {
     contact_no?: string;
     mail?: string;
@@ -43,6 +44,7 @@ const schoolDataSchema = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
   subdomain: z.string().optional(),
+  timezone: z.string().optional(),
   settings: schoolSettingsSchema.optional(),
   request_categories: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
   location: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
