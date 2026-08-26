@@ -11,6 +11,7 @@ import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
 import { COMPLETION_STATUSES, normalizeFormStatus, type NormalizedFormStatus } from '../lib/formStatus';
+import { documentRequestsApi, DocumentRequest } from '../services/api/documentRequests';
 type FormStatus = NormalizedFormStatus;
 type ChildFormCard = {
   title: string;
@@ -24,11 +25,13 @@ type ChildFormCard = {
   studentFormAssignmentId?: string | null;
   assignedAt?: string | null;
   dueDate?: string | null;
+  isDocumentRequest?: boolean;
 };
 type ChildSpecificFormGroup = {
   childId: string;
   childName: string;
   forms: ChildFormCard[];
+  documentRequests: DocumentRequest[];
 };
 type FamilyFormCard = ChildFormCard;
 type DashboardChild = {
@@ -49,6 +52,7 @@ type DashboardChild = {
   gender?: string;
   classroom: string;
   enrollmentId: string;
+  documentRequests: DocumentRequest[];
 };
 function getInitials(firstName: string, lastName: string): string {
   const initials = `${firstName?.[0] ?? ''}${lastName?.[0] ?? ''}`.toUpperCase();
@@ -64,7 +68,7 @@ function formatDate(input: string | null | undefined): string {
     year: 'numeric'
   });
 }
-function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChild {
+function normalizeChildFromParent(child: any, yearFilter?: string, childDocumentRequests?: DocumentRequest[]): DashboardChild {
   let forms = (child.forms || []).map((form: any) => {
     const status = normalizeFormStatus(form.status);
     return {
@@ -120,6 +124,8 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
       })() : null
     } satisfies ChildFormCard;
   });
+
+  // document requests are intentionally omitted from forms array
 
   // Filter forms by year if yearFilter is provided
   if (yearFilter && yearFilter !== 'all') {
@@ -182,7 +188,8 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     parentType: child.parent_type || child.parentType || 'primary_parent',
     gender: child.childGender,
     classroom: child.classroomName || '—',
-    enrollmentId: child.enrollmentId || ''
+    enrollmentId: child.enrollmentId || '',
+    documentRequests: childDocumentRequests || []
   };
 }
 export function Dashboard() {
@@ -223,9 +230,12 @@ export function Dashboard() {
       setLoading(true);
     }
 
-    // Fetch parent data
-    fetchSingleParent(parentId, userData.schoolId)
-      .then((parentData) => {
+    // Fetch parent data and mock document requests
+    Promise.all([
+      fetchSingleParent(parentId, userData.schoolId),
+      documentRequestsApi.getDocumentRequestsBySchool(userData.schoolId)
+    ])
+      .then(([parentData, allDocRequests]) => {
         if (!isMounted) return;
 
         if (!parentData) {
@@ -250,15 +260,17 @@ export function Dashboard() {
         });
        
         // Process children from the parent response
-        const processedChildren = (parentData.children || []).map(child => {
-          return normalizeChildFromParent(child, yearFilter);
+        const processedChildren = (parentData.children || []).map((child: any) => {
+          const childDocReqs = allDocRequests.filter(req => req.childId === child.childId || child.childId === req.childId);
+          return normalizeChildFromParent(child, yearFilter, childDocReqs);
         });
 
         // Extract forms for each child
         const childFormsData = processedChildren.map(child => ({
           childId: child.id,
           childName: child.name,
-          forms: child.forms
+          forms: child.forms,
+          documentRequests: child.documentRequests
         }));
 
         // For now, we'll use an empty array for family forms since the API doesn't provide them

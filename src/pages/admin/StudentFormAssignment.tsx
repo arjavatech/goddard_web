@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { Search, Plus, FileText, User, School, Calendar, X } from 'lucide-react';
 import { Checkbox } from '../../components/ui/checkbox';
+import { documentRequestsApi, DocumentRequest } from '../../services/api/documentRequests';
 
 export function StudentFormAssignment() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -15,6 +16,16 @@ export function StudentFormAssignment() {
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   const [selectedForm, setSelectedForm] = useState('');
   const [classroomFilter, setClassroomFilter] = useState('all');
+
+  const [isRequestDocDialogOpen, setIsRequestDocDialogOpen] = useState(false);
+  const [customDocTitle, setCustomDocTitle] = useState('');
+  const [documentRequests, setDocumentRequests] = useState<DocumentRequest[]>([]);
+  const schoolId = 'mock-school-id'; // using a mock school id for now
+
+  useEffect(() => {
+    // Load mock document requests
+    documentRequestsApi.getDocumentRequestsBySchool(schoolId).then(setDocumentRequests);
+  }, []);
 
   // Mock data - replace with API calls later
   const students = [
@@ -77,6 +88,21 @@ export function StudentFormAssignment() {
     setSelectedForm('');
   };
 
+  const handleRequestDocument = async () => {
+    if (!customDocTitle || selectedStudents.length === 0) return;
+    
+    const newReqs: DocumentRequest[] = [];
+    for (const studentId of selectedStudents) {
+      const req = await documentRequestsApi.createDocumentRequest(schoolId, studentId, customDocTitle);
+      newReqs.push(req);
+    }
+    
+    setDocumentRequests([...documentRequests, ...newReqs]);
+    setIsRequestDocDialogOpen(false);
+    setSelectedStudents([]);
+    setCustomDocTitle('');
+  };
+
   const handleRemoveAssignment = (assignmentId: string) => {
     setAssignments(assignments.filter(a => a.id !== assignmentId));
   };
@@ -93,13 +119,23 @@ export function StudentFormAssignment() {
               Assign forms to specific students
             </p>
           </div>
-          <Button 
-            className="bg-[#0891b2] hover:bg-[#0e7490]"
-            onClick={() => setIsAssignDialogOpen(true)}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Assign Forms
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline"
+              className="border-[#0891b2] text-[#0891b2] hover:bg-[#0891b2] hover:text-white"
+              onClick={() => setIsRequestDocDialogOpen(true)}
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Request Document
+            </Button>
+            <Button 
+              className="bg-[#0891b2] hover:bg-[#0e7490]"
+              onClick={() => setIsAssignDialogOpen(true)}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Assign Forms
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -178,8 +214,60 @@ export function StudentFormAssignment() {
                 </div>
               ))}
               {assignments.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
+                  <div className="text-center py-8 text-muted-foreground">
                   No form assignments yet. Click "Assign Forms" to get started.
+                </div>
+              )}
+
+              {/* Render custom document requests */}
+              {documentRequests.length > 0 && (
+                <div className="pt-4 border-t mt-4">
+                  <h3 className="text-sm font-semibold text-slate-900 mb-3">Custom Document Requests</h3>
+                  {documentRequests.map((req) => {
+                    const student = students.find(s => s.id === req.childId);
+                    return (
+                      <div key={req.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-sm">
+                              {student ? student.name.split(' ').map(n => n[0]).join('') : '?'}
+                            </div>
+                            <div>
+                              <h3 className="font-medium">{student ? student.name : 'Unknown Student'}</h3>
+                              <p className="text-sm text-slate-500">Manual Request: {req.title}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                          <div className="text-right">
+                            <p className="text-xs text-slate-500 mb-1">Created: {new Date(req.createdAt).toLocaleDateString()}</p>
+                            <Badge variant={req.status === 'Approved' ? 'success' : req.status === 'Pending' ? 'secondary' : 'default'}>
+                              {req.status}
+                            </Badge>
+                          </div>
+                          <div className="flex flex-col gap-1">
+                            {req.documents?.map(doc => (
+                              <Button key={doc.id} variant="outline" size="sm" onClick={() => window.open(doc.url, '_blank')} title={doc.name}>
+                                View {doc.name.length > 15 ? doc.name.substring(0, 15) + '...' : doc.name}
+                              </Button>
+                            ))}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              documentRequestsApi.deleteDocumentRequest(req.id).then(() => {
+                                setDocumentRequests(documentRequests.filter(r => r.id !== req.id));
+                              });
+                            }}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -282,6 +370,96 @@ export function StudentFormAssignment() {
                 disabled={!selectedForm || selectedStudents.length === 0}
               >
                 Assign Form ({selectedStudents.length} students)
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Request Document Dialog */}
+        <Dialog open={isRequestDocDialogOpen} onOpenChange={setIsRequestDocDialogOpen}>
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Request Custom Document</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Form Title</label>
+                <Input
+                  placeholder="e.g., Medical Clearance Form"
+                  value={customDocTitle}
+                  onChange={(e) => setCustomDocTitle(e.target.value)}
+                />
+              </div>
+
+              {/* Student Search and Filter */}
+              <div className="space-y-3">
+                <div className="flex space-x-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Input
+                      placeholder="Search students..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <Select value={classroomFilter} onValueChange={setClassroomFilter}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue placeholder="Filter by classroom" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Classrooms</SelectItem>
+                      {classrooms.map(classroom => (
+                        <SelectItem key={classroom} value={classroom}>
+                          {classroom}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Student Selection */}
+              <div>
+                <label className="block text-sm font-medium mb-2">
+                  Select Students ({selectedStudents.length} selected)
+                </label>
+                <div className="border rounded-lg max-h-60 overflow-y-auto">
+                  {filteredStudents.map((student) => (
+                    <div key={student.id} className="flex items-center space-x-3 p-3 border-b last:border-b-0 hover:bg-gray-50">
+                      <Checkbox
+                        checked={selectedStudents.includes(student.id)}
+                        onCheckedChange={() => handleStudentSelect(student.id)}
+                      />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-amazon-teal to-amazon-orange text-white flex items-center justify-center font-bold text-sm">
+                        {student.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">{student.name}</div>
+                        <div className="text-sm text-slate-500">
+                          {student.classroom} • {student.parent}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {filteredStudents.length === 0 && (
+                    <div className="p-4 text-center text-muted-foreground">
+                      No students found matching your search.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsRequestDocDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleRequestDocument} 
+                className="bg-[#0891b2] hover:bg-[#0e7490]"
+                disabled={!customDocTitle || selectedStudents.length === 0}
+              >
+                Request Document ({selectedStudents.length} students)
               </Button>
             </DialogFooter>
           </DialogContent>

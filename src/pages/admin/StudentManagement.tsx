@@ -23,6 +23,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { useToast } from '../../contexts/ToastContext';
+import { documentRequestsApi, DocumentRequest } from '../../services/api/documentRequests';
 
 type EnrollmentStatus = 'Completed-AdminApproved' | 'Completed-Pending Approval' | 'Draft';
 
@@ -90,6 +91,7 @@ interface Student {
   childStatus: 'active' | 'archive';
   enrollmentId?: string;
   formStatus?: string;
+  documentRequests: DocumentRequest[];
 }
 export function StudentManagement() {
   const { showToast } = useToast();
@@ -137,6 +139,12 @@ export function StudentManagement() {
   const [isStudentFormDialogOpen, setIsStudentFormDialogOpen] = useState(false);
   const [selectedStudentForForms, setSelectedStudentForForms] = useState<Student | null>(null);
   const [selectedFormsToAdd, setSelectedFormsToAdd] = useState<string[]>([]);
+  const [isManageFormTitlesDialogOpen, setIsManageFormTitlesDialogOpen] = useState(false);
+  const [selectedStudentForFormTitles, setSelectedStudentForFormTitles] = useState<Student | null>(null);
+  const [customDocTitle, setCustomDocTitle] = useState('');
+  const [editingDocRequestId, setEditingDocRequestId] = useState<string | null>(null);
+  const [deleteConfirmDocRequestId, setDeleteConfirmDocRequestId] = useState<string | null>(null);
+  const [isRequestingDoc, setIsRequestingDoc] = useState(false);
   
   // Class transfer states
   const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
@@ -283,7 +291,11 @@ export function StudentManagement() {
         setStudents([]);
         return;
       }
-      const enrollmentData = await fetchStudentEnrollments(schoolId);
+      
+      const [enrollmentData, mockDocRequests] = await Promise.all([
+        fetchStudentEnrollments(schoolId),
+        documentRequestsApi.getDocumentRequestsBySchool(schoolId)
+      ]);
       
       const enrollments = enrollmentData.enrollments || [];
       if (!enrollments || enrollments.length === 0) {
@@ -296,7 +308,7 @@ export function StudentManagement() {
         const lastName = enrollment.child_last_name || 'Student';
 
         // Map forms from new API response format
-        const formsArray = enrollment.forms && typeof enrollment.forms === 'object'
+        let formsArray = enrollment.forms && typeof enrollment.forms === 'object'
           ? Object.entries(enrollment.forms).map(([formName, formData]: [string, any]) => {
               const assignedDate = formData.assigned_at;
               let dueDate = null;
@@ -318,6 +330,8 @@ export function StudentManagement() {
               };
             })
           : [];
+
+        const childDocRequests = mockDocRequests.filter(req => req.childId === studentId);
 
         // Count approved forms
         const approved = formsArray.filter(form => {
@@ -385,7 +399,8 @@ export function StudentManagement() {
           assignedForms: formsArray,
           childStatus: (enrollment.child_status || 'active') as 'active' | 'archive',
           enrollmentId: enrollment.enrollment_id,
-          formStatus: computedFormStatus
+          formStatus: computedFormStatus,
+          documentRequests: childDocRequests
         };
         return student;
       });
@@ -670,6 +685,13 @@ export function StudentManagement() {
               Manage Forms
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => {
+              setSelectedStudentForFormTitles(student);
+              setIsManageFormTitlesDialogOpen(true);
+            }}>
+              <FileText className="h-4 w-4 mr-2" />
+              Manage Form Titles
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => {
               setSelectedStudentForTransfer(student);
               setNewClassroomId('');
               setIsTransferDialogOpen(true);
@@ -783,6 +805,68 @@ export function StudentManagement() {
     setAssignDialogClassroomFilter('all');
     setAssignDialogSearchTerm('');
   };
+
+  const handleRequestCustomDocument = async () => {
+    if (!customDocTitle || !selectedStudentForFormTitles || !schoolId) return;
+    
+    setIsRequestingDoc(true);
+    try {
+      if (editingDocRequestId) {
+        await documentRequestsApi.updateDocumentRequestTitle(editingDocRequestId, customDocTitle);
+        showToast('success', 'Document title updated successfully');
+      } else {
+        await documentRequestsApi.createDocumentRequest(
+          schoolId,
+          selectedStudentForFormTitles.id,
+          customDocTitle
+        );
+        showToast('success', 'Document requested successfully');
+      }
+      setCustomDocTitle('');
+      setEditingDocRequestId(null);
+      
+      // Reload student data to show the new request
+      await loadStudentData();
+      
+      // Update selected student context for the dialog
+      setStudents(prev => {
+        const updatedStudent = prev.find(s => s.id === selectedStudentForFormTitles.id);
+        if (updatedStudent) {
+          setSelectedStudentForFormTitles(updatedStudent);
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error('Failed to save document:', error);
+      showToast('error', 'Failed to save document');
+    } finally {
+      setIsRequestingDoc(false);
+    }
+  };
+
+  const handleDeleteCustomDocument = async (id: string) => {
+    try {
+      await documentRequestsApi.deleteDocumentRequest(id);
+      showToast('success', 'Document request deleted successfully');
+      
+      // Reload student data to show the new request
+      await loadStudentData();
+      
+      setStudents(prev => {
+        const updatedStudent = prev.find(s => s.id === selectedStudentForFormTitles?.id);
+        if (updatedStudent) {
+          setSelectedStudentForFormTitles(updatedStudent);
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error('Failed to delete document request:', error);
+      showToast('error', 'Failed to delete document request');
+    } finally {
+      setDeleteConfirmDocRequestId(null);
+    }
+  };
+
   const studentExportHeaders = [
     'Student Name', 'Classroom',
     'Primary Parent Name', 'Primary Parent Email', 'Primary Parent Phone', 'Primary Parent Address', 'Primary Parent Relation',
@@ -1525,7 +1609,7 @@ export function StudentManagement() {
                 </Badge>
               </div>
               
-              <div className="space-y-3 max-h-48 sm:max-h-80 overflow-y-auto">
+              <div className="space-y-3 max-h-48 sm:max-h-60 overflow-y-auto">
                 {availableForms.filter(form => 
                   !selectedStudentForForms?.assignedForms.some(assigned => assigned.name === form.name)
                 ).length > 0 ? (
@@ -1897,6 +1981,178 @@ export function StudentManagement() {
               disabled={!bulkTransferToGrade || selectedStudentsForTransfer.length === 0}
             >
               Transfer {selectedStudentsForTransfer.length} Students
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isManageFormTitlesDialogOpen} onOpenChange={(open) => {
+        if (!open) {
+          setIsManageFormTitlesDialogOpen(false);
+          setCustomDocTitle('');
+          setEditingDocRequestId(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[850px] p-0 overflow-hidden bg-slate-50 rounded-2xl border-0 shadow-lg">
+          <DialogHeader className="px-6 py-4 bg-white border-b border-slate-100">
+            <div className="flex items-center space-x-3">
+              <AvatarInitials initials={`${selectedStudentForFormTitles?.firstName[0] ?? ''}${selectedStudentForFormTitles?.lastName[0] ?? ''}`} size="lg" />
+              <div>
+                <DialogTitle className="text-xl font-bold text-slate-900">
+                  Manage Form Titles
+                </DialogTitle>
+                <p className="text-sm text-slate-500">
+                  {selectedStudentForFormTitles?.firstName} {selectedStudentForFormTitles?.lastName} • {selectedStudentForFormTitles?.classroom.name}
+                </p>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-0">
+            <div className="flex flex-col md:flex-row h-full max-h-[70vh]">
+              {/* Left side: Request Custom Document */}
+              <div className="flex-1 p-6 bg-white border-r border-slate-100 overflow-y-auto">
+                <h4 className="text-sm font-semibold text-slate-900 mb-4">Request Custom Document</h4>
+                <div className="flex flex-col gap-3">
+                  <Input 
+                    placeholder="Enter document title (e.g. Medical Form)"
+                    value={customDocTitle}
+                    onChange={(e) => setCustomDocTitle(e.target.value)}
+                    className="w-full"
+                  />
+                  <Button 
+                    className="bg-[#0891b2] hover:bg-[#0e7490] text-white w-full"
+                    onClick={handleRequestCustomDocument}
+                    disabled={!customDocTitle || isRequestingDoc}
+                  >
+                    {isRequestingDoc ? (editingDocRequestId ? 'Updating...' : 'Requesting...') : (editingDocRequestId ? 'Update Form Title' : 'Add Form Title')}
+                  </Button>
+                  {editingDocRequestId && (
+                    <Button 
+                      variant="ghost" 
+                      className="w-full text-slate-500 hover:text-slate-700"
+                      onClick={() => {
+                        setEditingDocRequestId(null);
+                        setCustomDocTitle('');
+                      }}
+                    >
+                      Cancel Edit
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Right side: Existing Form Titles */}
+              <div className="w-full md:w-[350px] lg:w-[400px] p-6 bg-slate-50 overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-semibold text-slate-900">Requested Custom Documents</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {selectedStudentForFormTitles?.documentRequests?.length || 0} requested
+                  </Badge>
+                </div>
+                
+                {selectedStudentForFormTitles?.documentRequests && selectedStudentForFormTitles.documentRequests.length > 0 ? (
+                  <div className="space-y-3">
+                    {selectedStudentForFormTitles.documentRequests.map((req) => {
+                      const normalizedStatus = normalizeFormStatus(req.status);
+                      const isPending = req.status === 'Pending';
+                      
+                      const statusVariant = normalizedStatus === 'Approved' ? 'success' : 
+                                          normalizedStatus === 'In Progress' || normalizedStatus === 'Submitted' ? 'secondary' : 'outline';
+                      const statusIcon = normalizedStatus === 'Approved' ? 
+                        <CheckCircle className="h-3 w-3" /> : 
+                        normalizedStatus === 'In Progress' || normalizedStatus === 'Submitted' ? 
+                        <Clock className="h-3 w-3" /> : 
+                        <AlertCircle className="h-3 w-3" />;
+                      
+                      return (
+                        <div key={req.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-colors group">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                              <FileText className="h-5 w-5 text-[#0891b2]" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-medium text-sm truncate">{req.title}</h4>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                <span>Requested: {new Date(req.createdAt).toLocaleDateString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            {!isPending && (
+                              <Badge variant={statusVariant as any} className="flex items-center gap-1 text-xs">
+                                {statusIcon}
+                                {normalizedStatus}
+                              </Badge>
+                            )}
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0 text-slate-500 hover:text-[#0891b2]"
+                                onClick={() => {
+                                  setEditingDocRequestId(req.id);
+                                  setCustomDocTitle(req.title);
+                                }}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0 text-slate-500 hover:text-red-600"
+                                onClick={() => setDeleteConfirmDocRequestId(req.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[200px]">
+                    <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                      <FileText className="w-6 h-6 text-slate-300" />
+                    </div>
+                    <p className="font-medium text-sm text-slate-600">No custom documents requested</p>
+                    <p className="text-xs text-slate-400 mt-1">Request a new document title on the left.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter className="px-6 py-4 bg-white border-t border-slate-100">
+            <div className="flex justify-end w-full">
+              <Button 
+                variant="outline" 
+                onClick={() => setIsManageFormTitlesDialogOpen(false)}
+                className="h-9 sm:h-10 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all duration-200"
+              >
+                Close
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      <Dialog open={!!deleteConfirmDocRequestId} onOpenChange={(open) => !open && setDeleteConfirmDocRequestId(null)}>
+        <DialogContent className="sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle>Delete Form Title</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-slate-500">
+              Are you sure you want to delete this custom form title? This action cannot be undone.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmDocRequestId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={() => deleteConfirmDocRequestId && handleDeleteCustomDocument(deleteConfirmDocRequestId)}>
+              Delete
             </Button>
           </DialogFooter>
         </DialogContent>

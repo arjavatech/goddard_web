@@ -5,8 +5,10 @@ import { Button } from '../components/ui/button';
 import { Loading } from '../components/ui/loading';
 import { Header } from '../components/layout/Header';
 import { StatusBadge } from '../components/dashboard/StatusBadge';
+import { DocumentUploader } from '../components/forms/DocumentUploader';
 import { useIframeScrollLock } from '../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../hooks/useEmbeddedFormResize';
+import { documentRequestsApi } from '../services/api/documentRequests';
 
 type SiblingForm = {
   formId: string;
@@ -17,6 +19,7 @@ type SiblingForm = {
   filloutFormId?: string | null;
   studentFormAssignmentId?: string | null;
   childName?: string | null;
+  isDocumentRequest?: boolean;
 };
 
 export function ParentFormView() {
@@ -26,7 +29,7 @@ export function ParentFormView() {
 
   const {
     viewUrl, title, status, childName, returnPath,
-    siblingForms, completedCount, totalForms,
+    siblingForms, completedCount, totalForms, isDocumentRequest
   } = (location.state ?? {}) as {
     viewUrl?: string;
     title?: string;
@@ -36,6 +39,7 @@ export function ParentFormView() {
     siblingForms?: SiblingForm[];
     completedCount?: number;
     totalForms?: number;
+    isDocumentRequest?: boolean;
   };
 
   const back = returnPath || `/${schoolSlug}/dashboard`;
@@ -104,6 +108,7 @@ export function ParentFormView() {
           status: sibling.status,
           childName: sibling.childName ?? childName,
           returnPath: back,
+          isDocumentRequest: sibling.isDocumentRequest,
           siblingForms,
           completedCount,
           totalForms,
@@ -470,6 +475,22 @@ export function ParentFormView() {
                   </Button>
                 </div>
               )}
+            </div>
+          ) : isDocumentRequest ? (
+            /* ── Document Upload View ── */
+            <div className="flex-1 flex flex-col p-6 sm:p-12 max-w-3xl mx-auto w-full">
+              <h2 className="text-xl font-bold text-slate-900 mb-2">{title}</h2>
+              <p className="text-sm text-slate-500 mb-8">
+                Please upload the required document below.
+              </p>
+              <DocumentUploader
+                onUpload={async (file) => {
+                  if (currentFormId) {
+                    await documentRequestsApi.uploadDocumentForRequest(currentFormId, file);
+                  }
+                  showThankYouScreen();
+                }}
+              />
             </div>
           ) : (
             /* ── Editable form (iframe) ── */

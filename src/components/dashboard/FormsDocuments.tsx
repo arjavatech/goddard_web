@@ -10,6 +10,11 @@ import { useAuth } from '../../services/auth/useAuth';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { cn } from '../../lib/utils';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { DocumentUploader } from '../forms/DocumentUploader';
+import { DocumentRequest, documentRequestsApi } from '../../services/api/documentRequests';
+import { UploadCloud, CheckCircle, Clock } from 'lucide-react';
+import { Badge } from '../ui/badge';
 interface FormCardProps {
   title: string;
   description: string;
@@ -155,6 +160,7 @@ interface FormsDocumentsProps {
     childId: string;
     childName: string;
     forms: FormData[];
+    documentRequests?: DocumentRequest[];
   }[];
   familyForms: FormData[];
   rawFormData?: any; // Raw parent data to access form URLs
@@ -185,6 +191,8 @@ export function FormsDocuments({
   onViewForm,
   formToOpen,
   onFormOpened,
+  onFormCompleted,
+  onFormViewChange,
   yearFilter = 'all',
   onYearFilterChange,
   enrollmentId,
@@ -204,6 +212,7 @@ export function FormsDocuments({
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [selectedDocumentRequest, setSelectedDocumentRequest] = useState<DocumentRequest | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(
     (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
   );
@@ -521,19 +530,18 @@ export function FormsDocuments({
           status: form.status,
           childName: form.childName,
           returnPath: `/${schoolSlug}/dashboard`,
+          isDocumentRequest: form.isDocumentRequest,
           siblingForms: tabForms.map((f: any) => ({
             formId: f.formId || f._key,
             title: f.title,
             status: f.status,
             recentPdfLink: f.rawData?.recent_pdf_link || f.rawData?.recentPdfLink || f.recentPdfLink || null,
             recentEditLink: f.rawData?.recent_edit_link || f.rawData?.recentEditLink || f.recentEditLink || null,
-            // Keep the complete launch metadata for sidebar/Previous/Next navigation.
-            // A draft form may not have a resume link yet, but it can still be
-            // opened from its Fillout form id and student assignment id.
             filloutFormId: f.rawData?.fillout_form_id || f.rawData?.filloutFormId || f.filloutFormId || null,
             studentFormAssignmentId: f.studentFormAssignmentId ||
               f.rawData?.student_form_assignment_id || f.rawData?.studentFormAssignmentId || null,
             childName: f.childName || null,
+            isDocumentRequest: f.isDocumentRequest,
           })),
           completedCount,
           totalForms: tabForms.length,
@@ -966,9 +974,123 @@ export function FormsDocuments({
                 ))}
               </div>
             )}
+            
+            {/* Requested Documents Section (Separated from Forms) */}
+            {child.documentRequests && child.documentRequests.length > 0 && (
+              <div className="mt-8">
+                <div className="flex items-center gap-2 mb-4">
+                  <h3 className="text-sm font-bold text-slate-800">Requested Documents</h3>
+                  <Badge variant="secondary" className="text-[10px] font-semibold bg-slate-100 text-slate-600">
+                    {child.documentRequests.length}
+                  </Badge>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
+                  {child.documentRequests.map(req => {
+                    return (
+                      <div 
+                        key={req.id} 
+                        className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col hover:border-slate-300 hover:shadow-sm transition-all"
+                      >
+                        <div className="flex items-start gap-3 flex-1 mb-4">
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center flex-shrink-0">
+                            <UploadCloud className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold text-slate-900 leading-snug truncate" title={req.title}>{req.title}</h4>
+                            <div className="mt-1 flex items-center gap-1.5">
+                              <span className="text-xs text-slate-500">
+                                {req.documents && req.documents.length > 0 ? `${req.documents.length} document${req.documents.length === 1 ? '' : 's'} uploaded` : 'No documents uploaded yet'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Button
+                          className="w-full text-xs h-9 rounded-xl font-semibold bg-[#0891b2] hover:bg-[#0e7490] text-white"
+                          onClick={() => setSelectedDocumentRequest(req)}
+                        >
+                          Manage Documents
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* Document Uploader Modal */}
+      <Dialog 
+        open={!!selectedDocumentRequest} 
+        onOpenChange={(open) => !open && setSelectedDocumentRequest(null)}
+      >
+        <DialogContent className="sm:max-w-[850px] p-0 overflow-hidden bg-slate-50 rounded-2xl border-0 shadow-xl">
+          <DialogHeader className="px-6 py-4 bg-white border-b border-slate-100">
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              {selectedDocumentRequest?.title}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-0">
+            {selectedDocumentRequest && (
+              <div className="flex flex-col md:flex-row h-full max-h-[70vh]">
+                {/* Left side: Upload */}
+                <div className="flex-1 p-6 bg-white border-r border-slate-100 overflow-y-auto">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-4">Upload New Document</h4>
+                  <DocumentUploader
+                    onUpload={async (file) => {
+                      if (selectedDocumentRequest) {
+                        const updatedReq = await documentRequestsApi.uploadDocumentForRequest(selectedDocumentRequest.id, file);
+                        setSelectedDocumentRequest(updatedReq);
+                        if (onFormCompleted) {
+                          onFormCompleted(true);
+                        }
+                      }
+                    }}
+                  />
+                </div>
+                
+                {/* Right side: Uploaded Documents */}
+                <div className="w-full md:w-[350px] lg:w-[400px] p-6 bg-slate-50 overflow-y-auto">
+                  <h4 className="text-sm font-semibold text-slate-900 mb-4">Uploaded Documents</h4>
+                  {selectedDocumentRequest.documents && selectedDocumentRequest.documents.length > 0 ? (
+                    <div className="space-y-3">
+                      {selectedDocumentRequest.documents.map((doc) => (
+                        <div key={doc.id} className="flex items-center justify-between p-3 bg-white border border-slate-200 rounded-xl shadow-sm hover:border-slate-300 transition-colors">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                              <FileText className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-slate-900 truncate" title={doc.name}>{doc.name}</p>
+                              <p className="text-xs text-slate-500">
+                                {new Date(doc.uploadedAt).toLocaleDateString()}
+                              </p>
+                            </div>
+                          </div>
+                          <Button variant="ghost" size="icon" className="flex-shrink-0 hover:bg-slate-100" onClick={() => window.open(doc.url, '_blank')} title="Download">
+                            <Download className="w-4 h-4 text-slate-500" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center py-12 text-center h-full min-h-[200px]">
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                        <FileText className="w-6 h-6 text-slate-300" />
+                      </div>
+                      <p className="text-sm font-medium text-slate-600">No documents uploaded yet</p>
+                      <p className="text-xs text-slate-400 mt-1">Upload a document on the left to see it here.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
