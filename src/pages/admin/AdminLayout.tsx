@@ -117,6 +117,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
       ],
     },
+    {
+      label: 'Documents',
+      items: [
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` },
+      ],
+    },
 
     ...(isSuperAdmin ? [{
       label: 'Administration',

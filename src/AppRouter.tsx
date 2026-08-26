@@ -24,6 +24,8 @@ import { ParentDetails } from './pages/admin/ParentDetails';
 import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/StudentDueForms';
 import { FormReviewQueue } from './pages/admin/FormReviewQueue';
+import { DocumentWorkspace } from './pages/admin/DocumentWorkspace';
+import { DocumentDueWorkspace } from './pages/admin/DocumentDueWorkspace';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
 import { ParentHelpCenter } from './pages/ParentHelpCenter';
@@ -53,6 +55,7 @@ import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { ProfilePage } from './pages/ProfilePage';
+import { MyDocuments } from './pages/MyDocuments';
 
 // SuperAdmin Requests & Expense analytics pages
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
@@ -101,9 +104,11 @@ export function AppRouter() {
                 <Route element={<SubdomainGuard />}>
                   <Route path="/:schoolSlug/dashboard" element={<App />} />
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<ParentFormView />} />
+                  <Route path="/:schoolSlug/dashboard/documents" element={<MyDocuments audience="student" />} />
                   <Route path="/:schoolSlug/employee/dashboard" element={<EmployeeDashboard />} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
                   <Route path="/:schoolSlug/employee/requests" element={<EmployeeRequests />} />
+                  <Route path="/:schoolSlug/employee/documents" element={<MyDocuments audience="employee" />} />
                 </Route>
                 <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}
@@ -134,6 +139,10 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/forms" element={<FormsManagement />} />
                   <Route path="/:schoolSlug/admin/forms/due" element={<DueForms />} />
                   <Route path="/:schoolSlug/admin/forms/review" element={<FormReviewQueue kind="student" />} />
+                  <Route path="/:schoolSlug/admin/documents" element={<DocumentWorkspace audience="student" mode="manage" />} />
+                  <Route path="/:schoolSlug/admin/documents/due" element={<DocumentDueWorkspace audience="student" />} />
+                  <Route path="/:schoolSlug/admin/documents/review" element={<DocumentWorkspace audience="student" mode="review" />} />
+                  <Route path="/:schoolSlug/admin/documents/review/:documentId" element={<DocumentWorkspace audience="student" mode="review" />} />
                   <Route path="/:schoolSlug/admin/forms/view/:formId" element={<FormView />} />
                   <Route path="/:schoolSlug/admin/form-assignments" element={<ClassroomFormAssignment />} />
                   <Route path="/:schoolSlug/admin/parents" element={<ParentManagement />} />
@@ -144,6 +153,10 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
                   <Route path="/:schoolSlug/admin/employee-forms/due" element={<EmployeeDueForms />} />
                   <Route path="/:schoolSlug/admin/employee-forms/review" element={<FormReviewQueue kind="employee" />} />
+                  <Route path="/:schoolSlug/admin/employee-documents" element={<DocumentWorkspace audience="employee" mode="manage" />} />
+                  <Route path="/:schoolSlug/admin/employee-documents/due" element={<DocumentDueWorkspace audience="employee" />} />
+                  <Route path="/:schoolSlug/admin/employee-documents/review" element={<DocumentWorkspace audience="employee" mode="review" />} />
+                  <Route path="/:schoolSlug/admin/employee-documents/review/:documentId" element={<DocumentWorkspace audience="employee" mode="review" />} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />

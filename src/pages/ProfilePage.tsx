@@ -4,10 +4,9 @@ import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { AdminLayout } from './admin/AdminLayout';
 import { EmployeeLayout } from './employee/EmployeeLayout';
+import { ParentLayout } from './parent/ParentLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
@@ -298,13 +297,10 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
-      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+    <ParentLayout>
+      <div className="w-full">
         <ProfileContent />
-      </main>
-      {/* Keeping Header/Footer for parents/others since they don't have a layout yet */}
-      <Footer />
-    </div>
+      </div>
+    </ParentLayout>
   );
 }

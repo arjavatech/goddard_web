@@ -278,6 +278,7 @@ export function EmployeeDashboard() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button type="button" size="sm" variant="ghost" onClick={() => navigate(`/${schoolSubdomain || 'goddard'}/employee/documents`)} className="h-7 px-2 text-[11px] font-bold text-white hover:bg-white/15 hover:text-white">Documents</Button>
                     {totalForms > 0 && (
                       <span className="text-[10px] font-bold text-white/80 bg-white/10 px-2 py-0.5 rounded-full border border-white/10">
                         {totalForms} form{totalForms !== 1 ? 's' : ''}
