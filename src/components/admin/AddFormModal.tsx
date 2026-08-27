@@ -80,14 +80,25 @@ export function AddFormModal({
           {setPdfFile && (
             <div>
               <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">PDF Template <span className="normal-case text-slate-400">(Optional)</span></label>
-              <Input type="file" accept="application/pdf,.pdf" className="w-full h-10 rounded-xl border-slate-200 text-sm file:mr-3 file:border-0 file:bg-transparent file:text-[#0F2D52] file:font-semibold" onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                if (file && file.type !== 'application/pdf') { setFormErrors(prev => ({ ...prev, pdfFile: 'Choose a PDF file.' })); return; }
-                if (file && file.size > 10 * 1024 * 1024) { setFormErrors(prev => ({ ...prev, pdfFile: 'PDF template must be 10 MB or smaller.' })); return; }
-                setFormErrors(prev => ({ ...prev, pdfFile: '' }));
-                setPdfFile(file);
-              }} />
-              {(pdfFile || existingPdfFileName) && <div className="mt-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600"><span className="flex min-w-0 items-center gap-2 truncate"><FileText className="h-4 w-4 shrink-0 text-[#0F2D52]" />{pdfFile?.name ?? existingPdfFileName}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={async () => { setPdfFile(null); if (!pdfFile && onRemoveExistingPdf) await onRemoveExistingPdf(); }}><X className="h-3.5 w-3.5" /></Button></div>}
+              {(pdfFile || existingPdfFileName) ? (
+                <div className="flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+                  <span className="flex min-w-0 items-center gap-2 truncate">
+                    <FileText className="h-4 w-4 shrink-0 text-[#0F2D52]" />
+                    {pdfFile?.name ?? existingPdfFileName}
+                  </span>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-slate-700 hover:bg-slate-200/50 cursor-pointer" onClick={async () => { setPdfFile(null); if (!pdfFile && onRemoveExistingPdf) await onRemoveExistingPdf(); }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Input type="file" accept="application/pdf,.pdf" className="w-full h-10 rounded-xl border-slate-200 text-sm file:mr-3 file:border-0 file:bg-transparent file:text-[#0F2D52] file:font-semibold cursor-pointer" onChange={(event) => {
+                  const file = event.target.files?.[0] ?? null;
+                  if (file && file.type !== 'application/pdf') { setFormErrors(prev => ({ ...prev, pdfFile: 'Choose a PDF file.' })); return; }
+                  if (file && file.size > 10 * 1024 * 1024) { setFormErrors(prev => ({ ...prev, pdfFile: 'PDF template must be 10 MB or smaller.' })); return; }
+                  setFormErrors(prev => ({ ...prev, pdfFile: '' }));
+                  setPdfFile(file);
+                }} />
+              )}
               {formErrors.pdfFile && <p className="text-xs text-red-500 mt-1">{formErrors.pdfFile}</p>}
             </div>
           )}
