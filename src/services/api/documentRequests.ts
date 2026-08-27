@@ -12,8 +12,35 @@ const query = (values:Record<string, string | number | undefined>) => {
   return params.toString();
 };
 
+import { fetchStudentEnrollments } from './admin';
+import { EmployeeService } from './employee';
+
 export const fetchDocumentRequests = (schoolId:string, audience?:string) => authedFetch({ method:'GET', url:`/document-requests?${query({school_id:schoolId,audience})}` }, z.array(z.any())) as Promise<DocumentRequest[]>;
-export const fetchDocumentRecipients = (schoolId:string, audience:'student'|'employee') => authedFetch({ method:'GET', url:`/document-request-recipients?${query({school_id:schoolId,audience})}` }, z.array(z.any())) as Promise<DocumentRecipient[]>;
+export const fetchDocumentRecipients = async (schoolId:string, audience:'student'|'employee'): Promise<DocumentRecipient[]> => {
+  try {
+    if (audience === 'student') {
+      const data = await fetchStudentEnrollments(schoolId);
+      const enrollments = data?.enrollments || [];
+      return enrollments.map((e: any) => ({
+        id: e.child_id || '',
+        name: `${e.child_first_name || ''} ${e.child_last_name || ''}`.trim() || 'Unknown Student',
+        email: e.primary_email || e.parent_email || undefined,
+        classroom_name: e.class_name || e.classroom_name || undefined
+      })).filter((e: DocumentRecipient) => e.id);
+    } else {
+      const employees = await EmployeeService.fetchEmployees(schoolId);
+      return employees.map((e: any) => ({
+        id: e.id,
+        name: `${e.firstName || e.first_name || ''} ${e.lastName || e.last_name || ''}`.trim() || 'Unknown Employee',
+        email: e.email,
+        classroom_name: undefined
+      })).filter((e: DocumentRecipient) => e.id);
+    }
+  } catch (error) {
+    console.error('fetchDocumentRecipients error:', error);
+    return [];
+  }
+};
 export const fetchDocumentAssignments = (options:Record<string, string | number | undefined>, review = false) => authedFetch({ method:'GET', url:`/${review ? 'document-assignments/review-queue' : 'document-assignments'}?${query(options)}` }, z.any()) as Promise<AssignmentPage>;
 export const createDocumentRequest = (body:unknown) => authedFetch({ method:'POST', url:'/document-requests', body }, z.any()) as Promise<DocumentRequest>;
 export const publishDocumentRequest = (id:string) => authedFetch({ method:'POST', url:`/document-requests/${id}/publish` }, z.any()) as Promise<DocumentRequest>;
