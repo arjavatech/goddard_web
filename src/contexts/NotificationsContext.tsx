@@ -93,6 +93,35 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     refetchRef.current = refetch;
   }, [refetch]);
 
+  // Background FCM notifications are rendered by the service worker. It also
+  // posts this small event to already-open Goddard tabs so their in-memory bell
+  // state is refreshed without polling or requiring the drawer to be opened.
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'goddard:notification-push-received') {
+        void refetchRef.current();
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', handleServiceWorkerMessage);
+    return () => navigator.serviceWorker.removeEventListener('message', handleServiceWorkerMessage);
+  }, [enabled]);
+
+  // Browsers may suspend inactive tabs and defer service-worker messages. A
+  // single reconciliation on return keeps the bell correct without polling.
+  useEffect(() => {
+    if (!enabled || typeof document === 'undefined') return;
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void refetchRef.current();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [enabled]);
+
   const enablePush = useCallback(async (): Promise<boolean> => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
       setPushPermission('unsupported');
