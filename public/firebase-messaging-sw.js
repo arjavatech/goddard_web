@@ -61,7 +61,9 @@ messaging.onBackgroundMessage((payload) => {
     tag: data.notification_id || undefined,
     icon: '/images/gs_logo_lynnwood.png',
     badge: '/images/gs_logo_lynnwood.png',
-    data: { url: data.action_url || '/admin/notifications' },
+    // Backend action URLs are school-scoped. A missing action must open the
+    // safe application root, never the legacy invalid admin route.
+    data: { url: data.action_url || '/' },
   };
 
   // A native alert alone cannot update the bell in a page that is already

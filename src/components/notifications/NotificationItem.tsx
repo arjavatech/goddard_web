@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import type { Notification } from '../../services/api/notifications';
 import { formatNotificationTime, getNotificationMeta } from './notificationMeta';
+import { resolveNotificationAction } from './notificationRoutes';
+import { useUserContext } from '../../contexts/UserContext';
 
 type Props = {
   notification: Notification;
@@ -10,13 +12,15 @@ type Props = {
 
 export function NotificationItem({ notification, onMarkRead, onClose }: Props) {
   const navigate = useNavigate();
+  const { schoolSubdomain } = useUserContext();
   const meta = getNotificationMeta(notification.notification_type);
   const Icon = meta.icon;
 
   const handleClick = () => {
     if (!notification.is_read) onMarkRead(notification.id);
-    if (notification.action_url) {
-      navigate(notification.action_url);
+    const action = resolveNotificationAction(notification, schoolSubdomain);
+    if (action) {
+      navigate(action);
       onClose();
     }
   };

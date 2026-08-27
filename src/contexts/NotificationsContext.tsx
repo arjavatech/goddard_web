@@ -201,7 +201,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
               tag: data.notification_id,
               icon: '/images/gs_logo_lynnwood.png',
               badge: '/images/gs_logo_lynnwood.png',
-              data: { url: data.action_url || '/admin/notifications' },
+              // New notification rows contain a school-scoped URL. Never use
+              // the old global `/admin/notifications` fallback: it is not a
+              // valid application route and sent users to the wrong screen.
+              data: { url: data.action_url || '/' },
             })
           );
         } else {
