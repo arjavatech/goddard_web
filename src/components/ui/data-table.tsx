@@ -56,7 +56,7 @@ export function DataTable({
         </div>
       )}
       <div className="overflow-x-auto">
-        <table className={`w-full min-w-[800px] border-collapse stagger-rows ${tableLayout === 'auto' ? 'table-auto' : 'table-fixed'}`}>
+        <table className={`w-full min-w-[720px] border-collapse stagger-rows ${tableLayout === 'auto' ? 'table-auto' : 'table-fixed'}`}>
           <thead>
             <tr className="border-b border-slate-200 bg-slate-500/50">
               {columns.map((col, i) => (

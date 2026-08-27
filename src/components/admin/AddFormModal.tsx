@@ -3,6 +3,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { AsyncButton } from '../ui/async-button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { FileText, X } from 'lucide-react';
 
 interface AddFormModalProps {
   isOpen: boolean;
@@ -21,6 +22,10 @@ interface AddFormModalProps {
   isSubmitting: boolean;
   title?: string;
   submitButtonText?: string;
+  pdfFile?: File | null;
+  setPdfFile?: (file: File | null) => void;
+  existingPdfFileName?: string;
+  onRemoveExistingPdf?: () => Promise<void>;
 }
 
 export function AddFormModal({
@@ -39,7 +44,11 @@ export function AddFormModal({
   setFormErrors,
   isSubmitting,
   title = "Add New Form",
-  submitButtonText = "Add Form"
+  submitButtonText = "Add Form",
+  pdfFile,
+  setPdfFile,
+  existingPdfFileName,
+  onRemoveExistingPdf,
 }: AddFormModalProps) {
   return (
     <Dialog
@@ -67,6 +76,21 @@ export function AddFormModal({
             />
             {formErrors.formName && <p className="text-xs text-red-500 mt-1">{formErrors.formName}</p>}
           </div>
+
+          {setPdfFile && (
+            <div>
+              <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">PDF Template <span className="normal-case text-slate-400">(Optional)</span></label>
+              <Input type="file" accept="application/pdf,.pdf" className="w-full h-10 rounded-xl border-slate-200 text-sm file:mr-3 file:border-0 file:bg-transparent file:text-[#0F2D52] file:font-semibold" onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+                if (file && file.type !== 'application/pdf') { setFormErrors(prev => ({ ...prev, pdfFile: 'Choose a PDF file.' })); return; }
+                if (file && file.size > 10 * 1024 * 1024) { setFormErrors(prev => ({ ...prev, pdfFile: 'PDF template must be 10 MB or smaller.' })); return; }
+                setFormErrors(prev => ({ ...prev, pdfFile: '' }));
+                setPdfFile(file);
+              }} />
+              {(pdfFile || existingPdfFileName) && <div className="mt-2 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600"><span className="flex min-w-0 items-center gap-2 truncate"><FileText className="h-4 w-4 shrink-0 text-[#0F2D52]" />{pdfFile?.name ?? existingPdfFileName}</span><Button type="button" variant="ghost" size="icon" className="h-6 w-6" onClick={async () => { setPdfFile(null); if (!pdfFile && onRemoveExistingPdf) await onRemoveExistingPdf(); }}><X className="h-3.5 w-3.5" /></Button></div>}
+              {formErrors.pdfFile && <p className="text-xs text-red-500 mt-1">{formErrors.pdfFile}</p>}
+            </div>
+          )}
 
           <div>
             <label className="block text-[10px] sm:text-xs font-bold uppercase tracking-wider text-black mb-1.5">Form Link</label>

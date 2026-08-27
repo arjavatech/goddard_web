@@ -67,9 +67,9 @@ export function MyDocuments({ audience }: { audience: Audience }) {
       setUploadSuccess('Document uploaded successfully.');
       setTimeout(() => setUploadSuccess(''), 5000);
       await load();
-    } catch (error) { 
+    } catch (error) {
       console.error('Document upload failed', error); 
-      setUploadError('Document upload failed. Please try again.'); 
+      setUploadError(error instanceof Error && error.message ? error.message : 'Document upload failed. Please try again.');
       setTimeout(() => setUploadError(''), 2000);
     }
     finally { setIsUploading(false); }

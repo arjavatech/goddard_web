@@ -472,7 +472,7 @@ export async function deleteForm(formId: string, schoolId: string): Promise<void
     url: `/form-templates?form_id=${encodeURIComponent(validFormId)}&school_id=${encodeURIComponent(schoolId)}`
   }, z.object({}));
 }
-export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string, dueDate: string, status?: string): Promise<void> {
+export async function createFormTemplate(formName: string, filloutFormId: string, schoolId: string, dueDate: string, status?: string): Promise<{ id: string }> {
   const body: any = {
     id: crypto.randomUUID(),
     school_id: schoolId,
@@ -485,11 +485,11 @@ export async function createFormTemplate(formName: string, filloutFormId: string
     body.status = status;
   }
 
-  await authedFetch({
+  return await authedFetch({
     method: 'POST',
     url: '/form-templates',
     body
-  }, z.object({}));
+  }, z.object({ id: z.string() }).passthrough());
 }
 export async function updateFormTemplate(formId: string, formName: string, filloutFormId: string, schoolId: string, status?: string, dueDate?: string): Promise<void> {
   const body: any = {
@@ -512,6 +512,28 @@ export async function updateFormTemplate(formId: string, formName: string, fillo
     url: '/form-templates',
     body
   }, z.object({}));
+}
+
+type PdfUploadIntent = { storage_key: string; upload_url: string };
+
+async function putPresignedPdf(intent: PdfUploadIntent, file: File): Promise<void> {
+  const response = await fetch(intent.upload_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+  if (!response.ok) throw new Error('Failed to upload PDF template');
+}
+
+export async function uploadFormTemplatePdf(formId: string, schoolId: string, file: File): Promise<void> {
+  const intent = await authedFetch({ method: 'POST', url: `/form-templates/${encodeURIComponent(formId)}/pdf/upload-intent?school_id=${encodeURIComponent(schoolId)}`, body: { file_name: file.name, content_type: file.type, file_size_bytes: file.size } }, z.any()) as PdfUploadIntent;
+  await putPresignedPdf(intent, file);
+  await authedFetch({ method: 'POST', url: `/form-templates/${encodeURIComponent(formId)}/pdf/complete-upload?school_id=${encodeURIComponent(schoolId)}`, body: { storage_key: intent.storage_key, file_name: file.name, content_type: file.type, file_size_bytes: file.size } }, z.any());
+}
+
+export async function getFormTemplatePdfUrl(formId: string, schoolId: string, download = false): Promise<string> {
+  const result = await authedFetch({ method: 'GET', url: `/form-templates/${encodeURIComponent(formId)}/pdf?school_id=${encodeURIComponent(schoolId)}&download=${download}` }, z.any()) as { url: string };
+  return result.url;
+}
+
+export async function removeFormTemplatePdf(formId: string, schoolId: string): Promise<void> {
+  await authedFetch({ method: 'DELETE', url: `/form-templates/${encodeURIComponent(formId)}/pdf?school_id=${encodeURIComponent(schoolId)}` }, z.any());
 }
 export async function inviteParent(schoolId: string, parentData: {
   parentFirstName: string;
