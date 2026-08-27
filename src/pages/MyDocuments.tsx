@@ -61,7 +61,29 @@ export function MyDocuments({ audience }: { audience: Audience }) {
       setUploading(null); await load();
     } catch (error) { console.error('Document upload failed', error); setUploadError('Document upload failed. Please try again.'); }
   };
-  const content = <div className="mx-auto w-full max-w-6xl space-y-6"><section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xs"><div className="flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-extrabold text-slate-950">{isParent ? 'Documents' : 'Employee Documents'}</h1><p className="mt-1 text-sm text-slate-500">View required documents, upload or replace files, and follow their review status.</p></div><Button variant="outline" onClick={() => void load()} disabled={loading} className="rounded-xl text-xs font-bold"><RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh</Button></div>{isParent && children.length > 0 && <div className="mt-4 border-t border-slate-100 pt-1"><ChildSelector children={children} selectedChildId={selectedChildId} onSelectChild={setSelectedChildId} showTitle={false} /></div>}</section>{isParent && selectedChildId && <p className="-mt-2 text-sm text-slate-500">Showing document requirements for <span className="font-semibold text-slate-700">{selectedChildId}</span>.</p>}<section className="grid grid-cols-2 gap-4 sm:grid-cols-4"><Summary label="Upload required" value={summary.required} /><Summary label="Submitted" value={summary.submitted} /><Summary label="Approved" value={summary.approved} /><Summary label="Re-upload needed" value={summary.rejected} /></section>{loading ? <div className="py-16 text-center text-sm text-slate-500">Loading documents…</div> : !visibleItems.length ? <div className="rounded-2xl border border-slate-100 bg-white py-16 text-center text-sm text-slate-500">No document requests are currently assigned.</div> : <section className="grid auto-rows-fr items-stretch gap-5 sm:grid-cols-2">{visibleItems.map(item => <DocumentCard key={item.id} item={item} onView={() => void openDetails(item)} onUpload={() => startUpload(item)} />)}</section>}<input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={event => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} />{uploadError && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-medium text-white shadow-lg"><XCircle className="mr-2 inline h-4 w-4" />{uploadError}</div>}<DocumentDetails item={selected} history={history} onClose={() => setSelected(null)} onUpload={() => { if (selected) { setSelected(null); startUpload(selected); } }} /></div>;
+  const content = <div className="mx-auto w-full max-w-6xl space-y-6 mt-16">
+    <section className="rounded-2xl border border-slate-100 bg-white p-6 shadow-xs">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-950">{isParent ? 'Documents' :        'Employee Documents'}
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">View required documents, upload or replace files, and follow their review status.</p>
+        </div>
+        <Button variant="outline" onClick={() => void load()} disabled={loading}className="rounded-xl text-xs font-bold">
+          <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+        {isParent && children.length >
+         0 && 
+        <div className="border-t border-slate-100">
+          <ChildSelector children={children} selectedChildId={selectedChildId} onSelectChild={setSelectedChildId} showTitle={false} />
+        </div>}
+        </section>
+        
+        {isParent && selectedChildId && 
+          <p className="-mt-2 text-sm text-slate-500">
+            Showing document requirements for <span className="font-semibold text-slate-700">{selectedChildId}</span>.</p>}<section className="grid grid-cols-2 gap-4 sm:grid-cols-4"><Summary label="Upload required" value={summary.required} /><Summary label="Submitted" value={summary.submitted} /><Summary label="Approved" value={summary.approved} /><Summary label="Re-upload needed" value={summary.rejected} /></section>{loading ? <div className="py-16 text-center text-sm text-slate-500">Loading documents…</div> : !visibleItems.length ? <div className="rounded-2xl border border-slate-100 bg-white py-16 text-center text-sm text-slate-500">No document requests are currently assigned.</div> : <section className="grid auto-rows-fr items-stretch gap-5 sm:grid-cols-2">{visibleItems.map(item => <DocumentCard key={item.id} item={item} onView={() => void openDetails(item)} onUpload={() => startUpload(item)} />)}</section>}<input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={event => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} />{uploadError && <div className="fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-medium text-white shadow-lg"><XCircle className="mr-2 inline h-4 w-4" />{uploadError}</div>}<DocumentDetails item={selected} history={history} onClose={() => setSelected(null)} onUpload={() => { if (selected) { setSelected(null); startUpload(selected); } }} /></div>;
   const Wrapper = isParent ? ParentLayout : EmployeeLayout;
   return <Wrapper>{content}</Wrapper>;
 }
