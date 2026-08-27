@@ -6,10 +6,16 @@ interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info'
   title?: string
   message: string
+  duration?: number
 }
 
 interface ToastContextType {
-  showToast: (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => void
+  showToast: (
+    type: 'success' | 'error' | 'warning' | 'info',
+    message: string,
+    title?: string,
+    duration?: number
+  ) => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -17,15 +23,21 @@ const ToastContext = createContext<ToastContextType | undefined>(undefined)
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastState[]>([])
 
-  const showToast = (type: 'success' | 'error' | 'warning' | 'info', message: string, title?: string) => {
+  const showToast = useCallback((
+    type: 'success' | 'error' | 'warning' | 'info',
+    message: string,
+    title?: string,
+    duration?: number
+  ) => {
     const id = Date.now().toString()
     setToasts(prev => [...prev, {
       id,
       type,
       title: title || '',
-      message
+      message,
+      duration,
     }])
-  }
+  }, [])
 
   const hideToast = useCallback((id: string) => {
     setToasts(prev => prev.filter(toast => toast.id !== id))
@@ -42,6 +54,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             type={toast.type}
             title={toast.title}
             message={toast.message}
+            duration={toast.duration}
             onClose={() => hideToast(toast.id)}
             index={index}
           />

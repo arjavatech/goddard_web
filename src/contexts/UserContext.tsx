@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { fetchUserContext, type UserContext as UserData } from '../services/api/user';
 import { useAuth } from '../services/auth/useAuth';
+import { clearSession } from '../services/auth/session';
 
 interface UserContextValue {
   userData: UserData | null;
@@ -35,6 +36,12 @@ function getSchoolSlug(name: string): string {
     .replace(/[^a-z0-9\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-');
+}
+
+function isTerminalSessionError(error: unknown): boolean {
+  const status = (error as { status?: number } | undefined)?.status;
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired|authorization error/i.test(message);
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -112,6 +119,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             return;
           } catch (err) {
             console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
+            if (isTerminalSessionError(err)) {
+              // A Supabase JWT whose session was revoked/deleted cannot be
+              // refreshed by retrying the same request. Remove it locally and
+              // send the user through the normal sign-in flow.
+              if (activeRequestRef.current?.key === requestKey) {
+                setUserData(null);
+                setError('Your session has expired. Please sign in again.');
+              }
+              void clearSession();
+              return;
+            }
             if (attempt === retries) {
               if (activeRequestRef.current?.key !== requestKey) return;
 

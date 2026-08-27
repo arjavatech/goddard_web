@@ -4,13 +4,13 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
   registerDeviceToken,
+  fetchDeviceTokenStatus,
   type Notification,
   type NotificationFilter,
 } from '../services/api/notifications';
 import { requestFcmToken, onForegroundMessage } from '../services/firebase';
-import { getNotificationWebSocket, disconnectNotificationWebSocket } from '../services/websocket/notificationWebSocket';
-import { wsApiUrl } from '../config/env';
 import { useUserContext } from './UserContext';
+import { useToast } from './ToastContext';
 
 const PAGE_SIZE = 100;
 
@@ -30,20 +30,23 @@ type NotificationsContextValue = {
   refetch: () => Promise<void>;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  pushPermission: NotificationPermission | 'unsupported';
+  pushRegistration: 'unknown' | 'registered' | 'not_registered' | 'failed';
+  pushError: string | null;
+  enablePush: () => Promise<boolean>;
 };
 
 const NotificationsContext = createContext<NotificationsContextValue | undefined>(undefined);
 
 /**
- * Pre-fetches the user's notifications immediately when they're logged in,
- * polls every 30s while the tab is visible, and exposes a single shared state
- * to the bell + drawer. Also wires the browser Notification API so the user
- * gets an OS-level alert when a new unread arrives.
+ * Pre-fetches the user's notifications immediately when they're logged in.
+ * FCM is the only real-time transport; it is enabled explicitly from Profile
+ * settings and refreshes the in-app state when a message arrives.
  */
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const { userData, isReady } = useUserContext();
   const loggedIn = !!userData;       // stable once authenticated — drives polling
-  const enabled = loggedIn && isReady; // also gates permission prompt
+  const enabled = loggedIn && isReady;
 
   const [allItems, setAllItems] = useState<Notification[]>([]);
   const [total, setTotal] = useState(0);
@@ -52,31 +55,16 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<NotificationFilter>('all');
+  const [pushPermission, setPushPermission] = useState<NotificationPermission | 'unsupported'>(() =>
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'unsupported'
+  );
+  const [pushRegistration, setPushRegistration] = useState<'unknown' | 'registered' | 'not_registered' | 'failed'>('unknown');
+  const [pushError, setPushError] = useState<string | null>(null);
+  const { showToast } = useToast();
 
-  // Track previously-seen unread IDs so we only push a desktop notification
-  // for ones the user hasn't seen this session.
-  const seenUnreadIdsRef = useRef<Set<string>>(new Set());
   const isFirstFetchRef = useRef(true);
   const isFetchingRef = useRef(false);
   const refetchRef = useRef<() => Promise<void>>(() => Promise.resolve());
-
-  const fireDesktopNotification = useCallback((notification: Notification) => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return;
-    if (Notification.permission !== 'granted') return;
-    try {
-      const safeTitle = String(notification.title ?? '').slice(0, 200);
-      const safeBody = String(notification.body ?? '').slice(0, 500);
-      const n = new Notification(safeTitle, {
-        body: safeBody,
-        tag: notification.id,
-        icon: '/images/gs_logo_lynnwood.png',
-      });
-      // Auto-close after 6s to avoid clutter.
-      setTimeout(() => n.close(), 6_000);
-    } catch (err) {
-      // Some browsers throw if the page isn't focused — ignore.
-    }
-  }, []);
 
   const refetch = useCallback(async () => {
     if (isFetchingRef.current) return;
@@ -89,20 +77,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setTotal(res.total);
       setUnreadCount(res.unread_count);
 
-      // Desktop notification dispatch: any unread we haven't seen before fires
-      // a notification. Skip on the very first fetch to avoid spamming for
-      // already-existing unread items.
-      if (!isFirstFetchRef.current) {
-        const newlyArrived = res.items.filter(
-          item => !item.is_read && !seenUnreadIdsRef.current.has(item.id)
-        );
-        // Only fire for the most recent 3 to avoid OS notification spam.
-        newlyArrived.slice(0, 3).forEach(fireDesktopNotification);
-      }
-      // Update the seen-set with whatever's currently unread.
-      seenUnreadIdsRef.current = new Set(
-        res.items.filter(item => !item.is_read).map(item => item.id)
-      );
       isFirstFetchRef.current = false;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
@@ -111,7 +85,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setLoading(false);
       setInitialLoading(false);
     }
-  }, [fireDesktopNotification]);
+  }, []);
 
   // Keep a ref to the latest refetch so the polling effect doesn't re-run
   // every time refetch's identity changes.
@@ -119,38 +93,93 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     refetchRef.current = refetch;
   }, [refetch]);
 
-  // Register SW, obtain FCM token, wire foreground listener — fires once on login.
+  const enablePush = useCallback(async (): Promise<boolean> => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setPushPermission('unsupported');
+      setPushRegistration('failed');
+      setPushError('This browser does not support web notifications.');
+      return false;
+    }
+    const permission = await Notification.requestPermission();
+    setPushPermission(permission);
+    if (permission !== 'granted') {
+      setPushRegistration('not_registered');
+      setPushError(permission === 'denied' ? 'Notifications are blocked in browser settings.' : null);
+      return false;
+    }
+    const token = await requestFcmToken();
+    if (!token) {
+      setPushRegistration('failed');
+      setPushError('Unable to create a browser notification token.');
+      return false;
+    }
+    try {
+      localStorage.setItem('goddard.fcm-token', token);
+      await registerDeviceToken(token, 'web');
+      const status = await fetchDeviceTokenStatus();
+      setPushRegistration(status.web_devices > 0 ? 'registered' : 'not_registered');
+      setPushError(null);
+      return status.web_devices > 0;
+    } catch (error) {
+      setPushRegistration('failed');
+      setPushError(error instanceof Error ? error.message : 'Unable to save this browser for notifications.');
+      return false;
+    }
+  }, []);
+
+  // FCM foreground events refresh the bell. The service worker owns all
+  // background browser notification rendering.
   useEffect(() => {
     if (!enabled) return;
 
     let unsubscribeForeground: (() => void) | null = null;
 
     const setup = async () => {
-      // 1. Request OS notification permission if not yet decided.
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission === 'default') {
-          await Notification.requestPermission().catch(() => {});
+      // Refresh an already-authorized browser token without prompting.
+      if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+        const token = await requestFcmToken();
+        if (token) {
+          try {
+            localStorage.setItem('goddard.fcm-token', token);
+            await registerDeviceToken(token, 'web');
+            const status = await fetchDeviceTokenStatus();
+            setPushRegistration(status.web_devices > 0 ? 'registered' : 'not_registered');
+            setPushError(null);
+          } catch (error) {
+            setPushRegistration('failed');
+            setPushError(error instanceof Error ? error.message : 'Unable to register this browser for notifications.');
+            console.warn('[notifications] FCM token registration failed', error);
+          }
+        } else {
+          setPushRegistration('failed');
+          setPushError('Unable to create a browser notification token.');
         }
+      } else if (typeof window !== 'undefined' && 'Notification' in window) {
+        setPushRegistration('not_registered');
       }
+      unsubscribeForeground = await onForegroundMessage((payload) => {
+        const data = payload.data ?? {};
+        const title = data.title || 'New notification';
+        const body = data.body || 'You have a new notification.';
 
-      // 2. Register the FCM service worker and obtain the push token.
-      //    requestFcmToken() handles SW registration internally and is idempotent.
-      const token = await requestFcmToken();
-      if (token) {
-        try {
-          localStorage.setItem('goddard.fcm-token', token);
-        } catch (err) {
-          console.warn('[FCM] failed to store token in localStorage:', err);
+        // FCM can deliver through the page listener even when the browser tab
+        // is inactive. An in-app toast would not be visible in that state, so
+        // use the active service worker to show the same native notification.
+        if (document.visibilityState !== 'visible' && 'serviceWorker' in navigator) {
+          void navigator.serviceWorker.ready.then((registration) =>
+            registration.showNotification(title, {
+              body,
+              tag: data.notification_id,
+              icon: '/images/gs_logo_lynnwood.png',
+              badge: '/images/gs_logo_lynnwood.png',
+              data: { url: data.action_url || '/admin/notifications' },
+            })
+          );
+        } else {
+          // Foreground notifications stay visible long enough to read, while
+          // retaining the normal manual close control.
+          showToast('info', body, title, 9000);
         }
-        await registerDeviceToken(token, 'web').catch((err) =>
-          console.warn('[FCM] registerDeviceToken failed:', err)
-        );
-      }
-
-      // 3. Handle messages that arrive while the tab is open (foreground).
-      //    Background messages are handled entirely by firebase-messaging-sw.js.
-      unsubscribeForeground = await onForegroundMessage(() => {
-        // Refetch so the bell count and drawer update immediately.
         void refetchRef.current();
       });
     };
@@ -160,9 +189,10 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return () => {
       unsubscribeForeground?.();
     };
-  }, [enabled]);
+  }, [enabled, showToast]);
 
-  // WebSocket connection for real-time notifications
+  // REST provides the initial in-app state. Subsequent real-time refreshes
+  // come from FCM foreground messages, not a timer or focus listener.
   useEffect(() => {
     if (!loggedIn) {
       setAllItems([]);
@@ -170,59 +200,14 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       setTotal(0);
       setInitialLoading(true);
       isFirstFetchRef.current = true;
-      seenUnreadIdsRef.current = new Set();
-      disconnectNotificationWebSocket();
       return;
     }
 
     // Initial fetch on login
     void refetchRef.current();
 
-    // Setup WebSocket connection
-    const ws = getNotificationWebSocket(wsApiUrl);
-    
-    const unsubscribe = ws.subscribe(event => {
-      if (event.type === 'notification:new') {
-        const notification = event.data;
-        setAllItems(prev => [notification, ...prev]);
-        setTotal(prev => prev + 1);
-        
-        if (!notification.is_read) {
-          setUnreadCount(prev => prev + 1);
-          if (!seenUnreadIdsRef.current.has(notification.id)) {
-            seenUnreadIdsRef.current.add(notification.id);
-            fireDesktopNotification(notification);
-          }
-        }
-      } else if (event.type === 'notification:updated') {
-        const updated = event.data;
-        setAllItems(prev =>
-          prev.map(item =>
-            item.id === updated.id ? { ...item, ...updated } : item
-          )
-        );
-        
-        if (updated.is_read) {
-          setUnreadCount(prev => Math.max(0, prev - 1));
-        }
-      } else if (event.type === 'sync') {
-        // Handle missed notifications on reconnect
-        const missedNotifications = event.data;
-        setAllItems(prev => {
-          const newIds = new Set(missedNotifications.map((n: any) => n.id));
-          const existing = prev.filter(n => !newIds.has(n.id));
-          return [...missedNotifications, ...existing];
-        });
-      }
-    });
-
-    void ws.connect();
-
-    return () => {
-      unsubscribe();
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loggedIn, fireDesktopNotification]);
+    return undefined;
+  }, [loggedIn]);
 
   const items = useMemo(() => {
     if (filter === 'all') return allItems;
@@ -283,8 +268,12 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       refetch,
       markRead,
       markAllRead,
+      pushPermission,
+      pushRegistration,
+      pushError,
+      enablePush,
     }),
-    [allItems, items, unreadCount, total, loading, initialLoading, error, filter, refetch, markRead, markAllRead]
+    [allItems, items, unreadCount, total, loading, initialLoading, error, filter, refetch, markRead, markAllRead, pushPermission, pushRegistration, pushError, enablePush]
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

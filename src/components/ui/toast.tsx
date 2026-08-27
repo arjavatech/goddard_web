@@ -9,15 +9,16 @@ interface ToastProps {
   onClose: () => void
   index: number
   id: string
+  duration?: number
 }
 
-export function Toast({ type, title, message, onClose, index, id }: ToastProps) {
+export function Toast({ type, title, message, onClose, index, id, duration = 4000 }: ToastProps) {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       onClose()
-    }, 4000)
+    }, duration)
     return () => clearTimeout(timer)
-  }, [id, onClose])
+  }, [id, onClose, duration])
 
   return (
     <div 

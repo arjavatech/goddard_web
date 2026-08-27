@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users, Bell } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
@@ -10,6 +10,7 @@ import { ParentLayout } from './parent/ParentLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
+import { useNotificationsContext } from '../contexts/NotificationsContext';
 
 function ProfileContent() {
   const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
@@ -34,6 +35,13 @@ function ProfileContent() {
   const [parentExtraInfo, setParentExtraInfo] = useState<{ phone?: string | null; address?: string | null; relationType?: string | null } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const { user } = useAuth();
+  const { pushPermission, pushRegistration, pushError, enablePush } = useNotificationsContext();
+  const [enablingPush, setEnablingPush] = useState(false);
+
+  const enableBrowserPush = async () => {
+    setEnablingPush(true);
+    try { await enablePush(); } finally { setEnablingPush(false); }
+  };
 
   useEffect(() => {
     if (isEmployee && userData?.schoolId) {
@@ -226,6 +234,29 @@ function ProfileContent() {
           </CardContent>
         </Card>
       )}
+      <Card className="rounded-2xl shadow-sm border border-slate-100">
+        <CardContent className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-[#0F2D52]" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-700">Browser notifications</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {pushPermission === 'granted'
+                  ? pushRegistration === 'registered' ? 'Enabled and registered for this browser and device.' : 'Permission is enabled; registering this browser…'
+                  : pushPermission === 'denied' ? 'Blocked by your browser settings.' : 'Enable alerts for new forms, documents, and review updates.'}
+                {pushError && <span className="block mt-1 text-red-600">{pushError}</span>}
+              </p>
+            </div>
+          </div>
+          {pushPermission !== 'granted' && pushPermission !== 'denied' && (
+            <button type="button" onClick={enableBrowserPush} disabled={enablingPush} className="rounded-xl bg-[#0F2D52] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              {enablingPush ? 'Enabling…' : 'Enable notifications'}
+            </button>
+          )}
+        </CardContent>
+      </Card>
       {schoolName && (
         <Card className="rounded-2xl shadow-sm border border-slate-100">
           <CardContent className="px-6 py-5">

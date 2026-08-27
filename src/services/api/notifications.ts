@@ -29,6 +29,13 @@ export type NotificationListResponse = z.infer<typeof NotificationListResponseSc
 
 const UnreadCountResponseSchema = z.object({ count: z.number() });
 const MarkAllReadResponseSchema = z.object({ updated: z.number() });
+const DeviceTokenStatusSchema = z.object({
+  registered_devices: z.number(),
+  web_devices: z.number(),
+  last_seen_at: z.string().nullable(),
+});
+
+export type DeviceTokenStatus = z.infer<typeof DeviceTokenStatusSchema>;
 
 export type NotificationFilter = 'all' | 'unread' | 'read';
 
@@ -88,7 +95,11 @@ export async function registerDeviceToken(
 
 export async function unregisterDeviceToken(token: string): Promise<void> {
   await authedFetch(
-    { method: 'DELETE', url: `/device-tokens/${encodeURIComponent(token)}` },
+    { method: 'DELETE', url: '/device-tokens', body: { token } },
     z.unknown()
   );
+}
+
+export async function fetchDeviceTokenStatus(): Promise<DeviceTokenStatus> {
+  return authedFetch({ method: 'GET', url: '/device-tokens/status' }, DeviceTokenStatusSchema);
 }

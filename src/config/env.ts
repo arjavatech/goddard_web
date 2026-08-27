@@ -41,8 +41,7 @@ const EnvSchema = z.object({
   VITE_SUPABASE_URL: withDefault('').pipe(z.string()),
   VITE_SUPABASE_ANON_KEY: withDefault('').pipe(z.string()),
   VITE_BYPASS_AUTH: withDefault(true, parseBoolean).pipe(z.boolean()),
-  VITE_USE_MOCK_API: withDefault(true, parseBoolean).pipe(z.boolean()),
-  VITE_WS_API_URL: withDefault('wss://75f60z9hr7.execute-api.us-west-1.amazonaws.com/dev').pipe(z.string())
+  VITE_USE_MOCK_API: withDefault(true, parseBoolean).pipe(z.boolean())
 });
 
 /**
@@ -77,8 +76,6 @@ const config = {
   isAuthBypassed: env.VITE_BYPASS_AUTH,
   // API configuration
   apiBaseUrl: env.VITE_USE_MOCK_API ? env.VITE_MOCK_API_URL : env.VITE_API_BASE_URL,
-  // WebSocket configuration
-  wsApiUrl: env.VITE_WS_API_URL,
   // Supabase configuration helpers
   supabase: {
     isConfigured: !!(env.VITE_SUPABASE_URL && env.VITE_SUPABASE_ANON_KEY),
@@ -92,8 +89,7 @@ export const {
   env: envVars,
   isDev,
   isAuthBypassed,
-  apiBaseUrl,
-  wsApiUrl
+  apiBaseUrl
 } = config;
 export { env };
 

@@ -92,8 +92,8 @@ export function AppRouter() {
   return <AuthErrorBoundary>
     <AuthProvider>
       <UserProvider>
-        <NotificationsProvider>
-          <ToastProvider>
+        <ToastProvider>
+          <NotificationsProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollToTop />
               <Routes>
@@ -188,8 +188,8 @@ export function AppRouter() {
 
               </Routes>
             </BrowserRouter>
-          </ToastProvider>
-        </NotificationsProvider>
+          </NotificationsProvider>
+        </ToastProvider>
       </UserProvider>
     </AuthProvider>
   </AuthErrorBoundary>;
