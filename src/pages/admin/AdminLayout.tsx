@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -97,8 +97,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
         { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
-        // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+        // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
         ...(isSuperAdmin ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
@@ -122,6 +122,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` },
+      ],
+    },
+    {
+      label: 'TapTime',
+      items: [
+        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Reports', path: `${schoolPrefix}/admin/time-tracking` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` },
+        ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
     },
 
@@ -381,7 +389,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Page content */}
           <main className={cn(
             'flex-1 bg-[#F7F9FC]',
-            userData?.role ? 'pt-16' : 'pt-0',
+            // The generic `p-*` utility below also sets padding-top.  Make the
+            // fixed-header offset important so page content can never render
+            // beneath the app bar.
+            userData?.role ? '!pt-16' : 'pt-0',
             isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
           )}>
             {children}

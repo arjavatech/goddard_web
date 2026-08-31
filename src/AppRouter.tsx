@@ -54,6 +54,7 @@ import { EmployeeDueForms } from './pages/employee/EmployeeDueForms';
 import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
+import { AttendanceReports } from './pages/employee/AttendanceReports';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
 
@@ -61,6 +62,9 @@ import { MyDocuments } from './pages/MyDocuments';
 import { SuperAdminRequests } from './pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
+import { TimeTracking } from './pages/admin/TimeTracking';
+import { ReportSettings } from './pages/admin/ReportSettings';
+import { TapTimeIntegration } from './pages/admin/TapTimeIntegration';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -109,6 +113,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/employee/form/:formId" element={<EmployeeFormView />} />
                   <Route path="/:schoolSlug/employee/requests" element={<EmployeeRequests />} />
                   <Route path="/:schoolSlug/employee/documents" element={<MyDocuments audience="employee" />} />
+                  <Route path="/:schoolSlug/employee/attendance" element={<AttendanceReports />} />
                 </Route>
                 <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}
@@ -149,6 +154,9 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/parents/:parentId" element={<ParentDetails />} />
                   <Route path="/:schoolSlug/admin/students" element={<StudentManagement />} />
                   <Route path="/:schoolSlug/admin/employees" element={<EmployeeManagement />} />
+                  <Route path="/:schoolSlug/admin/time-tracking" element={<TimeTracking />} />
+                  <Route path="/:schoolSlug/admin/report-settings" element={<ReportSettings />} />
+                  <Route path="/:schoolSlug/admin/taptime-integration" element={<SuperAdminOnly><TapTimeIntegration /></SuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/employees/:employeeId" element={<EmployeeDetails />} />
                   <Route path="/:schoolSlug/admin/employee-forms" element={<EmployeeFormsManagement />} />
                   <Route path="/:schoolSlug/admin/employee-forms/due" element={<EmployeeDueForms />} />
