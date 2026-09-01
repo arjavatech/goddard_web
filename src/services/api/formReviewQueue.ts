@@ -61,7 +61,8 @@ async function fetchQueue(kind: 'student' | 'employee', options: ReviewQueueOpti
   if (options.sortDirection) params.set('sort_direction', options.sortDirection);
   const path = kind === 'student' ? '/student-form-assignments/review-queue' : '/employee-form-assignments/review-queue';
   const data = await authedFetch({ method: 'GET', url: `${path}?${params}` }, z.array(z.any()));
-  return data.map((item: any) => mapItem(item, kind));
+  const items = data.map((item: any) => mapItem(item, kind));
+  return items;
 }
 
 export const fetchStudentFormReviewQueue = (options: ReviewQueueOptions) => fetchQueue('student', options);

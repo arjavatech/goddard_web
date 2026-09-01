@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { EmployeeLayout } from './EmployeeLayout';
 import { Card, CardContent } from '../../components/ui/card';
-import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
+import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin, UploadCloud } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
 import { RequestService } from '../../services/api/requests';
 import { useUserContext } from '../../contexts/UserContext';
@@ -14,6 +14,7 @@ import { Button } from '../../components/ui/button';
 import { cn } from '../../lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
+import { DocumentUploader } from '../../components/forms/DocumentUploader';
 import { useToast } from '../../contexts/ToastContext';
 import { Label } from 'recharts';
 
@@ -35,6 +36,7 @@ export function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<EnrichedAssignment | null>(null);
   const [showGuide, setShowGuide] = useState(false);
   const [userOverride, setUserOverride] = useState(false);
   const handleViewModeChange = (mode: 'card' | 'table') => {
@@ -357,9 +359,16 @@ export function EmployeeDashboard() {
                             <td className="px-3 py-2.5">
                               <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
                                 {!isApproved && (
-                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={() => handleOpenForm(assignment)} title="Open Form">
-                                    <Eye className="h-3 w-3" />
-                                  </Button>
+                                  <>
+                                    
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); handleOpenForm(assignment); }} title="Open Form">
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); setSelectedFormForUpload(assignment); }} title="Upload Form">
+                                      <UploadCloud className="h-4 w-4" />
+                                    </Button>
+                                  </>
                                 )}
                                 {isApproved && assignment.recentPdfLink && (
                                   <>
@@ -445,15 +454,33 @@ export function EmployeeDashboard() {
                                 </>
                               )}
                               {!isApproved && (
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                                  onClick={() => handleOpenForm(assignment)}
-                                  title="Open Form"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenForm(assignment);
+                                    }}
+                                    title="Open Form"
+                                  >
+                                    <Eye className="h-3.5 w-3.5" />
+                                  </Button>
+
+                                  <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedFormForUpload(assignment);
+                                    }}
+                                    title="Upload Form"
+                                  >
+                                    <UploadCloud className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </div>
@@ -477,6 +504,29 @@ export function EmployeeDashboard() {
             </DialogTitle>
           </DialogHeader>
           <EmployeeGuideContent />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedFormForUpload}
+        onOpenChange={(open) => !open && setSelectedFormForUpload(null)}
+      >
+        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-slate-50 rounded-2xl border-0 shadow-xl">
+          <DialogHeader className="px-6 py-4 bg-white border-b border-slate-100">
+            <DialogTitle className="text-lg font-bold text-slate-900">
+              Select Form: {selectedFormForUpload?.formTitle}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6">
+            <DocumentUploader
+              entityName="Form"
+              onUpload={async (file) => {
+                  // UI-only mock upload, no backend call
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  setSelectedFormForUpload(null);
+              }}
+            />
+          </div>
         </DialogContent>
       </Dialog>
     </EmployeeLayout>

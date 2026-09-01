@@ -270,18 +270,20 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
       }))
     });
 
+    // Removed mock logic
     // Handle new response format with active_parents and inactive_parents
     if (data.active_parents !== undefined || data.inactive_parents !== undefined) {
       const activeParents = Array.isArray(data.active_parents) ? data.active_parents.map(mapParentData) : [];
       const inactiveParents = Array.isArray(data.inactive_parents) ? data.inactive_parents.map(mapParentData) : [];
-      // console.log('Processed parent details (new format):', { activeParents, inactiveParents });
-      return { activeParents, inactiveParents };
+      return { 
+        activeParents,
+        inactiveParents
+      };
     }
 
     // Fallback for old format (simple array)
     if (Array.isArray(data)) {
       const activeParents = data.map(mapParentData);
-      // console.log('Processed parent details (legacy format):', { activeParents, inactiveParents: [] });
       return { activeParents, inactiveParents: [] };
     }
 
@@ -376,6 +378,8 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
         }))
       }))
     };
+
+    return result;
   } catch (error) {
     console.error('fetchSingleParent error:', error);
     return null;
@@ -1445,3 +1449,4 @@ export async function deleteSuperAdmin(userId: string): Promise<void> {
     }
   }, z.object({}).passthrough());
 }
+

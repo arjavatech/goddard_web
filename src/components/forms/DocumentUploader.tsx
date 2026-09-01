@@ -6,12 +6,14 @@ export interface DocumentUploaderProps {
   onUpload: (file: File) => Promise<void>;
   accept?: string;
   maxSizeMB?: number;
+  entityName?: string;
 }
 
 export function DocumentUploader({ 
   onUpload, 
   accept = 'application/pdf,image/jpeg,image/png', 
-  maxSizeMB = 10 
+  maxSizeMB = 10,
+  entityName = 'Document'
 }: DocumentUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -93,7 +95,7 @@ export function DocumentUploader({
       <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed border-emerald-200 rounded-xl bg-emerald-50/50">
         <CheckCircle2 className="w-12 h-12 text-emerald-500 mb-4" />
         <h3 className="text-lg font-semibold text-slate-900 mb-1">Upload Successful!</h3>
-        <p className="text-sm text-slate-500 text-center mb-6">Your document has been securely submitted.</p>
+        <p className="text-sm text-slate-500 text-center mb-6">Your {entityName.toLowerCase()} has been securely submitted.</p>
         <Button 
           variant="outline" 
           className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
@@ -102,7 +104,7 @@ export function DocumentUploader({
             setSelectedFile(null);
           }}
         >
-          Upload Another Document
+          Upload Another {entityName}
         </Button>
       </div>
     );
@@ -131,12 +133,12 @@ export function DocumentUploader({
             <Upload className="w-6 h-6 text-[#0F2D52]" />
           </div>
           <h3 className="text-base font-semibold text-slate-900 mb-1">Click or drag file to this area to upload</h3>
-          <p className="text-sm text-slate-500 mb-6">Support for a single or bulk upload. Max size: {maxSizeMB}MB</p>
+          <p className="text-sm text-slate-500 mb-6">Support for a upload form. Max size: {maxSizeMB}MB</p>
           <Button 
             onClick={onButtonClick}
             className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white"
           >
-            Select Document
+            Select {entityName}
           </Button>
         </div>
       ) : (
@@ -169,7 +171,7 @@ export function DocumentUploader({
             onClick={handleUploadSubmit}
             disabled={isUploading}
           >
-            {isUploading ? 'Uploading...' : 'Submit Document'}
+            {isUploading ? 'Uploading...' : `Submit ${entityName}`}
           </Button>
         </div>
       )}
