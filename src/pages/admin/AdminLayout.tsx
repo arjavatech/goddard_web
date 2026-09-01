@@ -32,7 +32,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady, schoolFeatures } = useUserContext();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
@@ -94,44 +94,50 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Workspace',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
-        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
-        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+        ...(schoolFeatures.parentManagementEnabled ? [
+          { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
+          { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+        ] : []),
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-        { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
-        ...(isSuperAdmin ? [
+        ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
+        ...(isSuperAdmin && schoolFeatures.expenseManagementEnabled ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
         ] : []),
 
       ],
     },
-    {
+    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
       label: 'Forms',
       items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
-         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
+        ...(schoolFeatures.parentManagementEnabled ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
+        ] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
+        ] : []),
       ],
-    },
-    {
+    }] : []),
+    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
       label: 'Documents',
       items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` },
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` }] : []),
       ],
-    },
-    {
+    }] : []),
+    ...(schoolFeatures.taptimeEnabled ? [{
       label: 'TapTime',
       items: [
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Reports', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` },
         ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
-    },
+    }] : []),
 
     ...(isSuperAdmin ? [{
       label: 'Administration',

@@ -1,7 +1,14 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { fetchUserContext, type UserContext as UserData } from '../services/api/user';
+import { fetchUserContext, type SchoolFeatures, type UserContext as UserData } from '../services/api/user';
 import { useAuth } from '../services/auth/useAuth';
 import { clearSession } from '../services/auth/session';
+
+const disabledSchoolFeatures: SchoolFeatures = {
+  parentManagementEnabled: false,
+  employeeManagementEnabled: false,
+  expenseManagementEnabled: false,
+  taptimeEnabled: false,
+};
 
 interface UserContextValue {
   userData: UserData | null;
@@ -14,6 +21,7 @@ interface UserContextValue {
   error: string | null;
   refreshUserData: () => Promise<void>;
   isReady: boolean;
+  schoolFeatures: SchoolFeatures;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -55,6 +63,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [profileGeneration, setProfileGeneration] = useState<number | null>(null);
+  const [schoolFeatures, setSchoolFeatures] = useState<SchoolFeatures>(disabledSchoolFeatures);
   const activeRequestRef = useRef<{ key: string; promise: Promise<void> } | null>(null);
   const { user, isAuthenticated, authGeneration } = useAuth();
 
@@ -70,6 +79,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
     setIsReady(true);
     setProfileGeneration(null);
+    setSchoolFeatures(disabledSchoolFeatures);
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
@@ -103,6 +113,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             if (activeRequestRef.current?.key !== requestKey) return;
 
             setUserData(data);
+            setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
             if (data.schoolData?.name) {
               setSchoolName(data.schoolData.name);
             }
@@ -173,7 +184,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolAddress = profileIsCurrent ? schoolAddress : '';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
       {children}
     </UserContext.Provider>
   );

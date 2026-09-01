@@ -2,6 +2,13 @@ import { authedFetch, z } from './common';
 
 export type SchoolRequestSettingOption = { id: string; label: string };
 
+export type SchoolFeatures = {
+  parentManagementEnabled: boolean;
+  employeeManagementEnabled: boolean;
+  expenseManagementEnabled: boolean;
+  taptimeEnabled: boolean;
+};
+
 export type SchoolData = {
   id?: string;
   name?: string;
@@ -17,6 +24,7 @@ export type SchoolData = {
   };
   requestCategories?: SchoolRequestSettingOption[];
   location?: SchoolRequestSettingOption[];
+  features: SchoolFeatures;
 };
 
 export type UserContext = {
@@ -48,6 +56,10 @@ const schoolDataSchema = z.object({
   settings: schoolSettingsSchema.optional(),
   request_categories: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
   location: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
+  parent_management_enabled: z.boolean().optional(),
+  employee_management_enabled: z.boolean().optional(),
+  expense_management_enabled: z.boolean().optional(),
+  taptime_enabled: z.boolean().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -97,7 +109,13 @@ export async function fetchUserContext(): Promise<UserContext> {
       schoolData: data.school_data ? {
         ...data.school_data,
         requestCategories: data.school_data.request_categories ?? [],
-        location: data.school_data.location ?? [],
+      location: data.school_data.location ?? [],
+        features: {
+          parentManagementEnabled: data.school_data.parent_management_enabled ?? false,
+          employeeManagementEnabled: data.school_data.employee_management_enabled ?? false,
+          expenseManagementEnabled: data.school_data.expense_management_enabled ?? false,
+          taptimeEnabled: data.school_data.taptime_enabled ?? false,
+        },
       } : null,
     };
 
