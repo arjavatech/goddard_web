@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Pencil, Plus, Tag, Trash2, MapPin, Settings2 } from 'lucide-react';
+import { Pencil, Plus, Tag, Trash2, MapPin, Settings2, Clock3 } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -11,6 +11,8 @@ import {
   updateRequestSettings,
   type RequestSetting,
   type RequestSettingOption,
+  fetchTapTimeSchoolSettings,
+  updateTapTimeSchoolSettings,
 } from '../../services/api/settings';
 
 type ListEditorProps = {
@@ -183,9 +185,14 @@ export function Settings() {
   const { userData } = useUserContext();
   const { showToast } = useToast();
   const schoolId = userData?.schoolId ?? '';
+  const canManageTapTimeDefault = (userData?.role || '').replace(/[^a-z]/gi, '').toLowerCase() === 'superadmin';
   const [categories, setCategories] = useState<RequestSettingOption[]>([]);
   const [locations, setLocations] = useState<RequestSettingOption[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tapTimeTypes, setTapTimeTypes] = useState<string[]>([]);
+  const [defaultReportType, setDefaultReportType] = useState('');
+  const [tapTimeLoading, setTapTimeLoading] = useState(true);
+  const [tapTimeSaving, setTapTimeSaving] = useState(false);
 
   const applySettings = (settings: Awaited<ReturnType<typeof fetchRequestSettings>>) => {
     setCategories(settings.requestCategories);
@@ -201,6 +208,15 @@ export function Settings() {
   };
 
   useEffect(() => { loadSettings(); }, [schoolId]);
+  useEffect(() => {
+    if (!schoolId) return;
+    setTapTimeLoading(true);
+    fetchTapTimeSchoolSettings(schoolId).then(settings => {
+      setTapTimeTypes(settings.employmentTypes);
+      setDefaultReportType(settings.defaultReportType || '');
+    }).catch(error => showToast('error', error instanceof Error ? error.message : 'Failed to load TapTime settings.', 'Error'))
+      .finally(() => setTapTimeLoading(false));
+  }, [schoolId]);
 
   const mutate = async (operation: Parameters<typeof updateRequestSettings>[1][number]) => {
     applySettings(await updateRequestSettings(schoolId, [operation]));
@@ -245,6 +261,10 @@ export function Settings() {
             onDelete={(setting, item) => mutate({ operation: 'delete', setting, optionId: item.id })}
           />
         </div>
+        <Card className="rounded-2xl border border-slate-200 shadow-sm bg-white">
+          <CardHeader className="px-5 py-4 border-b border-slate-100"><CardTitle className="flex items-center gap-2 text-sm font-semibold text-slate-800"><span className="flex items-center justify-center w-7 h-7 rounded-lg bg-[#0F2D52]/8 text-[#0F2D52]"><Clock3 className="w-4 h-4" /></span>TapTime Attendance</CardTitle></CardHeader>
+          <CardContent className="px-5 py-4"><p className="mb-4 text-sm text-slate-500">New manual attendance entries use this locked default Type.</p><div className="flex flex-col gap-3 sm:flex-row sm:items-end"><label className="grid flex-1 gap-1 text-sm font-medium text-slate-700">Default report type<select value={defaultReportType} onChange={event => setDefaultReportType(event.target.value)} disabled={!canManageTapTimeDefault || tapTimeLoading || tapTimeSaving} className="h-10 rounded-xl border border-slate-200 bg-white px-3"><option value="">Select default Type</option>{tapTimeTypes.map(type => <option key={type} value={type}>{type}</option>)}</select></label><Button disabled={!canManageTapTimeDefault || !defaultReportType || tapTimeSaving} onClick={async () => { setTapTimeSaving(true); try { const result = await updateTapTimeSchoolSettings(schoolId, defaultReportType); setDefaultReportType(result.defaultReportType || ''); showToast('success', 'TapTime default Type saved.', 'Saved'); } catch (error) { showToast('error', error instanceof Error ? error.message : 'Failed to save TapTime setting.', 'Error'); } finally { setTapTimeSaving(false); } }} className="rounded-xl bg-[#0F2D52] text-white hover:bg-[#1E4B83]">{tapTimeSaving ? 'Saving…' : 'Save Type'}</Button></div>{!canManageTapTimeDefault && <p className="mt-3 text-xs text-slate-500">Only a Super Admin can change the default Type.</p>}</CardContent>
+        </Card>
       </div>
     </AdminLayout>
   );
