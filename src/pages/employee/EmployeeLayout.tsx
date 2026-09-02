@@ -25,7 +25,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, isReady } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolFeatures, isReady } = useUserContext();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -68,7 +68,9 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard` },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
-        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` },
+        ...(schoolFeatures.taptimeEnabled
+          ? [{ icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` }]
+          : []),
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents` },
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
       ],
