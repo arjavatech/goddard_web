@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check, LayoutGrid, List } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, School, FileText, Eye, ArrowUp, ArrowDown, Settings, Copy, Check, LayoutGrid, List, Download, Printer } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchFormTemplates } from '../../services/api/dashboard';
-import { createFormTemplate, updateFormTemplate, assignFormToAllStudents } from '../../services/api/admin';
+import { createFormTemplate, updateFormTemplate, assignFormToAllStudents, uploadFormTemplatePdf, getFormTemplatePdfUrl, removeFormTemplatePdf } from '../../services/api/admin';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { DataGrid, ColumnDef } from '../../components/ui/data-grid';
@@ -30,6 +30,7 @@ interface Form {
   status: FormStatus;
   classroomsCount: number;
   dueDate?: string;
+  pdfFileName?: string | null;
 }
 const parseLocalDate = (s: string) => {
   const [y, m, d] = s.split('-').map(Number);
@@ -56,6 +57,7 @@ export function FormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
   const [formDueDate, setFormDueDate] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [copiedFormId, setCopiedFormId] = useState<string | null>(null);
 
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
@@ -83,6 +85,7 @@ export function FormsManagement() {
     setFormLink('');
     setFormStatus('school_default');
     setFormDueDate('');
+    setPdfFile(null);
     setFormErrors({});
     setHasTriedAddFormSubmit(false);
   };
@@ -109,7 +112,8 @@ export function FormsManagement() {
           link: template.filloutFormUrl ?? '#',
           status: mapStatus(template.status),
           classroomsCount: 0,
-          dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
+          dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4],
+          pdfFileName: template.pdfFileName
         }));
         setForms(mappedForms);
       } catch (error) {
@@ -176,7 +180,7 @@ export function FormsManagement() {
     {
       id: 'name',
       header: 'Form Name',
-      className: 'w-1/4',
+      className: 'w-[20%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center gap-2">
@@ -188,7 +192,7 @@ export function FormsManagement() {
     {
       id: 'due_date',
       header: 'Due Date',
-      className: 'w-1/8',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <span className="text-xs font-semibold text-slate-600">
@@ -199,7 +203,7 @@ export function FormsManagement() {
     {
       id: 'link',
       header: 'Form Link',
-      className: 'w-1/3',
+      className: 'w-[28%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center text-xs font-semibold text-[#0F2D52] max-w-xs">
@@ -231,7 +235,7 @@ export function FormsManagement() {
     {
       id: 'status',
       header: 'Status',
-      className: 'w-1/8',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <Badge variant={getStatusBadgeVariant(form.status)} className="text-[10px] font-bold rounded-full px-2.5 py-0.5 bg-[#085cb0] text-white">
@@ -240,9 +244,22 @@ export function FormsManagement() {
       )
     },
     {
+      id: 'pdf_template',
+      header: 'Template',
+      className: 'w-[18%]',
+      hideInCardBody: true,
+      cell: (form) => form.pdfFileName && schoolId ? (
+        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`}>
+          <Button variant="ghost" size="icon" title="View template" aria-label="View template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}><Eye className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Print template" aria-label="Print template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Open the PDF and use your browser print action.'); } }}><Printer className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Download template" aria-label="Download template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId, true), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to download PDF template'); } }}><Download className="h-3.5 w-3.5" /></Button>
+        </div>
+      ) : <span className="text-xs text-slate-400">—</span>
+    },
+    {
       id: 'actions',
       header: 'Actions',
-      className: 'w-1/8 text-right',
+      className: 'w-[10%] text-center whitespace-nowrap',
       hideInCardBody: true,
       cell: (form) => (
         <DropdownMenu>
@@ -258,6 +275,11 @@ export function FormsManagement() {
                 View Form
               </DropdownMenuItem>
             )}
+            {form.pdfFileName && schoolId && <>
+              <DropdownMenuItem className="cursor-pointer" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}>
+                <Eye className="h-4 w-4 mr-2 text-slate-400" /> View template
+              </DropdownMenuItem>
+            </>}
             <DropdownMenuItem className="cursor-pointer" onClick={() => openEditDialog(form)}>
               <Edit className="h-4 w-4 mr-2 text-slate-400" />
               Edit
@@ -271,13 +293,13 @@ export function FormsManagement() {
               }}
             >
               <School className="h-4 w-4 mr-2 text-slate-400" />
-              Assign to All Students
+              Assign to Students
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       )
     }
-  ], [copiedFormId]);
+  ], [copiedFormId, schoolId, showToast]);
 
   const fetchForms = async (showLoader = true) => {
     if (!schoolId) return;
@@ -291,7 +313,8 @@ export function FormsManagement() {
         link: template.filloutFormUrl ?? '#',
         status: mapStatus(template.status),
         classroomsCount: 0,
-        dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4]
+        dueDate: template.due_date || ['2024-01-15', '2024-01-20', '2024-01-25', '2024-02-01'][index % 4],
+        pdfFileName: template.pdfFileName
       }));
       setForms(mappedForms);
     } catch (error) {
@@ -310,7 +333,8 @@ export function FormsManagement() {
       // const user = await fetchUserContext();
       if (!schoolId) return;
       
-      await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
+      const created = await createFormTemplate(formName.trim(), formLink.trim(), schoolId, formDueDate, formStatus);
+      if (pdfFile) await uploadFormTemplatePdf(created.id, schoolId, pdfFile);
       showToast('success', 'Form created successfully');
       resetAddFormState();
       setIsAddDialogOpen(false);
@@ -352,6 +376,7 @@ export function FormsManagement() {
       const dueDateToSend = formStatus === 'inactive' ? undefined : formDueDate;
       
       await updateFormTemplate(selectedForm.id, formName.trim(), formLink.trim(), schoolId, formStatus, dueDateToSend);
+      if (pdfFile) await uploadFormTemplatePdf(selectedForm.id, schoolId, pdfFile);
       
       showToast('success', 'Form updated successfully');
       resetFormFields();
@@ -366,6 +391,7 @@ export function FormsManagement() {
     setFormLink('');
     setFormStatus('school_default');
     setFormDueDate('');
+    setPdfFile(null);
     setFormErrors({});
   };
   const openEditDialog = (form: Form) => {
@@ -374,6 +400,7 @@ export function FormsManagement() {
     setFormLink(form.link);
     setFormStatus(form.status);
     setFormDueDate(form.dueDate || '');
+    setPdfFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -765,6 +792,8 @@ export function FormsManagement() {
         formErrors={formErrors}
         setFormErrors={setFormErrors}
         isSubmitting={isAddingForm}
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
       />
 
       {/* Edit Form Modal — reuses AddFormModal for consistent responsive behaviour */}
@@ -788,6 +817,10 @@ export function FormsManagement() {
         isSubmitting={false}
         title="Edit Form"
         submitButtonText="Save Changes"
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
+        existingPdfFileName={selectedForm?.pdfFileName ?? undefined}
+        onRemoveExistingPdf={async () => { if (!selectedForm || !schoolId) return; await removeFormTemplatePdf(selectedForm.id, schoolId); setSelectedForm({ ...selectedForm, pdfFileName: null }); showToast('success', 'PDF template removed'); }}
       />
 
       {/* Assign to All Students Dialog */}
@@ -829,4 +862,3 @@ export function FormsManagement() {
     </AdminLayout>
   );
 }
-

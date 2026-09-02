@@ -20,6 +20,9 @@ export type FormTemplate = {
   isRequired: boolean | null;
   createdAt: string | null;
   due_date?: string | null;
+  pdfFileName?: string | null;
+  pdfContentType?: string | null;
+  pdfFileSizeBytes?: number | null;
 };
 const enrollmentChildSchema = z.object({
   child_id: z.string().optional(),
@@ -252,6 +255,9 @@ export async function fetchFormTemplates(schoolId: string): Promise<FormTemplate
         isRequired: template.is_required ?? template.isRequired ?? null,
         createdAt: template.created_at || template.createdAt || template.dateCreated || null,
         due_date: template.due_date || null
+        ,pdfFileName: template.pdf_file_name || null
+        ,pdfContentType: template.pdf_content_type || null
+        ,pdfFileSizeBytes: template.pdf_file_size_bytes ?? null
       };
 
       // Validate required fields

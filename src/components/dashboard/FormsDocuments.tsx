@@ -691,6 +691,7 @@ export function FormsDocuments({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              <button type="button" onClick={() => navigate(`/${schoolSlug || 'goddard'}/dashboard/documents`)} className="rounded-lg border border-white/20 bg-white/10 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-white/20">Documents</button>
               <div className="flex items-center gap-0.5 bg-white/10 p-0.5 rounded-lg border border-white/10">
                 <button
                   type="button"

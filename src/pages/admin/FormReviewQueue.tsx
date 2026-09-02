@@ -13,12 +13,15 @@ import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { useUserContext } from '../../contexts/UserContext';
 import { fetchEmployeeFormReviewQueue, fetchStudentFormReviewQueue, type ReviewQueueItem } from '../../services/api/formReviewQueue';
+import { formatSchoolDateTime } from '../../lib/schoolTime';
 
 type Props = { kind: 'student' | 'employee' };
 type SortBy = 'date' | 'name';
 type SortDirection = 'asc' | 'desc';
 
-const displayDate = (value: string) => new Date(value).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+// Review timestamps are returned as a school-local wall-clock value. Do not
+// let the browser reinterpret them in the reviewer's device timezone.
+const displayDate = (value: string) => formatSchoolDateTime(value);
 const initials = (name?: string) => (name || '').split(' ').filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase() || '—';
 
 export function FormReviewQueue({ kind }: Props) {

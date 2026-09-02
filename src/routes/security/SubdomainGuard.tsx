@@ -159,9 +159,9 @@ export function SubdomainGuard() {
 
   // Prevent employee users from accessing parent dashboard
   const isParentDashboard = location.pathname === `/${schoolSubdomain}/dashboard`;
-  // if (isParentDashboard && role === 'employee') {
-  //   return <Navigate to={`/${schoolSubdomain}/employee/dashboard`} replace />;
-  // }
+  if (isParentDashboard && role === 'employee') {
+    return <Navigate to={`/${schoolSubdomain}/employee/dashboard`} replace />;
+  }
 
   return <Outlet />;
 }

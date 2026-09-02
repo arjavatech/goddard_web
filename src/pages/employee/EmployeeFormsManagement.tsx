@@ -3,7 +3,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -26,6 +26,7 @@ interface Form {
   link: string;
   status: FormStatus;
   dueDate?: string;
+  pdfFileName?: string;
 }
 
 const mapStatus = (status: string | null | undefined): FormStatus => {
@@ -71,6 +72,7 @@ export function EmployeeFormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
   const [formDueDate, setFormDueDate] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
@@ -107,7 +109,8 @@ export function EmployeeFormsManagement() {
         name: t.formName,
         link: t.filloutFormId ?? '#',
         status: mapStatus(t.status),
-        dueDate: t.dueDate || ''
+        dueDate: t.dueDate || '',
+        pdfFileName: t.pdfFileName
       })));
       setEmployees(emps.filter(e => e.status === 'active'));
     } catch {
@@ -137,7 +140,8 @@ export function EmployeeFormsManagement() {
     try {
       if (!schoolId) return;
       setIsAddingForm(true);
-      await EmployeeService.createEmployeeFormTemplate({ schoolId, formName, filloutFormId: formLink || undefined, dueDate: formDueDate || undefined, status: formStatus });
+      const created = await EmployeeService.createEmployeeFormTemplate({ schoolId, formName, filloutFormId: formLink || undefined, dueDate: formDueDate || undefined, status: formStatus });
+      if (pdfFile) await EmployeeService.uploadEmployeeFormTemplatePdf(created.id, schoolId, pdfFile);
       showToast('success', 'Form created successfully');
       setIsAddDialogOpen(false);
       resetForm();
@@ -153,6 +157,7 @@ export function EmployeeFormsManagement() {
     if (!selectedForm || !formName.trim() || !schoolId) return;
     try {
       await EmployeeService.updateEmployeeFormTemplate({ id: selectedForm.id, schoolId, formName: formName.trim(), filloutFormId: formLink.trim() || undefined, status: formStatus, dueDate: formDueDate || undefined });
+      if (pdfFile) await EmployeeService.uploadEmployeeFormTemplatePdf(selectedForm.id, schoolId, pdfFile);
       showToast('success', 'Form updated successfully');
       setIsEditDialogOpen(false);
       await fetchForms(true);
@@ -167,6 +172,7 @@ export function EmployeeFormsManagement() {
     setFormLink(form.link);
     setFormStatus(form.status);
     setFormDueDate(form.dueDate || '');
+    setPdfFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -203,6 +209,7 @@ export function EmployeeFormsManagement() {
     setFormLink('');
     setFormDueDate('');
     setFormStatus('school_default');
+    setPdfFile(null);
     setFormErrors({});
   };
 
@@ -210,7 +217,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'name',
       header: 'Form Name',
-      className: 'w-1/3',
+      className: 'w-[20%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center gap-2">
@@ -222,7 +229,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'due_date',
       header: 'Due Date',
-      className: 'w-1/6',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <span className="text-xs font-semibold text-slate-600">
@@ -233,7 +240,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'link',
       header: 'Form Link',
-      className: 'w-1/4',
+      className: 'w-[28%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center text-xs font-semibold text-[#0F2D52] max-w-xs">
@@ -251,7 +258,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'status',
       header: 'Status',
-      className: 'w-1/8',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <Badge variant={getStatusBadgeVariant(form.status)} className={`text-[10px] font-bold rounded-full px-2.5 py-0.5 ${getStatusBadgeClass(form.status)}`}>
@@ -260,9 +267,22 @@ export function EmployeeFormsManagement() {
       )
     },
     {
+      id: 'pdf_template',
+      header: 'Template',
+      className: 'w-[18%]',
+      hideInCardBody: true,
+      cell: (form) => form.pdfFileName && schoolId ? (
+        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`}>
+          <Button variant="ghost" size="icon" title="View template" aria-label="View template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}><Eye className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Print template" aria-label="Print template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Open the PDF and use your browser print action.'); } }}><Printer className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Download template" aria-label="Download template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId, true), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to download PDF template'); } }}><Download className="h-3.5 w-3.5" /></Button>
+        </div>
+      ) : <span className="text-xs text-slate-400">—</span>
+    },
+    {
       id: 'actions',
       header: 'Actions',
-      className: 'w-1/8 text-right',
+      className: 'w-[10%] text-center whitespace-nowrap',
       hideInCardBody: true,
       cell: (form) => (
         <DropdownMenu>
@@ -277,6 +297,11 @@ export function EmployeeFormsManagement() {
                 <Eye className="h-4 w-4 mr-2 text-slate-400" /> View Form
               </DropdownMenuItem>
             )}
+            {form.pdfFileName && schoolId && <>
+              <DropdownMenuItem className="cursor-pointer text-xs" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}>
+                <Eye className="h-4 w-4 mr-2 text-slate-400" /> View template
+              </DropdownMenuItem>
+            </>}
             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openEditDialog(form)}>
               <Edit className="h-4 w-4 mr-2 text-slate-400" /> Edit Form
             </DropdownMenuItem>
@@ -294,7 +319,7 @@ export function EmployeeFormsManagement() {
         </DropdownMenu>
       )
     }
-  ], []);
+  ], [schoolId, showToast]);
 
   if (loading && forms.length === 0) {
     return (
@@ -516,6 +541,8 @@ export function EmployeeFormsManagement() {
         formErrors={formErrors}
         setFormErrors={setFormErrors}
         isSubmitting={isAddingForm}
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
       />
 
       {/* Edit Form Modal */}
@@ -536,6 +563,10 @@ export function EmployeeFormsManagement() {
         isSubmitting={false}
         title="Edit Form"
         submitButtonText="Save Changes"
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
+        existingPdfFileName={selectedForm?.pdfFileName}
+        onRemoveExistingPdf={async () => { if (!selectedForm || !schoolId) return; await EmployeeService.removeEmployeeFormTemplatePdf(selectedForm.id, schoolId); setSelectedForm({ ...selectedForm, pdfFileName: undefined }); showToast('success', 'PDF template removed'); }}
       />
 
       {/* Assign to Employee Dialog */}

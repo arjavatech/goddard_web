@@ -13,6 +13,7 @@ import { apiBaseUrl } from '../../config/env';
 import { ValidatedEmailInput } from '../../components/ui/validated-email-input';
 import { validateEmail } from '../../lib/emailValidation';
 import { supabase } from '../../lib/supabaseClient';
+import { SCHOOL_TIMEZONES, normalizeSchoolTimezone, schoolTimezoneLabel } from '../../lib/schoolTime';
 
 export function SchoolManagement() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,7 +23,7 @@ export function SchoolManagement() {
   const [schoolName, setSchoolName] = useState('');
   const [schoolLocation, setSchoolLocation] = useState('');
   const [subdomain, setSubdomain] = useState('');
-  const [timezone, setTimezone] = useState('America/New_York');
+  const [timezone, setTimezone] = useState('EST');
   const [capacity, setCapacity] = useState('200');
   const [adminName, setAdminName] = useState('');
   const [adminEmail, setAdminEmail] = useState('');
@@ -53,7 +54,8 @@ export function SchoolManagement() {
           id: item.school.id,
           name: item.school.name,
           subdomain: item.school.subdomain,
-          location: item.school.settings?.timezone || 'N/A',
+          timezone: normalizeSchoolTimezone(item.school.timezone || item.school.settings?.timezone),
+          location: schoolTimezoneLabel(item.school.timezone || item.school.settings?.timezone),
           capacity: item.school.settings?.enrollment_capacity || 'N/A',
           ageGroups: item.school.settings?.age_groups || [],
           admin: `${item.owner.first_name} ${item.owner.last_name}`,
@@ -186,6 +188,7 @@ export function SchoolManagement() {
         school: {
           name: schoolName.trim(),
           subdomain: subdomain.trim(),
+          timezone,
           settings: {
             timezone: timezone,
             enrollment_capacity: parseInt(capacity),
@@ -239,7 +242,7 @@ export function SchoolManagement() {
     setSchoolName('');
     setSchoolLocation('');
     setSubdomain('');
-    setTimezone('America/New_York');
+    setTimezone('EST');
     setCapacity('200');
     setAdminName('');
     setAdminEmail('');
@@ -252,26 +255,40 @@ export function SchoolManagement() {
     setSelectedSchool(school);
     setSchoolName(school.name);
     setSchoolLocation(school.location);
+    setSubdomain(school.subdomain);
+    setTimezone(normalizeSchoolTimezone(school.timezone));
     setAdminName(school.admin);
     setAdminEmail(school.adminEmail);
     setIsEditDialogOpen(true);
   };
 
-  const handleUpdateSchool = () => {
+  const handleUpdateSchool = async () => {
     if (!selectedSchool || !schoolName.trim() || !schoolLocation.trim() || !adminName.trim() || !adminEmail.trim()) return;
-
-    setSchools(schools.map(school =>
-      school.id === selectedSchool.id
-        ? { ...school, name: schoolName.trim(), location: schoolLocation.trim(), admin: adminName.trim(), adminEmail: adminEmail.trim() }
-        : school
-    ));
-    setIsEditDialogOpen(false);
-    setSelectedSchool(null);
-    setSchoolName('');
-    setSchoolLocation('');
-    setAdminName('');
-    setAdminEmail('');
-    showToast('success', 'School updated successfully');
+    try {
+      const response = await fetch(`${apiBaseUrl}/schools`, {
+        method: 'PUT',
+        headers: { 'X-API-Key': 'test-owner-key-2024', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedSchool.id,
+          name: schoolName.trim(),
+          subdomain: subdomain.trim() || selectedSchool.subdomain,
+          timezone,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to update school');
+      await fetchSchools();
+      setIsEditDialogOpen(false);
+      setSelectedSchool(null);
+      setSchoolName('');
+      setSchoolLocation('');
+      setSubdomain('');
+      setAdminName('');
+      setAdminEmail('');
+      showToast('success', 'School updated successfully');
+    } catch (error) {
+      console.error('Error updating school:', error);
+      showToast('error', 'Failed to update school');
+    }
   };
 
   const openDeleteDialog = (school: any) => {
@@ -522,10 +539,7 @@ export function SchoolManagement() {
                     onChange={(e) => setTimezone(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="America/New_York">Eastern Time</option>
-                    <option value="America/Chicago">Central Time</option>
-                    <option value="America/Denver">Mountain Time</option>
-                    <option value="America/Los_Angeles">Pacific Time</option>
+                    {SCHOOL_TIMEZONES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
                   </select>
                 </div>
               </div>
@@ -628,6 +642,16 @@ export function SchoolManagement() {
                   onChange={(e) => setSchoolLocation(e.target.value)}
                   placeholder="Enter location"
                 />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Timezone</label>
+                <select
+                  value={timezone}
+                  onChange={(e) => setTimezone(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {SCHOOL_TIMEZONES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Admin Name</label>

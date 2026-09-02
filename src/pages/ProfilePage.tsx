@@ -1,19 +1,21 @@
-import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users } from 'lucide-react';
+import { Mail, Phone, MapPin, Shield, Building2, CheckCircle2, Calendar, ChevronLeft, Briefcase, Users, Bell, KeyRound } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useUserContext } from '../contexts/UserContext';
 import { Card, CardContent } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Header } from '../components/layout/Header';
-import { Footer } from '../components/layout/Footer';
 import { AdminLayout } from './admin/AdminLayout';
 import { EmployeeLayout } from './employee/EmployeeLayout';
+import { ParentLayout } from './parent/ParentLayout';
 import { EmployeeService, type Employee } from '../services/api/employee';
 import { fetchSingleParent } from '../services/api/admin';
 import { useAuth } from '../services/auth/useAuth';
+import { useNotificationsContext } from '../contexts/NotificationsContext';
+import { mirrorOwnTapTimePin } from '../services/api/user';
+import { TapTimeService } from '../services/api/tapTime';
 
 function ProfileContent() {
-  const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress } = useUserContext();
+  const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress, refreshUserData } = useUserContext();
 
   const role = userData?.role?.toLowerCase() ?? '';
   const isAdmin = role === 'admin' || role === 'superadmin';
@@ -35,6 +37,46 @@ function ProfileContent() {
   const [parentExtraInfo, setParentExtraInfo] = useState<{ phone?: string | null; address?: string | null; relationType?: string | null } | null>(null);
   const [loadingExtra, setLoadingExtra] = useState(true);
   const { user } = useAuth();
+  const { pushPermission, pushRegistration, pushError, enablePush } = useNotificationsContext();
+  const [enablingPush, setEnablingPush] = useState(false);
+  const [tapTimePin, setTapTimePin] = useState(userData?.taptimePin ?? '');
+  const [savingTapTimePin, setSavingTapTimePin] = useState(false);
+  const [tapTimePinError, setTapTimePinError] = useState<string | null>(null);
+  const [tapTimePinSuccess, setTapTimePinSuccess] = useState<string | null>(null);
+  const tapTimePinAvailable = userData?.schoolData?.features.taptimeEnabled === true
+    && Boolean(userData.taptimeEmployeeId && userData.taptimePin);
+
+  const enableBrowserPush = async () => {
+    setEnablingPush(true);
+    try { await enablePush(); } finally { setEnablingPush(false); }
+  };
+
+  useEffect(() => {
+    setTapTimePin(userData?.taptimePin ?? '');
+  }, [userData?.taptimePin]);
+
+  const updateOwnTapTimePin = async () => {
+    if (!/^\d{4}$/.test(tapTimePin)) {
+      setTapTimePinSuccess(null);
+      setTapTimePinError('Enter exactly four digits.');
+      return;
+    }
+    setSavingTapTimePin(true);
+    setTapTimePinError(null);
+    setTapTimePinSuccess(null);
+    try {
+      // TapTime is authoritative. The Goddard call only mirrors the confirmed
+      // value locally, which makes the next profile load immediate.
+      await TapTimeService.updateMyPin(tapTimePin);
+      await mirrorOwnTapTimePin(tapTimePin);
+      await refreshUserData();
+      setTapTimePinSuccess('TapTime PIN updated.');
+    } catch (error) {
+      setTapTimePinError(error instanceof Error ? error.message : 'Unable to update TapTime PIN.');
+    } finally {
+      setSavingTapTimePin(false);
+    }
+  };
 
   useEffect(() => {
     if (isEmployee && userData?.schoolId) {
@@ -227,6 +269,73 @@ function ProfileContent() {
           </CardContent>
         </Card>
       )}
+
+      {tapTimePinAvailable && (
+        <Card className="rounded-2xl shadow-sm border border-slate-100">
+          <CardContent className="px-6 py-5">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-7 h-7 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center">
+                <KeyRound className="w-4 h-4 text-[#0F2D52]" />
+              </div>
+              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider">TapTime PIN</h2>
+            </div>
+            <p className="text-sm text-slate-500 mb-4">Use a unique four-digit PIN for TapTime check-in and check-out.</p>
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3 max-w-md">
+              <label className="flex-1 text-sm font-semibold text-slate-700">
+                Your PIN
+                <input
+                  value={tapTimePin}
+                  onChange={(event) => {
+                    setTapTimePin(event.target.value.replace(/\D/g, '').slice(0, 4));
+                    setTapTimePinError(null);
+                    setTapTimePinSuccess(null);
+                  }}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={4}
+                  className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-mono text-lg tracking-[0.3em] text-slate-900 outline-none transition focus:border-[#0F2D52] focus:ring-2 focus:ring-[#0F2D52]/15"
+                  aria-describedby="taptime-pin-help"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={updateOwnTapTimePin}
+                disabled={savingTapTimePin || !/^\d{4}$/.test(tapTimePin)}
+                className="rounded-xl bg-[#0F2D52] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#0a2340] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {savingTapTimePin ? 'Updating…' : 'Update PIN'}
+              </button>
+            </div>
+            <p id="taptime-pin-help" className="mt-2 text-xs text-slate-500">PIN must contain exactly four digits.</p>
+            {tapTimePinError && <p className="mt-2 text-sm text-red-600" role="alert">{tapTimePinError}</p>}
+            {tapTimePinSuccess && <p className="mt-2 text-sm text-emerald-700" role="status">{tapTimePinSuccess}</p>}
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="rounded-2xl shadow-sm border border-slate-100">
+        <CardContent className="px-6 py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
+              <Bell className="w-4 h-4 text-[#0F2D52]" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-700">Browser notifications</h2>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {pushPermission === 'granted'
+                  ? pushRegistration === 'registered' ? 'Enabled and registered for this browser and device.' : 'Permission is enabled; registering this browser…'
+                  : pushPermission === 'denied' ? 'Blocked by your browser settings.' : 'Enable alerts for new forms, documents, and review updates.'}
+                {pushError && <span className="block mt-1 text-red-600">{pushError}</span>}
+              </p>
+            </div>
+          </div>
+          {pushPermission !== 'granted' && pushPermission !== 'denied' && (
+            <button type="button" onClick={enableBrowserPush} disabled={enablingPush} className="rounded-xl bg-[#0F2D52] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60">
+              {enablingPush ? 'Enabling…' : 'Enable notifications'}
+            </button>
+          )}
+        </CardContent>
+      </Card>
       {schoolName && (
         <Card className="rounded-2xl shadow-sm border border-slate-100">
           <CardContent className="px-6 py-5">
@@ -298,13 +407,10 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
-      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+    <ParentLayout>
+      <div className="w-full">
         <ProfileContent />
-      </main>
-      {/* Keeping Header/Footer for parents/others since they don't have a layout yet */}
-      <Footer />
-    </div>
+      </div>
+    </ParentLayout>
   );
 }
