@@ -62,7 +62,8 @@ export function Login() {
         ? `/${userSubdomain}/employee/dashboard`
         : `/${userSubdomain}/dashboard`;
 
-      let redirectTo = location.state?.from?.pathname;
+      const forceRoleHome = sessionStorage.getItem('post_logout_login') === 'true';
+      let redirectTo = forceRoleHome ? null : location.state?.from?.pathname;
 
       // Discard any "from" path that belongs to a different school's subdomain
       if (redirectTo) {
@@ -82,6 +83,7 @@ export function Login() {
         }
       }
 
+      sessionStorage.removeItem('post_logout_login');
       navigate(redirectTo || defaultPath, { replace: true });
     } catch (err) {
       const raw = (err as Error).message?.toLowerCase() ?? '';

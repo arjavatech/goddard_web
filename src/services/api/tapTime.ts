@@ -19,6 +19,7 @@ async function tapTimeFetch<T>(path: string, schema: z.ZodType<T>, init: Request
 
 export const TapTimeService = {
   connection: () => tapTimeFetch('/connection', z.any()),
+  updateMyPin: (pin: string) => tapTimeFetch('/me/pin', z.any(), { method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ pin }) }),
   myReports: (params: URLSearchParams) => tapTimeFetch(`/me/reports?${params}`, z.object({ items: z.array(z.any()) })),
   myPending: () => tapTimeFetch('/me/pending-checkouts', z.object({ items: z.array(z.any()) })),
   schoolReports: (params: URLSearchParams) => tapTimeFetch(`/reports?${params}`, z.object({ items: z.array(z.any()) })),
@@ -26,6 +27,8 @@ export const TapTimeService = {
   employmentTypes: () => tapTimeFetch('/attendance/employment-types', z.object({ items: z.array(z.string()) })),
   correctReport: (empId: string, body: { original_check_in_time: string; check_in_time: string; check_out_time: string | null; type_id: string | null }) =>
     tapTimeFetch(`/attendance/reports/${encodeURIComponent(empId)}`, z.any(), { method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) }),
+  deleteReport: (empId: string, originalCheckInTime: string) =>
+    tapTimeFetch(`/attendance/reports/${encodeURIComponent(empId)}`, z.any(), { method: 'DELETE', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ original_check_in_time: originalCheckInTime }) }),
   createManualReport: (body: Record<string, unknown>) => tapTimeFetch('/attendance/reports', z.any(), { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) }),
   updateManualReport: (body: Record<string, unknown>) => tapTimeFetch('/attendance/reports', z.any(), { method: 'PATCH', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify(body) }),
   recipients: () => tapTimeFetch('/report-settings/recipients', z.object({ items: z.array(z.any()) })),

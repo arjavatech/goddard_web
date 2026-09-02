@@ -36,6 +36,8 @@ export type UserContext = {
   lastName?: string;
   phone?: string;
   address?: string;
+  taptimeEmployeeId?: string | null;
+  taptimePin?: string | null;
   schoolData?: SchoolData | null;
 };
 
@@ -78,6 +80,10 @@ const userContextSchema = z.object({
   phone: z.string().optional(),
   phone_number: z.string().optional(),
   address: z.string().optional(),
+  taptime_employee_id: z.string().nullable().optional(),
+  taptimeEmployeeId: z.string().nullable().optional(),
+  taptime_pin: z.string().nullable().optional(),
+  taptimePin: z.string().nullable().optional(),
   school_data: schoolDataSchema.nullable().optional(),
 }).passthrough();
 
@@ -106,6 +112,8 @@ export async function fetchUserContext(): Promise<UserContext> {
       lastName: data.last_name || data.lastName,
       phone: data.phone || data.phone_number,
       address: data.address,
+      taptimeEmployeeId: data.taptime_employee_id ?? data.taptimeEmployeeId ?? null,
+      taptimePin: data.taptime_pin ?? data.taptimePin ?? null,
       schoolData: data.school_data ? {
         ...data.school_data,
         requestCategories: data.school_data.request_categories ?? [],
@@ -134,4 +142,14 @@ export async function fetchUserContext(): Promise<UserContext> {
       inFlightUserContextRequest = null;
     }
   }
+}
+
+export async function mirrorOwnTapTimePin(pin: string): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: '/taptime/me/pin',
+    // httpFetch serializes request bodies. Passing a JSON string here would
+    // serialize it a second time and make Axum receive a string, not an object.
+    body: { pin },
+  }, z.object({ status: z.literal('updated') }));
 }

@@ -996,6 +996,8 @@ export type AdminUser = {
   role: string;
   is_verified: boolean;
   school_id: string;
+  taptime_employee_id?: string | null;
+  taptime_pin?: string | null;
 };
 
 export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
@@ -1013,7 +1015,9 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         last_name: z.string(),
         role: z.string(),
         is_verified: z.boolean(),
-        school_id: z.string()
+        school_id: z.string(),
+        taptime_employee_id: z.string().nullable().optional(),
+        taptime_pin: z.string().nullable().optional()
       }))
     }));
 
@@ -1022,6 +1026,14 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
     console.error('fetchAdminUsers error:', error);
     throw error;
   }
+}
+
+export async function updateAdminTapTimePin(userId: string, schoolId: string, pin: string): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: `/taptime/users/${userId}/pin?school_id=${encodeURIComponent(schoolId)}`,
+    body: { pin },
+  }, z.any());
 }
 
 export async function inviteAdmin(

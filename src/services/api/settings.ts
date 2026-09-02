@@ -16,11 +16,6 @@ export type RequestSettings = {
   csvFields: string[];
 };
 
-export type TapTimeSchoolSettings = {
-  defaultReportType: string | null;
-  employmentTypes: string[];
-};
-
 const optionSchema = z.object({ id: z.string(), label: z.string() });
 const requestSettingsSchema = z.object({
   // Production returns camelCase. Keep snake_case support while environments
@@ -70,28 +65,4 @@ export async function updateRequestSettings(
     requestSettingsSchema,
   );
   return data;
-}
-
-const tapTimeSettingsSchema = z.object({
-  default_report_type: z.string().nullable().optional(),
-  defaultReportType: z.string().nullable().optional(),
-  employment_types: z.array(z.string()).optional(),
-  employmentTypes: z.array(z.string()).optional(),
-}).transform((data): TapTimeSchoolSettings => ({
-  defaultReportType: data.default_report_type ?? data.defaultReportType ?? null,
-  employmentTypes: data.employment_types ?? data.employmentTypes ?? [],
-}));
-
-export async function fetchTapTimeSchoolSettings(schoolId: string): Promise<TapTimeSchoolSettings> {
-  return authedFetch(
-    { method: 'GET', url: `/taptime/settings?school_id=${encodeURIComponent(schoolId)}` },
-    tapTimeSettingsSchema,
-  );
-}
-
-export async function updateTapTimeSchoolSettings(schoolId: string, defaultReportType: string): Promise<TapTimeSchoolSettings> {
-  return authedFetch(
-    { method: 'PATCH', url: `/taptime/settings?school_id=${encodeURIComponent(schoolId)}`, body: { default_report_type: defaultReportType } },
-    tapTimeSettingsSchema,
-  );
 }

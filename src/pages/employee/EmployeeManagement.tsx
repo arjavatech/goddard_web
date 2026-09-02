@@ -16,7 +16,7 @@ import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle, RefreshCw, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export function EmployeeManagement() {
@@ -33,6 +33,9 @@ export function EmployeeManagement() {
   const [employeeToDelete, setEmployeeToDelete] = useState<Employee | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [resendingEmployeeId, setResendingEmployeeId] = useState<string | null>(null);
+  const [pinEmployee, setPinEmployee] = useState<Employee | null>(null);
+  const [tapTimePin, setTapTimePin] = useState('');
+  const [isUpdatingTapTimePin, setIsUpdatingTapTimePin] = useState(false);
 
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
@@ -154,6 +157,7 @@ export function EmployeeManagement() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
+  const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
 
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -318,6 +322,34 @@ export function EmployeeManagement() {
       showToast(result.emailSent ? 'success' : 'error', result.emailSent ? `Invitation resent to ${emp.email}` : result.message);
     } catch (error: any) { showToast('error', error.message || 'Failed to resend invitation'); }
     finally { setResendingEmployeeId(null); }
+  };
+
+  const openTapTimePinDialog = (emp: Employee) => {
+    if (!isTapTimeEnabled || !emp.taptimeEmployeeId) return;
+    setPinEmployee(emp);
+    setTapTimePin(emp.taptimePin || '');
+  };
+
+  const handleUpdateTapTimePin = async () => {
+    if (!pinEmployee || !userData?.schoolId || isUpdatingTapTimePin) return;
+    if (!/^\d{4}$/.test(tapTimePin)) {
+      showToast('error', 'PIN must contain exactly 4 digits');
+      return;
+    }
+    setIsUpdatingTapTimePin(true);
+    try {
+      await EmployeeService.updateTapTimePin(pinEmployee.userId, userData.schoolId, tapTimePin);
+      setEmployees((current) => current.map((employee) => employee.id === pinEmployee.id
+        ? { ...employee, taptimePin: tapTimePin }
+        : employee));
+      showToast('success', `TapTime PIN updated for ${pinEmployee.firstName} ${pinEmployee.lastName}`);
+      setPinEmployee(null);
+      setTapTimePin('');
+    } catch (error: any) {
+      showToast('error', error?.message || 'Failed to update the TapTime PIN');
+    } finally {
+      setIsUpdatingTapTimePin(false);
+    }
   };
 
   const confirmDeleteEmployee = async () => {
@@ -531,6 +563,11 @@ export function EmployeeManagement() {
                             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleEditEmployee(emp)}>
                               <Edit className="w-4 h-4 mr-2" /> Edit Employee
                             </DropdownMenuItem>
+                            {isTapTimeEnabled && emp.taptimeEmployeeId && (
+                              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openTapTimePinDialog(emp)}>
+                                <KeyRound className="w-4 h-4 mr-2" /> Update TapTime PIN
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={() => handleResendInvite(emp)}>
                               <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                             </DropdownMenuItem>
@@ -546,6 +583,12 @@ export function EmployeeManagement() {
                           {emp.status === 'active' ? 'Active' : 'Inactive'}
                         </Badge>
                       </div>
+                      {isTapTimeEnabled && emp.taptimeEmployeeId && (
+                        <div className="mt-3 flex items-center justify-between text-xs">
+                          <span className="font-semibold text-slate-500">TapTime PIN</span>
+                          <span className="font-mono font-bold text-[#0F2D52]">{emp.taptimePin || '—'}</span>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 );
@@ -567,6 +610,7 @@ export function EmployeeManagement() {
               columns={[
                 { header: 'Employee', className: 'w-auto min-w-[200px]' },
                 { header: 'Type', className: 'w-1/5' },
+                ...(isTapTimeEnabled ? [{ header: 'TapTime PIN', className: 'w-1/5' }] : []),
                 { header: 'Status', className: 'w-1/5' },
                 { header: 'Actions', className: 'w-1/5' },
               ]}
@@ -588,6 +632,11 @@ export function EmployeeManagement() {
                         {emp.employeeType}
                       </span>
                     </td>
+                    {isTapTimeEnabled && (
+                      <td className="py-4 px-4">
+                        {emp.taptimeEmployeeId && <span className="font-mono text-sm font-bold text-[#0F2D52]">{emp.taptimePin || '—'}</span>}
+                      </td>
+                    )}
                     <td className="py-4 px-4">
                       <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
                         {emp.status === 'active' ? 'Active' : 'Inactive'}
@@ -607,6 +656,11 @@ export function EmployeeManagement() {
                           <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleEditEmployee(emp); }}>
                             <Edit className="w-4 h-4 mr-2" /> Edit Employee
                           </DropdownMenuItem>
+                          {isTapTimeEnabled && emp.taptimeEmployeeId && (
+                            <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); openTapTimePinDialog(emp); }}>
+                              <KeyRound className="w-4 h-4 mr-2" /> Update TapTime PIN
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={(e) => { e.stopPropagation(); handleResendInvite(emp); }}>
                             <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                           </DropdownMenuItem>
@@ -774,6 +828,41 @@ export function EmployeeManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {isTapTimeEnabled && <Dialog open={!!pinEmployee} onOpenChange={(open) => {
+          if (!open && !isUpdatingTapTimePin) {
+            setPinEmployee(null);
+            setTapTimePin('');
+          }
+        }}>
+          <DialogContent className="w-[95vw] max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+            <DialogHeader className="mb-2">
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <KeyRound className="h-5 w-5 text-[#0F2D52]" /> Update TapTime PIN
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-500">Update the TapTime PIN for <span className="font-semibold text-slate-700">{pinEmployee?.firstName} {pinEmployee?.lastName}</span>. TapTime validates and stores this PIN.</p>
+            <div className="mt-5 space-y-2">
+              <label className="block text-xs font-bold uppercase text-slate-500">PIN</label>
+              <Input
+                value={tapTimePin}
+                inputMode="numeric"
+                maxLength={4}
+                autoFocus
+                onChange={(event) => setTapTimePin(event.target.value.replace(/\D/g, ''))}
+                placeholder="4 digits"
+                className="h-11 rounded-xl font-mono text-base tracking-widest"
+              />
+              <p className="text-xs text-slate-400">The PIN must be unique within this TapTime company.</p>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button variant="outline" disabled={isUpdatingTapTimePin} onClick={() => { setPinEmployee(null); setTapTimePin(''); }}>Cancel</Button>
+              <Button onClick={() => void handleUpdateTapTimePin()} disabled={isUpdatingTapTimePin || !/^\d{4}$/.test(tapTimePin)} className="bg-[#0F2D52] text-white hover:bg-[#1c477c]">
+                {isUpdatingTapTimePin ? 'Updating...' : 'Update PIN'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>}
 
         {/* Bulk Upload Modal */}
         <Dialog open={isBulkUploadOpen} onOpenChange={(open) => { if (!open) { setIsBulkUploadOpen(false); setBulkStep('upload'); setCsvRows([]); setCsvErrors({}); } }}>

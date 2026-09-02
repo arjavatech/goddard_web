@@ -93,6 +93,22 @@ function NavigateToAdmin() {
   return <Navigate to={targetPath} replace state={location.state} />;
 }
 
+function RoleHomeRedirect() {
+  const { userData, schoolSubdomain, isReady } = useUserContext();
+
+  if (!isReady || !userData) {
+    return <div className="flex min-h-screen items-center justify-center bg-slate-50"><div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#0F2D52]" /></div>;
+  }
+
+  const role = userData.role.toLowerCase();
+  const home = role === 'admin' || role === 'superadmin'
+    ? `/${schoolSubdomain || 'goddard'}/admin`
+    : role === 'employee'
+      ? `/${schoolSubdomain || 'goddard'}/employee/dashboard`
+      : `/${schoolSubdomain || 'goddard'}/dashboard`;
+  return <Navigate to={home} replace />;
+}
+
 export function AppRouter() {
   return <AuthErrorBoundary>
     <AuthProvider>
@@ -104,7 +120,7 @@ export function AppRouter() {
               <Routes>
                 <Route path="/" element={<Login />} />
                 <Route path="/dashboard" element={<ProtectedRoute>
-                  <App />
+                  <RoleHomeRedirect />
                 </ProtectedRoute>} />
                 <Route element={<SubdomainGuard />}>
                   <Route path="/:schoolSlug/dashboard" element={<App />} />

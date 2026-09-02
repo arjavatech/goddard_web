@@ -17,6 +17,8 @@ export type Employee = {
   status: 'active' | 'inactive';
   isVerified?: boolean;
   salaryDate?: string;
+  taptimeEmployeeId?: string;
+  taptimePin?: string;
 };
 
 export type EmployeeFormTemplate = {
@@ -86,6 +88,8 @@ function mapEmployee(raw: any): Employee {
     status: raw.is_active !== false ? 'active' : 'inactive',
     isVerified: raw.is_verified ?? undefined,
     salaryDate: raw.salary_date ?? undefined,
+    taptimeEmployeeId: raw.taptime_employee_id ?? undefined,
+    taptimePin: raw.taptime_pin ?? undefined,
   };
 }
 
@@ -225,6 +229,17 @@ export const EmployeeService = {
       z.any(),
     );
     return mapEmployee(data);
+  },
+
+  async updateTapTimePin(goddardUserId: string, schoolId: string, pin: string): Promise<void> {
+    await authedFetch(
+      {
+        method: 'PATCH',
+        url: `/taptime/users/${goddardUserId}/pin?school_id=${schoolId}`,
+        body: { pin },
+      },
+      z.any(),
+    );
   },
 
   async resendEmployeeInvite(employeeId: string, schoolId: string): Promise<{ emailSent: boolean; message: string }> {

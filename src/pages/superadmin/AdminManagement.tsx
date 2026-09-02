@@ -10,12 +10,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { PageLoader } from '../../components/ui/page-loader';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, type AdminUser } from '../../services/api/admin';
+import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, updateAdminTapTimePin, type AdminUser } from '../../services/api/admin';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List } from 'lucide-react';
+import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, KeyRound } from 'lucide-react';
 
 interface NetworkError {
   code?: string;
@@ -52,9 +52,14 @@ export function AdminManagement() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData } = useUserContext();
+  const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
+  const canManageAdministratorPins = isTapTimeEnabled && userData?.role === 'SuperAdmin';
 
   const [resendingAdminId, setResendingAdminId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [pinAdmin, setPinAdmin] = useState<AdminUser | null>(null);
+  const [tapTimePin, setTapTimePin] = useState('');
+  const [isUpdatingTapTimePin, setIsUpdatingTapTimePin] = useState(false);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -197,6 +202,34 @@ export function AdminManagement() {
       }
     } finally {
       setResendingAdminId(null);
+    }
+  };
+
+  const openTapTimePinDialog = (admin: AdminUser) => {
+    if (!canManageAdministratorPins || !admin.taptime_employee_id) return;
+    setPinAdmin(admin);
+    setTapTimePin(admin.taptime_pin || '');
+  };
+
+  const handleUpdateTapTimePin = async () => {
+    if (!pinAdmin || !userData?.schoolId || isUpdatingTapTimePin) return;
+    if (!/^\d{4}$/.test(tapTimePin)) {
+      showToast('error', 'PIN must contain exactly 4 digits');
+      return;
+    }
+    setIsUpdatingTapTimePin(true);
+    try {
+      await updateAdminTapTimePin(pinAdmin.id, userData.schoolId, tapTimePin);
+      setAdmins((current) => current.map((admin) => admin.id === pinAdmin.id
+        ? { ...admin, taptime_pin: tapTimePin }
+        : admin));
+      showToast('success', `TapTime PIN updated for ${pinAdmin.first_name} ${pinAdmin.last_name}`);
+      setPinAdmin(null);
+      setTapTimePin('');
+    } catch (error: any) {
+      showToast('error', error?.message || 'Failed to update the TapTime PIN');
+    } finally {
+      setIsUpdatingTapTimePin(false);
     }
   };
 
@@ -488,6 +521,11 @@ export function AdminManagement() {
                             <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
                               <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
                             </DropdownMenuItem>
+                            {canManageAdministratorPins && admin.taptime_employee_id && (
+                              <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => openTapTimePinDialog(admin)}>
+                                <KeyRound className="w-4 h-4 mr-2 text-slate-400" /> Update TapTime PIN
+                              </DropdownMenuItem>
+                            )}
                             {!admin.is_verified && (
                               <DropdownMenuItem
                                 className="cursor-pointer font-medium text-xs text-slate-700"
@@ -530,6 +568,10 @@ export function AdminManagement() {
                           {admin.is_verified ? 'Approved' : 'Pending'}
                         </Badge>
                       </div>
+                      {isTapTimeEnabled && admin.taptime_employee_id && <div className="mt-3 flex items-center justify-between text-xs">
+                        <span className="font-semibold text-slate-500">TapTime PIN</span>
+                        <span className="font-mono font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>
+                      </div>}
                     </div>
                   </Card>
                 );
@@ -550,6 +592,7 @@ export function AdminManagement() {
               columns={[
                 { header: 'Administrator', className: 'w-2/5' },
                 { header: 'Role', className: 'w-1/5' },
+                ...(isTapTimeEnabled ? [{ header: 'TapTime PIN', className: 'w-1/5' }] : []),
                 { header: 'Status', className: 'w-1/5' },
                 { header: 'Actions', className: 'w-1/5' },
               ]}
@@ -582,6 +625,9 @@ export function AdminManagement() {
                         {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
                       </span>
                     </td>
+                    {isTapTimeEnabled && <td className="py-4 px-4">
+                      {admin.taptime_employee_id && <span className="font-mono text-sm font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>}
+                    </td>}
                     <td className="py-4 px-4">
                       <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
                         {admin.is_verified ? 'Approved' : 'Pending'}
@@ -601,6 +647,11 @@ export function AdminManagement() {
                           <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
                             <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
                           </DropdownMenuItem>
+                          {canManageAdministratorPins && admin.taptime_employee_id && (
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => openTapTimePinDialog(admin)}>
+                              <KeyRound className="w-4 h-4 mr-2 text-slate-400" /> Update TapTime PIN
+                            </DropdownMenuItem>
+                          )}
                           {!admin.is_verified && (
                             <DropdownMenuItem
                               className="cursor-pointer font-medium text-xs text-slate-700"
@@ -777,6 +828,41 @@ export function AdminManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {isTapTimeEnabled && <Dialog open={!!pinAdmin} onOpenChange={(open) => {
+          if (!open && !isUpdatingTapTimePin) {
+            setPinAdmin(null);
+            setTapTimePin('');
+          }
+        }}>
+          <DialogContent className="w-[95vw] max-w-md rounded-2xl border border-slate-100 bg-white p-6 shadow-lg">
+            <DialogHeader className="mb-2">
+              <DialogTitle className="flex items-center gap-2 text-lg font-bold text-slate-900">
+                <KeyRound className="h-5 w-5 text-[#0F2D52]" /> Update TapTime PIN
+              </DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-slate-500">Update the TapTime PIN for <span className="font-semibold text-slate-700">{pinAdmin?.first_name} {pinAdmin?.last_name}</span>. TapTime validates and stores this PIN.</p>
+            <div className="mt-5 space-y-2">
+              <label className="block text-xs font-bold uppercase text-slate-500">PIN</label>
+              <Input
+                value={tapTimePin}
+                inputMode="numeric"
+                maxLength={4}
+                autoFocus
+                onChange={(event) => setTapTimePin(event.target.value.replace(/\D/g, ''))}
+                placeholder="4 digits"
+                className="h-11 rounded-xl font-mono text-base tracking-widest"
+              />
+              <p className="text-xs text-slate-400">The PIN must be unique within this TapTime company.</p>
+            </div>
+            <DialogFooter className="mt-6">
+              <Button variant="outline" disabled={isUpdatingTapTimePin} onClick={() => { setPinAdmin(null); setTapTimePin(''); }}>Cancel</Button>
+              <Button onClick={() => void handleUpdateTapTimePin()} disabled={isUpdatingTapTimePin || !/^\d{4}$/.test(tapTimePin)} className="bg-[#0F2D52] text-white hover:bg-[#1c477c]">
+                {isUpdatingTapTimePin ? 'Updating...' : 'Update PIN'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>}
 
         {/* View Admin Details Dialog */}
         <Dialog open={isViewDialogOpen} onOpenChange={(open) => {
