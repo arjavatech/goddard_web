@@ -16,7 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
 import { DocumentUploader } from '../../components/forms/DocumentUploader';
 import { useToast } from '../../contexts/ToastContext';
-import { uploadFormMock, getMockUploadedForms } from '../../services/api/formUpload';
+import { uploadFormMock, getMockUploadedForms, isMockRecord, getMockPdfFromIdb } from '../../services/api/formUpload';
+import { PdfPreviewModal } from '../../components/forms/PdfPreviewModal';
+import { FileSearch } from 'lucide-react';
 import { Label } from 'recharts';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
@@ -41,6 +43,24 @@ export function EmployeeDashboard() {
   const [isUploadingMock, setIsUploadingMock] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [userOverride, setUserOverride] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleViewUploaded = async (assignmentId: string) => {
+    try {
+      const file = await getMockPdfFromIdb(assignmentId);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewPdfUrl(url);
+        setIsPreviewOpen(true);
+      } else {
+        showToast('error', 'Uploaded file not found. It may have expired or you are in a different session.');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Failed to load preview');
+    }
+  };
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
     setUserOverride(true);
@@ -362,6 +382,7 @@ export function EmployeeDashboard() {
                       {assignments.map((assignment) => {
                         const ns = assignment.normalizedStatus;
                         const isApproved = ns === 'Approved';
+                        const hasUploadedFile = isMockRecord(assignment.id) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
                         return (
                           <tr
                             key={assignment.id}
@@ -389,10 +410,15 @@ export function EmployeeDashboard() {
                               <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
                                 {!isApproved && (
                                   <>
-                                    
                                     <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); handleOpenForm(assignment); }} title="Open Form">
                                       <Eye className="h-4 w-4" />
                                     </Button>
+                                    
+                                    {hasUploadedFile && (
+                                      <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignment.id); }} title="Preview Uploaded Form">
+                                        <FileSearch className="h-4 w-4" />
+                                      </Button>
+                                    )}
 
                                     <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); setSelectedFormForUpload(assignment); }} title="Upload Form">
                                       <UploadCloud className="h-4 w-4" />
@@ -422,6 +448,7 @@ export function EmployeeDashboard() {
                   {assignments.map((assignment, idx) => {
                     const ns = assignment.normalizedStatus;
                     const isApproved = ns === 'Approved';
+                    const hasUploadedFile = isMockRecord(assignment.id) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
                     return (
                       <motion.div
                         key={assignment.id}
@@ -496,6 +523,21 @@ export function EmployeeDashboard() {
                                   >
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
+                                  
+                                  {hasUploadedFile && (
+                                    <Button
+                                      variant="outline"
+                                      size="icon"
+                                      className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleViewUploaded(assignment.id);
+                                      }}
+                                      title="Preview Uploaded Form"
+                                    >
+                                      <FileSearch className="h-3.5 w-3.5" />
+                                    </Button>
+                                  )}
 
                                   <Button
                                     variant="outline"
@@ -540,13 +582,13 @@ export function EmployeeDashboard() {
         open={!!selectedFormForUpload}
         onOpenChange={(open) => !open && setSelectedFormForUpload(null)}
       >
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-slate-50 rounded-2xl border-0 shadow-xl">
-          <DialogHeader className="px-6 py-4 bg-white border-b border-slate-100">
-            <DialogTitle className="text-lg font-bold text-slate-900">
+        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] p-0 overflow-y-auto bg-slate-50 rounded-2xl border-0 shadow-xl">
+          <DialogHeader className="px-4 py-4 sm:px-6 bg-white border-b border-slate-100 relative">
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 break-words pr-12 text-left">
               Select Form: {selectedFormForUpload?.formTitle}
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <DocumentUploader
               entityName="Form"
               onUpload={async (file) => {
@@ -559,7 +601,7 @@ export function EmployeeDashboard() {
                         entityType: 'employee'
                       }, {
                         schoolId: userData?.schoolId || '',
-                        formTemplateId: selectedFormForUpload.formTemplateId || '',
+                        formTemplateId: selectedFormForUpload.formId || '',
                         formName: selectedFormForUpload.formTitle,
                         employeeId: employee.id,
                         employeeName: `${employee.firstName} ${employee.lastName}`.trim(),
@@ -583,6 +625,19 @@ export function EmployeeDashboard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          if (previewPdfUrl) {
+            URL.revokeObjectURL(previewPdfUrl);
+            setPreviewPdfUrl(null);
+          }
+        }}
+        fileUrl={previewPdfUrl}
+      />
     </EmployeeLayout>
   );
 }

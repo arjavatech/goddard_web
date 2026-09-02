@@ -8,14 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
-import { uploadFormMock, getMockUploadedForms } from '../../services/api/formUpload';
+import { uploadFormMock, getMockUploadedForms, isMockRecord, getMockPdfFromIdb } from '../../services/api/formUpload';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { cn } from '../../lib/utils';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
 import { DocumentUploader } from '../forms/DocumentUploader';
+import { PdfPreviewModal } from '../forms/PdfPreviewModal';
 import { DocumentRequest, documentRequestsApi } from '../../services/api/documentRequests';
-import { UploadCloud, CheckCircle, Clock } from 'lucide-react';
+import { UploadCloud, CheckCircle, Clock, FileSearch } from 'lucide-react';
 import { Badge } from '../ui/badge';
 interface FormCardProps {
   title: string;
@@ -34,6 +35,8 @@ interface FormCardProps {
   formId?: string;
   assignedAt?: string | null;
   dueDate?: string | null;
+  onViewUploaded?: () => void;
+  hasUploadedFile?: boolean;
 }
 function FormCard({
   title,
@@ -49,10 +52,11 @@ function FormCard({
   disabledReason,
   isLoading,
   formId,
-  dueDate
+  dueDate,
+  onViewUploaded,
+  hasUploadedFile
 }: FormCardProps) {
   const isApproved = status === 'Approved';
-  const canUpload = !['Pending Approval', 'Approved', 'Submitted'].includes(status);
   const isLoadingThis = isLoading?.formId === formId;
   const getBorderColor = () => {
     if (status === 'Approved' || status === 'Submitted' || status === 'In Progress') return 'border-green-500';
@@ -134,7 +138,7 @@ function FormCard({
               >
                 <Eye className="h-3.5 w-3.5" />
               </Button>
-              {onUploadClick && canUpload && (
+              {onUploadClick && (
                 <Button
                   variant="outline"
                   size="icon"
@@ -143,6 +147,17 @@ function FormCard({
                   title="Upload Form PDF"
                 >
                   <UploadCloud className="h-3.5 w-3.5" />
+                </Button>
+              )}
+              {hasUploadedFile && onViewUploaded && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200 ml-1"
+                  onClick={(e) => { e.stopPropagation(); if (disabled) return; onViewUploaded(); }}
+                  title="Preview Uploaded Form"
+                >
+                  <FileSearch className="h-3.5 w-3.5" />
                 </Button>
               )}
             </>
@@ -232,6 +247,24 @@ export function FormsDocuments({
   const isOpeningRef = useRef(false);
   const processedFormToOpenRef = useRef<string | null>(null);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
+  const [previewPdfUrl, setPreviewPdfUrl] = useState<string | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  const handleViewUploaded = async (assignmentId: string) => {
+    try {
+      const file = await getMockPdfFromIdb(assignmentId);
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setPreviewPdfUrl(url);
+        setIsPreviewOpen(true);
+      } else {
+        showToast('error', 'Uploaded file not found. It may have expired or you are in a different session.');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('error', 'Failed to load preview');
+    }
+  };
   const [selectedDocumentRequest, setSelectedDocumentRequest] = useState<DocumentRequest | null>(null);
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<any | null>(null);
   const [isUploadingMock, setIsUploadingMock] = useState(false);
@@ -868,7 +901,8 @@ export function FormsDocuments({
                   <tbody>
                     {getFormsForTab('family').map(form => {
                       const isApproved = form.status === 'Approved';
-                      const canUpload = !['Pending Approval', 'Approved', 'Submitted'].includes(form.status);
+                      const assignmentIdStr = extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key;
+                      const hasUploadedFile = !!(assignmentIdStr && isMockRecord(assignmentIdStr) && ['Submitted', 'Needs Revision', 'Approved'].includes(form.status));
                       const isDisabled = form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId);
                       const isLoadingThis = loadingAction?.formId === (form.formId || form._key);
                       return (
@@ -899,9 +933,12 @@ export function FormsDocuments({
                                       ? <span className="animate-spin h-3 w-3 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
                                       : <Eye className="h-3 w-3" />}
                                   </Button>
-                                  {canUpload && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={() => setSelectedFormForUpload(form)} title="Upload Form PDF">
-                                      <UploadCloud className="h-3 w-3" />
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={() => setSelectedFormForUpload(form)} title="Upload Form PDF">
+                                    <UploadCloud className="h-3 w-3" />
+                                  </Button>
+                                  {hasUploadedFile && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignmentIdStr); }} title="Preview Uploaded Form">
+                                      <FileSearch className="h-3 w-3" />
                                     </Button>
                                   )}
                                 </>
@@ -941,6 +978,8 @@ export function FormsDocuments({
                     disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
                     disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
                     onView={() => handleView(form)}
+                    hasUploadedFile={!!(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key ? isMockRecord(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key) && ['Submitted', 'Needs Revision', 'Approved'].includes(form.status) : false)}
+                    onViewUploaded={() => handleViewUploaded(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key)}
                     onUploadClick={() => setSelectedFormForUpload(form)}
                     onDownload={() => handleDownload(form)}
                     onPrint={() => handlePrint(form)}
@@ -972,7 +1011,8 @@ export function FormsDocuments({
                   <tbody>
                     {getFormsForTab(child.childId).map(form => {
                       const isApproved = form.status === 'Approved';
-                      const canUpload = !['Pending Approval', 'Approved', 'Submitted'].includes(form.status);
+                      const assignmentIdStr = extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key;
+                      const hasUploadedFile = !!(assignmentIdStr && isMockRecord(assignmentIdStr) && ['Submitted', 'Needs Revision', 'Approved'].includes(form.status));
                       const isDisabled = form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId);
                       const isLoadingThis = loadingAction?.formId === (form.formId || form._key);
                       return (
@@ -1006,6 +1046,11 @@ export function FormsDocuments({
                                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={() => setSelectedFormForUpload(form)} title="Upload Form PDF">
                                     <UploadCloud className="h-3 w-3" />
                                   </Button>
+                                  {hasUploadedFile && (
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignmentIdStr); }} title="Preview Uploaded Form">
+                                      <FileSearch className="h-3 w-3" />
+                                    </Button>
+                                  )}
                                 </>
                               )}
                               {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (
@@ -1043,6 +1088,8 @@ export function FormsDocuments({
                     disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
                     disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
                     onView={() => handleView(form)}
+                    hasUploadedFile={!!(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key ? isMockRecord(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key) && ['Submitted', 'Needs Revision', 'Approved'].includes(form.status) : false)}
+                    onViewUploaded={() => handleViewUploaded(extractStudentFormAssignmentId(form.studentFormAssignmentId) || form.formId || form._key)}
                     onUploadClick={() => setSelectedFormForUpload(form)}
                     onDownload={() => handleDownload(form)}
                     onPrint={() => handlePrint(form)}
@@ -1098,6 +1145,19 @@ export function FormsDocuments({
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* PDF Preview Modal */}
+      <PdfPreviewModal
+        isOpen={isPreviewOpen}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          if (previewPdfUrl) {
+            URL.revokeObjectURL(previewPdfUrl);
+            setPreviewPdfUrl(null);
+          }
+        }}
+        fileUrl={previewPdfUrl}
+      />
 
       {/* Document Uploader Modal */}
       <Dialog 
@@ -1173,13 +1233,13 @@ export function FormsDocuments({
         open={!!selectedFormForUpload} 
         onOpenChange={(open) => !open && setSelectedFormForUpload(null)}
       >
-        <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden bg-slate-50 rounded-2xl border-0 shadow-xl">
-          <DialogHeader className="px-6 py-4 bg-white border-b border-slate-100">
-            <DialogTitle className="text-lg font-bold text-slate-900">
+        <DialogContent className="w-[95vw] sm:max-w-[500px] max-h-[90vh] p-0 overflow-y-auto bg-slate-50 rounded-2xl border-0 shadow-xl">
+          <DialogHeader className="px-4 py-4 sm:px-6 bg-white border-b border-slate-100 relative">
+            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900 break-words pr-12 text-left">
               Select Form: {selectedFormForUpload?.title || selectedFormForUpload?.formName}
             </DialogTitle>
           </DialogHeader>
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             <DocumentUploader
               entityName="Form"
               onUpload={async (file) => {

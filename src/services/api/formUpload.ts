@@ -60,6 +60,45 @@ export function isMockRecord(assignmentId: string): boolean {
   return forms.some(f => f.assignmentId === assignmentId);
 }
 
+const DB_NAME = 'GoddardMockDB';
+const STORE_NAME = 'mockPdfs';
+
+function getDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (e) => {
+      const db = (e.target as IDBOpenDBRequest).result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+export async function saveMockPdfToIdb(assignmentId: string, file: File): Promise<void> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.put(file, assignmentId);
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+  });
+}
+
+export async function getMockPdfFromIdb(assignmentId: string): Promise<File | null> {
+  const db = await getDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.get(assignmentId);
+    request.onsuccess = () => resolve(request.result || null);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 /**
  * MOCK ONLY: This function simulates uploading a form PDF.
  * It stores only metadata in localStorage to appear in the Review Queue.
@@ -97,6 +136,13 @@ export async function uploadFormMock(
   };
 
   saveMockUploadedForm(newItem);
+
+  // Save file to IndexedDB for preview
+  try {
+    await saveMockPdfToIdb(request.assignmentId, request.file);
+  } catch (err) {
+    console.error('Failed to save mock PDF to IndexedDB', err);
+  }
 
   // Return a dummy URL since we don't store base64/blobs for mock.
   return { success: true, url: '#' };
