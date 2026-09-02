@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../componen
 import { EmployeeGuideContent } from '../../components/EmployeeGuideContent';
 import { DocumentUploader } from '../../components/forms/DocumentUploader';
 import { useToast } from '../../contexts/ToastContext';
+import { uploadFormMock, getMockUploadedForms } from '../../services/api/formUpload';
 import { Label } from 'recharts';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
@@ -37,6 +38,7 @@ export function EmployeeDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<EnrichedAssignment | null>(null);
+  const [isUploadingMock, setIsUploadingMock] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [userOverride, setUserOverride] = useState(false);
   const handleViewModeChange = (mode: 'card' | 'table') => {
@@ -87,12 +89,39 @@ export function EmployeeDashboard() {
         if (!isMounted) return;
         setPendingRequestsCount(allRequests.filter(r => r.status === 'Pending').length);
 
-        const enriched = rawAssignments.map(assignment => ({
-          ...assignment,
-          formTitle: assignment.formName || 'Employee Form',
-          formDescription: assignment.dueDate ? `Due: ${assignment.dueDate}` : 'Required documentation',
-          normalizedStatus: normalizeFormStatus(assignment.status),
-        }));
+        const enriched = [...rawAssignments, ...[
+          {
+            id: 'mock-employee-1',
+            formId: 'mock-employee-1',
+            userId: empId,
+            schoolId: userData.schoolId,
+            employeeId: employee.id,
+            status: 'draft',
+            formName: 'Mock Employee Form 1',
+            dueDate: '2027-01-01',
+            assignedAt: new Date().toISOString()
+          } as EmployeeFormAssignment,
+          {
+            id: 'mock-employee-2',
+            formId: 'mock-employee-2',
+            userId: empId,
+            schoolId: userData.schoolId,
+            employeeId: employee.id,
+            status: 'draft',
+            formName: 'Mock Employee Form 2',
+            dueDate: '2027-01-01',
+            assignedAt: new Date().toISOString()
+          } as EmployeeFormAssignment
+        ]].map(assignment => {
+          const uploaded = getMockUploadedForms().find(f => f.assignmentId === assignment.id);
+          const currentStatus = uploaded ? uploaded.status : assignment.status;
+          return {
+            ...assignment,
+            formTitle: assignment.formName || 'Employee Form',
+            formDescription: assignment.dueDate ? `Due: ${assignment.dueDate}` : 'Required documentation',
+            normalizedStatus: normalizeFormStatus(currentStatus),
+          };
+        });
 
         setAssignments(enriched);
       } catch (err) {
@@ -521,9 +550,34 @@ export function EmployeeDashboard() {
             <DocumentUploader
               entityName="Form"
               onUpload={async (file) => {
-                  // UI-only mock upload, no backend call
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  setSelectedFormForUpload(null);
+                  if (selectedFormForUpload && employee && !isUploadingMock) {
+                    setIsUploadingMock(true);
+                    try {
+                      await uploadFormMock({
+                        file,
+                        assignmentId: selectedFormForUpload.id,
+                        entityType: 'employee'
+                      }, {
+                        schoolId: userData?.schoolId || '',
+                        formTemplateId: selectedFormForUpload.formTemplateId || '',
+                        formName: selectedFormForUpload.formTitle,
+                        employeeId: employee.id,
+                        employeeName: `${employee.firstName} ${employee.lastName}`.trim(),
+                        employeeEmail: employee.email || userData?.email || ''
+                      });
+                      
+                      showToast('success', 'Form uploaded successfully and is pending approval.');
+                      setSelectedFormForUpload(null);
+                      // Update local state to reflect pending approval
+                      setAssignments(prev => prev.map(a => 
+                        a.id === selectedFormForUpload.id 
+                          ? { ...a, normalizedStatus: 'Submitted' } 
+                          : a
+                      ));
+                    } finally {
+                      setIsUploadingMock(false);
+                    }
+                  }
               }}
             />
           </div>

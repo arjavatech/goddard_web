@@ -1,4 +1,5 @@
 import { authedFetch, z } from './common';
+import { getMockUploadedForms } from './formUpload';
 
 export type ReviewQueueItem = {
   assignmentId: string;
@@ -62,7 +63,43 @@ async function fetchQueue(kind: 'student' | 'employee', options: ReviewQueueOpti
   const path = kind === 'student' ? '/student-form-assignments/review-queue' : '/employee-form-assignments/review-queue';
   const data = await authedFetch({ method: 'GET', url: `${path}?${params}` }, z.array(z.any()));
   const items = data.map((item: any) => mapItem(item, kind));
-  return items;
+
+  // Incorporate mock forms for the review queue feature
+  const mockForms = getMockUploadedForms().filter(form => 
+    form.schoolId === options.schoolId && 
+    (kind === 'student' ? !!form.studentName : !!form.employeeName) &&
+    form.status === 'Submitted'
+  );
+
+  const finalItems = [...items];
+  for (const mock of mockForms) {
+    const existingIdx = finalItems.findIndex(i => i.assignmentId === mock.assignmentId);
+    const mappedMock: ReviewQueueItem = {
+      assignmentId: mock.assignmentId,
+      schoolId: mock.schoolId,
+      formTemplateId: mock.formTemplateId,
+      formName: mock.formName,
+      status: mock.status,
+      submittedAt: mock.submittedAt,
+      studentName: mock.studentName,
+      parentName: mock.parentName,
+      parentEmail: mock.parentEmail,
+      classroomId: mock.classroomId,
+      classroomName: mock.classroomName,
+      employeeId: mock.employeeId,
+      employeeName: mock.employeeName,
+      employeeEmail: mock.employeeEmail,
+      recentPdfLink: '#', // mock
+    };
+
+    if (existingIdx >= 0) {
+      finalItems[existingIdx] = { ...finalItems[existingIdx], ...mappedMock };
+    } else {
+      finalItems.push(mappedMock);
+    }
+  }
+
+  return finalItems;
 }
 
 export const fetchStudentFormReviewQueue = (options: ReviewQueueOptions) => fetchQueue('student', options);

@@ -40,7 +40,9 @@ export function Header() {
     } catch (err) {
       console.error('Logout error:', err);
     } finally {
+      const mockData = localStorage.getItem('mock_uploaded_forms');
       localStorage.clear();
+      if (mockData) localStorage.setItem('mock_uploaded_forms', mockData);
       setIsLoggingOut(false);
       setShowLogoutModal(false);
       navigate('/login', { replace: true });

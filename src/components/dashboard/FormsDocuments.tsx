@@ -7,6 +7,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
+import { useToast } from '../../contexts/ToastContext';
+import { uploadFormMock, getMockUploadedForms } from '../../services/api/formUpload';
 import { getFilloutUserContext, appendFilloutUserParams } from '../../services/api/fillout';
 import { cn } from '../../lib/utils';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
@@ -202,6 +204,7 @@ export function FormsDocuments({
   familyForms,
   rawFormData,
   selectedChildId,
+  selectedChildName,
   childStatus = 'active',
   onChildSelect,
   onViewForm,
@@ -219,6 +222,7 @@ export function FormsDocuments({
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const navigate = useNavigate();
   const [loadingAction, setLoadingAction] = useState<{ action: string; formId: string } | null>(null);
@@ -230,6 +234,7 @@ export function FormsDocuments({
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const [selectedDocumentRequest, setSelectedDocumentRequest] = useState<DocumentRequest | null>(null);
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<any | null>(null);
+  const [isUploadingMock, setIsUploadingMock] = useState(false);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(
     (localStorage.getItem('parentFormsViewMode') as 'card' | 'table') || 'card'
   );
@@ -328,9 +333,48 @@ export function FormsDocuments({
             studentFormAssignmentId
           };
         });
+      }),
+      ...[
+        {
+          title: 'Mock Form 1',
+          description: 'Testing upload workflow 1',
+          status: 'Draft',
+          formId: 'mock-parent-1',
+          studentFormAssignmentId: 'mock-parent-1',
+          lastUpdated: new Date().toLocaleDateString(),
+          dueDate: '2027-01-01'
+        },
+        {
+          title: 'Mock Form 2',
+          description: 'Testing upload workflow 2',
+          status: 'Draft',
+          formId: 'mock-parent-2',
+          studentFormAssignmentId: 'mock-parent-2',
+          lastUpdated: new Date().toLocaleDateString(),
+          dueDate: '2027-01-01'
+        },
+        {
+          title: 'Mock Form 3',
+          description: 'Testing upload workflow 3',
+          status: 'Draft',
+          formId: 'mock-parent-3',
+          studentFormAssignmentId: 'mock-parent-3',
+          lastUpdated: new Date().toLocaleDateString(),
+          dueDate: '2027-01-01'
+        }
+      ].map(mockForm => {
+        const uploaded = getMockUploadedForms().find(f => f.assignmentId === mockForm.studentFormAssignmentId);
+        return {
+          ...mockForm,
+          childId: selectedChildId || childSpecificForms[0]?.childId,
+          childName: selectedChildName || childSpecificForms[0]?.childName,
+          _key: `mock-${mockForm.formId}`,
+          rawData: null,
+          status: uploaded ? uploaded.status : mockForm.status
+        };
       })
     ];
-  }, [familyForms, childSpecificForms, rawFormData, selectedChildId]);
+  }, [familyForms, childSpecificForms, rawFormData, selectedChildId, selectedChildName]);
 
   const handleView = async (form: any) => {
     if (isOpeningRef.current) return;
@@ -1139,12 +1183,30 @@ export function FormsDocuments({
             <DocumentUploader
               entityName="Form"
               onUpload={async (file) => {
-                  // UI-only mock upload, no backend call
-                  await new Promise(resolve => setTimeout(resolve, 500));
-                  
-                  setSelectedFormForUpload(null);
-                  if (onFormCompleted) {
-                    onFormCompleted(true);
+                  if (selectedFormForUpload && !isUploadingMock) {
+                    setIsUploadingMock(true);
+                    try {
+                      await uploadFormMock({
+                        file,
+                        assignmentId: selectedFormForUpload.studentFormAssignmentId || selectedFormForUpload.formId || '',
+                        entityType: 'student'
+                      }, {
+                        schoolId: userData?.schoolId || '',
+                        formTemplateId: selectedFormForUpload.formId || '',
+                        formName: selectedFormForUpload.title || selectedFormForUpload.formName || 'Form',
+                        studentName: selectedChildName || selectedFormForUpload.childName || '',
+                        parentName: `${userData?.firstName || ''} ${userData?.lastName || ''}`.trim(),
+                        parentEmail: userData?.email || ''
+                      });
+                      
+                      showToast('success', 'Form uploaded successfully and is pending approval.');
+                      setSelectedFormForUpload(null);
+                      if (onFormCompleted) {
+                        onFormCompleted(true);
+                      }
+                    } finally {
+                      setIsUploadingMock(false);
+                    }
                   }
               }}
             />

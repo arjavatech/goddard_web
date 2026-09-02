@@ -38,7 +38,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
+      const mockData = localStorage.getItem('mock_uploaded_forms');
       localStorage.clear();
+      if (mockData) localStorage.setItem('mock_uploaded_forms', mockData);
       sessionStorage.setItem('explicit_logout', 'true');
       await signOut();
     } catch (err) {

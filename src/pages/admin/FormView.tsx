@@ -14,6 +14,7 @@ import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
+import { updateMockUploadStatus, isMockRecord } from '../../services/api/formUpload';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -244,7 +245,9 @@ export function FormView() {
 
     setIsApproving(true);
     try {
-      if (isEmployeeForm && schoolId) {
+      if (isMockRecord(studentFormAssignmentId)) {
+        updateMockUploadStatus(studentFormAssignmentId, 'Approved');
+      } else if (isEmployeeForm && schoolId) {
         await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Approved', notes);
       } else {
         await reviewStudentFormAssignment(studentFormAssignmentId, 'approved', notes, user.id);
@@ -283,7 +286,9 @@ export function FormView() {
 
     setIsRejecting(true);
     try {
-      if (isEmployeeForm && schoolId) {
+      if (isMockRecord(studentFormAssignmentId)) {
+        updateMockUploadStatus(studentFormAssignmentId, 'Needs Revision');
+      } else if (isEmployeeForm && schoolId) {
         await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Rejected', notes);
       } else {
         await reviewStudentFormAssignment(studentFormAssignmentId, 'rejected', notes, user.id);
