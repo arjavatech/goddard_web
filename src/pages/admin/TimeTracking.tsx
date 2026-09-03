@@ -10,6 +10,10 @@ import { Input } from '../../components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
 import { authedFetch, z } from '../../services/api/common';
+import { Pagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
+import { usePageSize } from '../../hooks/usePageSize';
+import { usePagination } from '../../hooks/usePagination';
 
 type Tab = 'today' | 'daywise' | 'range' | 'pending';
 type AttendanceUser = { external_employee_id: string; taptime_employee_id: string; first_name: string; last_name: string; email: string; role: string };
@@ -28,6 +32,7 @@ const reportTime = (value?: string) => value ? value.replace(' ', 'T').slice(11,
 const timestamp = (date: string, time: string) => time ? `${date}T${time}:00` : null;
 const attendanceUsersSchema = z.object({ items: z.array(z.object({ external_employee_id: z.string(), taptime_employee_id: z.string(), first_name: z.string(), last_name: z.string(), email: z.string(), role: z.string() })) });
 const displayTime = (value?: string) => value ? new Date(value).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—';
+const displayReportDate = (value: string) => value ? new Date(`${value}T00:00:00`).toLocaleDateString() : '';
 
 function timeWorked(date: string, checkIn: string, checkOut: string) {
   if (!checkOut) return 'Pending';
@@ -41,6 +46,7 @@ export function TimeTracking() {
   const schoolId = userData?.schoolId || '';
   const [tab, setTab] = useState<Tab>('today');
   const [date, setDate] = useState(today());
+  const [appliedDaywiseDate, setAppliedDaywiseDate] = useState(today());
   const [start, setStart] = useState(today());
   const [end, setEnd] = useState(today());
   const [items, setItems] = useState<AttendanceReport[]>([]);
@@ -48,6 +54,7 @@ export function TimeTracking() {
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'grid'>('table');
+  const [itemsPerPage, setItemsPerPage] = usePageSize('time-tracking', 10);
 
   const [record, setRecord] = useState<AttendanceReport | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -83,12 +90,15 @@ export function TimeTracking() {
   }, [schoolId]);
 
   const load = async () => {
+    const requestedTab = tab;
+    const requestedDate = requestedTab === 'today' ? today() : date;
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams(tab === 'range' ? { start_date: start, end_date: end } : { date });
-      const response = tab === 'pending' ? await TapTimeService.pending() : await TapTimeService.schoolReports(params);
+      const params = new URLSearchParams(requestedTab === 'range' ? { start_date: start, end_date: end } : { date: requestedDate });
+      const response = requestedTab === 'pending' ? await TapTimeService.pending() : await TapTimeService.schoolReports(params);
       setItems(response.items);
+      if (requestedTab === 'daywise') setAppliedDaywiseDate(requestedDate);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Unable to load reports.');
     } finally {
@@ -101,7 +111,15 @@ export function TimeTracking() {
   const filtered = useMemo(() => items.filter(item =>
     `${item.name || ''} ${item.email || ''} ${item.date || ''}`.toLowerCase().includes(query.toLowerCase()),
   ), [items, query]);
-  const activeDate = tab === 'today' || tab === 'daywise' ? date : '';
+  const { currentPage, totalPages, paginatedData: paginatedReports, setCurrentPage } = usePagination({ data: filtered, itemsPerPage });
+  const activeDate = tab === 'today' ? today() : tab === 'daywise' ? date : '';
+
+  useEffect(() => { setCurrentPage(1); }, [items, query, tab, setCurrentPage]);
+
+  const handleItemsPerPageChange = (value: number) => {
+    setItemsPerPage(value);
+    setCurrentPage(1);
+  };
 
   const downloadCsv = () => {
     const rows = [['Employee', 'Username', 'Date', 'Check in', 'Check out', 'Worked'], ...filtered.map(item => [item.name || '', item.email || '', item.date || '', item.check_in_time || '', item.check_out_time || '', item.time_worked || ''])];
@@ -257,7 +275,7 @@ export function TimeTracking() {
     }
   };
 
-  const title = tab === 'today' ? `Today's Report - ${new Date().toLocaleDateString()}` : tabs.find(value => value.key === tab)?.label || 'Reports';
+  const title = tab === 'daywise' ? `Day-wise Report - ${displayReportDate(appliedDaywiseDate)}` : tab === 'today' ? `Today's Report - ${displayReportDate(today())}` : tabs.find(value => value.key === tab)?.label || 'Reports';
 
   return (
     <AdminLayout>
@@ -273,10 +291,10 @@ export function TimeTracking() {
         <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm"><div className="border-b border-slate-100 bg-slate-50/50 px-5"><nav className="flex gap-6 overflow-x-auto">{tabs.map(({ key, label, icon: Icon }) => <button key={key} onClick={() => setTab(key)} className={`flex shrink-0 items-center gap-2 border-b-2 px-1 py-4 text-sm font-bold ${tab === key ? 'border-[#1a6fc4] text-[#0F2D52]' : 'border-transparent text-slate-500 hover:text-[#0F2D52]'}`}><Icon className="h-4 w-4" />{label}</button>)}</nav></div>
         <div className="p-5">
           <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-end gap-3">{(tab === 'daywise' || tab === 'today') && <DateField label={tab === 'daywise' ? 'Select Date' : 'Today'} value={date} onChange={setDate} />}{tab === 'range' && <><DateField label="Start Date" value={start} onChange={setStart} /><DateField label="End Date" value={end} onChange={setEnd} /></>}{tab !== 'pending' && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => void load()}>View Report</Button>}</div>
+            <div className="flex flex-wrap items-end gap-3">{tab === 'daywise' && <DateField label="Select Date" value={date} onChange={setDate} />}{tab === 'range' && <><DateField label="Start Date" value={start} onChange={setStart} /><DateField label="End Date" value={end} onChange={setEnd} /></>}{(tab === 'daywise' || tab === 'range') && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => void load()}>View Report</Button>}</div>
             <div className="flex flex-wrap gap-3"><div className="relative max-w-md flex-1"><Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${query ? 'text-[#0F2D52]' : 'text-slate-400'}`} /><Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search reports..." className="pl-9" /></div><div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"><button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button><button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button></div></div>
           </div>
-          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} />)}</div> : <ReportTable items={filtered} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} />}</section>}
+          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} />}<Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></>}</section>}
         </div></section></div>
       </main>
       <AttendanceDialog open={editOpen} onOpenChange={setEditOpen} mode="edit" record={record} username={record ? `${record.name || 'Employee'}${record.email ? ` — ${record.email}` : ''}` : ''} date={editDate} checkInTime={checkInTime} checkOutTime={checkOutTime} error={formError} saving={saving} onDate={setEditDate} onCheckIn={value => updatePendingTime('check_in', value)} onCheckOut={value => updatePendingTime('check_out', value)} onSave={() => void saveEdit()} />
