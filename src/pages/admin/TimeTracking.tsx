@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { BarChart3, CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
@@ -108,6 +110,41 @@ export function TimeTracking() {
     link.download = 'taptime-report.csv';
     link.click();
     URL.revokeObjectURL(link.href);
+  };
+
+  const exportPdf = () => {
+    const document = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const reportTitle = tab === 'today' ? "Today's Attendance Report" : title;
+
+    document.setFontSize(18);
+    document.setTextColor(15, 45, 82);
+    document.text('The Goddard School', 40, 42);
+    document.setFontSize(13);
+    document.setTextColor(30, 41, 59);
+    document.text(reportTitle, 40, 66);
+    document.setFontSize(9);
+    document.setTextColor(100, 116, 139);
+    document.text(`Exported on ${new Date().toLocaleDateString()} • ${filtered.length} record${filtered.length === 1 ? '' : 's'}`, 40, 84);
+
+    autoTable(document, {
+      startY: 104,
+      head: [['Employee', 'Username', 'Date', 'Check In', 'Check Out', 'Worked']],
+      body: filtered.map(item => [
+        item.name || '—',
+        item.email || '—',
+        item.date || '—',
+        displayTime(item.check_in_time),
+        item.check_out_time ? displayTime(item.check_out_time) : 'Pending',
+        item.time_worked || '—',
+      ]),
+      theme: 'grid',
+      headStyles: { fillColor: [15, 45, 82], textColor: 255, fontStyle: 'bold' },
+      styles: { fontSize: 9, cellPadding: 7, textColor: [51, 65, 85] },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 40, right: 40 },
+    });
+
+    document.save(`taptime-attendance-report-${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
   const openEdit = (item: AttendanceReport) => {
@@ -229,7 +266,7 @@ export function TimeTracking() {
         <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:p-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h1 className="text-2xl font-bold text-[#0F2D52]">Reports &amp; Analytics</h1><p className="mt-1 text-sm text-slate-600">View and correct employee time tracking data</p></div>
-            <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={downloadCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" disabled={!filtered.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
+            <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={downloadCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" onClick={exportPdf} disabled={!filtered.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
           </div>
         </header>
         <div className="grid gap-4 sm:grid-cols-2"><Stat icon={Users} label={tab === 'pending' ? 'Affected Employees' : tab === 'today' ? 'Checked-in Employees' : 'Total Employees'} value={String(new Set(filtered.map(item => item.emp_id || item.name)).size)} color="text-blue-600" /><Stat icon={Clock3} label={tab === 'pending' ? 'Pending Checkouts' : tab === 'today' ? 'Currently Working' : 'Total Records'} value={String(tab === 'today' ? filtered.filter(item => item.check_in_time && !item.check_out_time).length : filtered.length)} color="text-emerald-600" /></div>
