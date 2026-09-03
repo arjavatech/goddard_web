@@ -16,6 +16,9 @@ import { getFilloutUserContext, appendFilloutUserParams } from '../../services/a
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
+import { getMockUploadedForms } from '../../services/api/formUpload';
+import { PdfRenderer } from '../../components/forms/PdfRenderer';
+import { extractFormAssignmentId } from '../../lib/utils';
 
 
 export function EmployeeFormView() {
@@ -52,6 +55,12 @@ export function EmployeeFormView() {
   const nextSibling = assignments && currentIndex >= 0 && currentIndex < assignments.length - 1
     ? assignments[currentIndex + 1]
     : null;
+
+  const normalizedId = assignment?.id ? extractFormAssignmentId(assignment.id) || assignment.id : null;
+  const hasUploadedFile = Boolean(
+    normalizedId && 
+    getMockUploadedForms().some(f => f.assignmentId === normalizedId)
+  );
 
   const handleNavigateToSibling = (sibling: EnrichedAssignment) => {
     setDrawerOpen(false);
@@ -106,7 +115,10 @@ export function EmployeeFormView() {
   // Build the form URL: prefer recentEditLink (resume in-progress form) over filloutFormId (fresh start)
   useEffect(() => {
     const baseUrl = assignment?.recentEditLink || assignment?.filloutFormId;
-    if (!baseUrl) return;
+    if (!baseUrl) {
+      setViewUrl(null);
+      return;
+    }
 
     (async () => {
       let url = baseUrl;
@@ -233,7 +245,7 @@ export function EmployeeFormView() {
   }, [assignment?.formTitle, handleSubmission]);
 
   if (!assignment) return null;
-  if (!assignment.recentEditLink && !assignment.filloutFormId) {
+  if (!hasUploadedFile && !assignment.recentEditLink && !assignment.filloutFormId) {
     return (
       <div className="h-screen flex items-center justify-center text-slate-500 text-sm">
         Form URL is not configured for this assignment.
@@ -424,14 +436,18 @@ export function EmployeeFormView() {
 
           {/* Iframe Container */}
           <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative">
-            {(!viewUrl || isFrameLoading) && (
+            {(!viewUrl || isFrameLoading) && !hasUploadedFile && (
               <div className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm" style={{ height: `${formHeight}px` }}>
                 <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
                 <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
               </div>
             )}
 
-            {viewUrl && (
+            {hasUploadedFile && normalizedId ? (
+              <div className="w-full h-full min-h-[480px]">
+                <PdfRenderer assignmentId={normalizedId} />
+              </div>
+            ) : viewUrl && (
               <iframe
                 ref={embeddedResize.iframeRef}
                 src={viewUrl}

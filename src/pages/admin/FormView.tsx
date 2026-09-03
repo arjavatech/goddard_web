@@ -14,7 +14,9 @@ import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
-import { updateMockUploadStatus, isMockRecord } from '../../services/api/formUpload';
+import { updateMockUploadStatus, isMockRecord, getMockUploadedForms } from '../../services/api/formUpload';
+import { extractFormAssignmentId } from '../../lib/utils';
+import { PdfRenderer } from '../../components/forms/PdfRenderer';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { isFormBuilderUrl } from '../../lib/formBuilderUrl';
 import 'react-pdf/dist/Page/TextLayer.css';
@@ -153,6 +155,12 @@ export function FormView() {
   const recentPdfLink = location.state?.recentPdfLink;
   const isEmployeeForm = location.state?.isEmployeeForm as boolean | undefined;
   const schoolId = location.state?.schoolId as string | undefined;
+
+  const normalizedId = studentFormAssignmentId ? extractFormAssignmentId(studentFormAssignmentId) || String(studentFormAssignmentId) : null;
+  const hasUploadedFile = Boolean(
+    normalizedId &&
+    getMockUploadedForms().some(f => f.assignmentId === normalizedId)
+  );
 
   const usesResumeLink = (() => {
     const link = recentEditLink || filloutFormId || filloutFormUrl;
@@ -369,12 +377,16 @@ export function FormView() {
           </div>
           {/* Form container with dynamic height */}
           <div className="mt-6 relative min-h-[480px]">
-            {isFrameLoading && (
+            {isFrameLoading && !hasUploadedFile && (
               <div className="absolute inset-0 flex items-center justify-center bg-white z-10 rounded-xl">
                 <Loading message="Loading..." size="md" />
               </div>
             )}
-            {isApproved && recentPdfLink ? (
+            {hasUploadedFile && normalizedId ? (
+              <div className="w-full h-full min-h-[480px]">
+                <PdfRenderer assignmentId={normalizedId} />
+              </div>
+            ) : isApproved && recentPdfLink ? (
               <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
                   <Button

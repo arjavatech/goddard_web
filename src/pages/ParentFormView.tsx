@@ -9,6 +9,9 @@ import { DocumentUploader } from '../components/forms/DocumentUploader';
 import { useIframeScrollLock } from '../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../hooks/useEmbeddedFormResize';
 import { documentRequestsApi } from '../services/api/documentRequests';
+import { getMockUploadedForms } from '../services/api/formUpload';
+import { extractFormAssignmentId } from '../lib/utils';
+import { PdfRenderer } from '../components/forms/PdfRenderer';
 
 type SiblingForm = {
   formId: string;
@@ -59,7 +62,15 @@ export function ParentFormView() {
   useIframeScrollLock();
   const embeddedResize = useEmbeddedFormResize(viewUrl);
 
-  const isReadOnly = status === 'Approved' || status === 'Submitted';
+  const currentSibling = siblingForms?.find(f => f.formId === decodeURIComponent(currentFormId ?? ''));
+  const rawId = currentSibling?.studentFormAssignmentId || currentFormId;
+  const normalizedId = rawId ? extractFormAssignmentId(rawId) || String(rawId) : null;
+  const hasUploadedFile = Boolean(
+    normalizedId && 
+    getMockUploadedForms().some(f => f.assignmentId === normalizedId)
+  );
+
+  const isReadOnly = (status === 'Approved' || status === 'Submitted') && !hasUploadedFile;
   // The parent dashboard currently presents an in-progress submission as
   // “Pending Approval”. Treat that state as submitted for post-form navigation.
   const showSubmissionNavigation = showThankYou ||
@@ -100,10 +111,14 @@ export function ParentFormView() {
         : baseUrl;
     }
 
-    if (siblingViewUrl) {
+    const siblingRawId = sibling.studentFormAssignmentId || sibling.formId;
+    const siblingNormalizedId = siblingRawId ? extractFormAssignmentId(siblingRawId) || String(siblingRawId) : null;
+    const siblingHasPdf = Boolean(siblingNormalizedId && getMockUploadedForms().some(f => f.assignmentId === siblingNormalizedId));
+
+    if (siblingViewUrl || siblingHasPdf) {
       navigate(`/${schoolSlug}/dashboard/form/${encodeURIComponent(sibling.formId)}`, {
         state: {
-          viewUrl: siblingViewUrl,
+          viewUrl: siblingViewUrl || '#',
           title: sibling.title,
           status: sibling.status,
           childName: sibling.childName ?? childName,
@@ -495,12 +510,16 @@ export function ParentFormView() {
           ) : (
             /* ── Editable form (iframe) ── */
             <div className="relative min-h-[480px]">
-              {isFrameLoading && (
+              {isFrameLoading && !hasUploadedFile && (
                 <div className="absolute inset-0 flex items-center justify-center bg-white z-10">
                   <Loading message="Loading form..." size="sm" />
                 </div>
               )}
-              {viewUrl && viewUrl !== '#' ? (
+              {hasUploadedFile && normalizedId ? (
+                <div className="w-full h-full min-h-[480px]">
+                  <PdfRenderer assignmentId={normalizedId} />
+                </div>
+              ) : viewUrl && viewUrl !== '#' ? (
                 <>
                   <style>{`
                     @media (max-width: 640px) {

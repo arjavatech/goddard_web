@@ -149,17 +149,6 @@ function FormCard({
                   <UploadCloud className="h-3.5 w-3.5" />
                 </Button>
               )}
-              {hasUploadedFile && onViewUploaded && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200 ml-1"
-                  onClick={(e) => { e.stopPropagation(); if (disabled) return; onViewUploaded(); }}
-                  title="Preview Uploaded Form"
-                >
-                  <FileSearch className="h-3.5 w-3.5" />
-                </Button>
-              )}
             </>
           )}
         </div>
@@ -464,8 +453,9 @@ export function FormsDocuments({
       // });
 
       const isReadOnly = form.status === 'Approved' || form.status === 'Submitted';
+      const hasUploadedPdf = getMockUploadedForms().some(f => f.assignmentId === studentFormAssignmentId);
 
-      if (isReadOnly) {
+      if (isReadOnly && !hasUploadedPdf) {
         return;
       } else {
         const isFillout = (() => {
@@ -936,11 +926,6 @@ export function FormsDocuments({
                                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={() => setSelectedFormForUpload(form)} title="Upload Form PDF">
                                     <UploadCloud className="h-3 w-3" />
                                   </Button>
-                                  {hasUploadedFile && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignmentIdStr); }} title="Preview Uploaded Form">
-                                      <FileSearch className="h-3 w-3" />
-                                    </Button>
-                                  )}
                                 </>
                               )}
                               {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (
@@ -1046,11 +1031,6 @@ export function FormsDocuments({
                                   <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={() => setSelectedFormForUpload(form)} title="Upload Form PDF">
                                     <UploadCloud className="h-3 w-3" />
                                   </Button>
-                                  {hasUploadedFile && (
-                                    <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52] ml-1" disabled={isDisabled} onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignmentIdStr); }} title="Preview Uploaded Form">
-                                      <FileSearch className="h-3 w-3" />
-                                    </Button>
-                                  )}
                                 </>
                               )}
                               {isApproved && (form.rawData?.recent_pdf_link || form.recentPdfLink) && (

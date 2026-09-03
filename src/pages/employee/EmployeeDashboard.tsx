@@ -19,6 +19,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { uploadFormMock, getMockUploadedForms, isMockRecord, getMockPdfFromIdb } from '../../services/api/formUpload';
 import { PdfPreviewModal } from '../../components/forms/PdfPreviewModal';
 import { FileSearch } from 'lucide-react';
+import { extractFormAssignmentId } from '../../lib/utils';
 import { Label } from 'recharts';
 
 type EnrichedAssignment = EmployeeFormAssignment & {
@@ -133,7 +134,8 @@ export function EmployeeDashboard() {
             assignedAt: new Date().toISOString()
           } as EmployeeFormAssignment
         ]].map(assignment => {
-          const uploaded = getMockUploadedForms().find(f => f.assignmentId === assignment.id);
+          const normalizedId = extractFormAssignmentId(assignment.id) || assignment.id;
+          const uploaded = getMockUploadedForms().find(f => f.assignmentId === normalizedId);
           const currentStatus = uploaded ? uploaded.status : assignment.status;
           return {
             ...assignment,
@@ -382,7 +384,8 @@ export function EmployeeDashboard() {
                       {assignments.map((assignment) => {
                         const ns = assignment.normalizedStatus;
                         const isApproved = ns === 'Approved';
-                        const hasUploadedFile = isMockRecord(assignment.id) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
+                        const normalizedId = extractFormAssignmentId(assignment.id) || assignment.id;
+                        const hasUploadedFile = isMockRecord(normalizedId) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
                         return (
                           <tr
                             key={assignment.id}
@@ -413,13 +416,6 @@ export function EmployeeDashboard() {
                                     <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); handleOpenForm(assignment); }} title="Open Form">
                                       <Eye className="h-4 w-4" />
                                     </Button>
-                                    
-                                    {hasUploadedFile && (
-                                      <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); handleViewUploaded(assignment.id); }} title="Preview Uploaded Form">
-                                        <FileSearch className="h-4 w-4" />
-                                      </Button>
-                                    )}
-
                                     <Button variant="ghost" size="icon" className="h-6 w-6 rounded-md text-slate-400 hover:text-[#0F2D52]" onClick={(e) => { e.stopPropagation(); setSelectedFormForUpload(assignment); }} title="Upload Form">
                                       <UploadCloud className="h-4 w-4" />
                                     </Button>
@@ -448,7 +444,8 @@ export function EmployeeDashboard() {
                   {assignments.map((assignment, idx) => {
                     const ns = assignment.normalizedStatus;
                     const isApproved = ns === 'Approved';
-                    const hasUploadedFile = isMockRecord(assignment.id) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
+                    const normalizedId = extractFormAssignmentId(assignment.id) || assignment.id;
+                    const hasUploadedFile = isMockRecord(normalizedId) && ['Submitted', 'Needs Revision', 'Approved'].includes(ns);
                     return (
                       <motion.div
                         key={assignment.id}
@@ -523,22 +520,6 @@ export function EmployeeDashboard() {
                                   >
                                     <Eye className="h-3.5 w-3.5" />
                                   </Button>
-                                  
-                                  {hasUploadedFile && (
-                                    <Button
-                                      variant="outline"
-                                      size="icon"
-                                      className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleViewUploaded(assignment.id);
-                                      }}
-                                      title="Preview Uploaded Form"
-                                    >
-                                      <FileSearch className="h-3.5 w-3.5" />
-                                    </Button>
-                                  )}
-
                                   <Button
                                     variant="outline"
                                     size="icon"
@@ -597,7 +578,7 @@ export function EmployeeDashboard() {
                     try {
                       await uploadFormMock({
                         file,
-                        assignmentId: selectedFormForUpload.id,
+                        assignmentId: extractFormAssignmentId(selectedFormForUpload.id) || selectedFormForUpload.id,
                         entityType: 'employee'
                       }, {
                         schoolId: userData?.schoolId || '',
