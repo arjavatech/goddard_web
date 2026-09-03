@@ -201,7 +201,6 @@ export function Settings() {
   };
 
   useEffect(() => { loadSettings(); }, [schoolId]);
-
   const mutate = async (operation: Parameters<typeof updateRequestSettings>[1][number]) => {
     applySettings(await updateRequestSettings(schoolId, [operation]));
   };

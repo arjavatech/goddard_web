@@ -2,10 +2,18 @@ import { authedFetch, z } from './common';
 
 export type SchoolRequestSettingOption = { id: string; label: string };
 
+export type SchoolFeatures = {
+  parentManagementEnabled: boolean;
+  employeeManagementEnabled: boolean;
+  expenseManagementEnabled: boolean;
+  taptimeEnabled: boolean;
+};
+
 export type SchoolData = {
   id?: string;
   name?: string;
   subdomain?: string;
+  timezone?: string;
   settings?: {
     contact_no?: string;
     mail?: string;
@@ -16,6 +24,7 @@ export type SchoolData = {
   };
   requestCategories?: SchoolRequestSettingOption[];
   location?: SchoolRequestSettingOption[];
+  features: SchoolFeatures;
 };
 
 export type UserContext = {
@@ -27,6 +36,8 @@ export type UserContext = {
   lastName?: string;
   phone?: string;
   address?: string;
+  taptimeEmployeeId?: string | null;
+  taptimePin?: string | null;
   schoolData?: SchoolData | null;
 };
 
@@ -43,9 +54,14 @@ const schoolDataSchema = z.object({
   id: z.string().optional(),
   name: z.string().optional(),
   subdomain: z.string().optional(),
+  timezone: z.string().optional(),
   settings: schoolSettingsSchema.optional(),
   request_categories: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
   location: z.array(z.object({ id: z.string(), label: z.string() })).nullable().optional(),
+  parent_management_enabled: z.boolean().optional(),
+  employee_management_enabled: z.boolean().optional(),
+  expense_management_enabled: z.boolean().optional(),
+  taptime_enabled: z.boolean().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -64,6 +80,10 @@ const userContextSchema = z.object({
   phone: z.string().optional(),
   phone_number: z.string().optional(),
   address: z.string().optional(),
+  taptime_employee_id: z.string().nullable().optional(),
+  taptimeEmployeeId: z.string().nullable().optional(),
+  taptime_pin: z.string().nullable().optional(),
+  taptimePin: z.string().nullable().optional(),
   school_data: schoolDataSchema.nullable().optional(),
 }).passthrough();
 
@@ -92,10 +112,18 @@ export async function fetchUserContext(): Promise<UserContext> {
       lastName: data.last_name || data.lastName,
       phone: data.phone || data.phone_number,
       address: data.address,
+      taptimeEmployeeId: data.taptime_employee_id ?? data.taptimeEmployeeId ?? null,
+      taptimePin: data.taptime_pin ?? data.taptimePin ?? null,
       schoolData: data.school_data ? {
         ...data.school_data,
         requestCategories: data.school_data.request_categories ?? [],
-        location: data.school_data.location ?? [],
+      location: data.school_data.location ?? [],
+        features: {
+          parentManagementEnabled: data.school_data.parent_management_enabled ?? false,
+          employeeManagementEnabled: data.school_data.employee_management_enabled ?? false,
+          expenseManagementEnabled: data.school_data.expense_management_enabled ?? false,
+          taptimeEnabled: data.school_data.taptime_enabled ?? false,
+        },
       } : null,
     };
 
@@ -114,4 +142,14 @@ export async function fetchUserContext(): Promise<UserContext> {
       inFlightUserContextRequest = null;
     }
   }
+}
+
+export async function mirrorOwnTapTimePin(pin: string): Promise<void> {
+  await authedFetch({
+    method: 'PATCH',
+    url: '/taptime/me/pin',
+    // httpFetch serializes request bodies. Passing a JSON string here would
+    // serialize it a second time and make Axum receive a string, not an object.
+    body: { pin },
+  }, z.object({ status: z.literal('updated') }));
 }

@@ -17,9 +17,10 @@ interface ChildSelectorProps {
   children: Child[];
   selectedChildId: string;
   onSelectChild: (childId: string) => void;
+  showTitle?: boolean;
 }
 
-export function ChildSelector({ children, selectedChildId, onSelectChild }: ChildSelectorProps) {
+export function ChildSelector({ children, selectedChildId, onSelectChild, showTitle = true }: ChildSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const sortedChildren = [...children].sort((a, b) => a.name.localeCompare(b.name));
@@ -44,14 +45,15 @@ export function ChildSelector({ children, selectedChildId, onSelectChild }: Chil
   const selectedChild = sortedChildren.find(c => c.id === selectedChildId) || sortedChildren[0];
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2 mt-6">
-      {/* Page title */}
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center">
-          <Users className="w-4 h-4 text-[#0F2D52]" />
+    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mb-2 mt-16">
+      {showTitle && (
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center">
+            <Users className="w-4 h-4 text-[#0F2D52]" />
+          </div>
+          <h1 className="text-base sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Dashboard</h1>
         </div>
-        <h1 className="text-base sm:text-2xl font-bold text-slate-900 tracking-tight">Parent Dashboard</h1>
-      </div>
+      )}
 
       {/* Child picker — only shown when there are multiple children */}
       {sortedChildren.length > 1 && (
