@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BarChart3, CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { ArrowDown, ArrowUp, ArrowUpDown, BarChart3, CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
@@ -56,6 +56,17 @@ export function TimeTracking() {
   const [query, setQuery] = useState('');
   const [view, setView] = useState<'table' | 'grid'>('table');
   const [itemsPerPage, setItemsPerPage] = usePageSize('time-tracking', 10);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof AttendanceReport; direction: 'asc' | 'desc' } | null>(null);
+
+  const handleSort = (key: keyof AttendanceReport) => {
+    setSortConfig(current => {
+      if (current?.key === key) {
+        if (current.direction === 'asc') return { key, direction: 'desc' };
+        return null;
+      }
+      return { key, direction: 'asc' };
+    });
+  };
 
   const [record, setRecord] = useState<AttendanceReport | null>(null);
   const [editOpen, setEditOpen] = useState(false);
@@ -109,13 +120,31 @@ export function TimeTracking() {
 
   useEffect(() => { void load(); }, [tab]);
 
-  const filtered = useMemo(() => items.filter(item =>
-    `${item.name || ''} ${item.email || ''} ${item.date || ''}`.toLowerCase().includes(query.toLowerCase()),
-  ), [items, query]);
+  const filtered = useMemo(() => {
+    let result = items.filter(item =>
+      `${item.name || ''} ${item.email || ''} ${item.date || ''}`.toLowerCase().includes(query.toLowerCase()),
+    );
+    if (sortConfig) {
+      result = [...result].sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        if (aValue == null) aValue = '';
+        if (bValue == null) bValue = '';
+        const aStr = String(aValue).toLowerCase();
+        const bStr = String(bValue).toLowerCase();
+        if (aStr < bStr) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aStr > bStr) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [items, query, sortConfig]);
   const { currentPage, totalPages, paginatedData: paginatedReports, setCurrentPage } = usePagination({ data: filtered, itemsPerPage });
   const activeDate = tab === 'today' ? today() : tab === 'daywise' ? date : '';
 
   useEffect(() => { setCurrentPage(1); }, [items, query, tab, setCurrentPage]);
+
+  useEffect(() => { setSortConfig(null); }, [tab]);
 
   const handleItemsPerPageChange = (value: number) => {
     setItemsPerPage(value);
@@ -285,7 +314,7 @@ export function TimeTracking() {
         <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:p-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h1 className="text-2xl font-bold text-[#0F2D52]">Reports &amp; Analytics</h1><p className="mt-1 text-sm text-slate-600">View and correct employee time tracking data</p></div>
-            <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={downloadCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" onClick={exportPdf} disabled={!filtered.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
+            <div className="flex flex-wrap gap-2 w-full sm:w-auto"><Button variant="outline" className="flex-1 sm:flex-none" onClick={downloadCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" className="flex-1 sm:flex-none" onClick={exportPdf} disabled={!filtered.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
           </div>
         </header>
         <div className="grid gap-4 sm:grid-cols-2"><Stat icon={Users} label={tab === 'pending' ? 'Affected Employees' : tab === 'today' ? 'Checked-in Employees' : 'Total Employees'} value={String(new Set(filtered.map(item => item.emp_id || item.name)).size)} color="text-blue-600" /><Stat icon={Clock3} label={tab === 'pending' ? 'Pending Checkouts' : tab === 'today' ? 'Currently Working' : 'Total Records'} value={String(tab === 'today' ? filtered.filter(item => item.check_in_time && !item.check_out_time).length : filtered.length)} color="text-emerald-600" /></div>
@@ -293,15 +322,40 @@ export function TimeTracking() {
         <div className="p-5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-end gap-3">{tab === 'daywise' && <DateField label="Select Date" value={date} onChange={setDate} />}{tab === 'range' && <><DateField label="Start Date" value={start} onChange={setStart} /><DateField label="End Date" value={end} onChange={setEnd} /></>}{(tab === 'daywise' || tab === 'range') && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => void load()}>View Report</Button>}</div>
-            <div className="flex flex-wrap gap-3"><div className="relative max-w-md flex-1"><Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${query ? 'text-[#0F2D52]' : 'text-slate-400'}`} /><Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search reports..." className="pl-9" /></div><div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"><button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button><button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button></div></div>
+            <div className="flex flex-wrap gap-3">
+              <div className="relative max-w-md flex-1">
+                <Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${query ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
+                <Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search reports..." className="pl-9" />
+              </div>
+              <select
+                value={sortConfig ? `${String(sortConfig.key)}-${sortConfig.direction}` : '-'}
+                onChange={e => {
+                  const [k, d] = e.target.value.split('-');
+                  setSortConfig(k ? { key: k as keyof AttendanceReport, direction: d as 'asc' | 'desc' } : null);
+                }}
+                className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-[#0F2D52] focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15"
+              >
+                <option value="-">Sort by...</option>
+                <option value="name-asc">Employee (A-Z)</option>
+                <option value="name-desc">Employee (Z-A)</option>
+                {(tab === 'range' || tab === 'pending') && <><option value="date-desc">Date (Newest)</option><option value="date-asc">Date (Oldest)</option></>}
+                <option value="check_in_time-asc">Check In (Earliest)</option>
+                <option value="check_in_time-desc">Check In (Latest)</option>
+                {tab !== 'pending' && <><option value="check_out_time-asc">Check Out (Earliest)</option><option value="check_out_time-desc">Check Out (Latest)</option><option value="time_worked-desc">Worked (Most)</option><option value="time_worked-asc">Worked (Least)</option></>}
+              </select>
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+                <button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                <button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+              </div>
+            </div>
           </div>
-          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && canManageReports && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} canManage={canManageReports} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} canManage={canManageReports} />}<Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></>}</section>}
+          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm"><div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && canManageReports && <Button className="w-full sm:w-auto bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} canManage={canManageReports} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} tab={tab} canManage={canManageReports} sortConfig={sortConfig} onSort={handleSort} />}<div className="mt-4"><Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></div></>}</section>}
         </div></section></div>
       </main>
       <AttendanceDialog open={editOpen} onOpenChange={setEditOpen} mode="edit" record={record} username={record ? `${record.name || 'Employee'}${record.email ? ` — ${record.email}` : ''}` : ''} date={editDate} checkInTime={checkInTime} checkOutTime={checkOutTime} error={formError} saving={saving} onDate={setEditDate} onCheckIn={value => updatePendingTime('check_in', value)} onCheckOut={value => updatePendingTime('check_out', value)} onSave={() => void saveEdit()} />
       <AttendanceDialog open={addOpen} onOpenChange={setAddOpen} mode="add" username={selectedUserId} users={mappedUsers} date={addDate} checkInTime={checkInTime} checkOutTime={checkOutTime} error={formError} saving={saving || formLoading} onUsername={setSelectedUserId} onDate={setAddDate} onCheckIn={setCheckInTime} onCheckOut={setCheckOutTime} onSave={() => void saveAdd()} />
       <Dialog open={deleteOpen} onOpenChange={open => { if (!deleting) setDeleteOpen(open); }}>
-        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Delete attendance report?</DialogTitle><DialogDescription>This removes the {reportDate(deleteRecord)} report for {deleteRecord?.name || 'this employee'} from active reports. This action can be recovered only by TapTime operations.</DialogDescription></DialogHeader>{formError && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{formError}</p>}<DialogFooter><Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</Button><Button variant="destructive" onClick={() => void removeReport()} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Delete report</Button></DialogFooter></DialogContent>
+        <DialogContent className="w-[95vw] max-w-md sm:max-w-md p-4 sm:p-6"><DialogHeader><DialogTitle>Delete attendance report?</DialogTitle><DialogDescription>This removes the {reportDate(deleteRecord)} report for {deleteRecord?.name || 'this employee'} from active reports. This action can be recovered only by TapTime operations.</DialogDescription></DialogHeader>{formError && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{formError}</p>}<DialogFooter className="flex-col sm:flex-row gap-2"><Button variant="outline" className="w-full sm:w-auto" onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</Button><Button variant="destructive" className="w-full sm:w-auto" onClick={() => void removeReport()} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Delete report</Button></DialogFooter></DialogContent>
       </Dialog>
     </AdminLayout>
   );
@@ -309,15 +363,24 @@ export function TimeTracking() {
 
 function Stat({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) { return <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs"><div className="flex items-center justify-between"><div><p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="text-2xl font-extrabold tracking-tight text-slate-900">{value}</p></div><div className="rounded-xl bg-[#EFF5FB] p-2.5"><Icon className={`h-4 w-4 ${color}`} /></div></div></div>; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{label}<Input type="date" value={value} max={today()} onChange={event => onChange(event.target.value)} className="w-auto min-w-44" /></label>; }
-function ReportTable({ items, onEdit, onDelete, pending, canManage }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; pending: boolean; canManage: boolean }) { return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{['Employee', 'Date', 'Check In', 'Check Out', 'Worked', ...(canManage ? ['Action'] : [])].map((header, index) => <th key={header} className={`border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 ${index === 5 ? 'text-right' : ''}`}>{header}</th>)}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>; }
-function ReportCard({ item, onEdit, onDelete, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all hover:shadow-md"><div className="flex justify-between gap-3"><div><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex justify-between"><dt>Date</dt><dd>{item.date || '—'}</dd></div><div className="flex justify-between"><dt>Check in</dt><dd>{displayTime(item.check_in_time)}</dd></div><div className="flex justify-between"><dt>Check out</dt><dd>{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex justify-between font-semibold text-slate-800"><dt>Worked</dt><dd>{item.time_worked || '—'}</dd></div></dl></div>; }
+function ReportTable({ items, onEdit, onDelete, pending, tab, canManage, sortConfig, onSort }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; pending: boolean; tab: string; canManage: boolean; sortConfig: { key: string; direction: 'asc' | 'desc' } | null; onSort: (key: keyof AttendanceReport) => void }) {
+  const headers = [
+    { label: 'Employee', key: 'name' as keyof AttendanceReport, sortable: true },
+    { label: 'Date', key: 'date' as keyof AttendanceReport, sortable: tab === 'range' || tab === 'pending' },
+    { label: 'Check In', key: 'check_in_time' as keyof AttendanceReport, sortable: true },
+    { label: 'Check Out', key: 'check_out_time' as keyof AttendanceReport, sortable: tab !== 'pending' },
+    { label: 'Worked', key: 'time_worked' as keyof AttendanceReport, sortable: tab !== 'pending' },
+  ];
+  return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map(({ label, key, sortable }) => <th key={label} onClick={() => sortable && onSort(key)} className={`${sortable ? 'cursor-pointer hover:bg-slate-100' : ''} group border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 transition-colors select-none`}><div className="flex items-center gap-1">{label}{sortable && (sortConfig?.key === key ? (sortConfig.direction === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-slate-700" /> : <ArrowDown className="h-3.5 w-3.5 text-slate-700" />) : <ArrowUpDown className="h-3.5 w-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />)}</div></th>)}{canManage && <th className="border-y border-slate-200/85 px-4 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Action</th>}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>;
+}
+function ReportCard({ item, onEdit, onDelete, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 bg-white p-4 sm:p-5 shadow-xs transition-all hover:shadow-md"><div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-4"><div className="min-w-0 flex-1"><p className="font-bold text-[#0F2D52] truncate">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400 break-all">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2 w-full sm:w-auto mt-1 sm:mt-0"><Button size="sm" variant="outline" className="flex-1 sm:flex-none" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" className="flex-none border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5 sm:mr-1" /><span className="sr-only sm:not-sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2"><dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:normal-case sm:font-normal sm:tracking-normal sm:text-slate-600">Date</dt><dd className="font-medium sm:font-normal text-slate-900 sm:text-slate-600">{item.date || '—'}</dd></div><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2"><dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:normal-case sm:font-normal sm:tracking-normal sm:text-slate-600">Check in</dt><dd className="font-medium sm:font-normal text-slate-900 sm:text-slate-600">{displayTime(item.check_in_time)}</dd></div><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2"><dt className="text-xs font-semibold uppercase tracking-wider text-slate-400 sm:normal-case sm:font-normal sm:tracking-normal sm:text-slate-600">Check out</dt><dd className="font-medium sm:font-normal text-slate-900 sm:text-slate-600">{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-0.5 sm:gap-2 font-semibold text-slate-800"><dt className="text-xs uppercase tracking-wider text-slate-500 sm:normal-case sm:tracking-normal sm:text-slate-800">Worked</dt><dd className="text-base sm:text-sm text-[#0F2D52] sm:text-slate-800">{item.time_worked || '—'}</dd></div></dl></div>; }
 
 function AttendanceDialog({ open, onOpenChange, mode, record, username, users = [], date, checkInTime, checkOutTime, error, saving, onUsername, onDate, onCheckIn, onCheckOut, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; mode: 'add' | 'edit'; record?: AttendanceReport | null; username: string; users?: AttendanceUser[]; date: string; checkInTime: string; checkOutTime: string; error: string; saving: boolean; onUsername?: (value: string) => void; onDate?: (value: string) => void; onCheckIn: (value: string) => void; onCheckOut: (value: string) => void; onSave: () => void }) {
   const pending = mode === 'edit' && !record?.check_out_time;
   const description = pending ? 'Choose the correct date and enter a Check-Out Time at least 1 minute after Check-In.' : 'Date, Check-In Time, and Check-Out Time can be changed. TapTime calculates Time Worked.';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="w-[95vw] max-w-lg sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <DialogHeader><DialogTitle>{mode === 'add' ? 'Add Attendance Entry' : pending ? 'Complete Pending Check-Out' : 'Edit Attendance Entry'}</DialogTitle><DialogDescription>{description}</DialogDescription></DialogHeader>
         <div className="grid min-w-0 gap-4 py-2">
           <label className="grid min-w-0 gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">Username{mode === 'add' ? <select value={username} onChange={event => onUsername?.(event.target.value)} disabled={saving} className="h-10 min-w-0 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-900 focus:border-[#0F2D52] focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15"><option value="">Select Username</option>{users.map(user => <option key={user.external_employee_id} value={user.external_employee_id}>{user.first_name} {user.last_name} — {user.email}</option>)}</select> : <Input value={username} readOnly className="bg-slate-50 text-slate-600" />}</label>
@@ -329,7 +392,7 @@ function AttendanceDialog({ open, onOpenChange, mode, record, username, users = 
           {!pending && <div className="rounded-xl bg-slate-50 p-3 text-sm"><span className="text-slate-600">Time Worked</span><p className="mt-1 font-semibold text-[#0F2D52]">{timeWorked(date, checkInTime, checkOutTime)}</p></div>}
           {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         </div>
-        <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button><Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={onSave} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{mode === 'add' ? 'Add Entry' : pending ? 'Complete Check-Out' : 'Save Correction'}</Button></DialogFooter>
+        <DialogFooter className="flex-col sm:flex-row gap-2 mt-2"><Button variant="outline" className="w-full sm:w-auto" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button><Button className="w-full sm:w-auto bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={onSave} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{mode === 'add' ? 'Add Entry' : pending ? 'Complete Check-Out' : 'Save Correction'}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
