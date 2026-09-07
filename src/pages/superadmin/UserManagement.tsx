@@ -47,7 +47,7 @@ export function UserManagement() {
 
   return (
     <SuperAdminLayout>
-      <div className="space-y-6 max-w-7xl mx-auto">
+      <div className="space-y-6  mx-auto mt-16 sm:mt-4">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             User Management

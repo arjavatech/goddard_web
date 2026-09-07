@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Header } from '../components/layout/Header';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
-import { Footer } from '../components/layout/Footer';
+import { ParentLayout } from './parent/ParentLayout';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ParentInfo } from '../components/dashboard/ParentInfo';
 import { fetchSingleParent } from '../services/api/admin';
@@ -334,9 +333,8 @@ export function Dashboard() {
     if (forceFullRefresh) setLoading(true);
     setRefreshTrigger(prev => prev + 1);
   };
-  return <div className="min-h-screen bg-slate-50 flex flex-col">
-      <Header />
-      <main className="flex-1 w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+  return <ParentLayout>
+      <div className="w-full pb-2">
         {error && <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>}
@@ -409,7 +407,6 @@ export function Dashboard() {
                 </div>
               </div>}
           </motion.div>}
-      </main>
-      <Footer />
-    </div>;
+      </div>
+    </ParentLayout>;
 }

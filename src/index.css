@@ -256,10 +256,10 @@
   .page-subtitle { @apply text-sm text-slate-500 mt-1 leading-relaxed; }
 
   /* Ensure page titles and portal headers have high contrast brand color */
-  main h1,
-  header h1,
-  h1.page-title,
-  .page-title { color: var(--brand-navy) !important; }
+  main h1:not([style*="color"]),
+  header h1:not([style*="color"]),
+  h1.page-title:not([style*="color"]),
+  .page-title:not([style*="color"]) { color: var(--brand-navy) !important; }
 
   /* ── Icon & Avatar polish ─────────────────────── */
   .two-tone-icon { 
@@ -291,7 +291,7 @@
   header h1,
   h1.page-title,
   .page-title {
-    color: #0F2D52 !important;
+    
   }
 
   /* ── Auth inputs ──────────────────────────────── */
@@ -728,7 +728,7 @@ a, button, select, input, textarea, .glass-card, tr, .badge, .transition-all {
 }
 
 /* Page Title and Heading contrast overrides - Unlayered to guarantee precedence */
-h1:not(.text-white),
+h1:not(.text-white):not([style*="color"]),
 h2.page-title,
 .page-title {
   color: #0F2D52 !important;

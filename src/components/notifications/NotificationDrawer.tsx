@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { BellRing, X } from 'lucide-react';
 import { useNotificationsContext } from '../../contexts/NotificationsContext';
 import type { NotificationFilter } from '../../services/api/notifications';
 import { groupForDate } from './notificationMeta';
@@ -25,9 +25,19 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
     error,
     filter,
     setFilter,
+    refetch,
     markRead,
     markAllRead,
+    pushPermission,
+    enablePush,
   } = useNotificationsContext();
+
+  // There is intentionally no interval polling. Opening the bell is the one
+  // user-driven reconciliation point, so a notification inserted while this
+  // browser was offline is visible without requiring a full page reload.
+  useEffect(() => {
+    if (open) void refetch();
+  }, [open, refetch]);
 
   // Group items by Today / Yesterday / Earlier
   const grouped = useMemo(() => {
@@ -47,6 +57,10 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
   const handleMarkAllRead = async () => {
     if (unreadCount === 0) return;
     await markAllRead();
+  };
+
+  const handleEnablePush = async () => {
+    await enablePush();
   };
 
   return (
@@ -107,6 +121,18 @@ export function NotificationDrawer({ open, onOpenChange }: Props) {
               Mark all read
             </button>
           </div>
+
+          {pushPermission === 'default' && (
+            <div className="mx-5 mt-4 flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3.5 py-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <BellRing className="h-4 w-4 shrink-0 text-[#1a6fc4]" />
+                <p className="text-xs font-medium text-slate-600">Enable browser alerts for new activity.</p>
+              </div>
+              <button type="button" onClick={handleEnablePush} className="shrink-0 text-xs font-bold text-[#0F2D52] hover:underline">
+                Enable
+              </button>
+            </div>
+          )}
 
           {/* List */}
           <div className="flex-1 overflow-y-auto">

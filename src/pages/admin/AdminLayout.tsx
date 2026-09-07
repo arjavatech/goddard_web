@@ -1,9 +1,9 @@
-import React, { ReactNode, useState, useEffect } from 'react';
+import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -22,6 +22,7 @@ import { cn } from '../../lib/utils';
 interface AdminLayoutProps { children: ReactNode; }
 
 export function AdminLayout({ children }: AdminLayoutProps) {
+  const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
@@ -31,8 +32,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady } = useUserContext();
-  const isSuperAdmin = userData?.role === 'SuperAdmin';
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady, schoolFeatures } = useUserContext();
+  const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -53,10 +54,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return () => { document.body.style.overflow = 'unset'; };
   }, [isSidebarOpen]);
 
+  useEffect(() => {
+    activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }, [location.pathname]);
+
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const isFromStudents = location.state?.fromStudents === true;
-  const isEmployeeFormView = currentPath.startsWith('/admin/forms/view') && !!location.state?.employeeId;
+  const isEmployeeFormView = currentPath.startsWith('/admin/forms/view') && !!location.state?.isEmployeeForm;
 
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/admin') return currentPath === '/admin';
@@ -65,11 +70,17 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
     if (normalizedItemPath === '/admin/forms') {
       if (isEmployeeFormView) return false;
-      return currentPath === '/admin/forms' || (currentPath.startsWith('/admin/forms/') && currentPath !== '/admin/forms/due' && currentPath !== '/admin/forms/pending-approval');
+      return currentPath === '/admin/forms' || (
+        currentPath.startsWith('/admin/forms/') &&
+        currentPath !== '/admin/forms/due' &&
+        currentPath !== '/admin/forms/review' &&
+        !isEmployeeFormView
+      );
     }
 
     if (normalizedItemPath === '/admin/employee-forms') {
-      if (isEmployeeFormView || currentPath === '/admin/employee-forms/due') return false;
+      if (isEmployeeFormView) return true;
+      if (currentPath === '/admin/employee-forms/due') return false;
       return currentPath === '/admin/employee-forms';
     }
 
@@ -83,42 +94,63 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Workspace',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
-        { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
-        { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+        ...(schoolFeatures.parentManagementEnabled ? [
+          { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
+          { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+        ] : []),
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-      ],
-    },
-    {
-      label: 'Student Enrollment',
-      items: [
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-        ...(isSuperAdmin ? [{ icon: <CheckCircle className="w-[18px] h-[18px]" />, label: 'Forms Pending Approval', path: `${schoolPrefix}/admin/forms/pending-approval` }] : []),
-      ],
-    },
+        ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
+        ...(isSuperAdmin && schoolFeatures.expenseManagementEnabled ? [
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `/superadmin-arjava/expenses` },
+        ] : []),
 
-    {
-      label: 'Employee Enrollment',
-      items: [
-        { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
       ],
     },
+    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+      label: 'Forms',
+      items: [
+        ...(schoolFeatures.parentManagementEnabled ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
+        ] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
+        ] : []),
+      ],
+    }] : []),
+    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+      label: 'Documents',
+      items: [
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` }] : []),
+      ],
+    }] : []),
+    ...(schoolFeatures.taptimeEnabled ? [{
+      label: 'TapTime',
+      items: [
+        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Reports', path: `${schoolPrefix}/admin/time-tracking` },
+        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` },
+        ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
+      ],
+    }] : []),
+
     ...(isSuperAdmin ? [{
       label: 'Administration',
       items: [
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
-
-    }] : []),
-    // ...(isSuperAdmin ? [{
-    //   label: 'Super Administration',
-    //   items: [
-    //     { icon: <Shield className="w-[18px] h-[18px]" />, label: 'Super Admins', path: `${schoolPrefix}/admin/super-admin-management` },
-    //   ],
-    // }] : []),
+    }] : [{
+      label: 'Administration',
+      items: [
+        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
+      ],
+    }]),
   ];
 
   const initials = userData?.firstName && userData?.lastName
@@ -168,6 +200,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
                           isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
@@ -175,7 +208,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
                       </Link>
                     );
                   })}
@@ -192,7 +225,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-500 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => { setIsSidebarOpen(false); setShowLogoutModal(true); }}
@@ -225,6 +257,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     const isActive = isNavItemActive(normalizedItemPath);
                     return (
                       <Link key={i} to={item.path}
+                        ref={isActive ? activeNavRef : undefined}
                         className={cn(
                           'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
                           isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
@@ -232,7 +265,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       >
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
                       </Link>
                     );
                   })}
@@ -249,7 +282,6 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] font-semibold text-white leading-tight truncate">{userData?.firstName} {userData?.lastName}</p>
-                <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-[11px] text-slate-400 mt-0.5`}>{userData?.email}</div></div>
               </div>
               <button
                 onClick={() => setShowLogoutModal(true)}
@@ -319,13 +351,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       </div>
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-56 sm:w-64 p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
+                  <DropdownMenuContent align="end" className="w-auto min-w-[15rem] p-0 rounded-xl border border-slate-100 shadow-xl bg-white overflow-hidden">
                     <div className="px-4 py-3.5 border-b border-slate-100 bg-slate-50/60">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1a6fc4] text-white flex items-center justify-center font-bold text-base shadow-sm flex-shrink-0">{initials}</div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-900 truncate">{userData?.firstName} {userData?.lastName}</p>
-                          <div className="overflow-x-auto scrollbar-thin"><div className={`whitespace-nowrap text-xs text-slate-400`}>{userData?.email}</div></div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{userData?.firstName} {userData?.lastName}</p>
+                          <div className="whitespace-nowrap text-xs text-slate-400">{userData?.email}</div>
                           <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
                         </div>
                       </div>
@@ -363,7 +395,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           {/* Page content */}
           <main className={cn(
             'flex-1 bg-[#F7F9FC]',
-            userData?.role ? 'pt-16' : 'pt-0',
+            // The generic `p-*` utility below also sets padding-top.  Make the
+            // fixed-header offset important so page content can never render
+            // beneath the app bar.
+            userData?.role ? '!pt-16' : 'pt-0',
             isParentDetailsPage ? 'p-2.5 sm:p-3 md:p-5' : 'p-3 sm:p-4 md:p-6'
           )}>
             {children}
@@ -374,7 +409,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       {/* ── Footer (outside main flex) ── */}
       <footer className="w-full bg-[#1a3a5c]">
         {/* Main body */}
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
 
             {/* ── Brand column ── */}
@@ -484,7 +519,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
           {/* ── Bottom bar ── */}
           <div className="border-t border-white/10 mt-3">
-            <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
               <p className="text-xs text-slate-400 text-center sm:text-left">
                 © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
               </p>

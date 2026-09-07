@@ -557,7 +557,7 @@ export function AdminDashboard() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-10 sm:mt-4 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-10 sm:mt-4 p-12  mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading dashboard data...</p>
@@ -569,7 +569,7 @@ export function AdminDashboard() {
 
   return (
     <AdminLayout>
-      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12 max-w-7xl space-y-6 pb-12">
+      <div className="container mx-auto px-2 sm:px-4  py-0 sm:pt-12  space-y-6 pb-12">
 
         {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 animate-fade-in">

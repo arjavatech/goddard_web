@@ -16,6 +16,9 @@ export type Employee = {
   schoolId: string;
   status: 'active' | 'inactive';
   isVerified?: boolean;
+  salaryDate?: string;
+  taptimeEmployeeId?: string;
+  taptimePin?: string;
 };
 
 export type EmployeeFormTemplate = {
@@ -28,6 +31,9 @@ export type EmployeeFormTemplate = {
   status?: string;
   isRequired?: boolean;
   displayOrder?: number;
+  pdfFileName?: string;
+  pdfContentType?: string;
+  pdfFileSizeBytes?: number;
 };
 
 export type EmployeeFormAssignment = {
@@ -56,6 +62,14 @@ export type EmployeeFormAssignment = {
   employeeLastName?: string;
 };
 
+export type AssignEmployeeFormToSchoolResponse = {
+  schoolId: string;
+  employeeFormTemplateId: string;
+  totalActiveEmployees: number;
+  employeesAlreadyAssigned: number;
+  newlyAssigned: number;
+};
+
 // ─── Mappers ─────────────────────────────────────────────────────────────────
 
 function mapEmployee(raw: any): Employee {
@@ -73,6 +87,9 @@ function mapEmployee(raw: any): Employee {
     schoolId: raw.school_id ?? '',
     status: raw.is_active !== false ? 'active' : 'inactive',
     isVerified: raw.is_verified ?? undefined,
+    salaryDate: raw.salary_date ?? undefined,
+    taptimeEmployeeId: raw.taptime_employee_id ?? undefined,
+    taptimePin: raw.taptime_pin ?? undefined,
   };
 }
 
@@ -87,6 +104,9 @@ function mapFormTemplate(raw: any): EmployeeFormTemplate {
     status: raw.status ?? undefined,
     isRequired: raw.is_required ?? undefined,
     displayOrder: raw.display_order ?? undefined,
+    pdfFileName: raw.pdf_file_name ?? undefined,
+    pdfContentType: raw.pdf_content_type ?? undefined,
+    pdfFileSizeBytes: raw.pdf_file_size_bytes ?? undefined,
   };
 }
 
@@ -211,6 +231,22 @@ export const EmployeeService = {
     return mapEmployee(data);
   },
 
+  async updateTapTimePin(goddardUserId: string, schoolId: string, pin: string): Promise<void> {
+    await authedFetch(
+      {
+        method: 'PATCH',
+        url: `/taptime/users/${goddardUserId}/pin?school_id=${schoolId}`,
+        body: { pin },
+      },
+      z.any(),
+    );
+  },
+
+  async resendEmployeeInvite(employeeId: string, schoolId: string): Promise<{ emailSent: boolean; message: string }> {
+    const data = await authedFetch({ method: 'POST', url: `/employees/${employeeId}/resend-invite`, body: { school_id: schoolId } }, z.any());
+    return { emailSent: data.email_sent, message: data.message };
+  },
+
   async deactivateEmployee(id: string, schoolId: string): Promise<void> {
     await authedFetch(
       { method: 'DELETE', url: `/employees/${id}?school_id=${schoolId}` },
@@ -297,6 +333,22 @@ export const EmployeeService = {
     );
   },
 
+  async uploadEmployeeFormTemplatePdf(formId: string, schoolId: string, file: File): Promise<void> {
+    const intent = await authedFetch({ method: 'POST', url: `/employee-form-templates/${encodeURIComponent(formId)}/pdf/upload-intent?school_id=${encodeURIComponent(schoolId)}`, body: { file_name: file.name, content_type: file.type, file_size_bytes: file.size } }, z.any()) as { storage_key: string; upload_url: string };
+    const uploaded = await fetch(intent.upload_url, { method: 'PUT', headers: { 'Content-Type': file.type }, body: file });
+    if (!uploaded.ok) throw new Error('Failed to upload PDF template');
+    await authedFetch({ method: 'POST', url: `/employee-form-templates/${encodeURIComponent(formId)}/pdf/complete-upload?school_id=${encodeURIComponent(schoolId)}`, body: { storage_key: intent.storage_key, file_name: file.name, content_type: file.type, file_size_bytes: file.size } }, z.any());
+  },
+
+  async getEmployeeFormTemplatePdfUrl(formId: string, schoolId: string, download = false): Promise<string> {
+    const result = await authedFetch({ method: 'GET', url: `/employee-form-templates/${encodeURIComponent(formId)}/pdf?school_id=${encodeURIComponent(schoolId)}&download=${download}` }, z.any()) as { url: string };
+    return result.url;
+  },
+
+  async removeEmployeeFormTemplatePdf(formId: string, schoolId: string): Promise<void> {
+    await authedFetch({ method: 'DELETE', url: `/employee-form-templates/${encodeURIComponent(formId)}/pdf?school_id=${encodeURIComponent(schoolId)}` }, z.any());
+  },
+
   // ── Employee Form Assignments ─────────────────────────────────────────────
 
   async fetchEmployeeFormAssignments(employeeId: string): Promise<EmployeeFormAssignment[]> {
@@ -334,6 +386,32 @@ export const EmployeeService = {
       z.any(),
     );
     return mapAssignment(data);
+  },
+
+  async assignFormToAllEmployees(
+    schoolId: string,
+    formTemplateId: string,
+    isRequired = true,
+  ): Promise<AssignEmployeeFormToSchoolResponse> {
+    const data = await authedFetch(
+      {
+        method: 'POST',
+        url: '/employee-form-assignments/assign-to-school',
+        body: {
+          school_id: schoolId,
+          employee_form_template_id: formTemplateId,
+          is_required: isRequired,
+        },
+      },
+      z.any(),
+    );
+    return {
+      schoolId: data.school_id,
+      employeeFormTemplateId: data.employee_form_template_id,
+      totalActiveEmployees: data.total_active_employees,
+      employeesAlreadyAssigned: data.employees_already_assigned,
+      newlyAssigned: data.newly_assigned,
+    };
   },
 
   async reviewEmployeeForm(

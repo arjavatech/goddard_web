@@ -1,23 +1,24 @@
 import * as React from "react"
-import { X, CheckCircle, AlertCircle, ShieldAlert } from "lucide-react"
+import { X, CheckCircle, AlertCircle, ShieldAlert, Info } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ToastProps {
-  type: 'success' | 'error' | 'warning'
+  type: 'success' | 'error' | 'warning' | 'info'
   title?: string
   message: string
   onClose: () => void
   index: number
   id: string
+  duration?: number
 }
 
-export function Toast({ type, title, message, onClose, index, id }: ToastProps) {
+export function Toast({ type, title, message, onClose, index, id, duration = 4000 }: ToastProps) {
   React.useEffect(() => {
     const timer = setTimeout(() => {
       onClose()
-    }, 4000)
+    }, duration)
     return () => clearTimeout(timer)
-  }, [id, onClose])
+  }, [id, onClose, duration])
 
   return (
     <div 
@@ -30,12 +31,16 @@ export function Toast({ type, title, message, onClose, index, id }: ToastProps) 
           ? "bg-white border-emerald-200 text-slate-800"
           : type === 'warning'
           ? "bg-white border-amber-200 text-slate-800"
+          : type === 'info'
+          ? "bg-white border-blue-200 text-slate-800"
           : "bg-white border-red-200 text-slate-800"
       )}>
         {type === 'success' ? (
           <CheckCircle className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" />
         ) : type === 'warning' ? (
           <ShieldAlert className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+        ) : type === 'info' ? (
+          <Info className="h-5 w-5 text-blue-500 mt-0.5 flex-shrink-0" />
         ) : (
           <AlertCircle className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
         )}

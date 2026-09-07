@@ -1,6 +1,14 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { fetchUserContext, type UserContext as UserData } from '../services/api/user';
+import { fetchUserContext, type SchoolFeatures, type UserContext as UserData } from '../services/api/user';
 import { useAuth } from '../services/auth/useAuth';
+import { clearSession } from '../services/auth/session';
+
+const disabledSchoolFeatures: SchoolFeatures = {
+  parentManagementEnabled: false,
+  employeeManagementEnabled: false,
+  expenseManagementEnabled: false,
+  taptimeEnabled: false,
+};
 
 interface UserContextValue {
   userData: UserData | null;
@@ -13,6 +21,7 @@ interface UserContextValue {
   error: string | null;
   refreshUserData: () => Promise<void>;
   isReady: boolean;
+  schoolFeatures: SchoolFeatures;
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -37,6 +46,12 @@ function getSchoolSlug(name: string): string {
     .replace(/\s+/g, '-');
 }
 
+function isTerminalSessionError(error: unknown): boolean {
+  const status = (error as { status?: number } | undefined)?.status;
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired|authorization error/i.test(message);
+}
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null);
   const [schoolName, setSchoolName] = useState('The Goddard School');
@@ -48,6 +63,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [profileGeneration, setProfileGeneration] = useState<number | null>(null);
+  const [schoolFeatures, setSchoolFeatures] = useState<SchoolFeatures>(disabledSchoolFeatures);
   const activeRequestRef = useRef<{ key: string; promise: Promise<void> } | null>(null);
   const { user, isAuthenticated, authGeneration } = useAuth();
 
@@ -63,6 +79,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
     setIsReady(true);
     setProfileGeneration(null);
+    setSchoolFeatures(disabledSchoolFeatures);
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
@@ -96,6 +113,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             if (activeRequestRef.current?.key !== requestKey) return;
 
             setUserData(data);
+            setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
             if (data.schoolData?.name) {
               setSchoolName(data.schoolData.name);
             }
@@ -112,6 +130,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             return;
           } catch (err) {
             console.warn(`Attempt ${attempt} to fetch user context failed:`, err);
+            if (isTerminalSessionError(err)) {
+              // A Supabase JWT whose session was revoked/deleted cannot be
+              // refreshed by retrying the same request. Remove it locally and
+              // send the user through the normal sign-in flow.
+              if (activeRequestRef.current?.key === requestKey) {
+                setUserData(null);
+                setError('Your session has expired. Please sign in again.');
+              }
+              void clearSession();
+              return;
+            }
             if (attempt === retries) {
               if (activeRequestRef.current?.key !== requestKey) return;
 
@@ -155,7 +184,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolAddress = profileIsCurrent ? schoolAddress : '';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
       {children}
     </UserContext.Provider>
   );

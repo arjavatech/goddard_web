@@ -139,6 +139,7 @@ export function FormView() {
     formData?.status === 'submitted';
   const isApproved = formData?.status === 'Approved' || formData?.status === 'approved';
   const childName = location.state?.childName;
+  const employeeName = location.state?.employeeName;
   const childDob = location.state?.childDob;
   const childGender = location.state?.childGender;
   const parentEmail = location.state?.parentEmail;
@@ -162,10 +163,10 @@ export function FormView() {
   })();
 
   useEffect(() => {
-    if (studentFormAssignmentId && usesResumeLink) {
+    if (studentFormAssignmentId && usesResumeLink && !isEmployeeForm) {
       getFormResumeLink(studentFormAssignmentId).then(setResolvedResumeLink);
     }
-  }, [studentFormAssignmentId, usesResumeLink]);
+  }, [studentFormAssignmentId, usesResumeLink, isEmployeeForm]);
 
   // Determine which URL to use based on form status
   const getFormUrl = () => {
@@ -336,22 +337,22 @@ export function FormView() {
     </AdminLayout>;
   }
   return <AdminLayout>
-    <div className="space-y-6 max-w-7xl mx-auto mt-14 pb-26">
+    <div className="space-y-6  mx-auto mt-14 pb-26">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div className="flex items-center space-x-3 sm:space-x-4">
           <Button variant="outline" onClick={handleBack} size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
             <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4" />
           </Button>
           <div className="flex items-center min-w-0 flex-1">
-            {childName && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
+            {(childName || employeeName) && <div className="flex flex-col sm:flex-row sm:items-center text-gray-600 gap-1 sm:gap-4 min-w-0">
               <div className="flex items-center gap-1 sm:gap-2 min-w-0">
                 <User className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
-                <span className="text-sm sm:text-base truncate">{childName}</span>
+                <span className="text-sm sm:text-base truncate">{childName || employeeName}</span>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 min-w-0">
+              {childName && <div className="flex items-center gap-1 sm:gap-2 min-w-0">
                 <School className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                 <span className="text-sm sm:text-base truncate">{classDetails}</span>
-              </div>
+              </div>}
             </div>}
           </div>
         </div>
@@ -471,56 +472,60 @@ export function FormView() {
             })()}
           </div>
 
-          {!(isApproved || isViewOnly) && (
-            <div className="mt-8 pt-6 border-t border-slate-100 flex flex-col sm:flex-row justify-end items-stretch sm:items-center gap-4">
-              <Textarea
-                placeholder="Add notes..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[60px] w-full sm:w-80 text-sm flex-shrink-0"
-                rows={2}
-              />
-              <div className="flex gap-3 w-full sm:w-auto flex-shrink-0">
-                <Button
-                  onClick={handleApprove}
-                  className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed flex-1 sm:flex-none"
-                  size="sm"
-                  disabled={!isReviewable || isApproving || isRejecting}
-                >
-                  {isApproving ? (
-                    <span className="flex items-center">
-                      <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                      Processing...
-                    </span>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-1" />
-                      Approve
-                    </>
-                  )}
-                </Button>
-                <Button
-                  onClick={handleReject}
-                  variant="destructive"
-                  size="sm"
-                  className="flex-1 sm:flex-none"
-                  disabled={!isReviewable || isApproving || isRejecting}
-                >
-                  {isRejecting ? (
-                    <span className="flex items-center">
-                      <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                      Processing...
-                    </span>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 mr-1" />
-                      Reject
-                    </>
-                  )}
-                </Button>
+          <div className="mt-8 flex justify-end pt-6 border-t border-slate-100">
+            {isApproved || isViewOnly ? (
+              <div className="flex items-center gap-2 text-green-600">
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                <Textarea
+                  placeholder="Add notes..."
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="min-h-[60px] w-full sm:w-64 text-sm"
+                  rows={2}
+                />
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    onClick={handleApprove}
+                    className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isApproving ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-1" />
+                        Approve
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    onClick={handleReject}
+                    variant="destructive"
+                    size="sm"
+                    disabled={!isReviewable || isApproving || isRejecting}
+                  >
+                    {isRejecting ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                        Processing...
+                      </span>
+                    ) : (
+                      <>
+                        <XCircle className="h-4 w-4 mr-1" />
+                        Reject
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

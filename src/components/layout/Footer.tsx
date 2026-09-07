@@ -18,7 +18,7 @@ export function Footer() {
   return (
     <footer className="w-full bg-[#1a3a5c]">
       {/* Main content grid */}
-      <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
+      <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           
           {/* Brand column */}
@@ -106,7 +106,7 @@ export function Footer() {
 
       {/* Bottom bar */}
       <div className="border-t border-white/10 bg-[#16314f]">
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-400 text-center sm:text-left">
             © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
           </p>

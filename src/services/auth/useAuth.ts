@@ -188,6 +188,9 @@ function useAuthState(): UseAuth {
     // Do not let the next login reuse a school selected by the previous user.
     localStorage.removeItem('schoolId');
     localStorage.removeItem('selectedSchool');
+    // The next authenticated user must start from their role's home route,
+    // rather than restoring the route used by the person who just signed out.
+    sessionStorage.setItem('post_logout_login', 'true');
     const {
       error
     } = await supabase.auth.signOut();

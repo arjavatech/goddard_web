@@ -56,13 +56,35 @@ messaging.onBackgroundMessage((payload) => {
   const data = (payload && payload.data) || {};
   const title = data.title || 'Goddard';
   const body = data.body || '';
-  self.registration.showNotification(title, {
+  const notificationOptions = {
     body,
     tag: data.notification_id || undefined,
     icon: '/images/gs_logo_lynnwood.png',
     badge: '/images/gs_logo_lynnwood.png',
-    data: { url: data.action_url || '/admin/notifications' },
-  });
+    // Backend action URLs are school-scoped. A missing action must open the
+    // safe application root, never the legacy invalid admin route.
+    data: { url: data.action_url || '/' },
+  };
+
+  // A native alert alone cannot update the bell in a page that is already
+  // open in the background. Tell controlled Goddard windows to fetch their
+  // notification state; the page makes the authenticated API call itself.
+  const notifyOpenWindows = self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((windows) => {
+      windows.forEach((windowClient) => {
+        windowClient.postMessage({
+          type: 'goddard:notification-push-received',
+          notification_id: data.notification_id || null,
+          notification_type: data.type || null,
+        });
+      });
+    });
+
+  return Promise.all([
+    self.registration.showNotification(title, notificationOptions),
+    notifyOpenWindows,
+  ]);
 });
 
 self.addEventListener('notificationclick', (event) => {

@@ -3,7 +3,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -26,6 +26,7 @@ interface Form {
   link: string;
   status: FormStatus;
   dueDate?: string;
+  pdfFileName?: string;
 }
 
 const mapStatus = (status: string | null | undefined): FormStatus => {
@@ -54,7 +55,7 @@ const getStatusBadgeClass = (status: FormStatus): string => {
 
 const getStatusDisplay = (status: FormStatus) => {
   switch (status) {
-    case 'school_default': return 'School Default';
+    case 'school_default': return 'Default';
     default: return status.charAt(0).toUpperCase() + status.slice(1);
   }
 };
@@ -71,12 +72,14 @@ export function EmployeeFormsManagement() {
   const [formLink, setFormLink] = useState('');
   const [formStatus, setFormStatus] = useState<FormStatus>('school_default');
   const [formDueDate, setFormDueDate] = useState('');
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [selectedForm, setSelectedForm] = useState<Form | null>(null);
 
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
   const [isAddingForm, setIsAddingForm] = useState(false);
 
   const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+  const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
 
@@ -106,7 +109,8 @@ export function EmployeeFormsManagement() {
         name: t.formName,
         link: t.filloutFormId ?? '#',
         status: mapStatus(t.status),
-        dueDate: t.dueDate || ''
+        dueDate: t.dueDate || '',
+        pdfFileName: t.pdfFileName
       })));
       setEmployees(emps.filter(e => e.status === 'active'));
     } catch {
@@ -136,7 +140,8 @@ export function EmployeeFormsManagement() {
     try {
       if (!schoolId) return;
       setIsAddingForm(true);
-      await EmployeeService.createEmployeeFormTemplate({ schoolId, formName, filloutFormId: formLink || undefined, dueDate: formDueDate || undefined, status: formStatus });
+      const created = await EmployeeService.createEmployeeFormTemplate({ schoolId, formName, filloutFormId: formLink || undefined, dueDate: formDueDate || undefined, status: formStatus });
+      if (pdfFile) await EmployeeService.uploadEmployeeFormTemplatePdf(created.id, schoolId, pdfFile);
       showToast('success', 'Form created successfully');
       setIsAddDialogOpen(false);
       resetForm();
@@ -152,6 +157,7 @@ export function EmployeeFormsManagement() {
     if (!selectedForm || !formName.trim() || !schoolId) return;
     try {
       await EmployeeService.updateEmployeeFormTemplate({ id: selectedForm.id, schoolId, formName: formName.trim(), filloutFormId: formLink.trim() || undefined, status: formStatus, dueDate: formDueDate || undefined });
+      if (pdfFile) await EmployeeService.uploadEmployeeFormTemplatePdf(selectedForm.id, schoolId, pdfFile);
       showToast('success', 'Form updated successfully');
       setIsEditDialogOpen(false);
       await fetchForms(true);
@@ -166,6 +172,7 @@ export function EmployeeFormsManagement() {
     setFormLink(form.link);
     setFormStatus(form.status);
     setFormDueDate(form.dueDate || '');
+    setPdfFile(null);
     setIsEditDialogOpen(true);
   };
 
@@ -186,11 +193,23 @@ export function EmployeeFormsManagement() {
     }
   };
 
+  const handleAssignToAllEmployees = async () => {
+    if (!selectedFormForAssign || !schoolId) return;
+    try {
+      const response = await EmployeeService.assignFormToAllEmployees(schoolId, selectedFormForAssign.id, true);
+      showToast('success', `Form assigned to ${response.newlyAssigned} employee${response.newlyAssigned === 1 ? '' : 's'} successfully!`);
+      setIsAssignToAllDialogOpen(false);
+    } catch (error: any) {
+      showToast('error', error.message || 'Failed to assign form to all employees');
+    }
+  };
+
   const resetForm = () => {
     setFormName('');
     setFormLink('');
     setFormDueDate('');
     setFormStatus('school_default');
+    setPdfFile(null);
     setFormErrors({});
   };
 
@@ -198,7 +217,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'name',
       header: 'Form Name',
-      className: 'w-1/3',
+      className: 'w-[20%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center gap-2">
@@ -210,7 +229,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'due_date',
       header: 'Due Date',
-      className: 'w-1/6',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <span className="text-xs font-semibold text-slate-600">
@@ -221,7 +240,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'link',
       header: 'Form Link',
-      className: 'w-1/4',
+      className: 'w-[28%]',
       hideInCardBody: true,
       cell: (form) => (
         <div className="flex items-center text-xs font-semibold text-[#0F2D52] max-w-xs">
@@ -239,7 +258,7 @@ export function EmployeeFormsManagement() {
     {
       id: 'status',
       header: 'Status',
-      className: 'w-1/8',
+      className: 'w-[12%]',
       hideInCardBody: true,
       cell: (form) => (
         <Badge variant={getStatusBadgeVariant(form.status)} className={`text-[10px] font-bold rounded-full px-2.5 py-0.5 ${getStatusBadgeClass(form.status)}`}>
@@ -248,9 +267,22 @@ export function EmployeeFormsManagement() {
       )
     },
     {
+      id: 'pdf_template',
+      header: 'Template',
+      className: 'w-[18%]',
+      hideInCardBody: true,
+      cell: (form) => form.pdfFileName && schoolId ? (
+        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`}>
+          <Button variant="ghost" size="icon" title="View template" aria-label="View template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}><Eye className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Print template" aria-label="Print template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Open the PDF and use your browser print action.'); } }}><Printer className="h-3.5 w-3.5" /></Button>
+          <Button variant="ghost" size="icon" title="Download template" aria-label="Download template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId, true), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to download PDF template'); } }}><Download className="h-3.5 w-3.5" /></Button>
+        </div>
+      ) : <span className="text-xs text-slate-400">—</span>
+    },
+    {
       id: 'actions',
       header: 'Actions',
-      className: 'w-1/8 text-right',
+      className: 'w-[10%] text-center whitespace-nowrap',
       hideInCardBody: true,
       cell: (form) => (
         <DropdownMenu>
@@ -265,9 +297,19 @@ export function EmployeeFormsManagement() {
                 <Eye className="h-4 w-4 mr-2 text-slate-400" /> View Form
               </DropdownMenuItem>
             )}
+            {form.pdfFileName && schoolId && <>
+              <DropdownMenuItem className="cursor-pointer text-xs" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}>
+                <Eye className="h-4 w-4 mr-2 text-slate-400" /> View template
+              </DropdownMenuItem>
+            </>}
             <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openEditDialog(form)}>
               <Edit className="h-4 w-4 mr-2 text-slate-400" /> Edit Form
             </DropdownMenuItem>
+            {form.status !== 'inactive' && (
+              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSelectedFormForAssign(form); setIsAssignToAllDialogOpen(true); }}>
+                <School className="h-4 w-4 mr-2 text-slate-400" /> Assign to All Employees
+              </DropdownMenuItem>
+            )}
             {form.status !== 'inactive' && (
               <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openAssignDialog(form)}>
                 <UserPlus className="h-4 w-4 mr-2 text-slate-400" /> Assign to Employee
@@ -277,12 +319,12 @@ export function EmployeeFormsManagement() {
         </DropdownMenu>
       )
     }
-  ], []);
+  ], [schoolId, showToast]);
 
   if (loading && forms.length === 0) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12 max-w-7xl mx-auto">
+        <div className="flex items-center justify-center min-h-[400px] bg-white rounded-2xl border border-slate-100 shadow-xs mt-12 sm:mt-10 p-12  mx-auto">
           <div className="text-center animate-pulse">
             <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
             <p className="text-slate-500 text-sm font-semibold">Loading employee forms...</p>
@@ -301,7 +343,7 @@ export function EmployeeFormsManagement() {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="container mx-auto px-2 sm:px-4 py-0 sm:pt-12 max-w-7xl space-y-6 pb-12"
+        className="container mx-auto px-2 sm:px-4 py-0 sm:pt-12  space-y-6 pb-12"
       >
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-16 sm:mt-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-xs">
@@ -449,6 +491,11 @@ export function EmployeeFormsManagement() {
                           <Edit className="h-4 w-4 mr-2 text-slate-400" /> Edit Form
                         </DropdownMenuItem>
                         {form.status !== 'inactive' && (
+                          <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSelectedFormForAssign(form); setIsAssignToAllDialogOpen(true); }}>
+                            <School className="h-4 w-4 mr-2 text-slate-400" /> Assign to All Employees
+                          </DropdownMenuItem>
+                        )}
+                        {form.status !== 'inactive' && (
                           <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => openAssignDialog(form)}>
                             <UserPlus className="h-4 w-4 mr-2 text-slate-400" /> Assign to Employee
                           </DropdownMenuItem>
@@ -494,6 +541,8 @@ export function EmployeeFormsManagement() {
         formErrors={formErrors}
         setFormErrors={setFormErrors}
         isSubmitting={isAddingForm}
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
       />
 
       {/* Edit Form Modal */}
@@ -514,6 +563,10 @@ export function EmployeeFormsManagement() {
         isSubmitting={false}
         title="Edit Form"
         submitButtonText="Save Changes"
+        pdfFile={pdfFile}
+        setPdfFile={setPdfFile}
+        existingPdfFileName={selectedForm?.pdfFileName}
+        onRemoveExistingPdf={async () => { if (!selectedForm || !schoolId) return; await EmployeeService.removeEmployeeFormTemplatePdf(selectedForm.id, schoolId); setSelectedForm({ ...selectedForm, pdfFileName: undefined }); showToast('success', 'PDF template removed'); }}
       />
 
       {/* Assign to Employee Dialog */}
@@ -548,6 +601,27 @@ export function EmployeeFormsManagement() {
             </Button>
             <Button onClick={handleAssignToEmployee} disabled={!selectedEmployeeId} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
               Assign Form
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All Employees</DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="text-sm text-slate-600 leading-relaxed">
+              Assign <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong> to every active employee in this school? Employees who already have this form will be skipped.
+            </p>
+          </div>
+          <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
+              Cancel
+            </Button>
+            <Button onClick={handleAssignToAllEmployees} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
+              Assign to All Employees
             </Button>
           </DialogFooter>
         </DialogContent>
