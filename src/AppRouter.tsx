@@ -65,6 +65,7 @@ import { SuperAdminExpenses } from './pages/superadmin/SuperAdminExpenses';
 import { Settings } from './pages/admin/Settings';
 import { TimeTracking } from './pages/admin/TimeTracking';
 import { ReportSettings } from './pages/admin/ReportSettings';
+import { SalaryReport } from './pages/admin/SalaryReport';
 import { TapTimeIntegration } from './pages/admin/TapTimeIntegration';
 
 function ScrollToTop() {
@@ -172,6 +173,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/students" element={<FeatureRoute feature="parentManagementEnabled"><StudentManagement /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employees" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeManagement /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/time-tracking" element={<FeatureRoute feature="taptimeEnabled"><TimeTracking /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/salary-report" element={<FeatureRoute feature="taptimeEnabled"><SalaryReport /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/report-settings" element={<FeatureRoute feature="taptimeEnabled"><ReportSettings /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/taptime-integration" element={<FeatureRoute feature="taptimeEnabled"><SuperAdminOnly><TapTimeIntegration /></SuperAdminOnly></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employees/:employeeId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDetails /></FeatureRoute>} />
