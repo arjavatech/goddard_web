@@ -338,10 +338,20 @@ export function TimeTracking() {
                 <option value="-">Sort by...</option>
                 <option value="name-asc">Employee (A-Z)</option>
                 <option value="name-desc">Employee (Z-A)</option>
-                {(tab === 'range' || tab === 'pending') && <><option value="date-desc">Date (Newest)</option><option value="date-asc">Date (Oldest)</option></>}
-                <option value="check_in_time-asc">Check In (Earliest)</option>
-                <option value="check_in_time-desc">Check In (Latest)</option>
-                {tab !== 'pending' && <><option value="check_out_time-asc">Check Out (Earliest)</option><option value="check_out_time-desc">Check Out (Latest)</option><option value="time_worked-desc">Worked (Most)</option><option value="time_worked-asc">Worked (Least)</option></>}
+                {(tab === 'range' || tab === 'pending') && (
+                  <>
+                    <option value="date-desc">Date (Newest)</option>
+                    <option value="date-asc">Date (Oldest)</option>
+                  </>
+                )}
+                {(tab === 'today' || tab === 'daywise') && (
+                  <>
+                    <option value="check_in_time-asc">Check In (Earliest)</option>
+                    <option value="check_in_time-desc">Check In (Latest)</option>
+                    <option value="check_out_time-asc">Check Out (Earliest)</option>
+                    <option value="check_out_time-desc">Check Out (Latest)</option>
+                  </>
+                )}
               </select>
               <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
                 <button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
@@ -367,9 +377,9 @@ function ReportTable({ items, onEdit, onDelete, pending, tab, canManage, sortCon
   const headers = [
     { label: 'Employee', key: 'name' as keyof AttendanceReport, sortable: true },
     { label: 'Date', key: 'date' as keyof AttendanceReport, sortable: tab === 'range' || tab === 'pending' },
-    { label: 'Check In', key: 'check_in_time' as keyof AttendanceReport, sortable: true },
-    { label: 'Check Out', key: 'check_out_time' as keyof AttendanceReport, sortable: tab !== 'pending' },
-    { label: 'Worked', key: 'time_worked' as keyof AttendanceReport, sortable: tab !== 'pending' },
+    { label: 'Check In', key: 'check_in_time' as keyof AttendanceReport, sortable: tab === 'today' || tab === 'daywise' },
+    { label: 'Check Out', key: 'check_out_time' as keyof AttendanceReport, sortable: tab === 'today' || tab === 'daywise' },
+    { label: 'Worked', key: 'time_worked' as keyof AttendanceReport, sortable: false },
   ];
   return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map(({ label, key, sortable }) => <th key={label} onClick={() => sortable && onSort(key)} className={`${sortable ? 'cursor-pointer hover:bg-slate-100' : ''} group border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 transition-colors select-none`}><div className="flex items-center gap-1">{label}{sortable && (sortConfig?.key === key ? (sortConfig.direction === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-slate-700" /> : <ArrowDown className="h-3.5 w-3.5 text-slate-700" />) : <ArrowUpDown className="h-3.5 w-3.5 opacity-0 group-hover:opacity-50 transition-opacity" />)}</div></th>)}{canManage && <th className="border-y border-slate-200/85 px-4 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500">Action</th>}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>;
 }
