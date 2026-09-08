@@ -58,7 +58,6 @@ export function SalaryReport() {
     try {
       const response = await TapTimeService.salaryReportPeriod(period.start_date, period.end_date);
       setSelected(response.data);
-      setTab('current');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load this report period');
     } finally {
@@ -186,7 +185,7 @@ export function SalaryReport() {
             </div>
             <div className="flex flex-wrap gap-2">
               {report && !report.period.is_current && (
-                <Button variant="outline" onClick={() => setSelected(current)}>
+                <Button variant="outline" onClick={() => { setSelected(current); setTab('current'); }}>
                   <CalendarDays className="mr-2 h-4 w-4" />
                   View Current
                 </Button>
@@ -221,7 +220,10 @@ export function SalaryReport() {
                     ].map(({ key, label }) => (
                       <button
                         key={key}
-                        onClick={() => setTab(key as typeof tab)}
+                        onClick={() => {
+                          setTab(key as typeof tab);
+                          setSelected(current);
+                        }}
                         className={`flex shrink-0 items-center gap-2 border-b-2 px-1 py-4 text-sm font-bold ${
                           tab === key
                             ? 'border-[#1a6fc4] text-[#0F2D52]'
@@ -235,7 +237,7 @@ export function SalaryReport() {
                 </div>
 
                 <div className="p-5">
-                  {tab === 'current' ? (
+                  {tab === 'current' || (tab === 'history' && selected && !selected.period.is_current) ? (
                     <>
                       {report && (
                         <>
