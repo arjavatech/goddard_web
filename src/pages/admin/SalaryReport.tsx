@@ -60,19 +60,22 @@ export function SalaryReport() {
 
   const generatePdf = (reportData: any) => {
     if (!reportData) return;
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
     doc.setFontSize(18);
     doc.setTextColor(15, 45, 82);
-    doc.text('The Goddard School', 14, 18);
-    doc.setFontSize(12);
+    doc.text('The Goddard School', 40, 42);
+
+    doc.setFontSize(13);
     doc.setTextColor(30, 41, 59);
-    doc.text(`Salary Report - ${reportData.frequency}`, 14, 28);
-    doc.setFontSize(10);
+    doc.text(`Salary Report - ${reportData.frequency}`, 40, 66);
+
+    doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${periodLabel(reportData.period)} • Employees: ${reportData.totals.employees} • Total Time: ${reportData.totals.time_worked}`, 14, 36);
+    doc.text(`${periodLabel(reportData.period)} • Employees: ${reportData.totals.employees} • Total Time: ${reportData.totals.time_worked}`, 40, 84);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 104,
       head: [['Employee', 'PIN', 'Entries', 'Time Worked']],
       body: reportData.items.map((item: any) => [
         item.name || '—',
@@ -84,7 +87,9 @@ export function SalaryReport() {
       headStyles: { fillColor: [15, 45, 82], textColor: 255, fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 7, textColor: [51, 65, 85] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 40, right: 40 },
     });
+
     doc.save(`salary-report-${reportData.period.start_date}-to-${reportData.period.end_date}.pdf`);
   };
 

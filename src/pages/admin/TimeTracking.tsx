@@ -132,7 +132,7 @@ export function TimeTracking() {
   };
 
   const exportPdf = () => {
-    const document = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    const document = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
     const reportTitle = tab === 'today' ? "Today's Attendance Report" : title;
 
     document.setFontSize(18);
