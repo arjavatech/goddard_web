@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays } from 'lucide-react';
+import { BarChart3, CalendarDays, LayoutGrid, List } from 'lucide-react';
 import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
@@ -22,6 +22,7 @@ function displayTime(value?: string) {
 
 export function AttendanceReports() {
   const [tab, setTab] = useState<ReportTab>('day');
+  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [date, setDate] = useState(today());
   const [startDate, setStartDate] = useState(today());
   const [endDate, setEndDate] = useState(today());
@@ -95,29 +96,79 @@ export function AttendanceReports() {
                 <p className="py-10 text-sm text-red-600" role="alert">{error}</p>
               ) : (
                 <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div>
-                    <h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2>
-                    <p className="mt-1 text-sm text-slate-600">Your check-in and check-out summary</p>
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2>
+                      <p className="mt-1 text-sm text-slate-600">Your check-in and check-out summary</p>
+                    </div>
+                    <div className="flex items-center self-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:self-auto">
+                      <button
+                        onClick={() => setViewMode('table')}
+                        className={`rounded-md p-1.5 transition-colors ${
+                          viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                        title="Table View"
+                      >
+                        <List className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setViewMode('card')}
+                        className={`rounded-md p-1.5 transition-colors ${
+                          viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
+                        }`}
+                        title="Card View"
+                      >
+                        <LayoutGrid className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="mt-5 overflow-x-auto">
-                    <table className="w-full min-w-[620px] text-sm">
-                      <thead className="border-y border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                        <tr><th className="p-3">Date</th><th className="p-3">Check In</th><th className="p-3">Check Out</th><th className="p-3">Worked</th></tr>
-                      </thead>
-                      <tbody>
-                        {records.length ? records.map(record => (
-                          <tr key={record.key} className="border-b border-slate-200 last:border-0">
-                            <td className="p-3 font-medium text-slate-800">{rowDate(record, selectedDateLabel)}</td>
-                            <td className="p-3 text-slate-700">{record.check_in_time ? displayTime(record.check_in_time) : '—'}</td>
-                            <td className="p-3 text-slate-700">{displayTime(record.check_out_time)}</td>
-                            <td className="p-3 font-medium text-slate-800">{record.time_worked || '—'}</td>
-                          </tr>
-                        )) : (
-                          <tr><td className="p-12 text-center text-slate-500" colSpan={4}>No attendance records found for this selection.</td></tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                  {viewMode === 'table' ? (
+                    <div className="mt-5 overflow-x-auto">
+                      <table className="w-full min-w-[620px] text-sm">
+                        <thead className="border-y border-slate-200 bg-slate-50 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                          <tr><th className="p-3">Date</th><th className="p-3">Check In</th><th className="p-3">Check Out</th><th className="p-3">Worked</th></tr>
+                        </thead>
+                        <tbody>
+                          {records.length ? records.map(record => (
+                            <tr key={record.key} className="border-b border-slate-200 last:border-0">
+                              <td className="p-3 font-medium text-slate-800">{rowDate(record, selectedDateLabel)}</td>
+                              <td className="p-3 text-slate-700">{record.check_in_time ? displayTime(record.check_in_time) : '—'}</td>
+                              <td className="p-3 text-slate-700">{displayTime(record.check_out_time)}</td>
+                              <td className="p-3 font-medium text-slate-800">{record.time_worked || '—'}</td>
+                            </tr>
+                          )) : (
+                            <tr><td className="p-12 text-center text-slate-500" colSpan={4}>No attendance records found for this selection.</td></tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {records.length ? records.map(record => (
+                        <div key={record.key} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+                          <div className="flex items-center justify-between border-b border-slate-50 pb-3">
+                            <h4 className="font-bold text-[#0F2D52]">{rowDate(record, selectedDateLabel)}</h4>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-xs text-slate-500">Check In</p>
+                              <p className="font-semibold text-slate-700">{record.check_in_time ? displayTime(record.check_in_time) : '—'}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-slate-500">Check Out</p>
+                              <p className="font-semibold text-slate-700">{displayTime(record.check_out_time)}</p>
+                            </div>
+                            <div className="col-span-2 pt-2 border-t border-slate-50">
+                              <p className="text-xs text-slate-500">Worked</p>
+                              <p className="font-semibold text-[#0F2D52]">{record.time_worked || '—'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )) : (
+                        <div className="col-span-full py-12 text-center text-slate-500">No attendance records found for this selection.</div>
+                      )}
+                    </div>
+                  )}
                 </section>
               )}
             </div>
