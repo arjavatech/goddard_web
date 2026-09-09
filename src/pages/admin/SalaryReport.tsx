@@ -7,6 +7,10 @@ import { TapTimeService } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
 import { useUserContext } from '../../contexts/UserContext';
+import { Pagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
+import { usePageSize } from '../../hooks/usePageSize';
+import { usePagination } from '../../hooks/usePagination';
 
 const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 const periodLabel = (period: any) => `${formatDate(period.start_date)} – ${formatDate(period.end_date)}`;
@@ -20,8 +24,11 @@ export function SalaryReport() {
   const [selected, setSelected] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [visibleCount, setVisibleCount] = useState(12);
   const [downloadingPeriod, setDownloadingPeriod] = useState<any>(null);
+
+  // Pagination state
+  const [currentItemsPerPage, setCurrentItemsPerPage] = usePageSize('salary-report-current', 10);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = usePageSize('salary-report-history', 10);
 
   const load = async () => {
     setLoading(true);
@@ -34,7 +41,6 @@ export function SalaryReport() {
       setCurrent(currentResponse.data);
       setSelected(currentResponse.data);
       setHistory(historyResponse.data.periods || []);
-      setVisibleCount(12);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load salary reports');
     } finally {
@@ -105,8 +111,36 @@ export function SalaryReport() {
     }
   };
 
-  const visibleHistory = history.slice(0, visibleCount);
   const report = selected || current;
+
+  // Current Period tab pagination
+  const {
+    currentPage,
+    totalPages: currentTotalPages,
+    paginatedData: paginatedItems,
+    setCurrentPage: setCurrentPageItems,
+  } = usePagination({ data: report?.items ?? [], itemsPerPage: currentItemsPerPage });
+
+  // History tab pagination
+  const {
+    currentPage: historyPage,
+    totalPages: historyTotalPages,
+    paginatedData: paginatedHistory,
+    setCurrentPage: setHistoryPage,
+  } = usePagination({ data: history, itemsPerPage: historyItemsPerPage });
+
+  useEffect(() => { setCurrentPageItems(1); }, [report, setCurrentPageItems]);
+  useEffect(() => { setHistoryPage(1); }, [history, setHistoryPage]);
+
+  const handleCurrentPageSizeChange = (value: number) => {
+    setCurrentItemsPerPage(value);
+    setCurrentPageItems(1);
+  };
+
+  const handleHistoryPageSizeChange = (value: number) => {
+    setHistoryItemsPerPage(value);
+    setHistoryPage(1);
+  };
 
   return (
     <AdminLayout>
@@ -188,50 +222,60 @@ export function SalaryReport() {
                           </div>
 
                           {report && (
-                            <div className="overflow-x-auto rounded-xl border border-slate-100">
-                              <table className="w-full min-w-[600px] text-sm">
-                                <thead className="bg-slate-50/80">
-                                  <tr>
-                                    {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
-                                      <th
-                                        key={header}
-                                        className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
-                                      >
-                                        {header}
-                                      </th>
-                                    ))}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {report.items.length ? (
-                                    report.items.map((item: any, idx: number) => (
-                                      <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
-                                        <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
-                                        <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
-                                        <td className="px-4 py-4 text-slate-600">{item.entries}</td>
-                                        <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
-                                      </tr>
-                                    ))
-                                  ) : (
+                            <>
+                              <div className="mb-3 flex justify-end">
+                                <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChange} />
+                              </div>
+                              <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                <table className="w-full min-w-[600px] text-sm">
+                                  <thead className="bg-slate-50/80">
                                     <tr>
-                                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
-                                        No attendance records in this period.
-                                      </td>
+                                      {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                        <th
+                                          key={header}
+                                          className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
+                                        >
+                                          {header}
+                                        </th>
+                                      ))}
                                     </tr>
-                                  )}
-                                </tbody>
-                              </table>
-                            </div>
+                                  </thead>
+                                  <tbody>
+                                    {paginatedItems.length ? (
+                                      paginatedItems.map((item: any, idx: number) => (
+                                        <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                                          <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
+                                          <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
+                                          <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                          <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                        </tr>
+                                      ))
+                                    ) : (
+                                      <tr>
+                                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                          No attendance records in this period.
+                                        </td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              </div>
+                              <Pagination
+                                currentPage={currentPage}
+                                totalPages={currentTotalPages}
+                                totalItems={report.items.length}
+                                itemsPerPage={currentItemsPerPage}
+                                onPageChange={setCurrentPageItems}
+                              />
+                            </>
                           )}
                         </>
                       )}
                     </>
                   ) : (
                     <>
-                      <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                        <p className="text-xs text-slate-600">
-                          Showing {visibleHistory.length} of {history.length} records
-                        </p>
+                      <div className="mb-3 flex justify-end">
+                        <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
                       </div>
 
                       <div className="overflow-x-auto rounded-xl border border-slate-100">
@@ -251,7 +295,7 @@ export function SalaryReport() {
                             </tr>
                           </thead>
                           <tbody>
-                            {visibleHistory.map((period, idx) => (
+                            {paginatedHistory.map((period, idx) => (
                               <tr
                                 key={idx}
                                 className={`border-b border-slate-50 transition-colors hover:bg-[#F8FAFC] ${
@@ -286,16 +330,13 @@ export function SalaryReport() {
                         </table>
                       </div>
 
-                      {visibleCount < history.length && (
-                        <div className="mt-4 text-center">
-                          <Button
-                            variant="outline"
-                            onClick={() => setVisibleCount((c) => c + 12)}
-                          >
-                            Load More ({history.length - visibleCount} remaining)
-                          </Button>
-                        </div>
-                      )}
+                      <Pagination
+                        currentPage={historyPage}
+                        totalPages={historyTotalPages}
+                        totalItems={history.length}
+                        itemsPerPage={historyItemsPerPage}
+                        onPageChange={setHistoryPage}
+                      />
                     </>
                   )}
                 </div>
