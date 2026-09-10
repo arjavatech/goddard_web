@@ -3,7 +3,7 @@ import { getAuthToken } from '../auth/session';
 
 const tapTimeBaseUrl = (import.meta.env.VITE_TAPTIME_API_BASE_URL || '').replace(/\/$/, '');
 
-export type AttendanceReport = { emp_id?: string; name?: string; email?: string; pin?: string; date?: string; check_in_time?: string; check_out_time?: string; time_worked?: string; type?: string };
+export type AttendanceReport = { emp_id?: string; name?: string; email?: string; pin?: string; date?: string; check_in_time?: string; check_out_time?: string; time_worked?: string; type?: string; last_modified_by?: string };
 
 async function tapTimeFetch<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   if (!tapTimeBaseUrl) throw new Error('TapTime integration is not configured for this environment.');
