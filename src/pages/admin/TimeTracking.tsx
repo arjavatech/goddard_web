@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BarChart3, CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronDown, Clock3, Download, FileText, Filter, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users, X } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
@@ -14,6 +14,7 @@ import { Pagination } from '../../components/ui/pagination';
 import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { usePageSize } from '../../hooks/usePageSize';
 import { usePagination } from '../../hooks/usePagination';
+import { SortDropdown, sortItems, type SortOption } from '../../components/ui/sort-dropdown';
 
 type Tab = 'today' | 'daywise' | 'range' | 'pending';
 type AttendanceUser = { external_employee_id: string; taptime_employee_id: string; first_name: string; last_name: string; email: string; role: string };
@@ -59,6 +60,15 @@ export function TimeTracking() {
   const [view, setView] = useState<'table' | 'grid'>('table');
   const [itemsPerPage, setItemsPerPage] = usePageSize('time-tracking', 10);
 
+  // filter
+  const [showFilters, setShowFilters] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [modifiedByFilter, setModifiedByFilter] = useState<string[]>([]);
+
+  // sort
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+
   const [record, setRecord] = useState<AttendanceReport | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -92,6 +102,71 @@ export function TimeTracking() {
     return () => { active = false; };
   }, [schoolId]);
 
+  const activeFilterCount = useMemo(() =>
+    [statusFilter, modifiedByFilter].filter(a => a.length > 0).length,
+  [statusFilter, modifiedByFilter]);
+
+  // Sort options
+  const sortOptions: SortOption[] = [
+    { label: 'Name A–Z',             sortBy: 'name',     sortOrder: 'asc' },
+    { label: 'Name Z–A',             sortBy: 'name',     sortOrder: 'desc' },
+    { label: 'Date Newest',          sortBy: 'date',     sortOrder: 'desc' },
+    { label: 'Date Oldest',          sortBy: 'date',     sortOrder: 'asc' },
+    { label: 'Check In Earliest',    sortBy: 'check_in', sortOrder: 'asc' },
+    { label: 'Check In Latest',      sortBy: 'check_in', sortOrder: 'desc' },
+    { label: 'Time Worked High–Low', sortBy: 'worked',   sortOrder: 'desc' },
+    { label: 'Time Worked Low–High', sortBy: 'worked',   sortOrder: 'asc' },
+  ];
+  const sortLabels: Record<string, string> = {
+    name: 'Name', date: 'Date', check_in: 'Check In', worked: 'Time Worked',
+  };
+
+  // Helper function for multi-select dropdown
+  const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
+    if (currentValues.includes(value)) {
+      setter(currentValues.filter(v => v !== value));
+    } else {
+      setter([...currentValues, value]);
+    }
+  };
+
+  // Multi-select dropdown component
+  const MultiSelectDropdown = ({ value, onValueChange, options, placeholder }: { value: string[]; onValueChange: (values: string[]) => void; options: string[]; placeholder: string; }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+      <div className="relative">
+        <button type="button" onClick={() => setIsOpen(!isOpen)} className="flex min-h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all gap-2">
+          <div className="flex flex-wrap gap-1 flex-1">
+            {value.length === 0 ? <span className="text-slate-400 font-semibold">{placeholder}</span> : value.map(v => <span key={v} className="inline-flex items-center gap-1 bg-[#EFF5FB] text-[#0F2D52] text-[10px] font-bold px-2 py-0.5 rounded-full border border-[#0F2D52]/10"><span>{v}</span><span role="button" onClick={e => { e.stopPropagation(); handleMultiSelectChange(v, value, onValueChange); }} className="hover:text-red-500 transition-colors cursor-pointer leading-none">×</span></span>)}
+          </div>
+          <ChevronDown className={`h-4 w-4 flex-shrink-0 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen && (
+          <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-100 bg-white shadow-xl overflow-hidden">
+            <div className="p-1.5 max-h-52 overflow-y-auto space-y-0.5">
+              {options.length > 0 && (
+                <div className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors border-b border-slate-100 mb-0.5 ${value.length === options.length ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => onValueChange(value.length === options.length ? [] : [...options])}>
+                  <span>Select All</span>
+                  {value.length === options.length && <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>}
+                </div>
+              )}
+              {options.map((option) => {
+                const selected = value.includes(option);
+                return (
+                  <div key={option} className={`flex cursor-pointer items-center justify-between rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${selected ? 'bg-[#EFF5FB] text-[#0F2D52]' : 'text-slate-700 hover:bg-slate-50'}`} onClick={() => handleMultiSelectChange(option, value, onValueChange)}>
+                    <span>{option}</span>
+                    {selected && <span className="h-4 w-4 rounded-full bg-[#0F2D52] text-white flex items-center justify-center text-[10px] font-bold flex-shrink-0">✓</span>}
+                  </div>
+                );
+              })}
+              {options.length === 0 && <div className="px-3 py-2 text-xs text-slate-400 font-semibold">No options available</div>}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const load = async () => {
     const requestedTab = tab;
     const requestedDate = requestedTab === 'today' ? today() : date;
@@ -111,13 +186,37 @@ export function TimeTracking() {
 
   useEffect(() => { void load(); }, [tab]);
 
-  const filtered = useMemo(() => items.filter(item =>
-    `${item.name || ''} ${item.email || ''} ${item.date || ''}`.toLowerCase().includes(query.toLowerCase()),
-  ), [items, query]);
-  const { currentPage, totalPages, paginatedData: paginatedReports, setCurrentPage } = usePagination({ data: filtered, itemsPerPage });
+  const filtered = useMemo(() => {
+    return items.filter(item => {
+      const matchesSearch = `${item.name || ''} ${item.email || ''} ${item.date || ''}`
+        .toLowerCase().includes(query.toLowerCase());
+
+      const isPending = !item.check_out_time;
+      const matchesStatus = statusFilter.length === 0 ||
+        (statusFilter.includes('Pending') && isPending) ||
+        (statusFilter.includes('Completed') && !isPending);
+
+      const modifiedByValue = item.last_modified_by ? (isUUID(item.last_modified_by) ? 'Tap-Time' : item.last_modified_by === 'Auto Checked Out' ? 'Auto Checked Out' : 'Others') : 'Others';
+      const matchesModifiedBy = modifiedByFilter.length === 0 ||
+        modifiedByFilter.includes(modifiedByValue);
+
+      return matchesSearch && matchesStatus && matchesModifiedBy;
+    });
+  }, [items, query, statusFilter, modifiedByFilter]);
+
+  const filteredAndSorted = useMemo(() =>
+    sortItems(filtered, sortBy, sortOrder, (item, key) => {
+      if (key === 'date')     return item.date || '';
+      if (key === 'check_in') return item.check_in_time || '';
+      if (key === 'worked')   return item.time_worked || '';
+      return item.name || '';
+    }),
+  [filtered, sortBy, sortOrder]);
+
+  const { currentPage, totalPages, paginatedData: paginatedReports, setCurrentPage } = usePagination({ data: filteredAndSorted, itemsPerPage });
   const activeDate = tab === 'today' ? today() : tab === 'daywise' ? date : '';
 
-  useEffect(() => { setCurrentPage(1); }, [items, query, tab, setCurrentPage]);
+  useEffect(() => { setCurrentPage(1); }, [items, query, tab, statusFilter, modifiedByFilter, sortBy, setCurrentPage]);
 
   const handleItemsPerPageChange = (value: number) => {
     setItemsPerPage(value);
@@ -125,7 +224,7 @@ export function TimeTracking() {
   };
 
   const downloadCsv = () => {
-    const rows = [['Employee', 'Username', 'Date', 'Check in', 'Check out', 'Worked', 'Last Modified By'], ...filtered.map(item => [item.name || '', item.email || '', item.date || '', item.check_in_time || '', item.check_out_time || '', item.time_worked || '', displayModifiedBy(item.last_modified_by)])];
+    const rows = [['Employee', 'Username', 'Date', 'Check in', 'Check out', 'Worked', 'Last Modified By'], ...filteredAndSorted.map(item => [item.name || '', item.email || '', item.date || '', item.check_in_time || '', item.check_out_time || '', item.time_worked || '', displayModifiedBy(item.last_modified_by)])];
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([rows.map(row => row.map(value => `"${value}"`).join(',')).join('\n')], { type: 'text/csv' }));
     link.download = 'taptime-report.csv';
@@ -145,12 +244,12 @@ export function TimeTracking() {
     document.text(reportTitle, 40, 66);
     document.setFontSize(9);
     document.setTextColor(100, 116, 139);
-    document.text(`Exported on ${new Date().toLocaleDateString()} • ${filtered.length} record${filtered.length === 1 ? '' : 's'}`, 40, 84);
+    document.text(`Exported on ${new Date().toLocaleDateString()} • ${filteredAndSorted.length} record${filteredAndSorted.length === 1 ? '' : 's'}`, 40, 84);
 
     autoTable(document, {
       startY: 104,
       head: [['Employee', 'Username', 'Date', 'Check In', 'Check Out', 'Worked', 'Last Modified By']],
-      body: filtered.map(item => [
+      body: filteredAndSorted.map(item => [
         item.name || '—',
         item.email || '—',
         item.date || '—',
@@ -288,7 +387,7 @@ export function TimeTracking() {
         <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-xs sm:flex-row sm:items-center sm:p-6">
           <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div><h1 className="text-2xl font-bold text-[#0F2D52]">Reports &amp; Analytics</h1><p className="mt-1 text-sm text-slate-600">View and correct employee time tracking data</p></div>
-            <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={downloadCsv} disabled={!filtered.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" onClick={exportPdf} disabled={!filtered.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
+            <div className="flex flex-wrap gap-2"><Button variant="outline" onClick={downloadCsv} disabled={!filteredAndSorted.length}><Download className="mr-2 h-4 w-4" />Export CSV</Button><Button variant="outline" onClick={exportPdf} disabled={!filteredAndSorted.length}><FileText className="mr-2 h-4 w-4" />Export PDF</Button></div>
           </div>
         </header>
         <div className="grid gap-4 sm:grid-cols-2"><Stat icon={Users} label={tab === 'pending' ? 'Affected Employees' : tab === 'today' ? 'Checked-in Employees' : 'Total Employees'} value={String(new Set(filtered.map(item => item.emp_id || item.name)).size)} color="text-blue-600" /><Stat icon={Clock3} label={tab === 'pending' ? 'Pending Checkouts' : tab === 'today' ? 'Currently Working' : 'Total Records'} value={String(tab === 'today' ? filtered.filter(item => item.check_in_time && !item.check_out_time).length : filtered.length)} color="text-emerald-600" /></div>
@@ -296,7 +395,27 @@ export function TimeTracking() {
         <div className="p-5">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-end gap-3">{tab === 'daywise' && <DateField label="Select Date" value={date} onChange={setDate} />}{tab === 'range' && <><DateField label="Start Date" value={start} onChange={setStart} /><DateField label="End Date" value={end} onChange={setEnd} /></>}{(tab === 'daywise' || tab === 'range') && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => void load()}>View Report</Button>}</div>
-            <div className="flex flex-wrap gap-3"><div className="relative max-w-md flex-1"><Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${query ? 'text-[#0F2D52]' : 'text-slate-400'}`} /><Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search reports..." className="pl-9" /></div><div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"><button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button><button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button></div></div>
+            <div className="flex flex-wrap gap-3 items-center"><div className="relative max-w-md flex-1"><Search className={`absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${query ? 'text-[#0F2D52]' : 'text-slate-400'}`} /><Input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search reports..." className="pl-9 h-9" /></div><Button variant="outline" onClick={() => setShowFilters(v => !v)} className="relative font-bold text-xs h-9" size="sm">{showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}<span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>{!showFilters && activeFilterCount > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#0F2D52] text-[9px] font-bold text-white">{activeFilterCount}</span>}</Button><SortDropdown currentSortBy={sortBy} currentSortOrder={sortOrder} options={sortOptions} labels={sortLabels} onSort={(by, order) => { setSortBy(by); setSortOrder(order); }} /><div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1"><button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button><button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button></div></div>
+            {showFilters && (
+              <div className="p-4 bg-slate-50/50 rounded-xl border border-slate-100 space-y-4">
+                {activeFilterCount > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">{activeFilterCount} {activeFilterCount === 1 ? 'filter' : 'filters'} applied</span>
+                    <Button variant="outline" size="sm" onClick={() => { setStatusFilter([]); setModifiedByFilter([]); }}><X className="h-3.5 w-3.5 mr-1" />Clear All</Button>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</label>
+                    <MultiSelectDropdown value={statusFilter} onValueChange={setStatusFilter} options={['Pending', 'Completed']} placeholder="Select status" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Last Modified By</label>
+                    <MultiSelectDropdown value={modifiedByFilter} onValueChange={setModifiedByFilter} options={['Tap-Time', 'Auto Checked Out', 'Others']} placeholder="Select modifier" />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
           {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && canManageReports && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} canManage={canManageReports} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} canManage={canManageReports} />}<Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></>}</section>}
         </div></section></div>
@@ -312,8 +431,8 @@ export function TimeTracking() {
 
 function Stat({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) { return <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs"><div className="flex items-center justify-between"><div><p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="text-2xl font-extrabold tracking-tight text-slate-900">{value}</p></div><div className="rounded-xl bg-[#EFF5FB] p-2.5"><Icon className={`h-4 w-4 ${color}`} /></div></div></div>; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{label}<Input type="date" value={value} max={today()} onChange={event => onChange(event.target.value)} className="w-auto min-w-44" /></label>; }
-function ReportTable({ items, onEdit, onDelete, pending, canManage }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; pending: boolean; canManage: boolean }) { const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Worked', 'Last Modified By', ...(canManage ? ['Action'] : [])]; return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map((header, index) => <th key={header} className={`border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 ${canManage && header === 'Action' ? 'text-right' : ''}`}>{header}</th>)}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td><td className="px-4 py-4 text-slate-600">{displayModifiedBy(item.last_modified_by)}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>; }
-function ReportCard({ item, onEdit, onDelete, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs transition-all hover:shadow-md"><div className="flex justify-between gap-3"><div><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex justify-between"><dt>Date</dt><dd>{item.date || '—'}</dd></div><div className="flex justify-between"><dt>Check in</dt><dd>{displayTime(item.check_in_time)}</dd></div><div className="flex justify-between"><dt>Check out</dt><dd>{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex justify-between font-semibold text-slate-800"><dt>Worked</dt><dd>{item.time_worked || '—'}</dd></div><div className="flex justify-between"><dt>Last Modified By</dt><dd>{displayModifiedBy(item.last_modified_by)}</dd></div></dl></div>; }
+function ReportTable({ items, onEdit, onDelete, pending, canManage }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; pending: boolean; canManage: boolean }) { const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Worked', 'Last Modified By', ...(canManage ? ['Action'] : [])]; return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map((header, index) => <th key={header} className={`border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 ${canManage && header === 'Action' ? 'text-right' : ''}`}>{header}</th>)}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined} key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td><td className="px-4 py-4 text-slate-600">{displayModifiedBy(item.last_modified_by)}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>; }
+function ReportCard({ item, onEdit, onDelete, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 p-5 shadow-xs transition-all hover:shadow-md bg-white" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined}><div className="flex justify-between gap-3"><div><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex justify-between"><dt>Date</dt><dd>{item.date || '—'}</dd></div><div className="flex justify-between"><dt>Check in</dt><dd>{displayTime(item.check_in_time)}</dd></div><div className="flex justify-between"><dt>Check out</dt><dd>{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex justify-between font-semibold text-slate-800"><dt>Worked</dt><dd>{item.time_worked || '—'}</dd></div><div className="flex justify-between"><dt>Last Modified By</dt><dd>{displayModifiedBy(item.last_modified_by)}</dd></div></dl></div>; }
 
 function AttendanceDialog({ open, onOpenChange, mode, record, username, users = [], date, checkInTime, checkOutTime, error, saving, onUsername, onDate, onCheckIn, onCheckOut, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; mode: 'add' | 'edit'; record?: AttendanceReport | null; username: string; users?: AttendanceUser[]; date: string; checkInTime: string; checkOutTime: string; error: string; saving: boolean; onUsername?: (value: string) => void; onDate?: (value: string) => void; onCheckIn: (value: string) => void; onCheckOut: (value: string) => void; onSave: () => void }) {
   const pending = mode === 'edit' && !record?.check_out_time;
