@@ -1,5 +1,5 @@
 export type NormalizedFormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
-const COMPLETION_TERMS = new Set(['approved', 'complete', 'completed', 'accepted']);
+const COMPLETION_TERMS = new Set(['approved', 'complete', 'completed', 'accepted', 'manually uploaded']);
 const SUBMITTED_TERMS = new Set(['submitted', 'received']);
 const IN_PROGRESS_TERMS = new Set(['in progress', 'in_progress']);
 const NEEDS_REVISION_TERMS = new Set(['needs revision', 'needs review', 'rejected', 'returned', 'changes requested', 'declined']);

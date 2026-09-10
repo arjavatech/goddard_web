@@ -443,6 +443,47 @@ export const EmployeeService = {
     );
   },
 
+  async employeeManualPdfUploadIntent(assignmentId: string, schoolId: string, file: File): Promise<{ storage_key: string; upload_url: string }> {
+    return await authedFetch({
+      method: 'POST',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/upload-intent?school_id=${encodeURIComponent(schoolId)}`,
+      body: {
+        assignment_id: assignmentId,
+        school_id: schoolId,
+        file_size_bytes: file.size,
+        content_type: file.type
+      }
+    }, z.object({ storage_key: z.string(), upload_url: z.string() }));
+  },
+
+  async employeeManualPdfCompleteUpload(assignmentId: string, schoolId: string, storageKey: string, fileName: string, fileSizeBytes: number, uploadedBy: string): Promise<void> {
+    await authedFetch({
+      method: 'POST',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/complete-upload?school_id=${encodeURIComponent(schoolId)}`,
+      body: {
+        storage_key: storageKey,
+        file_name: fileName,
+        file_size_bytes: fileSizeBytes,
+        uploaded_by: uploadedBy
+      }
+    }, z.any());
+  },
+
+  async getEmployeeManualPdfUrl(assignmentId: string, schoolId: string): Promise<string> {
+    const result = await authedFetch({
+      method: 'GET',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+    }, z.object({ url: z.string() }));
+    return result.url;
+  },
+
+  async deleteEmployeeManualPdf(assignmentId: string, schoolId: string): Promise<void> {
+    await authedFetch({
+      method: 'DELETE',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
+  },
+
   async submitEmployeeForm(_assignmentId: string, _formData: any): Promise<EmployeeFormAssignment> {
     throw new Error('Form submission is handled by Fillout directly via webhook.');
   },

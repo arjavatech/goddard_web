@@ -9,7 +9,7 @@ import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle, ChevronRight
 import { Card, CardContent } from '../../components/ui/card';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
-import { reviewStudentFormAssignment, getFormResumeLink } from '../../services/api/admin';
+import { reviewStudentFormAssignment, getFormResumeLink, getStudentManualPdfUrl, deleteStudentManualPdf } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -55,6 +55,9 @@ export function FormView() {
   const [resolvedResumeLink, setResolvedResumeLink] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
+  const [manualPdfUrl, setManualPdfUrl] = useState<string | null>(null);
+  const [isRemovingUpload, setIsRemovingUpload] = useState(false);
+  const isManualUpload = location.state?.submissionSource === 'manual_upload';
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     setIsFrameLoading(false);
@@ -152,6 +155,15 @@ export function FormView() {
   const recentPdfLink = location.state?.recentPdfLink;
   const isEmployeeForm = location.state?.isEmployeeForm as boolean | undefined;
   const schoolId = location.state?.schoolId as string | undefined;
+
+  // Fetch manual PDF URL if it's a manual upload
+  useEffect(() => {
+    if (isManualUpload && studentFormAssignmentId && schoolId) {
+      getStudentManualPdfUrl(studentFormAssignmentId, schoolId)
+        .then(url => setManualPdfUrl(url))
+        .catch(() => setManualPdfUrl(null));
+    }
+  }, [isManualUpload, studentFormAssignmentId, schoolId]);
 
   const usesResumeLink = (() => {
     const link = recentEditLink || filloutFormId || filloutFormUrl;
@@ -369,7 +381,7 @@ export function FormView() {
                 <Loading message="Loading..." size="md" />
               </div>
             )}
-            {isApproved && recentPdfLink ? (
+            {(isApproved && recentPdfLink) || (isManualUpload && manualPdfUrl) ? (
               <div className="w-full max-w-[800px] aspect-[1/1.414] mx-auto bg-white border border-slate-200/80 rounded-xl shadow-lg overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between p-2 bg-slate-50 border-b border-slate-100 flex-shrink-0">
                   <Button
@@ -401,7 +413,7 @@ export function FormView() {
                   className="relative flex-1 flex justify-center items-start overflow-y-auto bg-slate-50/40 p-2 sm:p-4"
                 >
                   <Document
-                    file={recentPdfLink}
+                    file={isManualUpload && manualPdfUrl ? manualPdfUrl : recentPdfLink}
                     onLoadSuccess={onDocumentLoadSuccess}
                     loading={<Loading message="Loading PDF..." size="md" />}
                     error={<div className="text-red-500 text-center p-4">Failed to load PDF</div>}
@@ -476,7 +488,32 @@ export function FormView() {
                   className="min-h-[60px] w-full sm:w-64 text-sm"
                   rows={2}
                 />
-                <div className="flex gap-2 w-full sm:w-auto">
+                <div className="flex gap-2 w-full sm:w-auto flex-wrap">
+                  {isManualUpload && (
+                    <Button
+                      onClick={async () => {
+                        if (!window.confirm('Are you sure you want to remove this uploaded PDF? The form will return to Incomplete status.')) return;
+                        setIsRemovingUpload(true);
+                        try {
+                          if (studentFormAssignmentId && schoolId) {
+                            await deleteStudentManualPdf(studentFormAssignmentId, schoolId);
+                            showToast('PDF removed successfully', 'success');
+                            navigate(-1);
+                          }
+                        } catch (error) {
+                          showToast('Failed to remove PDF', 'error');
+                        } finally {
+                          setIsRemovingUpload(false);
+                        }
+                      }}
+                      variant="outline"
+                      size="sm"
+                      disabled={isRemovingUpload || isApproving}
+                      className="border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                      {isRemovingUpload ? 'Removing...' : 'Remove Upload'}
+                    </Button>
+                  )}
                   <Button
                     onClick={handleApprove}
                     className="bg-green-600 hover:bg-green-700 text-white disabled:opacity-50 disabled:cursor-not-allowed"
@@ -495,24 +532,26 @@ export function FormView() {
                       </>
                     )}
                   </Button>
-                  <Button
-                    onClick={handleReject}
-                    variant="destructive"
-                    size="sm"
-                    disabled={!isReviewable || isApproving || isRejecting}
-                  >
-                    {isRejecting ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
-                        Processing...
-                      </span>
-                    ) : (
-                      <>
-                        <XCircle className="h-4 w-4 mr-1" />
-                        Reject
-                      </>
-                    )}
-                  </Button>
+                  {!isManualUpload && (
+                    <Button
+                      onClick={handleReject}
+                      variant="destructive"
+                      size="sm"
+                      disabled={!isReviewable || isApproving || isRejecting}
+                    >
+                      {isRejecting ? (
+                        <span className="flex items-center">
+                          <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                          Processing...
+                        </span>
+                      ) : (
+                        <>
+                          <XCircle className="h-4 w-4 mr-1" />
+                          Reject
+                        </>
+                      )}
+                    </Button>
+                  )}
                 </div>
               </div>
             )}
