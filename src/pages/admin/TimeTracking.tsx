@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { BarChart3, CalendarDays, ChevronDown, Clock3, Download, FileText, Filter, Grid2X2, List, Loader2, Pencil, Plus, Search, Trash2, Users, X } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronDown, Clock3, Download, FileText, Filter, Grid2X2, History, List, Loader2, Pencil, Plus, Search, Trash2, Users, X } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
@@ -85,6 +85,13 @@ export function TimeTracking() {
   const [selectedUserId, setSelectedUserId] = useState('');
   const [defaultType, setDefaultType] = useState('');
   const [formLoading, setFormLoading] = useState(false);
+
+  // History modal state
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyRecord, setHistoryRecord] = useState<AttendanceReport | null>(null);
+  const [historyItems, setHistoryItems] = useState<any[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState('');
 
   useEffect(() => {
     if (!schoolId) return;
@@ -378,6 +385,23 @@ export function TimeTracking() {
     }
   };
 
+  const openHistory = async (item: AttendanceReport) => {
+    if (!item.emp_id || !item.check_in_time) return;
+    setHistoryRecord(item);
+    setHistoryItems([]);
+    setHistoryError('');
+    setHistoryLoading(true);
+    setHistoryOpen(true);
+    try {
+      const res = await TapTimeService.reportHistory(item.emp_id, item.check_in_time);
+      setHistoryItems(res.items);
+    } catch (e: unknown) {
+      setHistoryError(e instanceof Error ? e.message : 'Unable to load history.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
   const title = tab === 'daywise' ? `Day-wise Report - ${displayReportDate(appliedDaywiseDate)}` : tab === 'today' ? `Today's Report - ${displayReportDate(today())}` : tabs.find(value => value.key === tab)?.label || 'Reports';
 
   return (
@@ -417,7 +441,7 @@ export function TimeTracking() {
               </div>
             )}
           </div>
-          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && canManageReports && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} pending={tab === 'pending'} canManage={canManageReports} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} pending={tab === 'pending'} canManage={canManageReports} />}<Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></>}</section>}
+          {loading ? <div className="py-20"><Loading size="md" message="Loading reports…" /></div> : error ? <p className="py-10 text-red-600">{error}</p> : <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><h2 className="text-xl font-bold text-[#0F2D52]">{title}</h2><p className="mt-1 text-sm text-slate-600">Employee check-in and check-out summary</p></div>{activeDate && canManageReports && <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={openAdd}><Plus className="mr-2 h-4 w-4" />Add Entry</Button>}</div>{filtered.length === 0 ? <div className="py-20 text-center"><FileText className="mx-auto h-12 w-12 text-slate-400" /><h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3><p className="mt-2 text-sm text-slate-600">No entries found for this selection.</p></div> : <><div className="mt-6 flex justify-end"><PageSizeSelector pageSize={itemsPerPage} onPageSizeChange={handleItemsPerPageChange} /></div>{view === 'grid' ? <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{paginatedReports.map((item, index) => <ReportCard key={`${item.emp_id}-${item.check_in_time}-${index}`} item={item} onEdit={() => openEdit(item)} onDelete={() => openDelete(item)} onHistory={() => void openHistory(item)} pending={tab === 'pending'} canManage={canManageReports} />)}</div> : <ReportTable items={paginatedReports} onEdit={openEdit} onDelete={openDelete} onHistory={openHistory} pending={tab === 'pending'} canManage={canManageReports} />}<Pagination currentPage={currentPage} totalPages={totalPages} totalItems={filtered.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} /></>}</section>}
         </div></section></div>
       </main>
       <AttendanceDialog open={editOpen} onOpenChange={setEditOpen} mode="edit" record={record} username={record ? `${record.name || 'Employee'}${record.email ? ` — ${record.email}` : ''}` : ''} date={editDate} checkInTime={checkInTime} checkOutTime={checkOutTime} error={formError} saving={saving} onDate={setEditDate} onCheckIn={value => updatePendingTime('check_in', value)} onCheckOut={value => updatePendingTime('check_out', value)} onSave={() => void saveEdit()} />
@@ -425,14 +449,15 @@ export function TimeTracking() {
       <Dialog open={deleteOpen} onOpenChange={open => { if (!deleting) setDeleteOpen(open); }}>
         <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Delete attendance report?</DialogTitle><DialogDescription>This removes the {reportDate(deleteRecord)} report for {deleteRecord?.name || 'this employee'} from active reports. This action can be recovered only by TapTime operations.</DialogDescription></DialogHeader>{formError && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{formError}</p>}<DialogFooter><Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={deleting}>Cancel</Button><Button variant="destructive" onClick={() => void removeReport()} disabled={deleting}>{deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Delete report</Button></DialogFooter></DialogContent>
       </Dialog>
+      <HistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} record={historyRecord} items={historyItems} loading={historyLoading} error={historyError} />
     </AdminLayout>
   );
 }
 
 function Stat({ icon: Icon, label, value, color }: { icon: React.ElementType; label: string; value: string; color: string }) { return <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs"><div className="flex items-center justify-between"><div><p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">{label}</p><p className="text-2xl font-extrabold tracking-tight text-slate-900">{value}</p></div><div className="rounded-xl bg-[#EFF5FB] p-2.5"><Icon className={`h-4 w-4 ${color}`} /></div></div></div>; }
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) { return <label className="grid gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">{label}<Input type="date" value={value} max={today()} onChange={event => onChange(event.target.value)} className="w-auto min-w-44" /></label>; }
-function ReportTable({ items, onEdit, onDelete, pending, canManage }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; pending: boolean; canManage: boolean }) { const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Worked', 'Last Modified By', ...(canManage ? ['Action'] : [])]; return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map((header, index) => <th key={header} className={`border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 ${canManage && header === 'Action' ? 'text-right' : ''}`}>{header}</th>)}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined} key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td><td className="px-4 py-4 text-slate-600">{displayModifiedBy(item.last_modified_by)}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>; }
-function ReportCard({ item, onEdit, onDelete, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 p-5 shadow-xs transition-all hover:shadow-md bg-white" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined}><div className="flex justify-between gap-3"><div><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex justify-between"><dt>Date</dt><dd>{item.date || '—'}</dd></div><div className="flex justify-between"><dt>Check in</dt><dd>{displayTime(item.check_in_time)}</dd></div><div className="flex justify-between"><dt>Check out</dt><dd>{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex justify-between font-semibold text-slate-800"><dt>Worked</dt><dd>{item.time_worked || '—'}</dd></div><div className="flex justify-between"><dt>Last Modified By</dt><dd>{displayModifiedBy(item.last_modified_by)}</dd></div></dl></div>; }
+function ReportTable({ items, onEdit, onDelete, onHistory, pending, canManage }: { items: AttendanceReport[]; onEdit: (item: AttendanceReport) => void; onDelete: (item: AttendanceReport) => void; onHistory: (item: AttendanceReport) => void; pending: boolean; canManage: boolean }) { const headers = ['Employee', 'Date', 'Check In', 'Check Out', 'Worked', 'Last Modified By', ...(canManage ? ['Action'] : [])]; return <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100"><table className="w-full min-w-[720px] text-sm"><thead className="bg-slate-50/80"><tr>{headers.map((header, index) => <th key={header} className={`border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 ${canManage && header === 'Action' ? 'text-right' : ''}`}>{header}</th>)}</tr></thead><tbody>{items.map((item, index) => <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined} key={`${item.emp_id}-${item.check_in_time}-${index}`}><td className="px-4 py-4"><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="text-xs text-slate-400">{item.email || '—'}</p></td><td className="px-4 py-4 text-slate-600">{item.date || '—'}</td><td className="px-4 py-4 text-slate-600">{displayTime(item.check_in_time)}</td><td className="px-4 py-4">{item.check_out_time ? <span className="text-slate-600">{displayTime(item.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td><td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked || '—'}</td><td className="px-4 py-4 text-slate-600">{displayModifiedBy(item.last_modified_by)}</td>{canManage && <td className="px-4 py-4"><div className="flex justify-end gap-2"><Button size="sm" variant="outline" onClick={() => onEdit(item)}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete & Edit' : 'Edit'}</Button><Button size="sm" variant="outline" onClick={() => onHistory(item)}><History className="mr-1 h-3.5 w-3.5" />History</Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={() => onDelete(item)}><Trash2 className="mr-1 h-3.5 w-3.5" />Delete</Button></div></td>}</tr>)}</tbody></table></div>; }
+function ReportCard({ item, onEdit, onDelete, onHistory, pending, canManage }: { item: AttendanceReport; onEdit: () => void; onDelete: () => void; onHistory: () => void; pending: boolean; canManage: boolean }) { return <div className="rounded-2xl border border-slate-100 p-5 shadow-xs transition-all hover:shadow-md bg-white" style={item.last_modified_by === 'Auto Checked Out' ? { backgroundColor: 'rgba(246, 235, 97, 0.5)' } : undefined}><div className="flex justify-between gap-3"><div><p className="font-bold text-[#0F2D52]">{item.name || 'Employee'}</p><p className="mt-1 text-xs font-medium text-slate-400">{item.email || '—'}</p></div>{canManage && <div className="flex gap-2"><Button size="sm" variant="outline" onClick={onEdit}><Pencil className="mr-1 h-3.5 w-3.5" />{pending ? 'Complete' : 'Edit'}</Button><Button size="sm" variant="outline" onClick={onHistory}><History className="h-3.5 w-3.5" /><span className="sr-only">History</span></Button><Button size="sm" variant="outline" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800" onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /><span className="sr-only">Delete</span></Button></div>}</div><dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-sm text-slate-600"><div className="flex justify-between"><dt>Date</dt><dd>{item.date || '—'}</dd></div><div className="flex justify-between"><dt>Check in</dt><dd>{displayTime(item.check_in_time)}</dd></div><div className="flex justify-between"><dt>Check out</dt><dd>{item.check_out_time ? displayTime(item.check_out_time) : 'Pending'}</dd></div><div className="flex justify-between font-semibold text-slate-800"><dt>Worked</dt><dd>{item.time_worked || '—'}</dd></div><div className="flex justify-between"><dt>Last Modified By</dt><dd>{displayModifiedBy(item.last_modified_by)}</dd></div></dl></div>; }
 
 function AttendanceDialog({ open, onOpenChange, mode, record, username, users = [], date, checkInTime, checkOutTime, error, saving, onUsername, onDate, onCheckIn, onCheckOut, onSave }: { open: boolean; onOpenChange: (open: boolean) => void; mode: 'add' | 'edit'; record?: AttendanceReport | null; username: string; users?: AttendanceUser[]; date: string; checkInTime: string; checkOutTime: string; error: string; saving: boolean; onUsername?: (value: string) => void; onDate?: (value: string) => void; onCheckIn: (value: string) => void; onCheckOut: (value: string) => void; onSave: () => void }) {
   const pending = mode === 'edit' && !record?.check_out_time;
@@ -452,6 +477,113 @@ function AttendanceDialog({ open, onOpenChange, mode, record, username, users = 
           {error && <p className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         </div>
         <DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>Cancel</Button><Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={onSave} disabled={saving}>{saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{mode === 'add' ? 'Add Entry' : pending ? 'Complete Check-Out' : 'Save Correction'}</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function HistoryDialog({ open, onOpenChange, record, items, loading, error }: { open: boolean; onOpenChange: (open: boolean) => void; record: AttendanceReport | null; items: any[]; loading: boolean; error: string }) {
+  const opColor: Record<string, string> = {
+    CREATE:  'bg-emerald-50 text-emerald-700',
+    UPDATE:  'bg-blue-50 text-blue-700',
+    CORRECT: 'bg-amber-50 text-amber-700',
+    DELETE:  'bg-red-50 text-red-700',
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl max-h-[70vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Attendance History</DialogTitle>
+          <DialogDescription>
+            {record?.name || 'Employee'} — {record?.date || ''}
+          </DialogDescription>
+        </DialogHeader>
+
+        {loading && (
+          <div className="py-10 text-center text-slate-400">
+            <Loader2 className="mx-auto h-8 w-8 animate-spin text-slate-400" />
+            <p className="mt-3 text-sm">Loading history…</p>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+            <p>{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && items.length === 0 && (
+          <div className="py-10 text-center text-slate-400 text-sm">
+            No history recorded yet.
+          </div>
+        )}
+
+        {!loading && items.length > 0 && (
+          <ol className="space-y-4">
+            {items.map((item, idx) => (
+              <li key={item.history_id} className="relative flex gap-4">
+                <div className="flex flex-col items-center flex-shrink-0">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#EFF5FB] text-xs font-bold text-[#0F2D52]">
+                    {item.sequence_num}
+                  </span>
+                  {idx < items.length - 1 && (
+                    <div className="w-px flex-1 bg-slate-100 mt-1" />
+                  )}
+                </div>
+
+                <div className="flex-1 pb-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${opColor[item.operation] || 'bg-slate-100 text-slate-600'}`}>
+                      {item.operation}
+                    </span>
+                    <span className="text-xs text-slate-500">
+                      by <strong className="text-slate-700">{item.modified_by}</strong>
+                      {' '}on {new Date(item.modified_at).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {Object.keys(item.changes).length > 0 ? (
+                    <table className="mt-2 w-full text-xs">
+                      <thead>
+                        <tr className="text-slate-400 text-[10px] uppercase tracking-wide">
+                          <th className="text-left pb-1">Field</th>
+                          <th className="text-left pb-1">Before</th>
+                          <th className="text-left pb-1">After</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {Object.entries(item.changes).map(([field, diff]) => (
+                          <tr key={field}>
+                            <td className="py-1 pr-3 font-semibold text-slate-600 capitalize">
+                              {field.replace(/_/g, ' ')}
+                            </td>
+                            <td className="py-1 pr-3 text-red-600 line-through opacity-60">
+                              {String((diff as {before: unknown}).before ?? '—')}
+                            </td>
+                            <td className="py-1 text-emerald-700 font-medium">
+                              {String((diff as {after: unknown}).after ?? '—')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p className="mt-1 text-xs text-slate-400">
+                      No business fields changed.
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
