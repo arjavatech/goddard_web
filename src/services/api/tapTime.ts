@@ -57,4 +57,31 @@ export const TapTimeService = {
   salaryReportCurrent: () => tapTimeFetch('/salary-report/current', z.any()),
   salaryReportHistory: () => tapTimeFetch('/salary-report/history', z.any()),
   salaryReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/salary-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
+  reportHistory: (empId: string, checkInTime: string) =>
+    tapTimeFetch(
+      `/attendance/reports/${encodeURIComponent(empId)}/history?check_in_time=${encodeURIComponent(checkInTime)}`,
+      z.object({
+        record_id: z.string(),
+        items: z.array(z.object({
+          history_id:            z.string(),
+          sequence_num:          z.number(),
+          operation:             z.string(),
+          before_check_in_time:  z.string().nullable(),
+          before_check_out_time: z.string().nullable(),
+          before_time_worked:    z.string().nullable(),
+          before_type_id:        z.string().nullable(),
+          before_is_active:      z.boolean().nullable(),
+          after_check_in_time:   z.string().nullable(),
+          after_check_out_time:  z.string().nullable(),
+          after_time_worked:     z.string().nullable(),
+          after_type_id:         z.string().nullable(),
+          after_is_active:       z.boolean().nullable(),
+          changes:               z.record(z.any()),
+          modified_by:           z.string(),
+          modified_at:           z.string(),
+          emp_id:                z.string(),
+          c_id:                  z.string(),
+        }))
+      })
+    ),
 };
