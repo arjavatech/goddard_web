@@ -174,7 +174,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employees" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeManagement /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/time-tracking" element={<FeatureRoute feature="taptimeEnabled"><TimeTracking /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/salary-report" element={<FeatureRoute feature="taptimeEnabled"><SalaryReport /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/admin/report-settings" element={<FeatureRoute feature="taptimeEnabled"><ReportSettings /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/report-settings" element={<FeatureRoute feature="taptimeEnabled"><SuperAdminOnly><ReportSettings /></SuperAdminOnly></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/taptime-integration" element={<FeatureRoute feature="taptimeEnabled"><SuperAdminOnly><TapTimeIntegration /></SuperAdminOnly></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employees/:employeeId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDetails /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-forms" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormsManagement /></FeatureRoute>} />
