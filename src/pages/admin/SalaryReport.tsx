@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CalendarDays, Clock3, Download, FileText, Loader2, Users } from 'lucide-react';
+import { CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Users } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
@@ -25,10 +25,19 @@ export function SalaryReport() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloadingPeriod, setDownloadingPeriod] = useState<any>(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+  const [view, setView] = useState<'table' | 'grid'>(isMobile ? 'grid' : 'table');
+  const [historyView, setHistoryView] = useState<'table' | 'grid'>(isMobile ? 'grid' : 'table');
 
   // Pagination state
   const [currentItemsPerPage, setCurrentItemsPerPage] = usePageSize('salary-report-current', 10);
   const [historyItemsPerPage, setHistoryItemsPerPage] = usePageSize('salary-report-history', 10);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -142,6 +151,11 @@ export function SalaryReport() {
     setHistoryPage(1);
   };
 
+  const handleCurrentPageSizeChangeView = (value: number) => {
+    setCurrentItemsPerPage(value);
+    setCurrentPageItems(1);
+  };
+
   return (
     <AdminLayout>
       {downloadingPeriod !== null && (
@@ -223,43 +237,65 @@ export function SalaryReport() {
 
                           {report && (
                             <>
-                              <div className="mb-3 flex justify-end">
-                                <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChange} />
+                              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                                  <button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                                  <button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                                </div>
+                                <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChangeView} />
                               </div>
-                              <div className="overflow-x-auto rounded-xl border border-slate-100">
-                                <table className="w-full min-w-[600px] text-sm">
-                                  <thead className="bg-slate-50/80">
-                                    <tr>
-                                      {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
-                                        <th
-                                          key={header}
-                                          className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
-                                        >
-                                          {header}
-                                        </th>
-                                      ))}
-                                    </tr>
-                                  </thead>
-                                  <tbody>
+                              {view === 'grid' ? (
+                                <>
+                                  <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                                     {paginatedItems.length ? (
                                       paginatedItems.map((item: any, idx: number) => (
-                                        <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
-                                          <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
-                                          <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
-                                          <td className="px-4 py-4 text-slate-600">{item.entries}</td>
-                                          <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
-                                        </tr>
+                                        <SalaryCard key={idx} item={item} />
                                       ))
                                     ) : (
-                                      <tr>
-                                        <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
-                                          No attendance records in this period.
-                                        </td>
-                                      </tr>
+                                      <div className="col-span-full py-20 text-center">
+                                        <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                        <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                        <p className="mt-2 text-sm text-slate-600">No attendance records in this period.</p>
+                                      </div>
                                     )}
-                                  </tbody>
-                                </table>
-                              </div>
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="overflow-x-auto rounded-xl border border-slate-100">
+                                  <table className="w-full min-w-[600px] text-sm">
+                                    <thead className="bg-slate-50/80">
+                                      <tr>
+                                        {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                          <th
+                                            key={header}
+                                            className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
+                                          >
+                                            {header}
+                                          </th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {paginatedItems.length ? (
+                                        paginatedItems.map((item: any, idx: number) => (
+                                          <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                                            <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
+                                            <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
+                                            <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                            <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                          </tr>
+                                        ))
+                                      ) : (
+                                        <tr>
+                                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                            No attendance records in this period.
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              )}
                               <Pagination
                                 currentPage={currentPage}
                                 totalPages={currentTotalPages}
@@ -274,61 +310,83 @@ export function SalaryReport() {
                     </>
                   ) : (
                     <>
-                      <div className="mb-3 flex justify-end">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                          <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                          <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                        </div>
                         <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
                       </div>
 
-                      <div className="overflow-x-auto rounded-xl border border-slate-100">
-                        <table className="w-full min-w-[700px] text-sm">
-                          <thead className="bg-slate-50/80">
-                            <tr>
-                              {['Start Date', 'End Date', 'Report Type', 'Period End', 'View', 'Download PDF'].map((header) => (
-                                <th
-                                  key={header}
-                                  className={`border-y border-slate-200/85 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 ${
-                                    ['View', 'Download PDF'].includes(header) ? 'text-center' : 'text-left'
+                      {historyView === 'grid' ? (
+                        <>
+                          <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                            {paginatedHistory.length ? (
+                              paginatedHistory.map((period, idx) => (
+                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => void selectPeriod(period)} onDownload={() => void downloadPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
+                              ))
+                            ) : (
+                              <div className="col-span-full py-20 text-center">
+                                <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                <p className="mt-2 text-sm text-slate-600">No salary report history available.</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="overflow-x-auto rounded-xl border border-slate-100">
+                          <table className="w-full min-w-[700px] text-sm">
+                            <thead className="bg-slate-50/80">
+                              <tr>
+                                {['Start Date', 'End Date', 'Report Type', 'Period End', 'View', 'Download PDF'].map((header) => (
+                                  <th
+                                    key={header}
+                                    className={`border-y border-slate-200/85 px-4 py-3.5 text-xs font-bold uppercase tracking-wider text-slate-500 ${
+                                      ['View', 'Download PDF'].includes(header) ? 'text-center' : 'text-left'
+                                    }`}
+                                  >
+                                    {header}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {paginatedHistory.map((period, idx) => (
+                                <tr
+                                  key={idx}
+                                  className={`border-b border-slate-50 transition-colors hover:bg-[#F8FAFC] ${
+                                    selected?.period.start_date === period.start_date &&
+                                    selected?.period.end_date === period.end_date
+                                      ? 'bg-blue-50'
+                                      : ''
                                   }`}
                                 >
-                                  {header}
-                                </th>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.start_date)}</td>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
+                                  <td className="px-4 py-4 text-slate-600">{current?.frequency || '—'}</td>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
+                                  <td className="px-4 py-4 text-center">
+                                    <Button size="sm" variant="outline" onClick={() => void selectPeriod(period)} disabled={loading}>
+                                      View
+                                    </Button>
+                                  </td>
+                                  <td className="px-4 py-4 text-center">
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      disabled={downloadingPeriod?.start_date === period.start_date}
+                                      onClick={() => void downloadPeriodPdf(period)}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
+                                  </td>
+                                </tr>
                               ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {paginatedHistory.map((period, idx) => (
-                              <tr
-                                key={idx}
-                                className={`border-b border-slate-50 transition-colors hover:bg-[#F8FAFC] ${
-                                  selected?.period.start_date === period.start_date &&
-                                  selected?.period.end_date === period.end_date
-                                    ? 'bg-blue-50'
-                                    : ''
-                                }`}
-                              >
-                                <td className="px-4 py-4 text-slate-600">{formatDate(period.start_date)}</td>
-                                <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
-                                <td className="px-4 py-4 text-slate-600">{current?.frequency || '—'}</td>
-                                <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
-                                <td className="px-4 py-4 text-center">
-                                  <Button size="sm" variant="outline" onClick={() => void selectPeriod(period)} disabled={loading}>
-                                    View
-                                  </Button>
-                                </td>
-                                <td className="px-4 py-4 text-center">
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    disabled={downloadingPeriod?.start_date === period.start_date}
-                                    onClick={() => void downloadPeriodPdf(period)}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
 
                       <Pagination
                         currentPage={historyPage}
@@ -360,6 +418,71 @@ function Stat({ icon: Icon, label, value, color }: { icon: React.ElementType; la
         <div className="rounded-xl bg-[#EFF5FB] p-2.5">
           <Icon className={`h-4 w-4 ${color}`} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SalaryCard({ item }: { item: any }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
+      <div className="min-w-0">
+        <p className="font-bold text-[#0F2D52] truncate">{item.name || '—'}</p>
+      </div>
+      <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">PIN</dt>
+          <dd className="text-right truncate">{item.pin || '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Entries</dt>
+          <dd className="text-right truncate">{item.entries}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
+          <dt className="flex-shrink-0">Time Worked</dt>
+          <dd className="text-right truncate">{item.time_worked}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function HistoryCard({ period, current, selected, onSelect, onDownload, loading, downloadingPeriod }: { period: any; current: any; selected: any; onSelect: () => void; onDownload: () => void; loading: boolean; downloadingPeriod: any }) {
+  const isSelected = selected?.period.start_date === period.start_date && selected?.period.end_date === period.end_date;
+  return (
+    <div className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden ${
+      isSelected ? 'border-[#1a6fc4] bg-blue-50' : 'border-slate-100'
+    }`}>
+      <div className="min-w-0">
+        <p className="font-bold text-[#0F2D52] truncate">{periodLabel(period)}</p>
+        <p className="mt-1 text-xs font-medium text-slate-400 truncate">{current?.frequency || '—'}</p>
+      </div>
+      <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Start Date</dt>
+          <dd className="text-right truncate">{formatDate(period.start_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">End Date</dt>
+          <dd className="text-right truncate">{formatDate(period.end_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Report Type</dt>
+          <dd className="text-right truncate">{current?.frequency || '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
+          <dt className="flex-shrink-0">Period End</dt>
+          <dd className="text-right truncate">{formatDate(period.end_date)}</dd>
+        </div>
+      </dl>
+      <div className="-mx-4 sm:-mx-5 -mb-4 sm:-mb-5 mt-4 flex justify-around border-t border-slate-100 px-4 sm:px-5 py-3 gap-1 sm:gap-2">
+        <Button size="sm" variant="outline" onClick={onSelect} disabled={loading} className="flex-1 min-w-0">
+          View
+        </Button>
+        <Button size="icon" variant="outline" disabled={downloadingPeriod?.start_date === period.start_date} onClick={onDownload} className="flex-1 min-w-0 px-2 sm:px-3">
+          <Download className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="sm:hidden ml-1 text-xs">PDF</span>
+        </Button>
       </div>
     </div>
   );
