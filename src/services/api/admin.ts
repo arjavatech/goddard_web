@@ -61,6 +61,7 @@ export type ParentDetail = {
       approved_on?: string | null;
       assigned_at?: string | null;
       due_date?: string | null;
+      manual_pdf_uploaded_at?: string | null;
     }[];
   }[];
 };
@@ -265,7 +266,8 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
           approved_by: form.approved_by || null,
           approved_on: form.approved_on || null,
           assigned_at: form.assigned_at || null,
-          due_date: form.due_date || null
+          due_date: form.due_date || null,
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
         }))
       }))
     });
@@ -372,7 +374,8 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           assigned_at: form.assigned_at || null,
           due_date: form.due_date || null,
           updated_at: form.updated_at || null,
-          created_at: form.created_at || null
+          created_at: form.created_at || null,
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
         }))
       }))
     };
@@ -1478,4 +1481,46 @@ export async function deleteSuperAdmin(userId: string): Promise<void> {
       user_id: userId
     }
   }, z.object({}).passthrough());
+}
+
+// Manual PDF Upload for Student Form Assignments
+export async function studentManualPdfUploadIntent(assignmentId: string, schoolId: string, file: File): Promise<{ storage_key: string; upload_url: string }> {
+  return await authedFetch({
+    method: 'POST',
+    url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/upload-intent?school_id=${encodeURIComponent(schoolId)}`,
+    body: {
+      assignment_id: assignmentId,
+      school_id: schoolId,
+      file_size_bytes: file.size,
+      content_type: file.type
+    }
+  }, z.object({ storage_key: z.string(), upload_url: z.string() }));
+}
+
+export async function studentManualPdfCompleteUpload(assignmentId: string, schoolId: string, storageKey: string, fileName: string, fileSizeBytes: number, uploadedBy: string): Promise<void> {
+  await authedFetch({
+    method: 'POST',
+    url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/complete-upload?school_id=${encodeURIComponent(schoolId)}`,
+    body: {
+      storage_key: storageKey,
+      file_name: fileName,
+      file_size_bytes: fileSizeBytes,
+      uploaded_by: uploadedBy
+    }
+  }, z.any());
+}
+
+export async function getStudentManualPdfUrl(assignmentId: string, schoolId: string): Promise<string> {
+  const result = await authedFetch({
+    method: 'GET',
+    url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+  }, z.object({ url: z.string() }));
+  return result.url;
+}
+
+export async function deleteStudentManualPdf(assignmentId: string, schoolId: string): Promise<void> {
+  await authedFetch({
+    method: 'DELETE',
+    url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+  }, z.any());
 }

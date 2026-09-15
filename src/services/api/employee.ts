@@ -53,6 +53,8 @@ export type EmployeeFormAssignment = {
   notes?: string;
   recentEditLink?: string;
   recentPdfLink?: string;
+  submissionSource?: string;
+  manualPdfUploadedAt?: string;
   // Joined from employee_form_templates:
   formName?: string;
   filloutFormId?: string;
@@ -127,6 +129,8 @@ function mapAssignment(raw: any): EmployeeFormAssignment {
     notes: raw.notes ?? undefined,
     recentEditLink: raw.recent_edit_link ?? undefined,
     recentPdfLink: raw.recent_pdf_link ?? undefined,
+    submissionSource: raw.submission_source ?? undefined,
+    manualPdfUploadedAt: raw.manual_pdf_uploaded_at ?? undefined,
     formName: raw.form_name ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     dueDate: raw.due_date ?? undefined,
@@ -441,6 +445,47 @@ export const EmployeeService = {
       { method: 'DELETE', url: `/employee-form-assignments?assignment_id=${assignmentId}&school_id=${schoolId}` },
       z.any(),
     );
+  },
+
+  async employeeManualPdfUploadIntent(assignmentId: string, schoolId: string, file: File): Promise<{ storage_key: string; upload_url: string }> {
+    return await authedFetch({
+      method: 'POST',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/upload-intent?school_id=${encodeURIComponent(schoolId)}`,
+      body: {
+        assignment_id: assignmentId,
+        school_id: schoolId,
+        file_size_bytes: file.size,
+        content_type: file.type
+      }
+    }, z.object({ storage_key: z.string(), upload_url: z.string() }));
+  },
+
+  async employeeManualPdfCompleteUpload(assignmentId: string, schoolId: string, storageKey: string, fileName: string, fileSizeBytes: number, uploadedBy: string): Promise<void> {
+    await authedFetch({
+      method: 'POST',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf/complete-upload?school_id=${encodeURIComponent(schoolId)}`,
+      body: {
+        storage_key: storageKey,
+        file_name: fileName,
+        file_size_bytes: fileSizeBytes,
+        uploaded_by: uploadedBy
+      }
+    }, z.any());
+  },
+
+  async getEmployeeManualPdfUrl(assignmentId: string, schoolId: string): Promise<string> {
+    const result = await authedFetch({
+      method: 'GET',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+    }, z.object({ url: z.string() }));
+    return result.url;
+  },
+
+  async deleteEmployeeManualPdf(assignmentId: string, schoolId: string): Promise<void> {
+    await authedFetch({
+      method: 'DELETE',
+      url: `/employee-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
+    }, z.any());
   },
 
   async submitEmployeeForm(_assignmentId: string, _formData: any): Promise<EmployeeFormAssignment> {

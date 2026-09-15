@@ -116,7 +116,9 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
           }
         }
         return form.due_date;
-      })() : null
+      })() : null,
+      approved_on: form.approved_on || null,
+      manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
     } satisfies ChildFormCard;
   });
 
