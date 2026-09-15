@@ -358,7 +358,7 @@ export function EmployeeDetails() {
                                   if (!isNaN(date.getTime())) {
                                     return (
                                       <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
-                                        Manually Uploaded {date.toLocaleDateString()}
+                                        Admin Uploaded {date.toLocaleDateString()}
                                       </span>
                                     );
                                   }

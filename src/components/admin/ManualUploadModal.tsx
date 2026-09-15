@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
@@ -32,6 +32,46 @@ export function ManualUploadModal({
   const [error, setError] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [contentHeight, setContentHeight] = useState<number | null>(null);
+  const pageRef = useRef<HTMLDivElement>(null);
+
+  const detectContentHeight = () => {
+    if (pageRef.current) {
+      const canvas = pageRef.current.querySelector('canvas');
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          let lastContentY = 0;
+          const width = canvas.width;
+          const height = canvas.height;
+          
+          for (let y = height - 1; y >= 0; y--) {
+            let rowHasContent = false;
+            for (let x = 0; x < width; x++) {
+              const idx = (y * width + x) * 4;
+              const a = data[idx + 3];
+              const r = data[idx];
+              const g = data[idx + 1];
+              const b = data[idx + 2];
+              
+              if (a > 128 && (r < 245 || g < 245 || b < 245)) {
+                rowHasContent = true;
+                break;
+              }
+            }
+            if (rowHasContent) {
+              lastContentY = y;
+              break;
+            }
+          }
+          
+          setContentHeight(lastContentY + 20);
+        }
+      }
+    }
+  };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -64,6 +104,11 @@ export function ManualUploadModal({
       validateAndSetFile(selectedFile);
     }
   };
+
+  useEffect(() => {
+    const timer = setTimeout(detectContentHeight, 300);
+    return () => clearTimeout(timer);
+  }, [currentPage, file]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -155,12 +200,14 @@ export function ManualUploadModal({
               </div>
 
               {/* PDF Preview */}
-              <div className="border rounded-lg bg-gray-50 p-4 max-h-96 overflow-auto flex flex-col items-center">
-                <Document file={file} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
-                  <Page pageNumber={currentPage} width={400} />
-                </Document>
+              <div className="border rounded-lg bg-gray-50 p-4 overflow-auto flex flex-col items-center w-fit mx-auto">
+                <div ref={pageRef} style={{ height: contentHeight ? `${contentHeight}px` : 'auto', overflow: 'hidden' }}>
+                  <Document file={file} onLoadSuccess={({ numPages }) => setNumPages(numPages)}>
+                    <Page pageNumber={currentPage} width={384} onRenderSuccess={detectContentHeight} />
+                  </Document>
+                </div>
                 {numPages && numPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 text-sm">
+                  <div className="flex items-center justify-center gap-4 mt-4 text-sm">
                     <button
                       onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
