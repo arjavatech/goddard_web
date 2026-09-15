@@ -135,7 +135,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Time Tracking', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Salary Report', path: `${schoolPrefix}/admin/salary-report` },
-        { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` },
+        ...(isSuperAdmin ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
         ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
     }] : []),
