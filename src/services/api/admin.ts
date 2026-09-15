@@ -61,6 +61,7 @@ export type ParentDetail = {
       approved_on?: string | null;
       assigned_at?: string | null;
       due_date?: string | null;
+      manual_pdf_uploaded_at?: string | null;
     }[];
   }[];
 };
@@ -265,7 +266,8 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
           approved_by: form.approved_by || null,
           approved_on: form.approved_on || null,
           assigned_at: form.assigned_at || null,
-          due_date: form.due_date || null
+          due_date: form.due_date || null,
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
         }))
       }))
     });
@@ -372,7 +374,8 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           assigned_at: form.assigned_at || null,
           due_date: form.due_date || null,
           updated_at: form.updated_at || null,
-          created_at: form.created_at || null
+          created_at: form.created_at || null,
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
         }))
       }))
     };

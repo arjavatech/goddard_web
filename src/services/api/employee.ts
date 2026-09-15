@@ -53,6 +53,8 @@ export type EmployeeFormAssignment = {
   notes?: string;
   recentEditLink?: string;
   recentPdfLink?: string;
+  submissionSource?: string;
+  manualPdfUploadedAt?: string;
   // Joined from employee_form_templates:
   formName?: string;
   filloutFormId?: string;
@@ -127,6 +129,8 @@ function mapAssignment(raw: any): EmployeeFormAssignment {
     notes: raw.notes ?? undefined,
     recentEditLink: raw.recent_edit_link ?? undefined,
     recentPdfLink: raw.recent_pdf_link ?? undefined,
+    submissionSource: raw.submission_source ?? undefined,
+    manualPdfUploadedAt: raw.manual_pdf_uploaded_at ?? undefined,
     formName: raw.form_name ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     dueDate: raw.due_date ?? undefined,

@@ -31,6 +31,7 @@ interface Form {
   studentFormAssignmentId: string | null;
   recentPdfLink: string | null;
   approvedOn: string | null;
+  manualPdfUploadedAt?: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -206,7 +207,8 @@ export function ParentDetails() {
                   '#',
                 studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
                 recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
-                approvedOn: form.approved_on || form.approvedOn || null
+                approvedOn: form.approved_on || form.approvedOn || null,
+                manualPdfUploadedAt: form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null
               } satisfies Form;
 
 
@@ -832,6 +834,21 @@ export function ParentDetails() {
                                             Approved {form.approvedOn}
                                           </span>
                                         );
+                                      })()}
+                                      {!form.approvedOn && form.manualPdfUploadedAt && (() => {
+                                        try {
+                                          const date = new Date(form.manualPdfUploadedAt);
+                                          if (!isNaN(date.getTime())) {
+                                            return (
+                                              <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                Manually Uploaded {date.toLocaleDateString()}
+                                              </span>
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // console.log('Error parsing manual upload date:', e);
+                                        }
+                                        return null;
                                       })()}
                                     </div>
                                     <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
