@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List } from 'lucide-react';
+import { Search, Mail, Calendar, AlertTriangle, CheckCircle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List, Upload } from 'lucide-react';
 import { DueForm } from '../../services/api/admin';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
@@ -18,6 +18,8 @@ import { usePageSize } from '../../hooks/usePageSize';
 import { PageLoader } from '../../components/ui/page-loader';
 import { StatCard } from '../../components/ui/stat-card';
 import { downloadCSV, printAsPDF } from '../../lib/export';
+import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
+import { useUserContext } from '../../contexts/UserContext';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
 type LocalDueForm = Omit<DueForm, 'status'> & { status: DueFormStatus };
@@ -46,6 +48,9 @@ export function DueForms() {
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
+  const { userData } = useUserContext();
+  const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<LocalDueForm | null>(null);
 
   const schoolId = localStorage.getItem('schoolId');
 
@@ -150,7 +155,7 @@ export function DueForms() {
         setLoading(true);
         // const user = await fetchUserContext();
         if (!schoolId) return;
-        
+
         // Use new enrollments API
         const response = await fetch(`${apiBaseUrl}/enrollments?school_id=${schoolId}`, {
           method: 'GET',
@@ -184,7 +189,7 @@ export function DueForms() {
               const submittedStatuses = new Set(['submitted', 'received']);
               const inProgressStatuses = new Set(['in progress', 'in_progress']);
               let status: 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress' = 'pending';
-              if (formData.status === 'approved') {
+              if (formData.status === 'approved' || formData.status === 'manually_uploaded') {
                 status = 'completed';
               } else if (formData.status && inProgressStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
                 status = 'in_progress';
@@ -193,7 +198,7 @@ export function DueForms() {
               } else if (dueDate && dueDate < today) {
                 status = 'overdue';
               }
-              
+
               // Skip completed and submitted forms
               if (status === 'completed' || status === 'submitted') {
                 return;
@@ -1000,7 +1005,21 @@ export function DueForms() {
                               <td className="py-4 px-3 text-center">
                                 {getStatusBadge(form.status)}
                               </td>
-                              <td className="py-4 px-6 text-right">
+                              <td className="py-4 px-6 text-right space-x-2 flex justify-end">
+                                {form.status !== 'completed' && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedFormForUpload(form);
+                                      setIsManualUploadOpen(true);
+                                    }}
+                                    className="h-8 px-3 text-xs rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200 font-bold"
+                                  >
+                                    <Upload className="h-3.5 w-3.5 mr-1" />
+                                    <span>Upload PDF</span>
+                                  </Button>
+                                )}
                                 <Button
                                   size="sm"
                                   variant="outline"
@@ -1044,6 +1063,29 @@ export function DueForms() {
             )}
           </CardContent>
         </div>
+
+        {selectedFormForUpload && (
+          <ManualUploadModal
+            isOpen={isManualUploadOpen}
+            onClose={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+            }}
+            onSuccess={() => {
+              // Refresh the list after successful upload
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+              showToast('PDF uploaded successfully', 'success');
+              // Optionally trigger a refresh of the forms list
+              window.location.reload();
+            }}
+            assignmentId={selectedFormForUpload.id}
+            schoolId={schoolId || ''}
+            studentName={selectedFormForUpload.studentName}
+            uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}
+            formType="student"
+          />
+        )}
       </motion.div>
     </AdminLayout>
   );

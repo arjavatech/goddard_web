@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp, Phone, MapPin } from 'lucide-react';
+import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp, Phone, MapPin, Upload } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -17,6 +17,7 @@ import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 import { useUserContext } from '../../contexts/UserContext';
+import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
   id: string;
@@ -30,6 +31,7 @@ interface Form {
   studentFormAssignmentId: string | null;
   recentPdfLink: string | null;
   approvedOn: string | null;
+  manualPdfUploadedAt?: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -126,6 +128,8 @@ export function ParentDetails() {
   const [error, setError] = useState<string | null>(null);
   const [loadingAction, setLoadingAction] = useState<{ formId: string, action: 'download' | 'print' } | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<{ form: Form; childName: string } | null>(null);
+  const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
@@ -203,7 +207,8 @@ export function ParentDetails() {
                   '#',
                 studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
                 recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
-                approvedOn: form.approved_on || form.approvedOn || null
+                approvedOn: form.approved_on || form.approvedOn || null,
+                manualPdfUploadedAt: form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null
               } satisfies Form;
 
 
@@ -830,6 +835,21 @@ export function ParentDetails() {
                                           </span>
                                         );
                                       })()}
+                                      {!form.approvedOn && form.manualPdfUploadedAt && (() => {
+                                        try {
+                                          const date = new Date(form.manualPdfUploadedAt);
+                                          if (!isNaN(date.getTime())) {
+                                            return (
+                                              <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                                Admin Uploaded {date.toLocaleDateString()}
+                                              </span>
+                                            );
+                                          }
+                                        } catch (e) {
+                                          // console.log('Error parsing manual upload date:', e);
+                                        }
+                                        return null;
+                                      })()}
                                     </div>
                                     <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
                                       {form.description}
@@ -892,6 +912,20 @@ export function ParentDetails() {
                                         <span>View Form</span>
                                       </Button>
                                     </Link>}
+                                    {form.status !== 'Approved' && form.studentFormAssignmentId && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                        onClick={() => {
+                                          setSelectedFormForUpload({ form, childName: `${child.firstName} ${child.lastName}` });
+                                          setIsManualUploadOpen(true);
+                                        }}
+                                      >
+                                        <Upload className="h-3.5 w-3.5 mr-1" />
+                                        Upload PDF
+                                      </Button>
+                                    )}
                                     {form.status === 'Submitted' && (
                                       <div className="flex gap-1.5">
                                         <Button variant="outline" size="sm" className="h-8 rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/50 text-xs font-bold" onClick={() => { setSelectedChildId(child.id); openReviewDialog(form, 'approve'); }}>
@@ -1021,6 +1055,26 @@ export function ParentDetails() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {selectedFormForUpload && (
+        <ManualUploadModal
+          isOpen={isManualUploadOpen}
+          onClose={() => {
+            setIsManualUploadOpen(false);
+            setSelectedFormForUpload(null);
+          }}
+          onSuccess={() => {
+            setIsManualUploadOpen(false);
+            setSelectedFormForUpload(null);
+            window.location.reload();
+          }}
+          assignmentId={selectedFormForUpload.form.studentFormAssignmentId!}
+          schoolId={schoolId || localStorage.getItem('schoolId') || ''}
+          studentName={selectedFormForUpload.childName}
+          uploadedBy={userData?.email || userData?.name || 'Admin'}
+          formType="student"
+        />
+      )}
     </AdminLayout>
   );
 }

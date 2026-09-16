@@ -26,6 +26,8 @@ interface FormCardProps {
   formId?: string;
   assignedAt?: string | null;
   dueDate?: string | null;
+  approvedOn?: string | null;
+  manualPdfUploadedAt?: string | null;
 }
 function FormCard({
   title,
@@ -40,7 +42,9 @@ function FormCard({
   disabledReason,
   isLoading,
   formId,
-  dueDate
+  dueDate,
+  approvedOn,
+  manualPdfUploadedAt
 }: FormCardProps) {
   const isApproved = status === 'Approved';
   const isLoadingThis = isLoading?.formId === formId;
@@ -65,8 +69,34 @@ function FormCard({
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{title}</p>
-          <div className="mt-1.5">
+          <div className="mt-1.5 flex flex-wrap gap-2 items-center">
             <StatusBadge status={status} />
+            {approvedOn && (() => {
+              try {
+                const date = new Date(approvedOn);
+                if (!isNaN(date.getTime())) {
+                  return (
+                    <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      Approved {date.toLocaleDateString()}
+                    </span>
+                  );
+                }
+              } catch (e) {}
+              return null;
+            })()}
+            {!approvedOn && manualPdfUploadedAt && (() => {
+              try {
+                const date = new Date(manualPdfUploadedAt);
+                if (!isNaN(date.getTime())) {
+                  return (
+                    <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                      Admin Uploaded {date.toLocaleDateString()}
+                    </span>
+                  );
+                }
+              } catch (e) {}
+              return null;
+            })()}
           </div>
         </div>
       </div>
@@ -148,6 +178,8 @@ interface FormData {
   assignedAt?: string | null;
   dueDate?: string | null;
   fromContinueButton?: boolean;
+  approvedOn?: string | null;
+  manualPdfUploadedAt?: string | null;
 }
 
 interface FormsDocumentsProps {
@@ -862,6 +894,8 @@ export function FormsDocuments({
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
                     assignedAt={form.assignedAt}
                     dueDate={form.dueDate}
+                    approvedOn={form.approved_on || form.approvedOn || null}
+                    manualPdfUploadedAt={form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null}
                     disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
                     disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
                     onView={() => handleView(form)}
@@ -957,6 +991,8 @@ export function FormsDocuments({
                     recentPdfLink={form.rawData?.recent_pdf_link || form.recentPdfLink}
                     assignedAt={form.assignedAt}
                     dueDate={form.dueDate}
+                    approvedOn={form.approved_on || form.approvedOn || null}
+                    manualPdfUploadedAt={form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null}
                     disabled={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId)}
                     disabledReason={form.status !== 'Approved' && !extractStudentFormAssignmentId(form.studentFormAssignmentId) ? 'Loading form assignment… (missing student_form_assignment_id)' : undefined}
                     onView={() => handleView(form)}

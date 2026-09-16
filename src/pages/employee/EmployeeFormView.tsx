@@ -149,6 +149,13 @@ export function EmployeeFormView() {
     })();
   }, [assignment, userData]);
 
+  // Handle manually uploaded PDFs
+  useEffect(() => {
+    if (assignment?.submissionSource === 'manual_upload' && assignment?.recentPdfLink) {
+      setViewUrl(assignment.recentPdfLink);
+    }
+  }, [assignment?.submissionSource, assignment?.recentPdfLink]);
+
   const handleSubmission = useCallback(() => {
     if (isSubmittingRef.current || !assignment) return;
     isSubmittingRef.current = true;
@@ -253,7 +260,7 @@ export function EmployeeFormView() {
   }, [assignment?.formTitle, handleSubmission]);
 
   if (!assignment) return null;
-  if (!assignment.recentEditLink && !assignment.filloutFormId) {
+  if (!assignment.recentEditLink && !assignment.filloutFormId && !assignment.recentPdfLink) {
     return (
       <div className="h-screen flex items-center justify-center text-slate-500 text-sm">
         Form URL is not configured for this assignment.

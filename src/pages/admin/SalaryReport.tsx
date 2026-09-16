@@ -1,12 +1,16 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CalendarDays, Clock3, Download, FileText, Loader2, Users, LayoutGrid, List, Search, ChevronLeft, ChevronRight, ArrowUpDown } from 'lucide-react';
+import { CalendarDays, Clock3, Download, FileText, Grid2X2, List, Loader2, Users } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { TapTimeService } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
 import { useUserContext } from '../../contexts/UserContext';
+import { Pagination } from '../../components/ui/pagination';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
+import { usePageSize } from '../../hooks/usePageSize';
+import { usePagination } from '../../hooks/usePagination';
 
 const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 const periodLabel = (period: any) => `${formatDate(period.start_date)} – ${formatDate(period.end_date)}`;
@@ -18,18 +22,29 @@ export function SalaryReport() {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortOption, setSortOption] = useState('none');
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
   
   const [historySearchQuery, setHistorySearchQuery] = useState('');
   const [historyViewMode, setHistoryViewMode] = useState<'table' | 'card'>('table');
   const [current, setCurrent] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const [historyDetailView, setHistoryDetailView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [visibleCount, setVisibleCount] = useState(12);
   const [downloadingPeriod, setDownloadingPeriod] = useState<any>(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+  const [view, setView] = useState<'table' | 'grid'>(isMobile ? 'grid' : 'table');
+  const [historyView, setHistoryView] = useState<'table' | 'grid'>(isMobile ? 'grid' : 'table');
+
+  // Pagination state
+  const [currentItemsPerPage, setCurrentItemsPerPage] = usePageSize('salary-report-current', 10);
+  const [historyItemsPerPage, setHistoryItemsPerPage] = usePageSize('salary-report-history', 10);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -42,7 +57,6 @@ export function SalaryReport() {
       setCurrent(currentResponse.data);
       setSelected(currentResponse.data);
       setHistory(historyResponse.data.periods || []);
-      setVisibleCount(12);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load salary reports');
     } finally {
@@ -52,12 +66,13 @@ export function SalaryReport() {
 
   useEffect(() => { void load(); }, []);
 
-  const selectPeriod = async (period: any) => {
+  const selectPeriod = async (period: any, switchTab = true) => {
     setLoading(true);
     setError('');
     try {
       const response = await TapTimeService.salaryReportPeriod(period.start_date, period.end_date);
       setSelected(response.data);
+      if (switchTab) setTab('current');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load this report period');
     } finally {
@@ -67,19 +82,22 @@ export function SalaryReport() {
 
   const generatePdf = (reportData: any) => {
     if (!reportData) return;
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
     doc.setFontSize(18);
     doc.setTextColor(15, 45, 82);
-    doc.text('The Goddard School', 14, 18);
-    doc.setFontSize(12);
+    doc.text('The Goddard School', 40, 42);
+
+    doc.setFontSize(13);
     doc.setTextColor(30, 41, 59);
-    doc.text(`Salary Report - ${reportData.frequency}`, 14, 28);
-    doc.setFontSize(10);
+    doc.text(`Salary Report - ${reportData.frequency}`, 40, 66);
+
+    doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
-    doc.text(`${periodLabel(reportData.period)} • Employees: ${reportData.totals.employees} • Total Time: ${reportData.totals.time_worked}`, 14, 36);
+    doc.text(`${periodLabel(reportData.period)} • Employees: ${reportData.totals.employees} • Total Time: ${reportData.totals.time_worked}`, 40, 84);
 
     autoTable(doc, {
-      startY: 45,
+      startY: 104,
       head: [['Employee', 'PIN', 'Entries', 'Time Worked']],
       body: reportData.items.map((item: any) => [
         item.name || '—',
@@ -91,7 +109,9 @@ export function SalaryReport() {
       headStyles: { fillColor: [15, 45, 82], textColor: 255, fontStyle: 'bold' },
       styles: { fontSize: 9, cellPadding: 7, textColor: [51, 65, 85] },
       alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: 40, right: 40 },
     });
+
     doc.save(`salary-report-${reportData.period.start_date}-to-${reportData.period.end_date}.pdf`);
   };
 
@@ -109,60 +129,49 @@ export function SalaryReport() {
 
   const report = selected || current;
 
-  const filteredHistory = useMemo(() => {
-    let list = history;
-    if (historySearchQuery) {
-      const q = historySearchQuery.toLowerCase();
-      list = list.filter(period => {
-         const start = formatDate(period.start_date).toLowerCase();
-         const end = formatDate(period.end_date).toLowerCase();
-         return start.includes(q) || end.includes(q);
-      });
-    }
-    return list;
-  }, [history, historySearchQuery]);
+  // Current Period tab pagination
+  const {
+    currentPage,
+    totalPages: currentTotalPages,
+    paginatedData: paginatedItems,
+    setCurrentPage: setCurrentPageItems,
+  } = usePagination({ data: report?.items ?? [], itemsPerPage: currentItemsPerPage });
 
-  const visibleHistory = filteredHistory.slice(0, visibleCount);
+  // History tab pagination
+  const {
+    currentPage: historyPage,
+    totalPages: historyTotalPages,
+    paginatedData: paginatedHistory,
+    setCurrentPage: setHistoryPage,
+  } = usePagination({ data: history, itemsPerPage: historyItemsPerPage });
 
-  useEffect(() => {
-    setVisibleCount(12);
-  }, [historySearchQuery]);
+  useEffect(() => { setCurrentPageItems(1); }, [report, setCurrentPageItems]);
+  useEffect(() => { setHistoryPage(1); }, [history, setHistoryPage]);
+  useEffect(() => { setHistoryDetailView(false); }, [tab]);
 
-  const filteredItems = useMemo(() => {
-    if (!report?.items) return [];
-    let items = [...report.items];
+  const handleCurrentPageSizeChange = (value: number) => {
+    setCurrentItemsPerPage(value);
+    setCurrentPageItems(1);
+  };
 
-    if (searchQuery) {
-      const q = searchQuery.toLowerCase();
-      items = items.filter((item: any) => 
-        (item.name || '').toLowerCase().includes(q) || 
-        (item.pin || '').toLowerCase().includes(q)
-      );
-    }
+  const handleHistoryPageSizeChange = (value: number) => {
+    setHistoryItemsPerPage(value);
+    setHistoryPage(1);
+  };
 
-    if (sortOption === 'name-asc') {
-      items.sort((a: any, b: any) => (a.name || '').localeCompare(b.name || ''));
-    } else if (sortOption === 'name-desc') {
-      items.sort((a: any, b: any) => (b.name || '').localeCompare(a.name || ''));
-    } else if (sortOption === 'entries-asc') {
-      items.sort((a: any, b: any) => a.entries - b.entries);
-    } else if (sortOption === 'entries-desc') {
-      items.sort((a: any, b: any) => b.entries - a.entries);
-    }
+  const handleCurrentPageSizeChangeView = (value: number) => {
+    setCurrentItemsPerPage(value);
+    setCurrentPageItems(1);
+  };
 
-    return items;
-  }, [report?.items, searchQuery, sortOption]);
+  const {
+    currentPage: historyDetailPage,
+    totalPages: historyDetailTotalPages,
+    paginatedData: paginatedHistoryDetailItems,
+    setCurrentPage: setHistoryDetailPage,
+  } = usePagination({ data: selected?.items ?? [], itemsPerPage: currentItemsPerPage });
 
-  const paginatedItems = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filteredItems.slice(start, start + itemsPerPage);
-  }, [filteredItems, currentPage]);
-
-  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, sortOption, report]);
+  useEffect(() => { setHistoryDetailPage(1); }, [selected?.period?.start_date, setHistoryDetailPage]);
 
   return (
     <AdminLayout>
@@ -248,58 +257,30 @@ export function SalaryReport() {
 
                           {report && (
                             <>
-                              <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                                <div className="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center sm:gap-4">
-                                  <div className="relative w-full sm:max-w-sm sm:flex-1">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                                    <input
-                                      type="text"
-                                      placeholder="Search by name or PIN..."
-                                      value={searchQuery}
-                                      onChange={(e) => setSearchQuery(e.target.value)}
-                                      className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-4 text-sm outline-none focus:border-[#1a6fc4] focus:ring-1 focus:ring-[#1a6fc4]"
-                                    />
-                                  </div>
-                                  <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:gap-2">
-                                    <div className="flex w-full items-center gap-2 sm:w-auto">
-                                      <ArrowUpDown className="h-4 w-4 shrink-0 text-slate-400" />
-                                      <select
-                                        value={sortOption}
-                                        onChange={(e) => setSortOption(e.target.value)}
-                                        className="w-full rounded-lg border border-slate-200 py-2 pl-3 pr-8 text-sm outline-none focus:border-[#1a6fc4] focus:ring-1 focus:ring-[#1a6fc4] sm:w-auto"
-                                      >
-                                        <option value="none">Sort By</option>
-                                        <option value="name-asc">Name: A → Z</option>
-                                        <option value="name-desc">Name: Z → A</option>
-                                        <option value="entries-asc">Entries: Low → High</option>
-                                        <option value="entries-desc">Entries: High → Low</option>
-                                      </select>
-                                    </div>
-                                  </div>
+                              <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                                  <button type="button" onClick={() => setView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                                  <button type="button" onClick={() => setView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${view === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
                                 </div>
-                                <div className="flex items-center self-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:self-auto">
-                                  <button
-                                    onClick={() => setViewMode('table')}
-                                    className={`rounded-md p-1.5 transition-colors ${
-                                      viewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                                    }`}
-                                    title="Table View"
-                                  >
-                                    <List className="h-4 w-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => setViewMode('card')}
-                                    className={`rounded-md p-1.5 transition-colors ${
-                                      viewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                                    }`}
-                                    title="Card View"
-                                  >
-                                    <LayoutGrid className="h-4 w-4" />
-                                  </button>
-                                </div>
+                                <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChangeView} />
                               </div>
-
-                              {viewMode === 'table' ? (
+                              {view === 'grid' ? (
+                                <>
+                                  <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                                    {paginatedItems.length ? (
+                                      paginatedItems.map((item: any, idx: number) => (
+                                        <SalaryCard key={idx} item={item} />
+                                      ))
+                                    ) : (
+                                      <div className="col-span-full py-20 text-center">
+                                        <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                        <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                        <p className="mt-2 text-sm text-slate-600">No attendance records in this period.</p>
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
                                 <div className="overflow-x-auto rounded-xl border border-slate-100">
                                   <table className="w-full min-w-[600px] text-sm">
                                     <thead className="bg-slate-50/80">
@@ -327,76 +308,21 @@ export function SalaryReport() {
                                       ) : (
                                         <tr>
                                           <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
-                                            No attendance records found.
+                                            No attendance records in this period.
                                           </td>
                                         </tr>
                                       )}
                                     </tbody>
                                   </table>
                                 </div>
-                              ) : (
-                                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                  {paginatedItems.length ? (
-                                    paginatedItems.map((item: any, idx: number) => (
-                                      <div key={idx} className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-                                        <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                                          <h4 className="font-bold text-[#0F2D52]">{item.name || '—'}</h4>
-                                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
-                                            PIN: {item.pin || '—'}
-                                          </span>
-                                        </div>
-                                        <div className="mt-4 grid grid-cols-2 gap-4">
-                                          <div>
-                                            <p className="text-xs text-slate-500">Entries</p>
-                                            <p className="font-semibold text-slate-700">{item.entries}</p>
-                                          </div>
-                                          <div>
-                                            <p className="text-xs text-slate-500">Time Worked</p>
-                                            <p className="font-semibold text-slate-700">{item.time_worked}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <div className="col-span-full py-8 text-center text-slate-400">
-                                      No attendance records found.
-                                    </div>
-                                  )}
-                                </div>
                               )}
-
-                              {totalPages > 1 && (
-                                <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
-                                  <p className="text-sm text-slate-600">
-                                    Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to{' '}
-                                    <span className="font-medium">{Math.min(currentPage * itemsPerPage, filteredItems.length)}</span> of{' '}
-                                    <span className="font-medium">{filteredItems.length}</span> results
-                                  </p>
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                      disabled={currentPage === 1}
-                                    >
-                                      <ChevronLeft className="h-4 w-4" />
-                                    </Button>
-                                    <div className="flex items-center gap-1">
-                                      <span className="px-2 text-sm text-slate-600">
-                                        Page {currentPage} of {totalPages}
-                                      </span>
-                                    </div>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                      disabled={currentPage === totalPages}
-                                    >
-                                      <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                  </div>
-                                </div>
-                              )}
+                              <Pagination
+                                currentPage={currentPage}
+                                totalPages={currentTotalPages}
+                                totalItems={report.items.length}
+                                itemsPerPage={currentItemsPerPage}
+                                onPageChange={setCurrentPageItems}
+                              />
                             </>
                           )}
                         </>
@@ -404,48 +330,107 @@ export function SalaryReport() {
                     </>
                   ) : (
                     <>
-                      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row sm:items-center sm:gap-4">
-                          <div className="relative w-full sm:max-w-sm sm:flex-1">
-                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                            <input
-                              type="text"
-                              placeholder="Search by date..."
-                              value={historySearchQuery}
-                              onChange={(e) => setHistorySearchQuery(e.target.value)}
-                              className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-4 text-sm outline-none focus:border-[#1a6fc4] focus:ring-1 focus:ring-[#1a6fc4]"
-                            />
+                      {historyDetailView && selected && !selected.period.is_current ? (
+                        <>
+                          <div className="mb-6 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <h3 className="text-sm font-bold text-[#0F2D52]">Historical Report — {selected?.frequency}</h3>
+                            <p className="mt-2 text-xs text-slate-600">{selected?.period ? periodLabel(selected.period) : ''}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center self-start gap-2 rounded-lg border border-slate-200 bg-slate-50 p-1 sm:self-auto">
-                          <button
-                            onClick={() => setHistoryViewMode('table')}
-                            className={`rounded-md p-1.5 transition-colors ${
-                              historyViewMode === 'table' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                            }`}
-                            title="Table View"
-                          >
-                            <List className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => setHistoryViewMode('card')}
-                            className={`rounded-md p-1.5 transition-colors ${
-                              historyViewMode === 'card' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-400 hover:text-slate-600'
-                            }`}
-                            title="Card View"
-                          >
-                            <LayoutGrid className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                              <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                              <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                            </div>
+                            <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChange} />
+                          </div>
+                          {historyView === 'grid' ? (
+                            <>
+                              <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedHistoryDetailItems.length ? (
+                                  paginatedHistoryDetailItems.map((item: any, idx: number) => (
+                                    <SalaryCard key={idx} item={item} />
+                                  ))
+                                ) : (
+                                  <div className="col-span-full py-20 text-center">
+                                    <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                    <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                    <p className="mt-2 text-sm text-slate-600">No attendance records in this period.</p>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="overflow-x-auto rounded-xl border border-slate-100">
+                              <table className="w-full min-w-[600px] text-sm">
+                                <thead className="bg-slate-50/80">
+                                  <tr>
+                                    {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                      <th
+                                        key={header}
+                                        className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
+                                      >
+                                        {header}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedHistoryDetailItems.length ? (
+                                    paginatedHistoryDetailItems.map((item: any, idx: number) => (
+                                      <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                                        <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
+                                        <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
+                                        <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                        <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                        No attendance records found.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                                  </table>
+                                </div>
+                              )}
 
-                      <div className="mb-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-                        <p className="text-xs text-slate-600">
-                          Showing {visibleHistory.length} of {filteredHistory.length} records
-                        </p>
-                      </div>
+                          <Pagination
+                            currentPage={historyDetailPage}
+                            totalPages={historyDetailTotalPages}
+                            totalItems={selected.items.length}
+                            itemsPerPage={currentItemsPerPage}
+                            onPageChange={setHistoryDetailPage}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                              <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                              <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                            </div>
+                            <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
+                          </div>
 
-                      {historyViewMode === 'table' ? (
+                          {historyView === 'grid' ? (
+                        <>
+                          <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                            {paginatedHistory.length ? (
+                              paginatedHistory.map((period, idx) => (
+                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => { void selectPeriod(period, false); setHistoryDetailView(true); }} onDownload={() => void downloadPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
+                              ))
+                            ) : (
+                              <div className="col-span-full py-20 text-center">
+                                <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                <p className="mt-2 text-sm text-slate-600">No salary report history available.</p>
+                              </div>
+                            )}
+                          </div>
+                        </>
+                      ) : (
                         <div className="overflow-x-auto rounded-xl border border-slate-100">
                           <table className="w-full min-w-[700px] text-sm">
                             <thead className="bg-slate-50/80">
@@ -463,103 +448,50 @@ export function SalaryReport() {
                               </tr>
                             </thead>
                             <tbody>
-                              {visibleHistory.length ? (
-                                visibleHistory.map((period, idx) => (
-                                  <tr
-                                    key={idx}
-                                    className={`border-b border-slate-50 transition-colors hover:bg-[#F8FAFC] ${
-                                      selected?.period.start_date === period.start_date &&
-                                      selected?.period.end_date === period.end_date
-                                        ? 'bg-blue-50'
-                                        : ''
-                                    }`}
-                                  >
-                                    <td className="px-4 py-4 text-slate-600">{formatDate(period.start_date)}</td>
-                                    <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
-                                    <td className="px-4 py-4 text-slate-600">{current?.frequency || '—'}</td>
-                                    <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
-                                    <td className="px-4 py-4 text-center">
-                                      <Button size="sm" variant="outline" onClick={() => void selectPeriod(period)} disabled={loading}>
-                                        View
-                                      </Button>
-                                    </td>
-                                    <td className="px-4 py-4 text-center">
-                                      <Button
-                                        size="icon"
-                                        variant="outline"
-                                        disabled={downloadingPeriod?.start_date === period.start_date}
-                                        onClick={() => void downloadPeriodPdf(period)}
-                                      >
-                                        <Download className="h-4 w-4" />
-                                      </Button>
-                                    </td>
-                                  </tr>
-                                ))
-                              ) : (
-                                <tr>
-                                  <td colSpan={6} className="px-4 py-8 text-center text-slate-400">
-                                    No records found.
+                              {paginatedHistory.map((period, idx) => (
+                                <tr
+                                  key={idx}
+                                  className={`border-b border-slate-50 transition-colors hover:bg-[#F8FAFC] ${
+                                    selected?.period.start_date === period.start_date &&
+                                    selected?.period.end_date === period.end_date
+                                      ? 'bg-blue-50'
+                                      : ''
+                                  }`}
+                                >
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.start_date)}</td>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
+                                  <td className="px-4 py-4 text-slate-600">{current?.frequency || '—'}</td>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
+                                  <td className="px-4 py-4 text-center">
+                                    <Button size="sm" variant="outline" onClick={() => { void selectPeriod(period, false); setHistoryDetailView(true); }} disabled={loading}>
+                                      View
+                                    </Button>
+                                  </td>
+                                  <td className="px-4 py-4 text-center">
+                                    <Button
+                                      size="icon"
+                                      variant="outline"
+                                      disabled={downloadingPeriod?.start_date === period.start_date}
+                                      onClick={() => void downloadPeriodPdf(period)}
+                                    >
+                                      <Download className="h-4 w-4" />
+                                    </Button>
                                   </td>
                                 </tr>
-                              )}
+                              ))}
                             </tbody>
                           </table>
                         </div>
-                      ) : (
-                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                          {visibleHistory.length ? (
-                            visibleHistory.map((period, idx) => (
-                              <div key={idx} className={`rounded-xl border p-5 shadow-sm transition-shadow hover:shadow-md ${
-                                selected?.period.start_date === period.start_date &&
-                                selected?.period.end_date === period.end_date
-                                  ? 'border-[#1a6fc4] bg-blue-50/50'
-                                  : 'border-slate-100 bg-white'
-                              }`}>
-                                <div className="flex items-center justify-between border-b border-slate-100/50 pb-3">
-                                  <h4 className="font-bold text-[#0F2D52]">{current?.frequency || '—'} Report</h4>
-                                </div>
-                                <div className="mt-4 grid gap-3 grid-cols-2">
-                                  <div>
-                                    <p className="text-xs text-slate-500">Start Date</p>
-                                    <p className="font-semibold text-slate-700">{formatDate(period.start_date)}</p>
-                                  </div>
-                                  <div>
-                                    <p className="text-xs text-slate-500">End Date</p>
-                                    <p className="font-semibold text-slate-700">{formatDate(period.end_date)}</p>
-                                  </div>
-                                </div>
-                                <div className="mt-4 flex gap-2 pt-4 border-t border-slate-100/50">
-                                  <Button className="flex-1" size="sm" variant="outline" onClick={() => void selectPeriod(period)} disabled={loading}>
-                                    View
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    disabled={downloadingPeriod?.start_date === period.start_date}
-                                    onClick={() => void downloadPeriodPdf(period)}
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="col-span-full py-8 text-center text-slate-400">
-                              No records found.
-                            </div>
-                          )}
-                        </div>
                       )}
 
-                      {visibleCount < filteredHistory.length && (
-                        <div className="mt-4 text-center">
-                          <Button
-                            variant="outline"
-                            onClick={() => setVisibleCount((c) => c + 12)}
-                          >
-                            Load More ({filteredHistory.length - visibleCount} remaining)
-                          </Button>
-                        </div>
+                          <Pagination
+                            currentPage={historyPage}
+                            totalPages={historyTotalPages}
+                            totalItems={history.length}
+                            itemsPerPage={historyItemsPerPage}
+                            onPageChange={setHistoryPage}
+                          />
+                        </>
                       )}
                     </>
                   )}
@@ -584,6 +516,71 @@ function Stat({ icon: Icon, label, value, color }: { icon: React.ElementType; la
         <div className="rounded-xl bg-[#EFF5FB] p-2.5">
           <Icon className={`h-4 w-4 ${color}`} />
         </div>
+      </div>
+    </div>
+  );
+}
+
+function SalaryCard({ item }: { item: any }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
+      <div className="min-w-0">
+        <p className="font-bold text-[#0F2D52] truncate">{item.name || '—'}</p>
+      </div>
+      <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">PIN</dt>
+          <dd className="text-right truncate">{item.pin || '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Entries</dt>
+          <dd className="text-right truncate">{item.entries}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
+          <dt className="flex-shrink-0">Time Worked</dt>
+          <dd className="text-right truncate">{item.time_worked}</dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function HistoryCard({ period, current, selected, onSelect, onDownload, loading, downloadingPeriod }: { period: any; current: any; selected: any; onSelect: () => void; onDownload: () => void; loading: boolean; downloadingPeriod: any }) {
+  const isSelected = selected?.period.start_date === period.start_date && selected?.period.end_date === period.end_date;
+  return (
+    <div className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden ${
+      isSelected ? 'border-[#1a6fc4] bg-blue-50' : 'border-slate-100'
+    }`}>
+      <div className="min-w-0">
+        <p className="font-bold text-[#0F2D52] truncate">{periodLabel(period)}</p>
+        <p className="mt-1 text-xs font-medium text-slate-400 truncate">{current?.frequency || '—'}</p>
+      </div>
+      <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Start Date</dt>
+          <dd className="text-right truncate">{formatDate(period.start_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">End Date</dt>
+          <dd className="text-right truncate">{formatDate(period.end_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0">Report Type</dt>
+          <dd className="text-right truncate">{current?.frequency || '—'}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
+          <dt className="flex-shrink-0">Period End</dt>
+          <dd className="text-right truncate">{formatDate(period.end_date)}</dd>
+        </div>
+      </dl>
+      <div className="-mx-4 sm:-mx-5 -mb-4 sm:-mb-5 mt-4 flex justify-around border-t border-slate-100 px-4 sm:px-5 py-3 gap-1 sm:gap-2">
+        <Button size="sm" variant="outline" onClick={onSelect} disabled={loading} className="flex-1 min-w-0">
+          View
+        </Button>
+        <Button size="icon" variant="outline" disabled={downloadingPeriod?.start_date === period.start_date} onClick={onDownload} className="flex-1 min-w-0 px-2 sm:px-3">
+          <Download className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="sm:hidden ml-1 text-xs">PDF</span>
+        </Button>
       </div>
     </div>
   );

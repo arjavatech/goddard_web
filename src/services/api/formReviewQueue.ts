@@ -1,5 +1,7 @@
 import { authedFetch, z } from './common';
 
+export type SubmissionSource = 'digital' | 'manual_upload';
+
 export type ReviewQueueItem = {
   assignmentId: string;
   schoolId: string;
@@ -10,6 +12,7 @@ export type ReviewQueueItem = {
   submittedAt: string;
   recentEditLink?: string;
   recentPdfLink?: string;
+  submissionSource?: SubmissionSource;
   studentName?: string;
   parentName?: string;
   parentEmail?: string;
@@ -39,6 +42,7 @@ const mapItem = (item: any, kind: 'student' | 'employee'): ReviewQueueItem => ({
   submittedAt: item.submitted_at,
   recentEditLink: item.recent_edit_link,
   recentPdfLink: item.recent_pdf_link,
+  submissionSource: item.submission_source,
   ...(kind === 'student' ? {
     studentName: `${item.student_first_name} ${item.student_last_name}`.trim(),
     parentName: `${item.parent_first_name} ${item.parent_last_name}`.trim(),

@@ -3,7 +3,7 @@ import { getAuthToken } from '../auth/session';
 
 const tapTimeBaseUrl = (import.meta.env.VITE_TAPTIME_API_BASE_URL || '').replace(/\/$/, '');
 
-export type AttendanceReport = { emp_id?: string; name?: string; email?: string; pin?: string; date?: string; check_in_time?: string; check_out_time?: string; time_worked?: string; type?: string };
+export type AttendanceReport = { emp_id?: string; name?: string; email?: string; pin?: string; date?: string; check_in_time?: string; check_out_time?: string; time_worked?: string; type?: string; last_modified_by?: string };
 
 async function tapTimeFetch<T>(path: string, schema: z.ZodType<T>, init: RequestInit = {}): Promise<T> {
   if (!tapTimeBaseUrl) throw new Error('TapTime integration is not configured for this environment.');
@@ -47,7 +47,41 @@ export const TapTimeService = {
   checkinRecipients: () => tapTimeFetch('/report-settings/checkin-reminder/recipients', z.object({ to: z.array(z.object({ id: z.string(), email: z.string() })), cc: z.array(z.object({ id: z.string(), email: z.string() })) })),
   addCheckinRecipient: (email: string, recipient_type: 'to' | 'cc') => tapTimeFetch('/report-settings/checkin-reminder/recipients', z.any(), { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ email, recipient_type }) }),
   removeCheckinRecipient: (recipientId: string) => tapTimeFetch(`/report-settings/checkin-reminder/recipients/${encodeURIComponent(recipientId)}`, z.any(), { method: 'DELETE', headers: { 'Idempotency-Key': crypto.randomUUID() } }),
+  autoCheckout: () => tapTimeFetch('/report-settings/auto-checkout', z.object({ is_auto_checkout_enabled: z.boolean(), auto_checkout_time: z.string().or(z.null()) })),
+  setAutoCheckout: (enabled: boolean, auto_checkout_time?: string) => tapTimeFetch('/report-settings/auto-checkout', z.any(), { method: 'PUT', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ enabled, auto_checkout_time }) }),
+  recoveryTracker: () => tapTimeFetch('/report-settings/recovery-tracker', z.object({ enabled: z.boolean() })),
+  setRecoveryTracker: (enabled: boolean) => tapTimeFetch('/report-settings/recovery-tracker', z.any(), { method: 'PUT', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ enabled }) }),
+  recoveryTrackerRecipients: () => tapTimeFetch('/report-settings/recovery-tracker/recipients', z.object({ to: z.array(z.object({ id: z.string(), email: z.string() })), cc: z.array(z.object({ id: z.string(), email: z.string() })) })),
+  addRecoveryTrackerRecipient: (email: string, recipient_type: 'to' | 'cc') => tapTimeFetch('/report-settings/recovery-tracker/recipients', z.any(), { method: 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() }, body: JSON.stringify({ email, recipient_type }) }),
+  removeRecoveryTrackerRecipient: (recipientId: string) => tapTimeFetch(`/report-settings/recovery-tracker/recipients/${encodeURIComponent(recipientId)}`, z.any(), { method: 'DELETE', headers: { 'Idempotency-Key': crypto.randomUUID() } }),
   salaryReportCurrent: () => tapTimeFetch('/salary-report/current', z.any()),
   salaryReportHistory: () => tapTimeFetch('/salary-report/history', z.any()),
   salaryReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/salary-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
+  reportHistory: (empId: string, checkInTime: string) =>
+    tapTimeFetch(
+      `/attendance/reports/${encodeURIComponent(empId)}/history?check_in_time=${encodeURIComponent(checkInTime)}`,
+      z.object({
+        record_id: z.string(),
+        items: z.array(z.object({
+          history_id:            z.string(),
+          sequence_num:          z.number(),
+          operation:             z.string(),
+          before_check_in_time:  z.string().nullable(),
+          before_check_out_time: z.string().nullable(),
+          before_time_worked:    z.string().nullable(),
+          before_type_id:        z.string().nullable(),
+          before_is_active:      z.boolean().nullable(),
+          after_check_in_time:   z.string().nullable(),
+          after_check_out_time:  z.string().nullable(),
+          after_time_worked:     z.string().nullable(),
+          after_type_id:         z.string().nullable(),
+          after_is_active:       z.boolean().nullable(),
+          changes:               z.record(z.any()),
+          modified_by:           z.string(),
+          modified_at:           z.string(),
+          emp_id:                z.string(),
+          c_id:                  z.string(),
+        }))
+      })
+    ),
 };
