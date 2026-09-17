@@ -394,42 +394,65 @@ export function EmployeeFormView() {
           </div>
 
           {/* Info Bar */}
-          <div className="bg-white border-b border-slate-200 px-6 py-3 flex items-center gap-6 shrink-0 z-20">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
-                <User className="w-3.5 h-3.5 text-[#0F2D52]" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
-                <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
-              </div>
-            </div>
-
-            <div className="h-8 w-px bg-slate-100 shrink-0" />
-
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
-                <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
-                <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
-              </div>
-            </div>
-
-            {assignment.dueDate && (
-              <>
-                <div className="h-8 w-px bg-slate-100 shrink-0" />
+          <div className="bg-white border-b border-slate-200 px-4 py-3 lg:px-6 lg:py-3 shrink-0 lg:z-20">
+            {/* Mobile: Employee + Due Date (2 columns) */}
+            <div className="flex lg:hidden items-start justify-between gap-4">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                  <User className="w-3.5 h-3.5 text-[#0F2D52]" />
+                </div>
                 <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
+                  <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
+                </div>
+              </div>
+
+              {assignment.dueDate && (
+                <div className="min-w-0 flex-1">
                   <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
                   <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
                 </div>
-              </>
-            )}
+              )}
+            </div>
+
+            {/* Tablet/Desktop: Employee + Form + Due Date */}
+            <div className="hidden lg:flex items-center gap-6">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                  <User className="w-3.5 h-3.5 text-[#0F2D52]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Employee</p>
+                  <p className="text-sm font-bold text-slate-900 truncate">{employeeName}</p>
+                </div>
+              </div>
+
+              <div className="h-8 w-px bg-slate-100 shrink-0" />
+
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
+                  <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
+                </div>
+              </div>
+
+              {assignment.dueDate && (
+                <>
+                  <div className="h-8 w-px bg-slate-100 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
+                    <p className="text-sm font-semibold text-slate-700 truncate">{assignment.dueDate}</p>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Iframe Container */}
-          <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative">
+          <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative mt-6">
             {(!viewUrl || isFrameLoading) && (
               <div className="flex flex-col items-center justify-center bg-slate-50/80 backdrop-blur-sm" style={{ height: `${formHeight}px` }}>
                 <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
@@ -461,43 +484,44 @@ export function EmployeeFormView() {
           {/* Footer Navigation */}
           <div className={`mt-auto shrink-0 border-t-2 border-slate-200 bg-white px-4 py-4 items-center gap-3 ${
             hasSidebar ? 'grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]' : 'flex justify-center'
-          }`}>
+          }`} style={{
+            display: hasSidebar ? (typeof window !== 'undefined' && window.innerWidth < 640 ? 'flex' : 'grid') : 'flex',
+            justifyContent: hasSidebar && typeof window !== 'undefined' && window.innerWidth < 640 ? 'space-between' : 'normal',
+          }}>
             {hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                className={`${typeof window !== 'undefined' && window.innerWidth < 640 ? 'h-11 w-11 p-0' : 'justify-self-start h-11 px-5 gap-2'} text-sm font-semibold border-slate-300 disabled:opacity-100 flex items-center justify-center ${
                   prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                 }`}
                 disabled={!prevSibling}
                 onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Previous
+                {typeof window !== 'undefined' && window.innerWidth >= 640 && <span>Previous</span>}
               </Button>
             ) : <div aria-hidden="true" />}
             
             <Button
-              className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
+              className={`${typeof window !== 'undefined' && window.innerWidth < 640 ? 'h-11 w-11 p-0' : 'h-12 px-7'} bg-[#0F2D52] hover:bg-[#1a3a60] text-white text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl flex items-center justify-center`}
               onClick={() => navigate(back)}
             >
-              <Home className="h-4 w-4" />
-              Back to Dashboard
+              <Home className="h-4 w-4 flex-shrink-0" />
+              {typeof window !== 'undefined' && window.innerWidth >= 640 && <span>Back to Dashboard</span>}
             </Button>
 
             {hasSidebar ? (
-              <div className="justify-self-end">
-                <Button
-                  variant="outline"
-                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
-                    nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
-                  }`}
-                  disabled={!nextSibling}
-                  onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <Button
+                variant="outline"
+                className={`${typeof window !== 'undefined' && window.innerWidth < 640 ? 'h-11 w-11 p-0' : 'justify-self-end h-11 px-5 gap-2'} text-sm font-semibold border-slate-300 disabled:opacity-100 flex items-center justify-center ${
+                  nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
+                }`}
+                disabled={!nextSibling}
+                onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
+              >
+                {typeof window !== 'undefined' && window.innerWidth >= 640 && <span>Next</span>}
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             ) : <div aria-hidden="true" />}
           </div>
         </div>
