@@ -353,21 +353,23 @@ export function EmployeeDetails() {
                               <StatusBadge status={normalizeFormStatus(form.status)} />
                               <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                                 Assigned {form.assignedOn ? new Date(form.assignedOn).toLocaleDateString() : '—'}
-                              {form.manualPdfUploadedAt && (() => {
-                                try {
-                                  const date = new Date(form.manualPdfUploadedAt);
-                                  if (!isNaN(date.getTime())) {
-                                    return (
+                              </span>
+                            </div>
+                            {form.manualPdfUploadedAt && (() => {
+                              try {
+                                const date = new Date(form.manualPdfUploadedAt);
+                                if (!isNaN(date.getTime())) {
+                                  return (
+                                    <div className="w-full mt-1">
                                       <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
                                         Admin Uploaded {date.toLocaleDateString()}
                                       </span>
-                                    );
-                                  }
-                                } catch (e) {}
-                                return null;
-                              })()}
-                              </span>
-                            </div>
+                                    </div>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
                             <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
                               {form.formDescription}
                             </p>
