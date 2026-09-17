@@ -206,6 +206,7 @@ interface FormsDocumentsProps {
   selectedChildDob?: string; // DOB of the selected child
   selectedChildGender?: string; // Gender of the selected child
   parentEmail?: string; // Parent email
+  onPageLoadingChange?: (isLoading: boolean) => void; // Callback to set page-level loading state
 }
 export function FormsDocuments({
   childSpecificForms,
@@ -224,6 +225,7 @@ export function FormsDocuments({
   selectedChildDob,
   selectedChildGender,
   parentEmail,
+  onPageLoadingChange,
 }: FormsDocumentsProps) {
   const { userData } = useUserContext();
   const { user } = useAuth();
@@ -430,14 +432,12 @@ export function FormsDocuments({
           let resumeLinkFromApi: string | null = null;
           const isNotCompleted = form.status !== 'Approved' && form.status !== 'Submitted';
           if (isNotCompleted && !recentEditLink && idForPayload.raw) {
-            setLoadingAction({ action: 'view', formId: form.formId ?? '' });
+            onPageLoadingChange?.(true);
             try {
               const { getFormResumeLink } = await import('../../services/api/admin');
               resumeLinkFromApi = await getFormResumeLink(idForPayload.raw);
             } catch (err) {
               console.error('Failed to fetch resume link:', err);
-            } finally {
-              setLoadingAction(null);
             }
           }
 
@@ -492,12 +492,16 @@ export function FormsDocuments({
             if (externalUserId) {
               const parentName =
                 [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || filloutEmail || 'Goddard Parent';
-              const filloutCtx = await getFilloutUserContext({
-                externalUserId,
-                email: filloutEmail || `${externalUserId}@goddard.parent`,
-                name: parentName,
-              });
-              formUrl = appendFilloutUserParams(formUrl, filloutCtx);
+              try {
+                const filloutCtx = await getFilloutUserContext({
+                  externalUserId,
+                  email: filloutEmail || `${externalUserId}@goddard.parent`,
+                  name: parentName,
+                });
+                formUrl = appendFilloutUserParams(formUrl, filloutCtx);
+              } catch (err) {
+                console.error('Failed to fetch Fillout user context:', err);
+              }
             }
           }
         } else {
@@ -577,8 +581,10 @@ export function FormsDocuments({
         : (form.formId ?? null);
       if (formKey) processedFormToOpenRef.current = formKey;
       onViewForm(form);
+      onPageLoadingChange?.(false);
     } finally {
       isOpeningRef.current = false;
+      onPageLoadingChange?.(false);
     }
   };
 
