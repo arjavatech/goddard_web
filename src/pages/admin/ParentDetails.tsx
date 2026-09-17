@@ -130,6 +130,7 @@ export function ParentDetails() {
   const [isReviewing, setIsReviewing] = useState(false);
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<{ form: Form; childName: string } | null>(null);
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
@@ -139,7 +140,7 @@ export function ParentDetails() {
     let isMounted = true;
     (async () => {
       try {
-        setIsLoading(true);
+        if (refreshKey === 0) setIsLoading(true);
         setError(null);
         // const user = await fetchUserContext();
         if (!schoolId || !parentId) return;
@@ -320,7 +321,7 @@ export function ParentDetails() {
     return () => {
       isMounted = false;
     };
-  }, [parentId]);
+  }, [parentId, refreshKey]);
 
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
@@ -835,7 +836,7 @@ export function ParentDetails() {
                                           </span>
                                         );
                                       })()}
-                                      {!form.approvedOn && form.manualPdfUploadedAt && (() => {
+                                      {form.manualPdfUploadedAt && (() => {
                                         try {
                                           const date = new Date(form.manualPdfUploadedAt);
                                           if (!isNaN(date.getTime())) {
@@ -1066,7 +1067,8 @@ export function ParentDetails() {
           onSuccess={() => {
             setIsManualUploadOpen(false);
             setSelectedFormForUpload(null);
-            window.location.reload();
+            showToast('success', 'PDF uploaded successfully');
+            setRefreshKey(k => k + 1);
           }}
           assignmentId={selectedFormForUpload.form.studentFormAssignmentId!}
           schoolId={schoolId || localStorage.getItem('schoolId') || ''}

@@ -27,7 +27,8 @@ export function EmployeeDetails() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignments, setAssignments] = useState<(EmployeeFormAssignment & { formTitle: string; formDescription: string })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [selectedForm, setSelectedForm] = useState<EmployeeFormAssignment | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [formAction, setFormAction] = useState<'approve' | 'reject' | null>(null);
@@ -42,7 +43,7 @@ export function EmployeeDetails() {
     let isMounted = true;
     (async () => {
       try {
-        setIsLoading(true);
+        if (refreshKey === 0) setIsLoading(true);
         if (!userData?.schoolId || !employeeId) return;
 
         const [empData, rawAssignments] = await Promise.all([
@@ -74,7 +75,7 @@ export function EmployeeDetails() {
     })();
 
     return () => { isMounted = false; };
-  }, [userData?.schoolId, employeeId, schoolSlug, navigate, showToast]);
+  }, [userData?.schoolId, employeeId, schoolSlug, navigate, showToast, refreshKey]);
 
   const handleReviewAction = async () => {
     if (!selectedForm || !formAction) return;
@@ -352,7 +353,7 @@ export function EmployeeDetails() {
                               <StatusBadge status={normalizeFormStatus(form.status)} />
                               <span className="text-[10px] text-slate-500 font-bold bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
                                 Assigned {form.assignedOn ? new Date(form.assignedOn).toLocaleDateString() : '—'}
-                              {!form.approvedOn && form.manualPdfUploadedAt && (() => {
+                              {form.manualPdfUploadedAt && (() => {
                                 try {
                                   const date = new Date(form.manualPdfUploadedAt);
                                   if (!isNaN(date.getTime())) {
@@ -499,7 +500,7 @@ export function EmployeeDetails() {
             onSuccess={() => {
               setIsManualUploadOpen(false);
               setSelectedFormForUpload(null);
-              window.location.reload();
+              setRefreshKey(k => k + 1);
             }}
             assignmentId={selectedFormForUpload.form.id!}
             schoolId={selectedFormForUpload.form.schoolId || userData?.schoolId || ''}

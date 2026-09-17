@@ -38,6 +38,7 @@ export function DueForms() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('dueFormsViewMode') as 'card' | 'table') || 'table');
   const handleViewModeChange = (mode: 'card' | 'table') => { setViewMode(mode); localStorage.setItem('dueFormsViewMode', mode); };
   const [itemsPerPage, setItemsPerPage] = usePageSize('studentDueForms', 10);
+  const [refreshKey, setRefreshKey] = useState(0);
   useEffect(() => {
     const handleResize = () => { 
       setWindowWidth(window.innerWidth);
@@ -152,7 +153,7 @@ export function DueForms() {
     let isMounted = true;
     (async () => {
       try {
-        setLoading(true);
+        if (refreshKey === 0) setLoading(true);
         // const user = await fetchUserContext();
         if (!schoolId) return;
 
@@ -247,7 +248,7 @@ export function DueForms() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [refreshKey]);
 
   const allClassrooms = useMemo(() => {
     const set = new Set<string>();
@@ -1076,8 +1077,7 @@ export function DueForms() {
               setIsManualUploadOpen(false);
               setSelectedFormForUpload(null);
               showToast('PDF uploaded successfully', 'success');
-              // Optionally trigger a refresh of the forms list
-              window.location.reload();
+              setRefreshKey(k => k + 1);
             }}
             assignmentId={selectedFormForUpload.id}
             schoolId={schoolId || ''}

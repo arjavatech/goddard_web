@@ -355,7 +355,7 @@ export function EmployeeDashboard() {
                             <td className="px-3 py-2.5">
                               <div className="flex flex-wrap gap-1.5 items-center">
                                 <StatusBadge status={ns} className="text-[10px] px-1.5 py-0.5 gap-0.5 mt-0" />
-                                {!assignment.approvedOn && assignment.manualPdfUploadedAt && (() => {
+                                {assignment.manualPdfUploadedAt && (() => {
                                   try {
                                     const date = new Date(assignment.manualPdfUploadedAt);
                                     if (!isNaN(date.getTime())) {
@@ -422,7 +422,7 @@ export function EmployeeDashboard() {
                               <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{assignment.formTitle}</p>
                               <div className="mt-1.5 flex flex-wrap gap-2 items-center">
                                 <StatusBadge status={ns} />
-                                {!assignment.approvedOn && assignment.manualPdfUploadedAt && (() => {
+                                {assignment.manualPdfUploadedAt && (() => {
                                   try {
                                     const date = new Date(assignment.manualPdfUploadedAt);
                                     if (!isNaN(date.getTime())) {

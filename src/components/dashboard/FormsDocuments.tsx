@@ -84,7 +84,7 @@ function FormCard({
               } catch (e) {}
               return null;
             })()}
-            {!approvedOn && manualPdfUploadedAt && (() => {
+            {manualPdfUploadedAt && (() => {
               try {
                 const date = new Date(manualPdfUploadedAt);
                 if (!isNaN(date.getTime())) {
