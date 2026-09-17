@@ -189,7 +189,7 @@ export function DueForms() {
               const submittedStatuses = new Set(['submitted', 'received']);
               const inProgressStatuses = new Set(['in progress', 'in_progress']);
               let status: 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress' = 'pending';
-              if (formData.status === 'approved' || formData.status === 'manually_uploaded') {
+              if (formData.status === 'approved') {
                 status = 'completed';
               } else if (formData.status && inProgressStatuses.has(formData.status.toLowerCase().replace(/_/g, ' '))) {
                 status = 'in_progress';
