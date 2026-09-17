@@ -6,6 +6,7 @@ import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
+import { useUserContext } from '../../contexts/UserContext';
 
 type ReportTab = 'day' | 'range' | 'pending' | 'salary';
 type ViewMode = 'table' | 'card';
@@ -68,12 +69,15 @@ function generateSalaryPdf(
   doc.text(`Total Entries: ${detail.entries || 0} | Total Time: ${detail.time_worked || '00:00'}`, margins.left, summaryY);
 
   // Attendance table
-  const tableData = (detail.items || []).map((item: any) => [
-    item.date || '—',
-    item.check_in_time ? displayTime(item.check_in_time) : '—',
-    item.check_out_time ? displayTime(item.check_out_time) : '—',
-    item.time_worked || '—',
-  ]);
+  const hasItems = (detail.items || []).length > 0;
+  const tableData = hasItems
+    ? detail.items.map((item: any) => [
+        item.date || '—',
+        item.check_in_time ? displayTime(item.check_in_time) : '—',
+        item.check_out_time ? displayTime(item.check_out_time) : '—',
+        item.time_worked || '—',
+      ])
+    : [['No records found', '', '', '']];
 
   autoTable(doc, {
     head: [['Date', 'Check In', 'Check Out', 'Time Worked']],
@@ -89,6 +93,9 @@ function generateSalaryPdf(
     },
     bodyStyles: { fontSize: 9, halign: 'left' },
     alternateRowStyles: { fillColor: [245, 245, 245] },
+    ...(!hasItems && {
+      bodyStyles: { fontSize: 9, halign: 'center', textColor: [148, 163, 184] },
+    }),
   });
 
   if (action === 'download') {
@@ -324,7 +331,7 @@ export function AttendanceReports() {
                                     </tr>
                                   ))
                                 ) : (
-                                  <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={4}>No entries for this period.</td></tr>
+                                  <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={4}>No records found</td></tr>
                                 )}
                               </tbody>
                             </table>
@@ -408,7 +415,7 @@ export function AttendanceReports() {
                                               </tr>
                                             ))
                                           ) : (
-                                            <tr><td className="px-3 py-4 text-center text-slate-500" colSpan={4}>No entries for this period.</td></tr>
+                                            <tr><td className="px-3 py-4 text-center text-slate-500" colSpan={4}>No records found</td></tr>
                                           )}
                                         </tbody>
                                       </table>
