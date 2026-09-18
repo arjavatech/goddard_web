@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
-  FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Clock
+  BarChart2, FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Clock
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -69,7 +69,10 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard` },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
         ...(schoolFeatures.taptimeEnabled
-          ? [{ icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` }]
+          ? [
+            { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` },
+            { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/employee/weekly-report` },
+          ]
           : []),
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents` },
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
