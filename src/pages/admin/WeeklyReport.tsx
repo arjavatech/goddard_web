@@ -491,6 +491,36 @@ export function WeeklyReport() {
                               </Button>
                             </div>
                           </div>
+
+                          {/* View toggle + page size for detail */}
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                              <button
+                                type="button"
+                                onClick={() => setHistoryView('table')}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all text-xs font-medium ${
+                                  historyView === 'table'
+                                    ? 'bg-white text-[#0F2D52] shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-600'
+                                }`}
+                              >
+                                <List className="h-3.5 w-3.5" /> Table
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setHistoryView('grid')}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all text-xs font-medium ${
+                                  historyView === 'grid'
+                                    ? 'bg-white text-[#0F2D52] shadow-xs'
+                                    : 'text-slate-500 hover:text-slate-600'
+                                }`}
+                              >
+                                <Grid2X2 className="h-3.5 w-3.5" /> Cards
+                              </button>
+                            </div>
+                            <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChange} />
+                          </div>
+
                           {historyView === 'grid' ? (
                             <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                               {paginatedHistoryDetailItems.length ? (
@@ -537,6 +567,17 @@ export function WeeklyReport() {
                               </table>
                             </div>
                           )}
+
+                          {/* Pagination for detail */}
+                          <div className="mt-4">
+                            <Pagination
+                              currentPage={historyDetailPage}
+                              totalPages={historyDetailTotalPages}
+                              totalItems={selected.items.length}
+                              itemsPerPage={currentItemsPerPage}
+                              onPageChange={setHistoryDetailPage}
+                            />
+                          </div>
                         </div>
                       )}
                     </>
