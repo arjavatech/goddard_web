@@ -18,6 +18,7 @@ import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { DataGrid, ColumnDef } from '../../components/ui/data-grid';
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 
 import { Checkbox } from '../../components/ui/checkbox';
 import { fetchStudentEnrollments, updateChildStatus, fetchClassrooms, assignFormsToStudent, promoteStudent, bulkPromoteStudents } from '@/services/api/admin';
@@ -112,10 +113,10 @@ export function StudentManagement() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+  const [activeTab, setActiveTab] = useState<'active' | 'archive'>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [formFilter, setFormFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [childStatusFilter, setChildStatusFilter] = useState<string[]>([]);
   const [classroomFilter, setClassroomFilter] = useState<string[]>([]);
   const [yearFilter, setYearFilter] = useState<string[]>([]);
 
@@ -429,8 +430,12 @@ export function StudentManagement() {
     return Array.from(classroomSet).sort();
   }, [students]);
 
+  const activeStudents = useMemo(() => students.filter(s => s.childStatus === 'active'), [students]);
+  const archivedStudents = useMemo(() => students.filter(s => s.childStatus === 'archive'), [students]);
+
   const filteredStudents = useMemo(() => {
-    return students.filter(student => {
+    const tabStudents = activeTab === 'active' ? activeStudents : archivedStudents;
+    return tabStudents.filter(student => {
       const matchesSearch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) || student.parent.email.toLowerCase().includes(searchQuery.toLowerCase()) || student.classroom.name.toLowerCase().includes(searchQuery.toLowerCase());
 
       // Filter by forms - show students who have any of the selected forms
@@ -440,9 +445,6 @@ export function StudentManagement() {
       const matchesStatus = statusFilter.length === 0 || statusFilter.some(status => {
         return student.formStatus === status;
       });
-
-      // Filter by child status
-      const matchesChildStatus = childStatusFilter.length === 0 || childStatusFilter.includes(student.childStatus);
 
       // Filter by classroom
       const matchesClassroom = classroomFilter.length === 0 || classroomFilter.includes(student.classroom.name);
@@ -466,9 +468,9 @@ export function StudentManagement() {
         });
       });
 
-      return matchesSearch && matchesForm && matchesStatus && matchesChildStatus && matchesClassroom && matchesYear;
+      return matchesSearch && matchesForm && matchesStatus && matchesClassroom && matchesYear;
     });
-  }, [students, searchQuery, formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
+  }, [activeTab, activeStudents, archivedStudents, searchQuery, formFilter, statusFilter, classroomFilter, yearFilter]);
 
   const [sortBy, setSortBy] = useState('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
@@ -723,22 +725,21 @@ export function StudentManagement() {
   ], [selectedStudentsForBulkAction, filteredAndSortedStudents, paginatedStudents, downloadingEnrollmentId]);
 
   const completionRate = useMemo(() => {
-    if (students.length === 0) return 0;
-    const complete = students.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
-    return Math.round(complete / students.length * 100);
-  }, [students]);
+    if (activeStudents.length === 0) return 0;
+    const complete = activeStudents.filter(student => student.enrollmentStatus === 'Completed-AdminApproved').length;
+    return Math.round(complete / activeStudents.length * 100);
+  }, [activeStudents]);
 
   const toggleFilters = () => setShowFilters(prev => !prev);
 
   const activeFilterCount = useMemo(() => {
-    return [formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]
+    return [formFilter, statusFilter, classroomFilter, yearFilter]
       .filter(arr => arr.length > 0).length;
-  }, [formFilter, statusFilter, childStatusFilter, classroomFilter, yearFilter]);
+  }, [formFilter, statusFilter, classroomFilter, yearFilter]);
 
   const clearAllFilters = () => {
     setFormFilter([]);
     setStatusFilter([]);
-    setChildStatusFilter([]);
     setClassroomFilter([]);
     setYearFilter([]);
     setCurrentPage(1);
@@ -835,13 +836,13 @@ export function StudentManagement() {
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
           <div className="h-full">
-            <StatCard 
-              label="Total Students" 
-              value={students.length} 
-              icon={GraduationCap} 
-              iconBgClass="bg-[#EFF5FB]" 
-              iconColorClass="text-[#0F2D52]" 
-              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs" 
+            <StatCard
+              label="Total Students"
+              value={activeStudents.length}
+              icon={GraduationCap}
+              iconBgClass="bg-[#EFF5FB]"
+              iconColorClass="text-[#0F2D52]"
+              className="h-full border border-slate-100 hover:shadow-md transition-all duration-300 rounded-2xl shadow-xs"
             />
           </div>
           <div className="h-full">
@@ -877,7 +878,7 @@ export function StudentManagement() {
           <div className="h-full">
             <StatCard
               label="Forms Pending"
-              value={students.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
+              value={activeStudents.filter(s => s.enrollmentStatus !== 'Completed-AdminApproved').length}
               icon={AlertCircle}
               iconBgClass="bg-amber-50"
               iconColorClass="text-amber-600"
@@ -893,7 +894,7 @@ export function StudentManagement() {
                 <div>
                   <h2 className="text-lg sm:text-xl font-semibold">Student Directory</h2>
                   <div className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-                    {filteredAndSortedStudents.length} of {students.length} students
+                    {filteredAndSortedStudents.length} of {activeTab === 'active' ? activeStudents.length : archivedStudents.length} students
                     {classroomFilter.length > 0 && (
                       <span className="ml-2 text-amazon-teal">• {classroomFilter.length} classroom{classroomFilter.length !== 1 ? 's' : ''}</span>
                     )}
@@ -928,7 +929,19 @@ export function StudentManagement() {
                   </button>
                 </div>
               </div>
-              
+
+              {/* Tabs */}
+              <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'active' | 'archive')} className="mb-4">
+                <TabsList className="w-full justify-start overflow-x-auto h-auto p-1 bg-slate-100/60 border border-slate-100 rounded-xl gap-1">
+                  <TabsTrigger value="active" className="text-xs font-bold px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0F2D52] data-[state=active]:shadow-sm transition-all">
+                    Active ({activeStudents.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="archive" className="text-xs font-bold px-4 py-2 rounded-lg data-[state=active]:bg-white data-[state=active]:text-[#0F2D52] data-[state=active]:shadow-sm transition-all">
+                    Archive ({archivedStudents.length})
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
               <div className="flex flex-col gap-3 mb-4">
                 <div className="flex items-center gap-2">
                   <div className="relative flex-1 min-w-0">
@@ -1075,18 +1088,7 @@ export function StudentManagement() {
                       placeholder="Select statuses"
                     />
                   </div>
-                  
-                  
-                  <div className="space-y-2">
-                    <label className="text-xs sm:text-sm font-medium text-muted-foreground">Child Status</label>
-                    <MultiSelectDropdown
-                      value={childStatusFilter}
-                      onValueChange={setChildStatusFilter}
-                      options={['active', 'archive']}
-                      placeholder="Select child status"
-                    />
-                  </div>
-                  
+
                   <div className="space-y-2">
                     <label className="text-xs sm:text-sm font-medium text-muted-foreground">Classroom</label>
                     <MultiSelectDropdown
