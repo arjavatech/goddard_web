@@ -57,6 +57,9 @@ export const TapTimeService = {
   salaryReportCurrent: () => tapTimeFetch('/salary-report/current', z.any()),
   salaryReportHistory: () => tapTimeFetch('/salary-report/history', z.any()),
   salaryReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/salary-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
+  weeklyReportCurrent: () => tapTimeFetch('/weekly-time-report/current', z.any()),
+  weeklyReportHistory: () => tapTimeFetch('/weekly-time-report/history', z.any()),
+  weeklyReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/weekly-time-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
   mySalaryReportCurrent: () =>
     tapTimeFetch('/me/salary-report/current', z.object({
       data: z.object({

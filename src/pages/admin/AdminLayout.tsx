@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -135,6 +135,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Time Tracking', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Salary Report', path: `${schoolPrefix}/admin/salary-report` },
+        { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/admin/weekly-report` },
         ...(isSuperAdmin ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
         ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
