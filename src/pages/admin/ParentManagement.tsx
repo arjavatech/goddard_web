@@ -411,7 +411,6 @@ export function ParentManagement() {
             {activeTab === 'active' ? (
               <DropdownMenuItem
                 className="text-red-600 focus:text-red-650 cursor-pointer font-semibold"
-                disabled={parent.signupStatus === 'Not Signed'}
                 onClick={() => setParentToDeactivate(parent)}
               >
                 <XCircle className="h-4 w-4 mr-2 text-red-500" />Deactivate
