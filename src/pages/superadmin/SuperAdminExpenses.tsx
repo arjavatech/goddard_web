@@ -103,11 +103,12 @@ export function SuperAdminExpenses() {
   const activeFilterCount = (ledgerSortConfig ? 1 : 0) + (ledgerScopeFilter !== 'all' ? 1 : 0) + (ledgerCategoryFilter !== 'all' ? 1 : 0);
 
   const loadData = async () => {
+    if (!userData?.schoolId) return;
     setLoading(true);
     try {
       const [reqList, data] = await Promise.all([
-        RequestService.fetchRequests(),
-        RequestService.fetchExpenseData()
+        RequestService.fetchRequests(userData.schoolId),
+        RequestService.fetchExpenseData(userData.schoolId)
       ]);
       setRequests(reqList);
       setExpenseData(data);
@@ -118,7 +119,7 @@ export function SuperAdminExpenses() {
     }
   };
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { loadData(); }, [userData?.schoolId]);
 
   const handleAddExpense = async () => {
     if (!form.item.trim() || !form.amountSpent || !form.requesterName.trim()) {
