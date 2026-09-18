@@ -571,36 +571,42 @@ function Stat({ icon: Icon, label, value, color, subtitle }: { icon: React.Eleme
 function WeeklyCard({ item, completedWeekdays = 5 }: { item: any; completedWeekdays?: number }) {
   const hasOvertime = item.overtime_hours !== '00:00';
   const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
-  const DAY_LABELS = ['M', 'T', 'W', 'T', 'F'];
+  const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
   return (
     <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
-      <div className="min-w-0">
-        <p className="font-bold text-[#0F2D52] truncate">{item.name || '—'}</p>
+      {/* Section 1: Employee Name + PIN */}
+      <div className="min-w-0 mb-4">
+        <p className="font-bold text-[#0F2D52] truncate text-sm">{item.name || '—'}</p>
+        <p className="text-xs text-slate-500 mt-1">PIN: {item.pin || '—'}</p>
       </div>
-      <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
-        <div className="flex justify-between gap-2 min-w-0">
-          <dt className="flex-shrink-0">PIN</dt>
-          <dd className="text-right truncate">{item.pin || '—'}</dd>
-        </div>
-        <div className="grid grid-cols-5 gap-1 text-xs">
+
+      {/* Section 2: Days Grid (in grey container) */}
+      <div className="bg-slate-50 rounded-xl p-2.5 mb-4">
+        <div className="grid grid-cols-5 gap-1">
           {DAY_KEYS.map((key, idx) => (
-            <div key={key} className={`text-center ${idx >= completedWeekdays ? 'opacity-40' : ''}`}>
-              <dt className={`font-bold ${idx >= completedWeekdays ? 'text-slate-300' : 'text-slate-500'}`}>{DAY_LABELS[idx]}</dt>
-              <dd className={`${idx >= completedWeekdays ? 'text-slate-300' : 'text-slate-700'}`}>
+            <div key={key} className={`text-center ${idx >= completedWeekdays ? 'opacity-30' : ''}`}>
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 mb-1">{DAY_LABELS[idx]}</div>
+              <div className="text-xs font-medium text-slate-700">
                 {idx >= completedWeekdays ? '—' : item[key]}
-              </dd>
+              </div>
             </div>
           ))}
         </div>
-        <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800 border-t border-slate-100 pt-2">
-          <dt className="flex-shrink-0">Total</dt>
-          <dd className="text-right truncate">{item.total_hours}</dd>
+      </div>
+
+      {/* Section 3: Totals */}
+      <div className="border-t border-slate-100 pt-3 space-y-2">
+        <div className="flex items-center text-sm">
+          <span className="font-semibold text-slate-800">Total Hours</span>
+          <span className="font-semibold text-slate-800 ml-auto w-12 text-right">{item.total_hours}</span>
         </div>
-        <div className="flex justify-between gap-2 min-w-0 font-semibold">
-          <dt className="flex-shrink-0">Overtime</dt>
-          <dd className={`text-right truncate rounded px-2 ${hasOvertime ? 'bg-yellow-200 text-yellow-900' : 'text-slate-600'}`}>{item.overtime_hours}</dd>
+        <div className="flex items-center text-sm">
+          <span className="font-semibold text-slate-800">Overtime</span>
+          <span className={`font-semibold rounded px-2 py-0.5 ml-auto w-12 text-right ${hasOvertime ? 'bg-yellow-200 text-yellow-900' : 'text-slate-600'}`}>
+            {item.overtime_hours}
+          </span>
         </div>
-      </dl>
+      </div>
     </div>
   );
 }
