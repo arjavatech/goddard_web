@@ -353,7 +353,22 @@ export function EmployeeDashboard() {
                               {assignment.dueDate || '—'}
                             </td>
                             <td className="px-3 py-2.5">
-                              <StatusBadge status={ns} className="text-[10px] px-1.5 py-0.5 gap-0.5 mt-0" />
+                              <div className="flex flex-wrap gap-1.5 items-center">
+                                <StatusBadge status={ns} className="text-[10px] px-1.5 py-0.5 gap-0.5 mt-0" />
+                                {assignment.manualPdfUploadedAt && (() => {
+                                  try {
+                                    const date = new Date(assignment.manualPdfUploadedAt);
+                                    if (!isNaN(date.getTime())) {
+                                      return (
+                                        <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                          Admin Uploaded {date.toLocaleDateString()}
+                                        </span>
+                                      );
+                                    }
+                                  } catch (e) {}
+                                  return null;
+                                })()}
+                              </div>
                             </td>
                             <td className="px-3 py-2.5">
                               <div className="flex gap-0.5 justify-end" onClick={e => e.stopPropagation()}>
@@ -405,8 +420,21 @@ export function EmployeeDashboard() {
                             </div>
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{assignment.formTitle}</p>
-                              <div className="mt-1.5">
+                              <div className="mt-1.5 flex flex-wrap gap-2 items-center">
                                 <StatusBadge status={ns} />
+                                {assignment.manualPdfUploadedAt && (() => {
+                                  try {
+                                    const date = new Date(assignment.manualPdfUploadedAt);
+                                    if (!isNaN(date.getTime())) {
+                                      return (
+                                        <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                          Admin Uploaded {date.toLocaleDateString()}
+                                        </span>
+                                      );
+                                    }
+                                  } catch (e) {}
+                                  return null;
+                                })()}
                               </div>
                             </div>
                           </div>

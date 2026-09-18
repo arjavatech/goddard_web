@@ -22,6 +22,7 @@ export function SalaryReport() {
   const [current, setCurrent] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [selected, setSelected] = useState<any>(null);
+  const [historyDetailView, setHistoryDetailView] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [downloadingPeriod, setDownloadingPeriod] = useState<any>(null);
@@ -59,13 +60,13 @@ export function SalaryReport() {
 
   useEffect(() => { void load(); }, []);
 
-  const selectPeriod = async (period: any) => {
+  const selectPeriod = async (period: any, switchTab = true) => {
     setLoading(true);
     setError('');
     try {
       const response = await TapTimeService.salaryReportPeriod(period.start_date, period.end_date);
       setSelected(response.data);
-      setTab('current');
+      if (switchTab) setTab('current');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to load this report period');
     } finally {
@@ -140,6 +141,7 @@ export function SalaryReport() {
 
   useEffect(() => { setCurrentPageItems(1); }, [report, setCurrentPageItems]);
   useEffect(() => { setHistoryPage(1); }, [history, setHistoryPage]);
+  useEffect(() => { setHistoryDetailView(false); }, [tab]);
 
   const handleCurrentPageSizeChange = (value: number) => {
     setCurrentItemsPerPage(value);
@@ -155,6 +157,15 @@ export function SalaryReport() {
     setCurrentItemsPerPage(value);
     setCurrentPageItems(1);
   };
+
+  const {
+    currentPage: historyDetailPage,
+    totalPages: historyDetailTotalPages,
+    paginatedData: paginatedHistoryDetailItems,
+    setCurrentPage: setHistoryDetailPage,
+  } = usePagination({ data: selected?.items ?? [], itemsPerPage: currentItemsPerPage });
+
+  useEffect(() => { setHistoryDetailPage(1); }, [selected?.period?.start_date, setHistoryDetailPage]);
 
   return (
     <AdminLayout>
@@ -177,7 +188,7 @@ export function SalaryReport() {
             </div>
             <div className="flex flex-wrap gap-2">
               {report && !report.period.is_current && (
-                <Button variant="outline" onClick={() => setSelected(current)}>
+                <Button variant="outline" onClick={() => { setSelected(current); setTab('current'); }}>
                   <CalendarDays className="mr-2 h-4 w-4" />
                   View Current
                 </Button>
@@ -310,20 +321,95 @@ export function SalaryReport() {
                     </>
                   ) : (
                     <>
-                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
-                          <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
-                          <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
-                        </div>
-                        <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
-                      </div>
+                      {historyDetailView && selected && !selected.period.is_current ? (
+                        <>
+                          <div className="mb-6 rounded-xl border border-slate-100 bg-slate-50 p-4">
+                            <h3 className="text-sm font-bold text-[#0F2D52]">Historical Report — {selected?.frequency}</h3>
+                            <p className="mt-2 text-xs text-slate-600">{selected?.period ? periodLabel(selected.period) : ''}</p>
+                          </div>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                              <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                              <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                            </div>
+                            <PageSizeSelector pageSize={currentItemsPerPage} onPageSizeChange={handleCurrentPageSizeChange} />
+                          </div>
+                          {historyView === 'grid' ? (
+                            <>
+                              <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                                {paginatedHistoryDetailItems.length ? (
+                                  paginatedHistoryDetailItems.map((item: any, idx: number) => (
+                                    <SalaryCard key={idx} item={item} />
+                                  ))
+                                ) : (
+                                  <div className="col-span-full py-20 text-center">
+                                    <FileText className="mx-auto h-12 w-12 text-slate-400" />
+                                    <h3 className="mt-4 text-lg font-bold text-[#0F2D52]">No Records Found</h3>
+                                    <p className="mt-2 text-sm text-slate-600">No attendance records in this period.</p>
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <div className="overflow-x-auto rounded-xl border border-slate-100">
+                              <table className="w-full min-w-[600px] text-sm">
+                                <thead className="bg-slate-50/80">
+                                  <tr>
+                                    {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                      <th
+                                        key={header}
+                                        className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
+                                      >
+                                        {header}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {paginatedHistoryDetailItems.length ? (
+                                    paginatedHistoryDetailItems.map((item: any, idx: number) => (
+                                      <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                                        <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
+                                        <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
+                                        <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                        <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr>
+                                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                        No attendance records in this period.
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          <Pagination
+                            currentPage={historyDetailPage}
+                            totalPages={historyDetailTotalPages}
+                            totalItems={selected.items.length}
+                            itemsPerPage={currentItemsPerPage}
+                            onPageChange={setHistoryDetailPage}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10">
+                              <button type="button" onClick={() => setHistoryView('table')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'table' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><List className="h-3.5 w-3.5" />Table</button>
+                              <button type="button" onClick={() => setHistoryView('grid')} className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${historyView === 'grid' ? 'bg-white text-[#0F2D52] shadow-xs' : 'text-slate-500 hover:text-slate-800'}`}><Grid2X2 className="h-3.5 w-3.5" />Cards</button>
+                            </div>
+                            <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
+                          </div>
 
-                      {historyView === 'grid' ? (
+                          {historyView === 'grid' ? (
                         <>
                           <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {paginatedHistory.length ? (
                               paginatedHistory.map((period, idx) => (
-                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => void selectPeriod(period)} onDownload={() => void downloadPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
+                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => { void selectPeriod(period, false); setHistoryDetailView(true); }} onDownload={() => void downloadPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
                               ))
                             ) : (
                               <div className="col-span-full py-20 text-center">
@@ -367,7 +453,7 @@ export function SalaryReport() {
                                   <td className="px-4 py-4 text-slate-600">{current?.frequency || '—'}</td>
                                   <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
                                   <td className="px-4 py-4 text-center">
-                                    <Button size="sm" variant="outline" onClick={() => void selectPeriod(period)} disabled={loading}>
+                                    <Button size="sm" variant="outline" onClick={() => { void selectPeriod(period, false); setHistoryDetailView(true); }} disabled={loading}>
                                       View
                                     </Button>
                                   </td>
@@ -388,13 +474,15 @@ export function SalaryReport() {
                         </div>
                       )}
 
-                      <Pagination
-                        currentPage={historyPage}
-                        totalPages={historyTotalPages}
-                        totalItems={history.length}
-                        itemsPerPage={historyItemsPerPage}
-                        onPageChange={setHistoryPage}
-                      />
+                          <Pagination
+                            currentPage={historyPage}
+                            totalPages={historyTotalPages}
+                            totalItems={history.length}
+                            itemsPerPage={historyItemsPerPage}
+                            onPageChange={setHistoryPage}
+                          />
+                        </>
+                      )}
                     </>
                   )}
                 </div>

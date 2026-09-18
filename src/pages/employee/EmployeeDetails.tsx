@@ -3,7 +3,7 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail as MailIcon, CheckCircle, AlertCircle, FileText, ChevronLeft, Download, Printer, ChevronDown, ChevronUp, Briefcase, Eye } from 'lucide-react';
+import { Mail as MailIcon, CheckCircle, AlertCircle, FileText, ChevronLeft, Download, Printer, ChevronDown, ChevronUp, Briefcase, Eye, Upload } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Link, useParams, useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { COMPLETION_STATUSES, normalizeFormStatus } from '../../lib/formStatus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Calendar } from 'lucide-react';
+import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 
 type FormStatus = 'Approved' | 'Submitted' | 'Assigned' | 'Rejected';
 
@@ -26,7 +27,8 @@ export function EmployeeDetails() {
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [assignments, setAssignments] = useState<(EmployeeFormAssignment & { formTitle: string; formDescription: string })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const [selectedForm, setSelectedForm] = useState<EmployeeFormAssignment | null>(null);
   const [isReviewDialogOpen, setIsReviewDialogOpen] = useState(false);
   const [formAction, setFormAction] = useState<'approve' | 'reject' | null>(null);
@@ -34,12 +36,14 @@ export function EmployeeDetails() {
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [loadingAction, setLoadingAction] = useState<{ formId: string, action: 'download' | 'print' } | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<{ form: EmployeeFormAssignment & { formTitle: string }; employeeName: string } | null>(null);
+  const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
-        setIsLoading(true);
+        if (refreshKey === 0) setIsLoading(true);
         if (!userData?.schoolId || !employeeId) return;
 
         const [empData, rawAssignments] = await Promise.all([
@@ -71,7 +75,7 @@ export function EmployeeDetails() {
     })();
 
     return () => { isMounted = false; };
-  }, [userData?.schoolId, employeeId, schoolSlug, navigate, showToast]);
+  }, [userData?.schoolId, employeeId, schoolSlug, navigate, showToast, refreshKey]);
 
   const handleReviewAction = async () => {
     if (!selectedForm || !formAction) return;
@@ -351,6 +355,21 @@ export function EmployeeDetails() {
                                 Assigned {form.assignedOn ? new Date(form.assignedOn).toLocaleDateString() : '—'}
                               </span>
                             </div>
+                            {form.manualPdfUploadedAt && (() => {
+                              try {
+                                const date = new Date(form.manualPdfUploadedAt);
+                                if (!isNaN(date.getTime())) {
+                                  return (
+                                    <div className="w-full mt-1">
+                                      <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-full border border-blue-100">
+                                        Admin Uploaded {date.toLocaleDateString()}
+                                      </span>
+                                    </div>
+                                  );
+                                }
+                              } catch (e) {}
+                              return null;
+                            })()}
                             <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
                               {form.formDescription}
                             </p>
@@ -389,6 +408,20 @@ export function EmployeeDetails() {
                                   <span>View Form</span>
                                 </Button>
                               </Link>
+                            )}
+                            {normalizeFormStatus(form.status) !== 'Approved' && form.id && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                onClick={() => {
+                                  setSelectedFormForUpload({ form, employeeName: `${employee.firstName} ${employee.lastName}` });
+                                  setIsManualUploadOpen(true);
+                                }}
+                              >
+                                <Upload className="h-3.5 w-3.5 mr-1" />
+                                Upload PDF
+                              </Button>
                             )}
 
                             {normalizeFormStatus(form.status) === 'Submitted' && (
@@ -458,6 +491,26 @@ export function EmployeeDetails() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {selectedFormForUpload && (
+          <ManualUploadModal
+            isOpen={isManualUploadOpen}
+            onClose={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+            }}
+            onSuccess={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+              setRefreshKey(k => k + 1);
+            }}
+            assignmentId={selectedFormForUpload.form.id!}
+            schoolId={selectedFormForUpload.form.schoolId || userData?.schoolId || ''}
+            employeeName={selectedFormForUpload.employeeName}
+            uploadedBy={userData?.email || userData?.name || 'Admin'}
+            formType="employee"
+          />
+        )}
 
       </motion.div>
     </AdminLayout>

@@ -6,6 +6,7 @@ import { FormsDocuments } from '../components/dashboard/FormsDocuments';
 import { ParentLayout } from './parent/ParentLayout';
 import { ChildSelector } from '../components/dashboard/ChildSelector';
 import { ParentInfo } from '../components/dashboard/ParentInfo';
+import { Loading } from '../components/ui/loading';
 import { fetchSingleParent } from '../services/api/admin';
 import { useUserContext } from '../contexts/UserContext';
 import { useAuth } from '../services/auth/useAuth';
@@ -116,7 +117,9 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
           }
         }
         return form.due_date;
-      })() : null
+      })() : null,
+      approved_on: form.approved_on || null,
+      manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
     } satisfies ChildFormCard;
   });
 
@@ -196,6 +199,7 @@ export function Dashboard() {
   const [parentData, setParentData] = useState<any>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [yearFilter, setYearFilter] = useState<string>('all');
+  const [formLoadingState, setFormLoadingState] = useState<{ childId: string; formId: string } | null>(null);
   
   useEffect(() => {
     // Wait for user data to be loaded
@@ -349,6 +353,13 @@ export function Dashboard() {
             transition={{ duration: 0.3 }}
             className="space-y-4"
           >
+            {formLoadingState?.childId === selectedChild?.id && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+                <div className="bg-white rounded-2xl p-5 shadow-lg">
+                  <div className="h-6 w-6 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+                </div>
+              </div>
+            )}
             <div className="mb-4 sm:mb-5">
               <ChildSelector children={children} selectedChildId={selectedChildId ?? children[0]?.id ?? ''} onSelectChild={setSelectedChildId} />
             </div>
@@ -394,6 +405,13 @@ export function Dashboard() {
                       selectedChildDob={selectedChild.rawDob || undefined}
                       selectedChildGender={selectedChild.gender}
                       parentEmail={parentData?.email || userData?.email || ''}
+                      onPageLoadingChange={(isLoading) => {
+                        if (isLoading) {
+                          setFormLoadingState({ childId: selectedChild.id, formId: '' });
+                        } else {
+                          setFormLoadingState(null);
+                        }
+                      }}
                     />
                   </div>
                 )}

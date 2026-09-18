@@ -57,6 +57,47 @@ export const TapTimeService = {
   salaryReportCurrent: () => tapTimeFetch('/salary-report/current', z.any()),
   salaryReportHistory: () => tapTimeFetch('/salary-report/history', z.any()),
   salaryReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/salary-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
+  weeklyReportCurrent: () => tapTimeFetch('/weekly-time-report/current', z.any()),
+  weeklyReportHistory: () => tapTimeFetch('/weekly-time-report/history', z.any()),
+  weeklyReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/weekly-time-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
+  mySalaryReportCurrent: () =>
+    tapTimeFetch('/me/salary-report/current', z.object({
+      data: z.object({
+        frequency: z.string(),
+        period: z.object({ start_date: z.string(), end_date: z.string(), is_current: z.boolean() }),
+        next_period_start: z.string(),
+        time_worked: z.string(),
+        entries: z.number(),
+        items: z.array(z.object({
+          date: z.string().nullable(),
+          check_in_time: z.string().nullable(),
+          check_out_time: z.string().nullable(),
+          time_worked: z.string().nullable(),
+        })),
+      }),
+    })),
+  mySalaryReportHistory: () =>
+    tapTimeFetch('/me/salary-report/history', z.object({
+      data: z.object({
+        frequency: z.string(),
+        periods: z.array(z.object({ start_date: z.string(), end_date: z.string(), is_current: z.boolean() })),
+      }),
+    })),
+  mySalaryReportPeriod: (start_date: string, end_date: string) =>
+    tapTimeFetch(`/me/salary-report/period?start_date=${start_date}&end_date=${end_date}`, z.object({
+      data: z.object({
+        frequency: z.string(),
+        period: z.object({ start_date: z.string(), end_date: z.string(), is_current: z.boolean() }),
+        time_worked: z.string(),
+        entries: z.number(),
+        items: z.array(z.object({
+          date: z.string().nullable(),
+          check_in_time: z.string().nullable(),
+          check_out_time: z.string().nullable(),
+          time_worked: z.string().nullable(),
+        })),
+      }),
+    })),
   reportHistory: (empId: string, checkInTime: string) =>
     tapTimeFetch(
       `/attendance/reports/${encodeURIComponent(empId)}/history?check_in_time=${encodeURIComponent(checkInTime)}`,

@@ -524,36 +524,36 @@ export function ParentFormView() {
             {showSubmissionNavigation && (hasSidebar ? (
               <Button
                 variant="outline"
-                className={`justify-self-start h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                className={`justify-self-start h-11 px-3 md:px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                   prevSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                 }`}
                 disabled={!prevSibling}
                 onClick={() => prevSibling && handleNavigateToSibling(prevSibling)}
               >
                 <ChevronLeft className="h-4 w-4" />
-                Previous
+                <span className="hidden md:inline">Previous</span>
               </Button>
             ) : <div aria-hidden="true" />)}
             <Button
-                className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
+                className="bg-[#0F2D52] hover:bg-[#1a3a60] text-white h-12 px-3 md:px-7 text-sm font-semibold gap-2 transition-colors shadow-sm rounded-xl"
                 onClick={() => showSubmissionNavigation
                   ? navigate(back, { state: { formCompleted: true } })
                   : handleBack()}
               >
                 <Home className="h-4 w-4" />
-              Back to Dashboard
+              <span className="hidden md:inline">Back to Dashboard</span>
             </Button>
             {showSubmissionNavigation && (hasSidebar ? (
               <div className="justify-self-end">
                 <Button
                   variant="outline"
-                  className={`h-11 px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
+                  className={`h-11 px-3 md:px-5 gap-2 text-sm font-semibold border-slate-300 disabled:opacity-100 ${
                     nextSibling ? 'text-slate-700 hover:text-[#0F2D52] hover:border-[#0F2D52]' : 'text-slate-400 bg-slate-50 border-slate-200 cursor-not-allowed'
                   }`}
                   disabled={!nextSibling}
                   onClick={() => nextSibling && handleNavigateToSibling(nextSibling)}
                 >
-                  Next
+                  <span className="hidden md:inline">Next</span>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
