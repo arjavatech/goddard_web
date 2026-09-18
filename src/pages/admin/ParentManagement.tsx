@@ -32,6 +32,7 @@ interface Child {
   firstName: string;
   lastName: string;
   dob: string;
+  childStatus?: string;
   classroom: {
     id: string;
     name: string;
@@ -154,6 +155,7 @@ export function ParentManagement() {
         firstName: childFirstName,
         lastName: childLastNameParts.join(' ') || 'Child',
         dob: child.childDob || '—',
+        childStatus: child.childStatus || 'active',
         classroom: {
           id: child.classroomId || 'unassigned',
           name: child.classroomName || 'Unassigned'
@@ -311,46 +313,49 @@ export function ParentManagement() {
       header: 'Linked Children',
       className: 'w-1/3',
       hideInCardBody: true,
-      cell: (parent) => (
-        <>
-          {parent.children.length === 0 ? (
-            <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
-          ) : (
-            <div className="flex flex-wrap gap-2 py-1 max-w-sm">
-              {(expandedParents[parent.id] ? parent.children : parent.children.slice(0, 2)).map(child => (
-                <div 
-                  key={child.id} 
-                  className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
-                >
-                  <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
-                  <Link
-                    to={`/admin/parents/${parent.id}`}
-                    state={{ parentData: parent, selectedChildId: child.id }}
-                    className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
+      cell: (parent) => {
+        const activeChildren = parent.children.filter(c => c.childStatus !== 'archive');
+        return (
+          <>
+            {activeChildren.length === 0 ? (
+              <span className="text-slate-400 text-xs italic font-medium">No children linked yet</span>
+            ) : (
+              <div className="flex flex-wrap gap-2 py-1 max-w-sm">
+                {(expandedParents[parent.id] ? activeChildren : activeChildren.slice(0, 2)).map(child => (
+                  <div
+                    key={child.id}
+                    className="inline-flex items-center gap-1.5 bg-[#EFF5FB]/60 border border-slate-100 hover:bg-[#EFF5FB] hover:border-slate-200 rounded-full pl-2.5 pr-3 py-1 text-xs transition-all shadow-xs duration-200 group"
                   >
-                    {child.firstName} {child.lastName}
-                  </Link>
-                  <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
-                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
-                    {child.classroom.name}
-                  </span>
-                </div>
-              ))}
-              {parent.children.length > 2 && (
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    toggleParentExpanded(parent.id);
-                  }}
-                  className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
-                >
-                  {expandedParents[parent.id] ? 'Show Less' : `Show More (+${parent.children.length - 2})`}
-                </button>
-              )}
-            </div>
-          )}
-        </>
-      )
+                    <GraduationCap className="h-3.5 w-3.5 text-[#0F2D52]/70 group-hover:text-[#0F2D52] flex-shrink-0" />
+                    <Link
+                      to={`/admin/parents/${parent.id}`}
+                      state={{ parentData: parent, selectedChildId: child.id }}
+                      className="font-bold text-[#0F2D52]/90 group-hover:text-[#0F2D52] hover:underline truncate max-w-[110px]"
+                    >
+                      {child.firstName} {child.lastName}
+                    </Link>
+                    <span className="h-1 w-1 rounded-full bg-slate-300 group-hover:bg-slate-400 flex-shrink-0" />
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">
+                      {child.classroom.name}
+                    </span>
+                  </div>
+                ))}
+                {activeChildren.length > 2 && (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleParentExpanded(parent.id);
+                    }}
+                    className="inline-flex items-center justify-center bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-full px-2.5 py-1 text-[10px] font-bold text-slate-600 transition-all duration-200 shadow-xs"
+                  >
+                    {expandedParents[parent.id] ? 'Show Less' : `Show More (+${activeChildren.length - 2})`}
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        );
+      }
     },
     {
       id: 'status',
