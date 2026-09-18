@@ -67,6 +67,7 @@ import { TimeTracking } from './pages/admin/TimeTracking';
 import { ReportSettings } from './pages/admin/ReportSettings';
 import { SalaryReport } from './pages/admin/SalaryReport';
 import { WeeklyReport } from './pages/admin/WeeklyReport';
+import { EmployeeWeeklyReport } from './pages/employee/EmployeeWeeklyReport';
 import { TapTimeIntegration } from './pages/admin/TapTimeIntegration';
 
 function ScrollToTop() {
@@ -133,6 +134,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="employee" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
                 </Route>
                 <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}

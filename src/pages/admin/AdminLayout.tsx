@@ -131,9 +131,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     }] : []),
     ...(schoolFeatures.taptimeEnabled ? [{
-      label: 'TapTime',
+      label: 'Time Tracking',
       items: [
-        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Time Tracking', path: `${schoolPrefix}/admin/time-tracking` },
+        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Log', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Salary Report', path: `${schoolPrefix}/admin/salary-report` },
         { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/admin/weekly-report` },
         ...(isSuperAdmin ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),

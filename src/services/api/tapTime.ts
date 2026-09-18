@@ -98,6 +98,9 @@ export const TapTimeService = {
         })),
       }),
     })),
+  myWeeklyReportCurrent: () => tapTimeFetch('/me/weekly-time-report/current', z.any()),
+  myWeeklyReportHistory: () => tapTimeFetch('/me/weekly-time-report/history', z.any()),
+  myWeeklyReportPeriod: (start_date: string, end_date: string) => tapTimeFetch(`/me/weekly-time-report/period?start_date=${start_date}&end_date=${end_date}`, z.any()),
   reportHistory: (empId: string, checkInTime: string) =>
     tapTimeFetch(
       `/attendance/reports/${encodeURIComponent(empId)}/history?check_in_time=${encodeURIComponent(checkInTime)}`,
