@@ -194,9 +194,9 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<FeatureRoute feature="expenseManagementEnabled"><RequestsRouter /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
-                  <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled"><SuperAdminOnly>
+                  <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled">
                     <SuperAdminExpenses />
-                  </SuperAdminOnly></FeatureRoute>} />
+                  </FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/help" element={<HelpCenter />} />
                 </Route>
 
