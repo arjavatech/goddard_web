@@ -15,11 +15,12 @@ import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { Pagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
+import { getTodayDateString, validateFutureDate } from '../../lib/utils';
 import {
   ShoppingBag, Search, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign,
   LayoutGrid, TableProperties, Plus, Filter, School, User, GraduationCap, ArrowRight,
-  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2
+  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle
 } from 'lucide-react';
 
 export function SuperAdminRequests() {
@@ -56,9 +57,11 @@ export function SuperAdminRequests() {
   // Start Processing modal state
   const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
   const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
-  const [expectedCompletionDate, setExpectedCompletionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState(getTodayDateString());
+  const [dateError, setDateError] = useState<string | null>(null);
   const [dateEditRequest, setDateEditRequest] = useState<Request | null>(null);
   const [isDateEditOpen, setIsDateEditOpen] = useState(false);
+  const [dateEditError, setDateEditError] = useState<string | null>(null);
 
   // Purchase modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
@@ -298,12 +301,21 @@ export function SuperAdminRequests() {
 
   const handleOpenStartProcessing = (req: Request) => {
     setStartProcessingRequest(req);
-    setExpectedCompletionDate(new Date().toISOString().split('T')[0]);
+    setExpectedCompletionDate(getTodayDateString());
+    setDateError(null);
     setIsStartProcessingModalOpen(true);
   };
 
   const handleStartProcessing = async () => {
     if (!startProcessingRequest) return;
+    
+    // Validate date
+    const validation = validateFutureDate(expectedCompletionDate);
+    if (!validation.isValid) {
+      setDateError(validation.error || 'Invalid date');
+      return;
+    }
+    
     const req = startProcessingRequest;
     setIsStartProcessingModalOpen(false);
     setValidatingId(req.id);
@@ -317,11 +329,20 @@ export function SuperAdminRequests() {
     } finally {
       setValidatingId(null);
       setStartProcessingRequest(null);
+      setDateError(null);
     }
   };
 
   const handleSaveExpectedCompletionDate = async () => {
     if (!dateEditRequest || !expectedCompletionDate) return;
+    
+    // Validate date
+    const validation = validateFutureDate(expectedCompletionDate);
+    if (!validation.isValid) {
+      setDateEditError(validation.error || 'Invalid date');
+      return;
+    }
+    
     setSubmitting(true);
     try {
       const updatedRequest = await RequestService.updateExpectedCompletionDate(dateEditRequest.id, expectedCompletionDate);
@@ -334,6 +355,7 @@ export function SuperAdminRequests() {
       showToast('success', 'Expected completion date updated.', 'Date Updated');
       setIsDateEditOpen(false);
       setDateEditRequest(null);
+      setDateEditError(null);
       setRequests(await RequestService.fetchRequests());
     } catch {
       showToast('error', 'Could not update expected completion date.', 'Error');
@@ -1081,15 +1103,29 @@ export function SuperAdminRequests() {
                             <input
                               type="date"
                               value={expectedCompletionDate}
-                              min={new Date().toISOString().split('T')[0]}
-                              onChange={e => setExpectedCompletionDate(e.target.value)}
-                              className="w-full px-3 py-2 text-xs text-slate-900 border border-blue-200 rounded-lg focus:outline-none focus:border-[#0F2D52] bg-white"
+                              min={getTodayDateString()}
+                              onChange={(e) => {
+                                setExpectedCompletionDate(e.target.value);
+                                const validation = validateFutureDate(e.target.value);
+                                setDateEditError(validation.isValid ? null : validation.error || null);
+                              }}
+                              className={`w-full px-3 py-2 text-xs text-slate-900 border rounded-lg focus:outline-none transition-colors bg-white ${
+                                dateEditError
+                                  ? 'border-red-300 focus:border-red-500'
+                                  : 'border-blue-200 focus:border-[#0F2D52]'
+                              }`}
                             />
+                            {dateEditError && (
+                              <div className="flex items-start gap-2 p-2 bg-red-50 border border-red-200 rounded-lg">
+                                <AlertCircle className="w-3.5 h-3.5 text-red-600 flex-shrink-0 mt-0.5" />
+                                <p className="text-[10px] text-red-700 font-medium">{dateEditError}</p>
+                              </div>
+                            )}
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => { setIsDateEditOpen(false); setDateEditRequest(null); }}
+                                onClick={() => { setIsDateEditOpen(false); setDateEditRequest(null); setDateEditError(null); }}
                                 className="flex-1 h-8 rounded-lg text-[10px] font-semibold border-slate-200"
                               >
                                 Cancel
@@ -1097,8 +1133,8 @@ export function SuperAdminRequests() {
                               <Button
                                 size="sm"
                                 onClick={handleSaveExpectedCompletionDate}
-                                disabled={!expectedCompletionDate || submitting}
-                                className="flex-1 h-8 rounded-lg text-[10px] font-bold bg-[#0F2D52] text-white hover:bg-[#1E4B83]"
+                                disabled={!expectedCompletionDate || !!dateEditError || submitting}
+                                className="flex-1 h-8 rounded-lg text-[10px] font-bold bg-[#0F2D52] text-white hover:bg-[#1E4B83] disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {submitting ? 'Saving...' : 'Save Date'}
                               </Button>
@@ -1114,7 +1150,7 @@ export function SuperAdminRequests() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => { setDateEditRequest(req); setExpectedCompletionDate(req.expectedCompletionDate || ''); setIsDateEditOpen(true); }}
+                                onClick={() => { setDateEditRequest(req); setExpectedCompletionDate(req.expectedCompletionDate || ''); setDateEditError(null); setIsDateEditOpen(true); }}
                                 className="h-7 text-[10px] rounded-lg border-blue-200 text-blue-600 hover:bg-blue-100"
                               >
                                 Edit
@@ -1247,18 +1283,32 @@ export function SuperAdminRequests() {
             <input
               type="date"
               value={expectedCompletionDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => setExpectedCompletionDate(e.target.value)}
-              className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
+              min={getTodayDateString()}
+              onChange={(e) => {
+                setExpectedCompletionDate(e.target.value);
+                const validation = validateFutureDate(e.target.value);
+                setDateError(validation.isValid ? null : validation.error || null);
+              }}
+              className={`w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border rounded-xl focus:outline-none transition-colors ${
+                dateError
+                  ? 'border-red-300 focus:border-red-500 bg-red-50'
+                  : 'border-slate-200 focus:border-[#0F2D52]'
+              }`}
             />
+            {dateError && (
+              <div className="flex items-start gap-2 mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700 font-medium">{dateError}</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-50">
             <Button type="button" variant="outline" onClick={() => setIsStartProcessingModalOpen(false)}
               className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
             <Button
               onClick={handleStartProcessing}
-              disabled={!expectedCompletionDate}
-              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
+              disabled={!expectedCompletionDate || !!dateError}
+              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
             </Button>
           </DialogFooter>
@@ -1360,14 +1410,17 @@ export function SuperAdminRequests() {
 
       {/* Create Request Modal */}
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Submit a school-wide, class-specific, or teacher-specific procurement request.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateSubmit} className="space-y-4 pt-2">
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
+          <div className="px-6 pt-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900">Create Procurement Request</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Submit a school-wide, class-specific, or teacher-specific procurement request.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleCreateSubmit} id="create-request-form" className="flex-1 overflow-y-auto">
+            <div className="space-y-4 pt-2 px-6 pb-1">
             {/* Scope */}
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -1449,7 +1502,7 @@ export function SuperAdminRequests() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
                 <select name="category" value={createFormData.category} onChange={handleCreateInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap">
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {createFormErrors.category && <p className="text-xs text-red-600 font-semibold">{createFormErrors.category}</p>}
@@ -1472,15 +1525,15 @@ export function SuperAdminRequests() {
                   <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleCreateImageChange} className="hidden" />
                 </label>
               ) : (
-                <div className="flex items-center gap-3">
+                <div className="flex gap-3">
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
                     <img src={URL.createObjectURL(createImageFile)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{createImageFile.name}</p>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 break-words overflow-wrap-anywhere whitespace-normal" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{createImageFile.name}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{(createImageFile.size / 1024).toFixed(0)} KB</p>
                     <button type="button" onClick={() => setCreateImageFile(null)}
-                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
+                      className="mt-auto pt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit">Remove</button>
                   </div>
                 </div>
               )}
@@ -1492,32 +1545,36 @@ export function SuperAdminRequests() {
                 onChange={e => setCreateFormData(prev => ({ ...prev, notes: e.target.value }))} rows={2}
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
-              <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}
-                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold">Cancel</Button>
-              <Button type="submit" disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
-                {submitting ? (createImageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
+          <DialogFooter className="px-6 py-1 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
+            <Button type="button" variant="outline" onClick={() => setIsCreateModalOpen(false)}
+              className="rounded-xl h-9 text-xs font-semibold px-5">Cancel</Button>
+            <Button type="submit" form="create-request-form" disabled={submitting}
+              className="rounded-xl h-9 px-5 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+              {submitting ? (createImageFile ? 'Uploading & Submitting...' : 'Submitting...') : 'Submit Request'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
       {/* Edit Request Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={open => { setIsEditModalOpen(open); if (!open) setEditingRequest(null); }}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">Edit Request</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Editing: <span className="font-semibold text-slate-700">{editingRequest?.item}</span>
-              {editingRequest && (
-                <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(editingRequest.status)}`}>
-                  {getStatusIcon(editingRequest.status)}{getStatusLabel(editingRequest.status)}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4 pt-2">
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
+          <div className="px-6 pt-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900">Edit Request</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Editing: <span className="font-semibold text-slate-700">{editingRequest?.item}</span>
+                {editingRequest && (
+                  <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(editingRequest.status)}`}>
+                    {getStatusIcon(editingRequest.status)}{getStatusLabel(editingRequest.status)}
+                  </span>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <form onSubmit={handleEditSubmit} id="edit-request-form" className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="space-y-4 pt-2 px-6 pb-6">
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Requested Item <span className="text-red-500">*</span></label>
               <input type="text" name="item" value={editFormData.item} onChange={handleEditInputChange}
@@ -1534,7 +1591,7 @@ export function SuperAdminRequests() {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
                 <select name="category" value={editFormData.category} onChange={handleEditInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                  className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap">
                   {categories.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
                 {editFormErrors.category && <p className="text-xs text-red-600 font-semibold">{editFormErrors.category}</p>}
@@ -1592,9 +1649,9 @@ export function SuperAdminRequests() {
                   <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
                     <img src={URL.createObjectURL(editImageFile)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
-                  <div>
-                    <p className="text-xs font-semibold text-slate-700 truncate">{editImageFile.name}</p>
-                    <button type="button" onClick={() => setEditImageFile(null)} className="text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 break-words overflow-wrap-anywhere whitespace-normal" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{editImageFile.name}</p>
+                    <button type="button" onClick={() => setEditImageFile(null)} className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit">Remove</button>
                   </div>
                 </div>
               ) : (
@@ -1611,15 +1668,16 @@ export function SuperAdminRequests() {
                 onChange={e => setEditFormData(prev => ({ ...prev, notes: e.target.value }))} rows={2}
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
             </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
-              <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingRequest(null); }}
-                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold">Cancel</Button>
-              <Button type="submit" disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
-                {submitting ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
+          <DialogFooter className="px-6 py-4 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
+            <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingRequest(null); }}
+              className="rounded-xl h-10 text-xs font-semibold px-6">Cancel</Button>
+            <Button type="submit" form="edit-request-form" disabled={submitting}
+              className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+              {submitting ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -734,15 +734,18 @@ export function EmployeeRequests() {
 
       {/* New Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={open => { setIsModalOpen(open); if (!open) setEditingRequest(null); }}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
-            <DialogDescription className="text-[10px] sm:text-xs text-slate-500">
-              Submit a request for supplies or equipment. The administrators will review it before purchase.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
+          <div className="px-6 pt-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-base sm:text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
+              <DialogDescription className="text-[10px] sm:text-xs text-slate-500">
+                Submit a request for supplies or equipment. The administrators will review it before purchase.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleFormSubmit} id="employee-request-form" className="flex-1 overflow-y-auto no-scrollbar">
+            <div className="space-y-4 pt-2 px-6 pb-6">
             {/* Classroom */}
             <div className="space-y-1.5">
               <label className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -857,10 +860,10 @@ export function EmployeeRequests() {
                   <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
                     <img src={URL.createObjectURL(imageFile)} alt="Preview" className="w-full h-full object-cover" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-slate-700" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{imageFile.name}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
-                    <button type="button" onClick={handleClearImage} className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
+                    <button type="button" onClick={handleClearImage} className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit">Remove</button>
                   </div>
                 </div>
               ) : editingRequest?.productImage ? (
@@ -905,25 +908,26 @@ export function EmployeeRequests() {
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none"
               />
             </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
-              >
-                {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
+          <DialogFooter className="px-6 py-4 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsModalOpen(false)}
+              className="rounded-xl h-10 text-xs font-semibold px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="employee-request-form"
+              disabled={submitting}
+              className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
+            >
+              {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

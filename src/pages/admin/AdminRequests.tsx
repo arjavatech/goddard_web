@@ -11,10 +11,11 @@ import { RequestService, type Request, type RequestStatus } from '../../services
 import { fetchRequestSettings } from '../../services/api/settings';
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
+import { getTodayDateString, validateFutureDate } from '../../lib/utils';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
-  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2, AlertCircle
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -57,7 +58,8 @@ export function AdminRequests() {
   // Start Processing modal states
   const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
   const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
-  const [expectedCompletionDate, setExpectedCompletionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState(getTodayDateString());
+  const [dateError, setDateError] = useState<string | null>(null);
   const [validatingId, setValidatingId] = useState<string | null>(null);
 
   const activeFilterCount = (sortConfig ? 1 : 0) + (scopeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
@@ -293,12 +295,21 @@ export function AdminRequests() {
 
   const handleOpenStartProcessing = (req: Request) => {
     setStartProcessingRequest(req);
-    setExpectedCompletionDate(new Date().toISOString().split('T')[0]);
+    setExpectedCompletionDate(getTodayDateString());
+    setDateError(null);
     setIsStartProcessingModalOpen(true);
   };
 
   const handleStartProcessing = async () => {
     if (!startProcessingRequest) return;
+    
+    // Validate date
+    const validation = validateFutureDate(expectedCompletionDate);
+    if (!validation.isValid) {
+      setDateError(validation.error || 'Invalid date');
+      return;
+    }
+    
     const req = startProcessingRequest;
     setIsStartProcessingModalOpen(false);
     setValidatingId(req.id);
@@ -311,6 +322,7 @@ export function AdminRequests() {
     } finally {
       setValidatingId(null);
       setStartProcessingRequest(null);
+      setDateError(null);
     }
   };
 
@@ -992,15 +1004,18 @@ export function AdminRequests() {
 
       {/* Admin Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
+          <div className="px-6 pt-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleFormSubmit} id="admin-request-form" className="flex-1 overflow-y-auto">
+            <div className="space-y-4 pt-2 px-6 pb-2">
             
             {/* Target Assignment Selection */}
             <div className="space-y-1.5">
@@ -1156,7 +1171,7 @@ export function AdminRequests() {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+                  className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap"
                 >
                 <option value="">Select category</option>{categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -1195,13 +1210,13 @@ export function AdminRequests() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-slate-700" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{imageFile.name}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
                     <button
                       type="button"
                       onClick={handleClearImage}
-                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                      className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit"
                     >
                       Remove
                     </button>
@@ -1259,25 +1274,26 @@ export function AdminRequests() {
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none"
               />
             </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setIsModalOpen(false); setEditingRequest(null); }}
-                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
-              >
-                {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
+          <DialogFooter className="px-6 py-3 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setIsModalOpen(false); setEditingRequest(null); }}
+              className="rounded-xl h-9 text-xs font-semibold px-5"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="admin-request-form"
+              disabled={submitting}
+              className="rounded-xl h-9 px-5 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
+            >
+              {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -1438,18 +1454,32 @@ export function AdminRequests() {
             <input
               type="date"
               value={expectedCompletionDate}
-              min={new Date().toISOString().split('T')[0]}
-              onChange={e => setExpectedCompletionDate(e.target.value)}
-              className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
+              min={getTodayDateString()}
+              onChange={(e) => {
+                setExpectedCompletionDate(e.target.value);
+                const validation = validateFutureDate(e.target.value);
+                setDateError(validation.isValid ? null : validation.error || null);
+              }}
+              className={`w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border rounded-xl focus:outline-none transition-colors ${
+                dateError
+                  ? 'border-red-300 focus:border-red-500 bg-red-50'
+                  : 'border-slate-200 focus:border-[#0F2D52]'
+              }`}
             />
+            {dateError && (
+              <div className="flex items-start gap-2 mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700 font-medium">{dateError}</p>
+              </div>
+            )}
           </div>
           <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-50">
             <Button type="button" variant="outline" onClick={() => setIsStartProcessingModalOpen(false)}
               className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
             <Button
               onClick={handleStartProcessing}
-              disabled={!expectedCompletionDate}
-              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
+              disabled={!expectedCompletionDate || !!dateError}
+              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
               <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
             </Button>
           </DialogFooter>
