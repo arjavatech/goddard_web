@@ -66,7 +66,7 @@ function generateSalaryPdf(
   // Summary stats
   doc.setFontSize(10);
   const summaryY = margins.top + 45;
-  doc.text(`Total Entries: ${detail.entries || 0} | Total Time: ${detail.time_worked || '00:00'}`, margins.left, summaryY);
+  doc.text(`Total Days: ${detail.days || 0} | Total Time: ${detail.time_worked || '00:00'}`, margins.left, summaryY);
 
   // Attendance table
   const hasItems = (detail.items || []).length > 0;
@@ -305,8 +305,8 @@ export function AttendanceReports() {
                                 <dd className="text-right text-slate-800">{salaryCurrent.time_worked}</dd>
                               </div>
                               <div className="flex justify-between gap-2">
-                                <dt className="font-bold uppercase tracking-wider text-slate-500">Entries</dt>
-                                <dd className="text-right font-semibold text-slate-900">{salaryCurrent.entries}</dd>
+                                <dt className="font-bold uppercase tracking-wider text-slate-500">Days</dt>
+                                <dd className="text-right font-semibold text-slate-900">{salaryCurrent.days}</dd>
                               </div>
                             </dl>
                           </div>
@@ -389,8 +389,8 @@ export function AttendanceReports() {
                                           <dd className="font-semibold text-slate-900">{periodDetail[period.start_date].time_worked}</dd>
                                         </div>
                                         <div className="flex justify-between gap-2">
-                                          <dt className="font-bold text-slate-500">Entries</dt>
-                                          <dd className="font-semibold text-slate-900">{periodDetail[period.start_date].entries}</dd>
+                                          <dt className="font-bold text-slate-500">Days</dt>
+                                          <dd className="font-semibold text-slate-900">{periodDetail[period.start_date].days}</dd>
                                         </div>
                                       </dl>
                                     </div>

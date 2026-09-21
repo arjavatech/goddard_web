@@ -92,11 +92,11 @@ export function SalaryReport() {
 
     autoTable(doc, {
       startY: 104,
-      head: [['Employee', 'PIN', 'Entries', 'Time Worked']],
+      head: [['Employee', 'PIN', 'Days', 'Time Worked']],
       body: reportData.items.map((item: any) => [
         item.name || '—',
         item.pin || '—',
-        String(item.entries),
+        String(item.days),
         item.time_worked,
       ]),
       theme: 'grid',
@@ -207,9 +207,8 @@ export function SalaryReport() {
           ) : (
             <>
               {/* Stats */}
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 <Stat icon={Users} label="Employees" value={String(report?.totals?.employees || 0)} color="text-blue-600" />
-                <Stat icon={FileText} label="Entries" value={String(report?.totals?.entries || 0)} color="text-emerald-600" />
                 <Stat icon={Clock3} label="Total Time" value={report?.totals?.time_worked || '—'} color="text-purple-600" />
               </div>
 
@@ -276,7 +275,7 @@ export function SalaryReport() {
                                   <table className="w-full min-w-[600px] text-sm">
                                     <thead className="bg-slate-50/80">
                                       <tr>
-                                        {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                        {['Employee', 'PIN', 'Days', 'Time Worked'].map((header) => (
                                           <th
                                             key={header}
                                             className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
@@ -292,7 +291,7 @@ export function SalaryReport() {
                                           <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
                                             <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
                                             <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
-                                            <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                            <td className="px-4 py-4 text-slate-600">{item.days}</td>
                                             <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
                                           </tr>
                                         ))
@@ -355,7 +354,7 @@ export function SalaryReport() {
                               <table className="w-full min-w-[600px] text-sm">
                                 <thead className="bg-slate-50/80">
                                   <tr>
-                                    {['Employee', 'PIN', 'Entries', 'Time Worked'].map((header) => (
+                                    {['Employee', 'PIN', 'Days', 'Time Worked'].map((header) => (
                                       <th
                                         key={header}
                                         className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
@@ -371,7 +370,7 @@ export function SalaryReport() {
                                       <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
                                         <td className="px-4 py-4 font-medium text-[#0F2D52]">{item.name || '—'}</td>
                                         <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
-                                        <td className="px-4 py-4 text-slate-600">{item.entries}</td>
+                                        <td className="px-4 py-4 text-slate-600">{item.days}</td>
                                         <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
                                       </tr>
                                     ))
@@ -523,8 +522,8 @@ function SalaryCard({ item }: { item: any }) {
           <dd className="text-right truncate">{item.pin || '—'}</dd>
         </div>
         <div className="flex justify-between gap-2 min-w-0">
-          <dt className="flex-shrink-0">Entries</dt>
-          <dd className="text-right truncate">{item.entries}</dd>
+          <dt className="flex-shrink-0">Days</dt>
+          <dd className="text-right truncate">{item.days}</dd>
         </div>
         <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
           <dt className="flex-shrink-0">Time Worked</dt>
