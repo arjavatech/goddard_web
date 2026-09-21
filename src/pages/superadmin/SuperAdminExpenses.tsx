@@ -133,7 +133,7 @@ export function SuperAdminExpenses() {
         schoolId: userData?.schoolId || '00000000-0000-0000-0000-000000000000',
         item: form.item.trim(),
         requesterName: form.requesterName.trim(),
-        requesterRole: 'superadmin',
+        requesterRole: (userData?.role ?? 'superadmin') as 'admin' | 'superadmin',
         scope: form.scope,
         category: form.category,
         quantity: parseInt(form.quantity) || 1,
@@ -231,12 +231,14 @@ export function SuperAdminExpenses() {
             </p>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-auto">
-            <Button
-              onClick={() => setShowAddModal(true)}
-              className="h-9 px-4 rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white text-xs font-semibold gap-2"
-            >
-              <Plus className="h-3.5 w-3.5" /> Add Expense
-            </Button>
+            {userData?.role !== 'admin' && (
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="h-9 px-4 rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white text-xs font-semibold gap-2"
+              >
+                <Plus className="h-3.5 w-3.5" /> Add Expense
+              </Button>
+            )}
             <Button
               variant="outline"
               onClick={loadData}

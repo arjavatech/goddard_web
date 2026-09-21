@@ -171,7 +171,7 @@ export const RequestService = {
     const params = new URLSearchParams();
     if (schoolId)  params.set('schoolId', schoolId);
     if (userId)    params.set('userId', userId);
-    if (userRole)  params.set('role', userRole);
+    if (userRole)  params.set('requesterRole', userRole);
     params.set('limit', '100');
 
     const data = await authedFetch(

@@ -118,7 +118,7 @@ export function AdminRequests() {
       const [, classroomList, reqList, requestSettings] = await Promise.all([
         fetchTeacherList(userData.schoolId),
         fetchClassrooms(userData.schoolId),
-        RequestService.fetchRequests(userData.schoolId, 'admin'),
+        RequestService.fetchRequests(userData.schoolId),
         fetchRequestSettings(userData.schoolId),
       ]);
       setClassrooms(classroomList);
@@ -263,8 +263,8 @@ export function AdminRequests() {
       showToast('success', editingRequest ? 'Request updated successfully.' : 'Admin request created successfully. Sent to Super Admin for validation.', editingRequest ? 'Request Updated' : 'Request Created');
       setIsModalOpen(false);
       setEditingRequest(null);
-      
-      const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1', 'admin');
+
+      const reqList = await RequestService.fetchRequests(userData?.schoolId || 'school-1');
       setRequests(reqList);
     } catch (err) {
       showToast('error', 'Could not create request. Please try again.', 'Error Submitting Request');
