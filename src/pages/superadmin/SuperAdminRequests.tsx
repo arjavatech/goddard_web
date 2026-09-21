@@ -555,6 +555,9 @@ export function SuperAdminRequests() {
             <p className="text-[8px] sm:text-xs md:text-sm font-bold text-emerald-700 whitespace-nowrap">Spent: ${req.amountSpent?.toFixed(2)}</p>
           </div>
           <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">via {req.paymentMethod} on {req.purchaseDate}</p>
+          {req.paidByName && (
+            <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">Completed by: {req.paidByName}</p>
+          )}
         </div>
       );
     }
@@ -970,10 +973,12 @@ export function SuperAdminRequests() {
                           </td>
                           <td className="px-3 sm:px-4 py-3 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
                             <div className="flex items-center justify-end gap-1.5">
+                              {req.status !== 'Completed' && (
                                 <>
                                   <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
                                   <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
                                 </>
+                              )}
                               <ActionCell req={req} />
                             </div>
                           </td>
@@ -1164,6 +1169,12 @@ export function SuperAdminRequests() {
                           <div>
                             <p className="text-[9px] text-emerald-500 uppercase font-bold tracking-wide">Notes</p>
                             <p className="text-emerald-700">{req.paymentNotes}</p>
+                          </div>
+                        )}
+                        {req.paidByName && (
+                          <div>
+                            <p className="text-[9px] text-emerald-500 uppercase font-bold tracking-wide">Completed By</p>
+                            <p className="font-bold text-emerald-800">{req.paidByName}</p>
                           </div>
                         )}
                       </div>

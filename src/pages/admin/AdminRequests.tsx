@@ -28,7 +28,7 @@ export function AdminRequests() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   
   // States
-  const [activeTab, setActiveTab] = useState<'admin' | 'employee'>('admin');
+  const [activeTab, setActiveTab] = useState<'all' | 'employee' | 'admin' | 'mine'>('all');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -41,6 +41,24 @@ export function AdminRequests() {
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pay modal states
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [payFormErrors, setPayFormErrors] = useState<Record<string, string>>({});
+  const [payFormData, setPayFormData] = useState({
+    amountSpent: '',
+    paymentMethod: 'Credit Card',
+    purchaseDate: new Date().toISOString().split('T')[0],
+    paymentNotes: ''
+  });
+
+  // Start Processing modal states
+  const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
+  const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState(new Date().toISOString().split('T')[0]);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
 
   const activeFilterCount = (sortConfig ? 1 : 0) + (scopeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
 
@@ -227,6 +245,75 @@ export function AdminRequests() {
     }
   };
 
+  const handleOpenPurchaseModal = (req: Request) => {
+    setSelectedRequest(req);
+    setPayFormData({ amountSpent: '', paymentMethod: 'Credit Card', purchaseDate: new Date().toISOString().split('T')[0], paymentNotes: '' });
+    setBillImageFile(null);
+    setPayFormErrors({});
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleBillImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('error', 'Image must be under 5 MB.', 'File Too Large');
+      return;
+    }
+    setBillImageFile(file);
+  };
+
+  const handleClearBillImage = () => {
+    setBillImageFile(null);
+  };
+
+  const handlePurchaseSubmit = async () => {
+    if (!selectedRequest || !payFormData.amountSpent) {
+      showToast('error', 'Please enter an amount.', 'Missing Information');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await RequestService.verifyRequest(selectedRequest.id, {
+        amountSpent: parseFloat(payFormData.amountSpent),
+        paymentMethod: payFormData.paymentMethod,
+        purchaseDate: payFormData.purchaseDate,
+        paymentNotes: payFormData.paymentNotes || undefined
+      }, billImageFile || undefined);
+      setIsPurchaseModalOpen(false);
+      showToast('success', 'Purchase recorded successfully.', 'Success');
+      await loadData();
+    } catch (error: any) {
+      const msg = error?.message || 'Could not record purchase. Please try again.';
+      showToast('error', msg, 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenStartProcessing = (req: Request) => {
+    setStartProcessingRequest(req);
+    setExpectedCompletionDate(new Date().toISOString().split('T')[0]);
+    setIsStartProcessingModalOpen(true);
+  };
+
+  const handleStartProcessing = async () => {
+    if (!startProcessingRequest) return;
+    const req = startProcessingRequest;
+    setIsStartProcessingModalOpen(false);
+    setValidatingId(req.id);
+    try {
+      await RequestService.validateRequest(req.id, undefined, expectedCompletionDate);
+      showToast('success', `"${req.item}" moved to In Progress.`, 'Status Updated');
+      await loadData();
+    } catch {
+      showToast('error', 'Could not update request status.', 'Error');
+    } finally {
+      setValidatingId(null);
+      setStartProcessingRequest(null);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -274,8 +361,12 @@ export function AdminRequests() {
   };
 
   const searchedAndFiltered = requests.filter(req => {
-    const matchesTab = activeTab === 'employee' ? req.requesterRole === 'employee' : (req.requesterRole === 'admin' || req.requesterRole === 'superadmin');
-    const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesTab =
+      activeTab === 'all' ? true :
+      activeTab === 'employee' ? req.requesterRole === 'employee' :
+      activeTab === 'admin' ? (req.requesterRole === 'admin' || req.requesterRole === 'superadmin') :
+      req.requesterId === user?.id;
+    const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesScope = scopeFilter === 'all' || req.scope === scopeFilter;
@@ -361,7 +452,7 @@ export function AdminRequests() {
             </p>
           </div>
 
-          {activeTab === 'admin' && (
+          {activeTab !== 'employee' && (
             <Button
               onClick={handleOpenModal}
               className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2"
@@ -372,33 +463,28 @@ export function AdminRequests() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit mb-2">
-          <button
-            onClick={() => { setActiveTab('admin'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'admin' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            My Requests
-            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-              activeTab === 'admin' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
-            }`}>
-              {requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length}
-            </span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('employee'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'employee' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Employee Requests
-            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-              activeTab === 'employee' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
-            }`}>
-              {requests.filter(r => r.requesterRole === 'employee').length}
-            </span>
-          </button>
+        <div className="-mx-4 px-4 overflow-x-auto border-b border-slate-200">
+          <div className="flex min-w-max">
+            {([
+              { key: 'all' as const,      label: 'All',              count: requests.length },
+              { key: 'employee' as const, label: 'Employee request',  count: requests.filter(r => r.requesterRole === 'employee').length },
+              { key: 'admin' as const,    label: 'Admin request',     count: requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length },
+              { key: 'mine' as const,     label: 'My Requests',       count: requests.filter(r => r.requesterId === user?.id).length },
+            ]).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { setActiveTab(tab.key); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
+                className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+                  activeTab === tab.key ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {tab.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === tab.key ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-100 text-slate-400'
+                }`}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Filter and Search Bar */}
@@ -673,17 +759,30 @@ export function AdminRequests() {
                             <div className="text-right text-[11px]">
                               <span className="font-semibold text-slate-400">Spent:</span>{' '}
                               <span className="font-extrabold text-emerald-700 text-xs">${req.amountSpent?.toFixed(2)}</span>
+                              {req.paidByName && (
+                                <p className="text-[10px] text-slate-400 mt-0.5">Completed by: <span className="font-semibold text-slate-600">{req.paidByName}</span></p>
+                              )}
                             </div>
                           )}
                           {req.status === 'Pending' && (
-                            <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 whitespace-nowrap">
-                              Pending Approval
-                            </span>
+                            <button
+                              onClick={() => handleOpenStartProcessing(req)}
+                              disabled={validatingId === req.id}
+                              className="text-[11px] text-[#0F2D52] font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1 hover:bg-[#0F2D52] hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {validatingId === req.id
+                                ? <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 w-2.5 inline-block" />
+                                : <ArrowRight className="w-3 h-3" />}
+                              Processing
+                            </button>
                           )}
                           {req.status === 'In Progress' && (
-                            <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
-                              <ArrowRight className="w-3 h-3" /> In Progress
-                            </span>
+                            <button
+                              onClick={() => handleOpenPurchaseModal(req)}
+                              className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-50/80 border border-emerald-100 rounded-lg px-2.5 py-1 hover:bg-emerald-100 transition-colors"
+                            >
+                              <CheckCircle2 className="w-3 h-3" /> Record Purchase
+                            </button>
                           )}
                         </div>
                       </div>
@@ -803,15 +902,36 @@ export function AdminRequests() {
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount Spent</p>
                             <span className="font-extrabold text-emerald-700">${req.amountSpent.toFixed(2)}</span>
                             {req.paymentMethod && <p className="text-[10px] text-slate-400 mt-0.5">{req.paymentMethod}</p>}
+                            {req.paidByName && <p className="text-[10px] text-slate-400 mt-0.5">Completed by: {req.paidByName}</p>}
                           </div>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
                       <td className="px-2 py-3.5">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3" /></Button>
                           <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>
+                          {req.status === 'Pending' && (
+                            <button
+                              onClick={() => handleOpenStartProcessing(req)}
+                              disabled={validatingId === req.id}
+                              className="h-7 px-2 rounded-lg text-xs border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold flex items-center gap-1 transition-colors whitespace-nowrap disabled:opacity-50"
+                            >
+                              {validatingId === req.id
+                                ? <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 w-2.5 inline-block" />
+                                : <ArrowRight className="w-3 h-3" />}
+                              Processing
+                            </button>
+                          )}
+                          {req.status === 'In Progress' && (
+                            <button
+                              onClick={() => handleOpenPurchaseModal(req)}
+                              className="h-7 px-2 rounded-lg text-xs text-emerald-600 font-semibold border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 transition-colors whitespace-nowrap"
+                            >
+                              <CheckCircle2 className="w-3 h-3" /> Record Purchase
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1158,6 +1278,181 @@ export function AdminRequests() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase Modal */}
+      <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">Record Purchase</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600">
+              {selectedRequest?.item && `Complete the purchase for: ${selectedRequest.item}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Amount Spent */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Amount Spent <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={payFormData.amountSpent}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, amountSpent: e.target.value }))}
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Payment Method <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={payFormData.paymentMethod}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              >
+                <option>Credit Card</option>
+                <option>Debit Card</option>
+                <option>Cash</option>
+                <option>Check</option>
+                <option>Bank Transfer</option>
+              </select>
+            </div>
+
+            {/* Purchase Date */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Purchase Date
+              </label>
+              <input
+                type="date"
+                value={payFormData.purchaseDate}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              />
+            </div>
+
+            {/* Bill/Receipt Image Upload */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Bill / Receipt Image
+              </label>
+              {!billImageFile ? (
+                <label className="block relative w-full border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer hover:border-slate-400 transition-colors bg-slate-50/30">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBillImageChange}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center justify-center text-center gap-2">
+                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Upload bill/receipt</p>
+                      <p className="text-[10px] text-slate-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                  </div>
+                </label>
+              ) : (
+                <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
+                    <p className="text-[10px] text-slate-500">{(billImageFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearBillImage}
+                    className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Notes */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Payment Notes
+              </label>
+              <textarea
+                value={payFormData.paymentNotes}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, paymentNotes: e.target.value }))}
+                placeholder="Any additional notes about this purchase..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPurchaseModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePurchaseSubmit}
+              disabled={submitting || !payFormData.amountSpent}
+              className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Recording...' : 'Record Purchase'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Processing Modal */}
+      <Dialog open={isStartProcessingModalOpen} onOpenChange={setIsStartProcessingModalOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Processing
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Set the date this request is expected to be completed.
+            </DialogDescription>
+          </DialogHeader>
+          {startProcessingRequest && (
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1 my-2">
+              <p className="font-semibold text-slate-700">Item: <span className="font-extrabold text-slate-900">{startProcessingRequest.item}</span></p>
+              <p className="text-slate-500">Requested by: <span className="font-bold text-slate-700">{startProcessingRequest.requesterName}</span></p>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Expected Completion Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={expectedCompletionDate}
+              min={new Date().toISOString().split('T')[0]}
+              onChange={e => setExpectedCompletionDate(e.target.value)}
+              className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]"
+            />
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-50">
+            <Button type="button" variant="outline" onClick={() => setIsStartProcessingModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
+            <Button
+              onClick={handleStartProcessing}
+              disabled={!expectedCompletionDate}
+              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors">
+              <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
