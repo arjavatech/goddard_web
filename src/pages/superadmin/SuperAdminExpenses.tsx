@@ -133,7 +133,7 @@ export function SuperAdminExpenses() {
         schoolId: userData?.schoolId || '00000000-0000-0000-0000-000000000000',
         item: form.item.trim(),
         requesterName: form.requesterName.trim(),
-        requesterRole: 'superadmin',
+        requesterRole: (userData?.role ?? 'superadmin') as 'admin' | 'superadmin',
         scope: form.scope,
         category: form.category,
         quantity: parseInt(form.quantity) || 1,
