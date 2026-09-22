@@ -184,6 +184,9 @@ export function SuperAdminExpenses() {
     }
     setSaving(true);
     try {
+      const paidByName = userData
+        ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Admin'
+        : 'Admin';
       await RequestService.recordExpense({
         requestId: `manual-${Date.now()}`,
         schoolId: userData?.schoolId || '00000000-0000-0000-0000-000000000000',
@@ -202,6 +205,7 @@ export function SuperAdminExpenses() {
         paymentMethod: form.paymentMethod === 'Other' ? form.paymentMethodOther.trim() : form.paymentMethod,
         purchaseDate: form.purchaseDate,
         paymentNotes: form.paymentNotes || undefined,
+        paidByName,
       }, billImageFile ?? undefined);
       showToast('success', 'Expense added successfully.', 'Added');
       setShowAddModal(false);
