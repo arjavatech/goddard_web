@@ -218,6 +218,7 @@ export function DueForms() {
               
               mappedForms.push({
                 id: `${enrollment.enrollment_id}-${formName}`,
+                studentFormAssignmentId: formData.assignment_id || '',
                 formName,
                 studentName: `${enrollment.child_first_name} ${enrollment.child_last_name}`,
                 classroomName: enrollment.class_name || 'Unassigned',
@@ -1076,10 +1077,10 @@ export function DueForms() {
               // Refresh the list after successful upload
               setIsManualUploadOpen(false);
               setSelectedFormForUpload(null);
-              showToast('PDF uploaded successfully', 'success');
+              showToast('success', 'PDF uploaded successfully');
               setRefreshKey(k => k + 1);
             }}
-            assignmentId={selectedFormForUpload.id}
+            assignmentId={selectedFormForUpload.studentFormAssignmentId}
             schoolId={schoolId || ''}
             studentName={selectedFormForUpload.studentName}
             uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}

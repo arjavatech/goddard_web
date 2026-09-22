@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileText, AlertCircle } from 'lucide-react';
 import { Document, Page } from 'react-pdf';
 import { fetchWithTokenRefresh } from '@/services/auth/apiInterceptor';
@@ -15,6 +16,7 @@ interface ManualUploadModalProps {
   studentName: string;
   uploadedBy: string;
   formType: 'student' | 'employee';
+  isReplacing?: boolean;
 }
 
 export function ManualUploadModal({
@@ -25,7 +27,8 @@ export function ManualUploadModal({
   schoolId,
   studentName,
   uploadedBy,
-  formType
+  formType,
+  isReplacing = false
 }: ManualUploadModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,6 +37,7 @@ export function ManualUploadModal({
   const [currentPage, setCurrentPage] = useState(1);
   const [contentHeight, setContentHeight] = useState<number | null>(null);
   const [pdfWidth, setPdfWidth] = useState<number>(384);
+  const [reason, setReason] = useState('');
   const pageContainerRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
 
@@ -131,11 +135,29 @@ export function ManualUploadModal({
       clearTimeout(timer);
       window.removeEventListener('resize', handleResize);
     };
+    // Reset form when modal closes
+    return () => {
+      if (!isOpen) {
+        setFile(null);
+        setReason('');
+        setError(null);
+        setCurrentPage(1);
+      }
+    };
   }, [isOpen]);
+
+  // Validate UUID format at render time
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isInvalidAssignmentId = !UUID_REGEX.test(assignmentId);
 
   const handleUpload = async () => {
     if (!file) {
       setError('Please select a PDF file');
+      return;
+    }
+
+    if (isReplacing && !reason.trim()) {
+      setError('Please provide a reason for replacing the PDF');
       return;
     }
 
@@ -150,6 +172,9 @@ export function ManualUploadModal({
       const formData = new FormData();
       formData.append('file', file);
       formData.append('uploaded_by', uploadedBy);
+      if (isReplacing && reason.trim()) {
+        formData.append('reason', reason);
+      }
 
       const response = await fetchWithTokenRefresh(`${apiBaseUrl}${endpoint}`, {
         method: 'POST',
@@ -182,6 +207,20 @@ export function ManualUploadModal({
             <p><strong>Student/Employee:</strong> <span className="lg:text-gray-900">{studentName}</span></p>
             <p><strong>Uploader:</strong> <span className="lg:text-gray-900">{uploadedBy}</span></p>
           </div>
+
+          {isReplacing && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Reason for Replacement <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                placeholder="Please provide a reason for replacing the PDF..."
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="min-h-[70px] text-sm"
+              />
+            </div>
+          )}
 
           {!file ? (
             <div
@@ -271,17 +310,25 @@ export function ManualUploadModal({
           )}
         </div>
 
-        <DialogFooter className="shrink-0 lg:flex-row lg:justify-end lg:gap-3">
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
-            Cancel
-          </Button>
-          <Button
-            onClick={handleUpload}
-            disabled={!file || isUploading}
-            className="bg-[#0F2D52] hover:bg-[#1E4B83] text-white"
-          >
-            {isUploading ? 'Uploading...' : 'Confirm & Submit for Review'}
-          </Button>
+        <DialogFooter className="shrink-0 lg:flex-col lg:gap-3">
+          {isInvalidAssignmentId && (
+            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800 w-full">
+              <AlertCircle size={16} className="flex-shrink-0" />
+              <span className="text-xs">Form assignment ID is missing. Please refresh the page and try again.</span>
+            </div>
+          )}
+          <div className="flex lg:flex-row gap-3 lg:justify-end w-full">
+            <Button variant="outline" onClick={onClose} disabled={isUploading}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpload}
+              disabled={!file || isUploading || (isReplacing && !reason.trim()) || isInvalidAssignmentId}
+              className="bg-[#0F2D52] hover:bg-[#1E4B83] text-white"
+            >
+              {isUploading ? 'Uploading...' : 'Confirm & Submit for Review'}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

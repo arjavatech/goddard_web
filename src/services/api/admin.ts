@@ -821,6 +821,36 @@ export async function reviewStudentFormAssignment(
   }
 }
 
+export async function revokeStudentFormAssignment(
+  assignmentId: string,
+  notes: string,
+  revokedBy: string,
+  targetStatus: 'in_progress' | 'rejected' = 'in_progress'
+): Promise<void> {
+  const requestBody = {
+    assignment_id: assignmentId,
+    notes,
+    revoked_by: revokedBy,
+    target_status: targetStatus
+  };
+
+  const responseSchema = z.object({
+    success: z.boolean().optional(),
+    message: z.string().optional()
+  }).passthrough();
+
+  try {
+    await authedFetch({
+      method: 'PUT',
+      url: '/student-form-assignments/revoke',
+      body: requestBody
+    }, responseSchema);
+  } catch (error) {
+    console.error('Error revoking form assignment:', error);
+    throw new Error('Failed to revoke form assignment');
+  }
+}
+
 export type DashboardMetrics = {
   schoolId: string;
   totalClassrooms: number;
@@ -1223,6 +1253,7 @@ export async function downloadAllForms(enrollmentId: string): Promise<void> {
 
 export type DueForm = {
   id: string;
+  studentFormAssignmentId: string;
   formName: string;
   studentName: string;
   classroomName: string;
@@ -1336,7 +1367,8 @@ export async function fetchDueForms(schoolId: string): Promise<DueForm[]> {
             const combinedParentEmail = parentEmails.join(', ');
 
             dueFormsMap.set(formKey, {
-              id: form.studentFormAssignmentId || formKey,
+              id: formKey,
+              studentFormAssignmentId: form.studentFormAssignmentId || '',
               formName: form.formName,
               studentName: child.childFullName,
               parentName: combinedParentName,
