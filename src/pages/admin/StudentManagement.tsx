@@ -149,12 +149,20 @@ export function StudentManagement() {
 
   const schoolId = localStorage.getItem('schoolId');
 
-  const handleDownloadAllForms = async (enrollmentId: string) => {
+  const handleDownloadAllForms = async (enrollmentId: string, event?: React.MouseEvent) => {
     if (!enrollmentId) return;
+    
+    // Prevent dropdown from closing
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    
     setDownloadingEnrollmentId(enrollmentId);
     try {
       const { downloadAllForms } = await import('../../services/api/admin');
       await downloadAllForms(enrollmentId);
+      showToast('success', 'Forms downloaded successfully!');
     } catch (err) {
       console.error('Download failed:', err);
       showToast('error', 'Failed to download forms. Please try again.');
@@ -682,12 +690,16 @@ export function StudentManagement() {
             {student.enrollmentId && (
               <DropdownMenuItem
                 disabled={downloadingEnrollmentId === student.enrollmentId}
-                onClick={() => handleDownloadAllForms(student.enrollmentId!)}
+                onClick={(e) => handleDownloadAllForms(student.enrollmentId!, e as any)}
+                className={downloadingEnrollmentId === student.enrollmentId ? 'opacity-70' : ''}
               >
                 {downloadingEnrollmentId === student.enrollmentId
-                  ? <span className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-amazon-teal border-t-transparent inline-block" />
+                  ? <svg className="h-4 w-4 mr-2 animate-spin text-[#0F2D52]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
                   : <Download className="h-4 w-4 mr-2" />}
-                Download All Forms
+                {downloadingEnrollmentId === student.enrollmentId ? 'Downloading…' : 'Download All Forms'}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -1176,8 +1188,14 @@ export function StudentManagement() {
                               <School className="h-4 w-4 mr-2 text-slate-400" />Transfer Classroom
                             </DropdownMenuItem>
                             {student.enrollmentId && (
-                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={() => handleDownloadAllForms(student.enrollmentId!)}>
-                                <Download className="h-4 w-4 mr-2 text-slate-400" />Download All Forms
+                              <DropdownMenuItem className="cursor-pointer font-semibold text-xs text-[#0F2D52]" disabled={downloadingEnrollmentId === student.enrollmentId} onClick={(e) => handleDownloadAllForms(student.enrollmentId!, e as any)} style={{opacity: downloadingEnrollmentId === student.enrollmentId ? 0.7 : 1}}>
+                                {downloadingEnrollmentId === student.enrollmentId
+                                  ? <svg className="h-4 w-4 mr-2 animate-spin text-[#0F2D52]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                  : <Download className="h-4 w-4 mr-2 text-slate-400" />}
+                                {downloadingEnrollmentId === student.enrollmentId ? 'Downloading…' : 'Download All Forms'}
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

@@ -30,6 +30,8 @@ export type Request = {
   purchaseDate?: string;
   paymentNotes?: string;
   billImageUrl?: string;
+  paidByUserId?: string;
+  paidByName?: string;
 };
 
 export type PaymentDetails = {
@@ -49,13 +51,18 @@ export type ExpenseRecord = {
   scope: RequestScope;
   category?: string;
   quantity: number;
+  location?: string;
   classroomName?: string;
   teacherName?: string;
+  productLink?: string;
+  notes?: string;
   amountSpent: number;
   paymentMethod: string;
   purchaseDate: string;
   paymentNotes?: string;
+  billImageUrl?: string;
   recordedAt: string;
+  paidByName?: string;
 };
 
 export type ExpenseSummary = {
@@ -109,6 +116,8 @@ function mapRequest(r: any): Request {
     purchaseDate: r.purchase_date ?? undefined,
     paymentNotes: r.payment_notes ?? undefined,
     billImageUrl: r.bill_image ?? undefined,
+    paidByUserId: r.paid_by_user_id ?? undefined,
+    paidByName: r.paid_by_name ?? undefined,
   };
 }
 
@@ -123,13 +132,18 @@ function mapExpenseRecord(r: any): ExpenseRecord {
     scope: (r.scope ?? 'school') as RequestScope,
     category: r.category ?? undefined,
     quantity: r.quantity ?? 1,
+    location: r.location ?? undefined,
     classroomName: r.classroom_name ?? undefined,
     teacherName: r.teacher_name ?? undefined,
+    productLink: r.product_link ?? undefined,
+    notes: r.notes ?? undefined,
     amountSpent: r.amount_spent ?? 0,
     paymentMethod: r.payment_method ?? '',
     purchaseDate: r.purchase_date ?? r.created_at?.slice(0, 10) ?? '',
     paymentNotes: r.payment_notes ?? undefined,
+    billImageUrl: r.bill_image ?? undefined,
     recordedAt: r.created_at ?? new Date().toISOString(),
+    paidByName: r.paid_by_name ?? undefined,
   };
 }
 
@@ -327,8 +341,26 @@ export const RequestService = {
     return mapRequest(data);
   },
 
-  /** POST /expenses — manual expense entry (superadmin) */
-  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>): Promise<ExpenseRecord> {
+  /** POST /expenses — manual expense entry with full fields */
+  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>, billImageFile?: File): Promise<ExpenseRecord> {
+    let billImageBase64: string | undefined;
+    let billImageName: string | undefined;
+    let billImageContentType: string | undefined;
+
+    if (billImageFile) {
+      billImageBase64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          resolve(result.split(',')[1]); // strip "data:image/...;base64," prefix
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(billImageFile);
+      });
+      billImageName = billImageFile.name;
+      billImageContentType = billImageFile.type;
+    }
+
     const data = await authedFetch(
       {
         method: 'POST',
@@ -341,12 +373,18 @@ export const RequestService = {
           quantity:      Number(details.quantity),
           category:      details.category,
           scope:         details.scope,
+          location:      details.location,
           classroomName: details.classroomName,
           teacherName:   details.teacherName,
+          productLink:   details.productLink,
+          notes:         details.notes,
           amountSpent:   details.amountSpent,
           paymentMethod: details.paymentMethod,
           purchaseDate:  details.purchaseDate,
           paymentNotes:  details.paymentNotes,
+          billImageBase64,
+          billImageName,
+          billImageContentType,
         },
       },
       z.any()

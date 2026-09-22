@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Pagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { RequestService, type Request, type RequestExpenseData } from '../../services/api/requests';
+import { fetchRequestSettings } from '../../services/api/settings';
 import { useToast } from '../../contexts/ToastContext';
 import { useUserContext } from '../../contexts/UserContext';
 import {
@@ -16,7 +17,7 @@ import {
 import {
   DollarSign, ShoppingBag, Clock, Play, CheckCircle2,
   TrendingUp, RefreshCw, Layers, Users, School,
-  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter
+  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter, ImageIcon
 } from 'lucide-react';
 import { SuperAdminLayout } from './SuperAdminLayout';
 import { AdminLayout } from '../admin/AdminLayout';
@@ -58,8 +59,7 @@ function StatCard({
   );
 }
 
-const CATEGORIES = ['Classroom Supplies', 'STEM & Toys', 'Books & Learning', 'Office & Equipment', 'Play & Outdoor', 'Health & Safety', 'Other'];
-const PAYMENT_METHODS = ['Credit Card','Debit Card',  'Cash', 'Check', 'Bank Transfer'];
+const PAYMENT_METHODS = ['Credit Card', 'Debit Card', 'Cash', 'Check', 'Bank Transfer', 'Other'];
 const SCOPES = ['classroom', 'teacher', 'school'] as const;
 
 type AddExpenseForm = {
@@ -70,8 +70,12 @@ type AddExpenseForm = {
   teacherName: string;
   category: string;
   quantity: string;
+  location: string;
+  productLink: string;
+  notes: string;
   amountSpent: string;
   paymentMethod: string;
+  paymentMethodOther: string;
   purchaseDate: string;
   paymentNotes: string;
 };
@@ -79,7 +83,8 @@ type AddExpenseForm = {
 const EMPTY_FORM: AddExpenseForm = {
   item: '', requesterName: '', scope: 'school',
   classroomName: '', teacherName: '', category: 'Classroom Supplies',
-  quantity: '1', amountSpent: '', paymentMethod: 'Credit Card',
+  quantity: '1', location: '', productLink: '', notes: '',
+  amountSpent: '', paymentMethod: 'Credit Card', paymentMethodOther: '',
   purchaseDate: new Date().toISOString().slice(0, 10), paymentNotes: ''
 };
 
@@ -92,6 +97,10 @@ export function SuperAdminExpenses() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState<AddExpenseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
+  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [locationOptions, setLocationOptions] = useState<string[]>([]);
+  const [step, setStep] = useState<1 | 2>(1);
   const [ledgerView, setLedgerView] = useState<'cards' | 'table'>('table');
   const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
   const [recordsPerPage, setRecordsPerPage] = useState(10);
@@ -106,12 +115,15 @@ export function SuperAdminExpenses() {
     if (!userData?.schoolId) return;
     setLoading(true);
     try {
-      const [reqList, data] = await Promise.all([
+      const [reqList, data, requestSettings] = await Promise.all([
         RequestService.fetchRequests(userData.schoolId),
-        RequestService.fetchExpenseData(userData.schoolId)
+        RequestService.fetchExpenseData(userData.schoolId),
+        fetchRequestSettings(userData.schoolId)
       ]);
       setRequests(reqList);
       setExpenseData(data);
+      setCategories(requestSettings.requestCategories.map(item => item.label));
+      setLocationOptions(requestSettings.location.map(item => item.label));
     } catch {
       showToast('error', 'Failed to load expense metrics.', 'Error');
     } finally {
@@ -121,9 +133,22 @@ export function SuperAdminExpenses() {
 
   useEffect(() => { loadData(); }, [userData?.schoolId]);
 
+  const handleOpenModal = () => {
+    const currentUserName = userData
+      ? `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || userData.email || 'Admin User'
+      : 'Admin User';
+    setForm({ ...EMPTY_FORM, requesterName: currentUserName });
+    setShowAddModal(true);
+    setStep(1);
+  };
+
   const handleAddExpense = async () => {
     if (!form.item.trim() || !form.amountSpent || !form.requesterName.trim()) {
       showToast('error', 'Item, requester name, and amount are required.', 'Validation');
+      return;
+    }
+    if (form.paymentMethod === 'Other' && !form.paymentMethodOther.trim()) {
+      showToast('error', 'Please specify a payment method.', 'Validation');
       return;
     }
     setSaving(true);
@@ -137,16 +162,21 @@ export function SuperAdminExpenses() {
         scope: form.scope,
         category: form.category,
         quantity: parseInt(form.quantity) || 1,
+        location: form.location || undefined,
+        productLink: form.productLink || undefined,
+        notes: form.notes || undefined,
         classroomName: form.scope === 'classroom' ? form.classroomName : undefined,
         teacherName: form.scope === 'teacher' ? form.teacherName : undefined,
         amountSpent: parseFloat(form.amountSpent),
-        paymentMethod: form.paymentMethod,
+        paymentMethod: form.paymentMethod === 'Other' ? form.paymentMethodOther.trim() : form.paymentMethod,
         purchaseDate: form.purchaseDate,
         paymentNotes: form.paymentNotes || undefined,
-      });
+      }, billImageFile ?? undefined);
       showToast('success', 'Expense added successfully.', 'Added');
       setShowAddModal(false);
       setForm(EMPTY_FORM);
+      setBillImageFile(null);
+      setStep(1);
       await loadData();
     } catch {
       showToast('error', 'Failed to add expense.', 'Error');
@@ -233,7 +263,7 @@ export function SuperAdminExpenses() {
           <div className="flex items-center gap-2 self-start sm:self-auto">
             {userData?.role !== 'admin' && (
               <Button
-                onClick={() => setShowAddModal(true)}
+                onClick={handleOpenModal}
                 className="h-9 px-4 rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white text-xs font-semibold gap-2"
               >
                 <Plus className="h-3.5 w-3.5" /> Add Expense
@@ -509,6 +539,12 @@ export function SuperAdminExpenses() {
                           <div><p className="text-slate-400">Target</p><p className="font-medium text-slate-700 truncate">{expense.scope === 'classroom' ? expense.classroomName : expense.scope === 'teacher' ? expense.teacherName : 'Entire School'}</p></div>
                           <div><p className="text-slate-400">Payment</p><p className="font-medium text-slate-700 truncate">{expense.paymentMethod}</p></div>
                           <div><p className="text-slate-400">Purchase date</p><p className="font-medium text-slate-700">{expense.purchaseDate}</p></div>
+                          {expense.paidByName && (
+                            <div className="col-span-2">
+                              <p className="text-slate-400">Completed By</p>
+                              <p className="font-medium text-slate-700 truncate">{expense.paidByName}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -517,7 +553,7 @@ export function SuperAdminExpenses() {
                   <table className="w-full text-xs text-left">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/60">
-                        {['Item', 'Requester', 'Scope / Target', 'Payment', 'Date', 'Amount'].map(h => (
+                        {['Item', 'Requester', 'Scope / Target', 'Payment', 'Date', 'Completed By', 'Amount'].map(h => (
                           <th key={h} className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap last:text-right">
                             {h}
                           </th>
@@ -542,6 +578,7 @@ export function SuperAdminExpenses() {
                           </td>
                           <td className="px-5 py-3.5 font-medium text-slate-600">{req.paymentMethod}</td>
                           <td className="px-5 py-3.5 text-slate-500">{req.purchaseDate}</td>
+                          <td className="px-5 py-3.5 text-slate-500">{req.paidByName || <span className="text-slate-300">—</span>}</td>
                           <td className="px-5 py-3.5 text-right">
                             <span className="font-bold text-emerald-700 text-sm">${req.amountSpent?.toFixed(2)}</span>
                           </td>
@@ -572,91 +609,217 @@ export function SuperAdminExpenses() {
             <DialogTitle className="text-base font-bold text-slate-900">Add New Expense</DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-3 py-1">
-            {/* Item & Requester */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Item *</label>
-                <Input value={form.item} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} placeholder="e.g. Crayola Crayons" className="mt-1 h-9 text-sm" />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Requester Name *</label>
-                <Input value={form.requesterName} onChange={e => setForm(f => ({ ...f, requesterName: e.target.value }))} placeholder="Full name" className="mt-1 h-9 text-sm" />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Quantity</label>
-                <Input type="number" min={1} value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="mt-1 h-9 text-sm" />
-              </div>
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className={`flex items-center gap-1.5 text-xs font-semibold ${step === 1 ? 'text-[#0F2D52]' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 1 ? 'bg-[#0F2D52] text-white' : 'bg-slate-200 text-slate-500'}`}>1</span>
+              Request Details
             </div>
-
-            {/* Scope */}
-            <div>
-              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Scope</label>
-              <div className="flex gap-2 mt-1">
-                {SCOPES.map(s => (
-                  <button key={s} onClick={() => setForm(f => ({ ...f, scope: s }))}
-                    className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      form.scope === s ? 'bg-[#0F2D52] text-white border-[#0F2D52]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
-                    }`}>
-                    {s === 'classroom' ? 'Classroom' : s === 'teacher' ? 'Teacher' : 'School-wide'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {form.scope === 'classroom' && (
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Classroom Name</label>
-                <Input value={form.classroomName} onChange={e => setForm(f => ({ ...f, classroomName: e.target.value }))} placeholder="e.g. Preschool A" className="mt-1 h-9 text-sm" />
-              </div>
-            )}
-            {form.scope === 'teacher' && (
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Teacher Name</label>
-                <Input value={form.teacherName} onChange={e => setForm(f => ({ ...f, teacherName: e.target.value }))} placeholder="e.g. Sarah Jenkins" className="mt-1 h-9 text-sm" />
-              </div>
-            )}
-
-            {/* Category & Payment */}
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Category</label>
-                <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-                  className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20">
-                  {CATEGORIES.map(c => <option key={c}>{c}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Payment Method</label>
-                <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}
-                  className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20">
-                  {PAYMENT_METHODS.map(p => <option key={p}>{p}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amount Spent ($) *</label>
-                <Input type="number" min={0} step={0.01} value={form.amountSpent} onChange={e => setForm(f => ({ ...f, amountSpent: e.target.value }))} placeholder="0.00" className="mt-1 h-9 text-sm" />
-              </div>
-              <div>
-                <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Purchase Date</label>
-                <Input type="date" value={form.purchaseDate} onChange={e => setForm(f => ({ ...f, purchaseDate: e.target.value }))} className="mt-1 h-9 text-sm" />
-              </div>
-            </div>
-
-            <div>
-              <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Notes (optional)</label>
-              <Input value={form.paymentNotes} onChange={e => setForm(f => ({ ...f, paymentNotes: e.target.value }))} placeholder="Receipt info, PO number, etc." className="mt-1 h-9 text-sm" />
+            <div className="w-12 h-px bg-slate-200" />
+            <div className={`flex items-center gap-1.5 text-xs font-semibold ${step === 2 ? 'text-[#0F2D52]' : 'text-slate-400'}`}>
+              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === 2 ? 'bg-[#0F2D52] text-white' : 'bg-slate-200 text-slate-500'}`}>2</span>
+              Payment
             </div>
           </div>
 
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => { setShowAddModal(false); setForm(EMPTY_FORM); }} disabled={saving} className="rounded-xl">
-              Cancel
-            </Button>
-            <Button onClick={handleAddExpense} disabled={saving} className="rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white">
-              {saving ? 'Saving…' : 'Add Expense'}
-            </Button>
-          </DialogFooter>
+          <div className="space-y-3 py-1">
+            {/* STEP 1: Request Details */}
+            {step === 1 && (
+              <>
+                {/* Item & Product Link */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Item *</label>
+                  <Input value={form.item} onChange={e => setForm(f => ({ ...f, item: e.target.value }))} placeholder="e.g. Crayola Crayons" className="mt-1 h-9 text-sm" />
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Product Link (optional)</label>
+                  <Input value={form.productLink} onChange={e => setForm(f => ({ ...f, productLink: e.target.value }))} placeholder="https://example.com/product" className="mt-1 h-9 text-sm" />
+                </div>
+
+                {/* Quantity */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Quantity</label>
+                  <Input type="number" min={1} value={form.quantity} onChange={e => setForm(f => ({ ...f, quantity: e.target.value }))} className="mt-1 h-9 text-sm" />
+                </div>
+
+                {/* Scope */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Scope</label>
+                  <div className="flex gap-2 mt-1">
+                    {SCOPES.map(s => (
+                      <button key={s} onClick={() => setForm(f => ({ ...f, scope: s }))}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                          form.scope === s ? 'bg-[#0F2D52] text-white border-[#0F2D52]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                        }`}>
+                        {s === 'classroom' ? 'Classroom' : s === 'teacher' ? 'Teacher' : 'School-wide'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {form.scope === 'classroom' && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Classroom Name</label>
+                    <Input value={form.classroomName} onChange={e => setForm(f => ({ ...f, classroomName: e.target.value }))} placeholder="e.g. Preschool A" className="mt-1 h-9 text-sm" />
+                  </div>
+                )}
+                {form.scope === 'teacher' && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Teacher Name</label>
+                    <Input value={form.teacherName} onChange={e => setForm(f => ({ ...f, teacherName: e.target.value }))} placeholder="e.g. Sarah Jenkins" className="mt-1 h-9 text-sm" />
+                  </div>
+                )}
+
+                {/* Location & Notes */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Location (optional)</label>
+                  <select value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20">
+                    <option value="">Select location</option>
+                    {locationOptions.map(loc => <option key={loc}>{loc}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Notes (optional)</label>
+                  <Input value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Item details, specifications, etc." className="mt-1 h-9 text-sm" />
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Category</label>
+                  <select value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20">
+                    <option value="">Select category</option>
+                    {categories.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </>
+            )}
+
+            {/* STEP 2: Payment */}
+            {step === 2 && (
+              <>
+                {/* Payment Method */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Payment Method</label>
+                  <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value, paymentMethodOther: '' }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20">
+                    {PAYMENT_METHODS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                  {form.paymentMethod === 'Other' && (
+                    <Input
+                      value={form.paymentMethodOther}
+                      onChange={e => setForm(f => ({ ...f, paymentMethodOther: e.target.value }))}
+                      placeholder="Specify payment method"
+                      className="mt-2 h-9 text-sm"
+                    />
+                  )}
+                </div>
+
+                {/* Amount & Purchase Date */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amount Spent ($) *</label>
+                    <Input type="number" min={0} step={0.01} value={form.amountSpent} onChange={e => setForm(f => ({ ...f, amountSpent: e.target.value }))} placeholder="0.00" className="mt-1 h-9 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Purchase Date</label>
+                    <Input type="date" value={form.purchaseDate} onChange={e => setForm(f => ({ ...f, purchaseDate: e.target.value }))} className="mt-1 h-9 text-sm" />
+                  </div>
+                </div>
+
+                {/* Payment Notes */}
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Payment Notes (optional)</label>
+                  <Input value={form.paymentNotes} onChange={e => setForm(f => ({ ...f, paymentNotes: e.target.value }))} placeholder="Receipt info, PO number, etc." className="mt-1 h-9 text-sm" />
+                </div>
+
+                {/* Bill Image Upload — Requests-style dashed zone */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bill Image (optional)</label>
+                  {billImageFile ? (
+                    <div className="flex items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50">
+                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-100 bg-white flex-shrink-0">
+                        {billImageFile.type.startsWith('image/') ? (
+                          <img
+                            src={URL.createObjectURL(billImageFile)}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-slate-100">
+                            <ImageIcon className="w-6 h-6 text-slate-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{(billImageFile.size / 1024).toFixed(0)} KB</p>
+                        <button
+                          type="button"
+                          onClick={() => setBillImageFile(null)}
+                          className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                      <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
+                      <span className="text-xs text-slate-400 font-medium">Click to upload bill</span>
+                      <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, PDF up to 2MB</span>
+                      <input
+                        type="file"
+                        accept="image/*,application/pdf"
+                        onChange={e => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          if (file.size > 2 * 1024 * 1024) {
+                            showToast('error', 'Image must be under 2 MB.', 'File Too Large');
+                            return;
+                          }
+                          setBillImageFile(file);
+                        }}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Validation flags */}
+          {(() => {
+            const step1Valid = form.item.trim().length > 0;
+            const step2Valid = parseFloat(form.amountSpent) > 0 && (form.paymentMethod !== 'Other' || form.paymentMethodOther.trim().length > 0);
+
+            return (
+              <DialogFooter className="gap-2">
+                {step === 1 ? (
+                  <>
+                    <Button variant="outline" onClick={() => { setShowAddModal(false); setForm(EMPTY_FORM); setBillImageFile(null); setStep(1); }} disabled={saving} className="rounded-xl">
+                      Cancel
+                    </Button>
+                    <Button onClick={() => setStep(2)} disabled={!step1Valid} className="rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                      Next →
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => setStep(1)} className="rounded-xl">
+                      ← Back
+                    </Button>
+                    <Button onClick={handleAddExpense} disabled={!step2Valid || saving} className="rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white disabled:opacity-50 disabled:cursor-not-allowed">
+                      {saving ? 'Saving…' : 'Add Expense'}
+                    </Button>
+                  </>
+                )}
+              </DialogFooter>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </AdminLayout>

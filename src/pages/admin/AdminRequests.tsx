@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Papa from 'papaparse';
 import { AdminLayout } from './AdminLayout';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { Pagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
@@ -11,10 +15,11 @@ import { RequestService, type Request, type RequestStatus } from '../../services
 import { fetchRequestSettings } from '../../services/api/settings';
 import { EmployeeService, type Employee } from '../../services/api/employee';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
+import { getTodayDateString, validateFutureDate } from '../../lib/utils';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
-  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap, CreditCard,
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2, AlertCircle, Download, Receipt, Package
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -28,7 +33,7 @@ export function AdminRequests() {
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
   
   // States
-  const [activeTab, setActiveTab] = useState<'admin' | 'employee'>('admin');
+  const [activeTab, setActiveTab] = useState<'all' | 'employee' | 'admin' | 'mine'>('all');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -36,11 +41,34 @@ export function AdminRequests() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [scopeFilter, setScopeFilter] = useState<string>('all');
   
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024 ? 'cards' : 'table';
+    }
+    return 'table';
+  });
   const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Pay modal states
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [payFormErrors, setPayFormErrors] = useState<Record<string, string>>({});
+  const [payFormData, setPayFormData] = useState({
+    amountSpent: '',
+    paymentMethod: 'Credit Card',
+    purchaseDate: new Date().toISOString().split('T')[0],
+    paymentNotes: ''
+  });
+
+  // Start Processing modal states
+  const [isStartProcessingModalOpen, setIsStartProcessingModalOpen] = useState(false);
+  const [startProcessingRequest, setStartProcessingRequest] = useState<Request | null>(null);
+  const [expectedCompletionDate, setExpectedCompletionDate] = useState(getTodayDateString());
+  const [dateError, setDateError] = useState<string | null>(null);
+  const [validatingId, setValidatingId] = useState<string | null>(null);
 
   const activeFilterCount = (sortConfig ? 1 : 0) + (scopeFilter !== 'all' ? 1 : 0) + (statusFilter !== 'all' ? 1 : 0);
 
@@ -48,7 +76,6 @@ export function AdminRequests() {
     setSortConfig(null);
     setScopeFilter('all');
     setStatusFilter('all');
-    setCurrentPage(1);
   };
 
   // Modal states
@@ -135,6 +162,14 @@ export function AdminRequests() {
   useEffect(() => {
     loadData();
   }, [userData?.schoolId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewMode(window.innerWidth < 1024 ? 'cards' : 'table');
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -227,6 +262,85 @@ export function AdminRequests() {
     }
   };
 
+  const handleOpenPurchaseModal = (req: Request) => {
+    setSelectedRequest(req);
+    setPayFormData({ amountSpent: '', paymentMethod: 'Credit Card', purchaseDate: new Date().toISOString().split('T')[0], paymentNotes: '' });
+    setBillImageFile(null);
+    setPayFormErrors({});
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handleBillImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('error', 'Image must be under 5 MB.', 'File Too Large');
+      return;
+    }
+    setBillImageFile(file);
+  };
+
+  const handleClearBillImage = () => {
+    setBillImageFile(null);
+  };
+
+  const handlePurchaseSubmit = async () => {
+    if (!selectedRequest || !payFormData.amountSpent) {
+      showToast('error', 'Please enter an amount.', 'Missing Information');
+      return;
+    }
+    try {
+      setSubmitting(true);
+      await RequestService.verifyRequest(selectedRequest.id, {
+        amountSpent: parseFloat(payFormData.amountSpent),
+        paymentMethod: payFormData.paymentMethod,
+        purchaseDate: payFormData.purchaseDate,
+        paymentNotes: payFormData.paymentNotes || undefined
+      }, billImageFile || undefined);
+      setIsPurchaseModalOpen(false);
+      showToast('success', 'Purchase recorded successfully.', 'Success');
+      await loadData();
+    } catch (error: any) {
+      const msg = error?.message || 'Could not record purchase. Please try again.';
+      showToast('error', msg, 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleOpenStartProcessing = (req: Request) => {
+    setStartProcessingRequest(req);
+    setExpectedCompletionDate(getTodayDateString());
+    setDateError(null);
+    setIsStartProcessingModalOpen(true);
+  };
+
+  const handleStartProcessing = async () => {
+    if (!startProcessingRequest) return;
+    
+    // Validate date
+    const validation = validateFutureDate(expectedCompletionDate);
+    if (!validation.isValid) {
+      setDateError(validation.error || 'Invalid date');
+      return;
+    }
+    
+    const req = startProcessingRequest;
+    setIsStartProcessingModalOpen(false);
+    setValidatingId(req.id);
+    try {
+      await RequestService.validateRequest(req.id, undefined, expectedCompletionDate);
+      showToast('success', `"${req.item}" moved to In Progress.`, 'Status Updated');
+      await loadData();
+    } catch {
+      showToast('error', 'Could not update request status.', 'Error');
+    } finally {
+      setValidatingId(null);
+      setStartProcessingRequest(null);
+      setDateError(null);
+    }
+  };
+
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
@@ -274,8 +388,12 @@ export function AdminRequests() {
   };
 
   const searchedAndFiltered = requests.filter(req => {
-    const matchesTab = activeTab === 'employee' ? req.requesterRole === 'employee' : (req.requesterRole === 'admin' || req.requesterRole === 'superadmin');
-    const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    const matchesTab =
+      activeTab === 'all' ? true :
+      activeTab === 'employee' ? req.requesterRole === 'employee' :
+      activeTab === 'admin' ? (req.requesterRole === 'admin' || req.requesterRole === 'superadmin') :
+      req.requesterId === user?.id;
+    const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' || req.status.toLowerCase() === statusFilter.toLowerCase();
     const matchesScope = scopeFilter === 'all' || req.scope === scopeFilter;
@@ -292,22 +410,8 @@ export function AdminRequests() {
     return 0;
   });
 
-  const requestSort = (key: keyof Request) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const totalPages = Math.max(1, Math.ceil(sortedRequests.length / recordsPerPage));
-  const paginatedRequests = sortedRequests.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
+  const { currentPage, totalPages, paginatedData, itemsPerPage, setCurrentPage } =
+    usePagination({ data: sortedRequests, itemsPerPage: recordsPerPage });
 
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
@@ -333,38 +437,147 @@ export function AdminRequests() {
     }
   };
 
-  const getStatusLabel = (status: RequestStatus) => {
-    switch (status) {
-      case 'Pending':
-        return 'Submitted';
-      case 'In Progress':
-        return 'In Progress';
-      case 'Completed':
-        return 'Completed';
-      default:
-        return status;
+  // Action cell (shared between card and table)
+  const ActionCell = ({ req }: { req: Request }) => {
+    if (req.status === 'Completed') {
+      return (
+        <div className="text-right flex flex-col items-end gap-0.5">
+          <div className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-white border-2 border-transparent flex items-center justify-center">
+            <p className="text-[8px] sm:text-xs md:text-sm font-bold text-emerald-700 whitespace-nowrap">Spent: ${req.amountSpent?.toFixed(2)}</p>
+          </div>
+          <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">via {req.paymentMethod} on {req.purchaseDate}</p>
+          {req.paidByName && (
+            <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">Completed by: {req.paidByName}</p>
+          )}
+        </div>
+      );
     }
+    if (req.status === 'Pending') {
+      return (
+        <div className="flex justify-end">
+          <Button
+            onClick={() => handleOpenStartProcessing(req)}
+            disabled={validatingId === req.id}
+            className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+          >
+            {validatingId === req.id ? (
+              <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 sm:h-3 w-2.5 sm:w-3 inline-block" />
+            ) : (
+              <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+            )}
+            <span className="hidden sm:inline">Processing</span>
+            <span className="inline sm:hidden text-[7px]">Processing</span>
+          </Button>
+        </div>
+      );
+    }
+    // In Progress
+    return (
+      <div className="flex justify-end">
+        <Button
+          onClick={() => handleOpenPurchaseModal(req)}
+          className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+        >
+          <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+          <span className="hidden sm:inline text-[7px] sm:text-[8px] md:text-[9px]">Record Purchase</span>
+          <span className="inline sm:hidden text-[6px]">Record</span>
+        </Button>
+      </div>
+    );
+  };
+
+  const getStatusLabel = (status: RequestStatus) => status === 'Pending' ? 'Submitted' : status;
+
+  // Export helpers
+  const exportToCSV = () => {
+    const rows = searchedAndFiltered.map(r => ({
+      Item: r.item,
+      Category: r.category || '',
+      Quantity: r.quantity,
+      Scope: r.scope,
+      'Classroom / Teacher': r.classroomName || r.teacherName || '',
+      Requester: r.requesterName,
+      Role: r.requesterRole,
+      Status: r.status,
+      'Product Link': r.productLink || '',
+      Notes: r.notes || '',
+      'Amount Spent': r.amountSpent ?? '',
+      'Payment Method': r.paymentMethod || '',
+      'Purchase Date': r.purchaseDate || '',
+      'Payment Notes': r.paymentNotes || '',
+      'Created At': new Date(r.createdAt).toLocaleString(),
+    }));
+    const csv = Papa.unparse(rows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `requests_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const rows = searchedAndFiltered.map(r => `
+      <tr>
+        <td>${r.item}</td>
+        <td>${r.requesterName}</td>
+        <td style="text-transform:capitalize">${r.scope}</td>
+        <td>${r.classroomName || r.teacherName || '-'}</td>
+        <td><span class="badge badge-${r.status.toLowerCase().replace(' ', '-')}">${r.status}</span></td>
+        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+        <td>${r.amountSpent != null ? '$' + r.amountSpent.toFixed(2) : '-'}</td>
+      </tr>`).join('');
+    win.document.write(`<!DOCTYPE html><html><head><title>Requests Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #1e293b; }
+        h1 { font-size: 18px; color: #0F2D52; margin-bottom: 4px; }
+        p { font-size: 11px; color: #64748b; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0F2D52; color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+        .badge-pending { background:#fef3c7; color:#b45309; }
+        .badge-in-progress { background:#dbeafe; color:#1d4ed8; }
+        .badge-completed { background:#d1fae5; color:#065f46; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h1>Admin — Requests Queue</h1>
+      <p>Exported on ${new Date().toLocaleString()} &nbsp;|&nbsp; ${searchedAndFiltered.length} records</p>
+      <table>
+        <thead><tr>
+          <th>Item</th><th>Requester</th><th>Scope</th><th>Target</th>
+          <th>Status</th><th>Date</th><th>Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <script>window.onload=()=>{window.print();}</script>
+      </body></html>`);
+    win.document.close();
   };
 
   return (
     <AdminLayout>
-      <div className="space-y-6 mx-auto px-4 py-6">
-        
-        {/* Upper Header Row */}
+      <div className="space-y-5 sm:space-y-6 mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
+
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <ShoppingBag className="w-6 h-6 text-[#0F2D52]" /> Procurement Request Board
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
+              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Requests
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Create and manage procurement requests for the school or specific teachers.
             </p>
           </div>
 
-          {activeTab === 'admin' && (
+          {activeTab !== 'employee' && (
             <Button
               onClick={handleOpenModal}
-              className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2"
+              className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2 self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" /> Create Request
             </Button>
@@ -372,33 +585,28 @@ export function AdminRequests() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-fit mb-2">
-          <button
-            onClick={() => { setActiveTab('admin'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'admin' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            My Requests
-            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-              activeTab === 'admin' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
-            }`}>
-              {requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length}
-            </span>
-          </button>
-          <button
-            onClick={() => { setActiveTab('employee'); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              activeTab === 'employee' ? 'bg-white text-[#0F2D52] shadow-sm' : 'text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            Employee Requests
-            <span className={`ml-1.5 text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
-              activeTab === 'employee' ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-200 text-slate-500'
-            }`}>
-              {requests.filter(r => r.requesterRole === 'employee').length}
-            </span>
-          </button>
+        <div className="-mx-4 px-4 overflow-x-auto border-b border-slate-200">
+          <div className="flex min-w-max">
+            {([
+              { key: 'all' as const,      label: 'All',              count: requests.length },
+              { key: 'employee' as const, label: 'Employee request',  count: requests.filter(r => r.requesterRole === 'employee').length },
+              { key: 'admin' as const,    label: 'Admin request',     count: requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length },
+              { key: 'mine' as const,     label: 'My Requests',       count: requests.filter(r => r.requesterId === user?.id).length },
+            ]).map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+                  activeTab === tab.key ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
+                }`}
+              >
+                {tab.label}
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${
+                  activeTab === tab.key ? 'bg-[#0F2D52]/10 text-[#0F2D52]' : 'bg-slate-100 text-slate-400'
+                }`}>{tab.count}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Filter and Search Bar */}
@@ -408,7 +616,7 @@ export function AdminRequests() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by item..."
+                placeholder="Search by requested item or requester name..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
@@ -438,6 +646,29 @@ export function AdminRequests() {
                   </span>
                 )}
               </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs px-3 sm:px-4 flex-shrink-0 flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2 cursor-pointer">
+                    <Package className="w-4 h-4" />
+                    <span>Export as CSV</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2 cursor-pointer">
+                    <Receipt className="w-4 h-4" />
+                    <span>Export as PDF</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 variant="outline"
@@ -494,13 +725,13 @@ export function AdminRequests() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-slate-500">Assignment Level</label>
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
                   <select
                     value={scopeFilter}
                     onChange={e => { setScopeFilter(e.target.value); setCurrentPage(1); }}
                     className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                   >
-                    <option value="all">All Levels</option>
+                    <option value="all">All Scopes</option>
                     <option value="school">Entire School</option>
                     <option value="classroom">Specific Classroom</option>
                     <option value="teacher">Specific Employee</option>
@@ -544,8 +775,8 @@ export function AdminRequests() {
             </select>
             <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
               <button
-                onClick={() => setViewMode('card')}
-                className={`rounded-md p-1.5 transition-colors ${viewMode === 'card' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={() => setViewMode('cards')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'cards' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -572,13 +803,13 @@ export function AdminRequests() {
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-1">No requests found</h3>
             <p className="text-sm text-slate-500 max-w-sm mx-auto">
-              No matching items for this role and status filter.
+              No matching items for the selected filters and criteria.
             </p>
           </div>
-        ) : viewMode === 'card' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ) : viewMode === 'cards' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {paginatedRequests.map((req, idx) => (
+              {paginatedData.map((req, idx) => (
                 <motion.div
                   key={req.id}
                   initial={{ opacity: 0, y: 15 }}
@@ -673,17 +904,30 @@ export function AdminRequests() {
                             <div className="text-right text-[11px]">
                               <span className="font-semibold text-slate-400">Spent:</span>{' '}
                               <span className="font-extrabold text-emerald-700 text-xs">${req.amountSpent?.toFixed(2)}</span>
+                              {req.paidByName && (
+                                <p className="text-[10px] text-slate-400 mt-0.5">Completed by: <span className="font-semibold text-slate-600">{req.paidByName}</span></p>
+                              )}
                             </div>
                           )}
                           {req.status === 'Pending' && (
-                            <span className="text-[11px] text-amber-600 font-semibold flex items-center gap-1 bg-amber-50 border border-amber-100 rounded-lg px-2.5 py-1 whitespace-nowrap">
-                              Pending Approval
-                            </span>
+                            <button
+                              onClick={() => handleOpenStartProcessing(req)}
+                              disabled={validatingId === req.id}
+                              className="text-[11px] text-[#0F2D52] font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1 hover:bg-[#0F2D52] hover:text-white transition-colors disabled:opacity-50 whitespace-nowrap"
+                            >
+                              {validatingId === req.id
+                                ? <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 w-2.5 inline-block" />
+                                : <ArrowRight className="w-3 h-3" />}
+                              Processing
+                            </button>
                           )}
                           {req.status === 'In Progress' && (
-                            <span className="text-[11px] text-blue-600 font-semibold flex items-center gap-1 bg-blue-50/80 border border-blue-100 rounded-lg px-2.5 py-1">
-                              <ArrowRight className="w-3 h-3" /> In Progress
-                            </span>
+                            <button
+                              onClick={() => handleOpenPurchaseModal(req)}
+                              className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1 bg-emerald-50/80 border border-emerald-100 rounded-lg px-2.5 py-1 hover:bg-emerald-100 transition-colors"
+                            >
+                              <CheckCircle2 className="w-3 h-3" /> Record Purchase
+                            </button>
                           )}
                         </div>
                       </div>
@@ -696,49 +940,43 @@ export function AdminRequests() {
         ) : (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] table-fixed text-left border-collapse text-sm">
-                <colgroup>
-                  <col className="w-[18%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[5%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[10%]" />
-                </colgroup>
+              <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('item')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'item' ? { key: 'item', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'item', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Item {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Item {sortConfig?.key === 'item' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors leading-5">
-                      Target<br />Assignment
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Requester
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Scope
+                    </th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Target
+                    </th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'status' ? { key: 'status', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'status', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Qty {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap" onClick={() => requestSort('status')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'createdAt' ? { key: 'createdAt', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'createdAt', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Status {sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Date {sortConfig?.key === 'createdAt' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('createdAt')}>
-                      <div className="flex items-center gap-1.5">
-                        Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
-                      </div>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Amount
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 leading-5">Expected<br />Completion</th>
-                    <th className="px-2 py-3 font-semibold text-slate-700">Amount</th>
-                    <th className="px-2 py-3 font-semibold text-slate-700">Actions</th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 text-right min-w-[160px]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {paginatedRequests.map((req) => (
+                  {paginatedData.map((req) => (
                     <tr key={req.id} className="hover:bg-slate-50/40 transition-colors group">
                       <td className="px-4 py-3.5 text-slate-900">
                         <div className="flex gap-3 items-start">
@@ -750,12 +988,8 @@ export function AdminRequests() {
                             </div>
                           )}
                           <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold text-sm line-clamp-2">{req.item}</span>
+                            <span className="font-semibold text-xs sm:text-sm line-clamp-2">{req.item}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{req.category || 'Supplies'}</span>
-                            <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                              <span className="font-semibold text-slate-700">{req.requesterName}</span>
-                              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded font-bold uppercase">{req.requesterRole}</span>
-                            </p>
                             {req.productLink && (
                               <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="text-[#1a6fc4] hover:text-[#0F2D52] hover:underline inline-flex items-center gap-1 text-[10px] font-medium w-fit mt-0.5">
                                 <Link2 className="w-3 h-3" /> View Product
@@ -764,54 +998,45 @@ export function AdminRequests() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600">
-                        {req.scope === 'classroom' && (
-                          <>Target: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
-                        )}
-                        {req.scope === 'teacher' && (
-                          <>Target: <span className="font-bold text-slate-700">Employee ({req.teacherName})</span></>
-                        )}
-                        {req.scope === 'school' && (
-                          <>Target: <span className="font-bold text-slate-700">Entire School</span></>
-                        )}
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-medium whitespace-nowrap">
+                        {req.requesterName}
                       </td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-700">
-                        {req.quantity}
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600 capitalize">
+                        {req.scope}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600">
+                        {req.scope === 'classroom' && req.classroomName}
+                        {req.scope === 'teacher' && req.teacherName}
+                        {req.scope === 'school' && 'Entire School'}
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                            {getStatusIcon(req.status)}
-                            {getStatusLabel(req.status)}
-                          </span>
-                        </div>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                          {getStatusIcon(req.status)}
+                          {getStatusLabel(req.status)}
+                        </span>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-500 font-medium whitespace-nowrap">
                         {new Date(req.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3.5 text-xs font-semibold whitespace-nowrap">
-                        {req.expectedCompletionDate ? (
-                          <span className="text-blue-600">{new Date(req.expectedCompletionDate).toLocaleDateString()}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                   
-                      <td className="px-2 py-3.5">
+                      <td className="px-4 py-3.5 text-center">
                         {req.status === 'Completed' && req.amountSpent !== undefined ? (
                           <div className="text-xs">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount Spent</p>
-                            <span className="font-extrabold text-emerald-700">${req.amountSpent.toFixed(2)}</span>
+                            <p className="font-bold text-emerald-700">${req.amountSpent.toFixed(2)}</p>
                             {req.paymentMethod && <p className="text-[10px] text-slate-400 mt-0.5">{req.paymentMethod}</p>}
                           </div>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-3.5">
-                        <div className="flex items-center gap-1.5">
-                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3" /></Button>
-                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>
+                      <td className="px-4 py-3.5 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {req.status !== 'Completed' && (
+                            <>
+                              <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
+                              <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => handleDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
+                            </>
+                          )}
+                          <ActionCell req={req} />
                         </div>
                       </td>
                     </tr>
@@ -824,47 +1049,15 @@ export function AdminRequests() {
 
         {/* Pagination Controls */}
         {!loading && sortedRequests.length > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-slate-500 text-xs sm:text-sm">
               Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span>–<span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
-              >
-                <ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline ml-1">Prev</span>
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                  .map((p, i, arr) => (
-                    <React.Fragment key={p}>
-                      {i > 0 && arr[i - 1] !== p - 1 && (
-                        <span className="px-1 text-slate-400 text-xs">…</span>
-                      )}
-                      <button
-                        onClick={() => setCurrentPage(p)}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-colors ${currentPage === p ? 'bg-[#0F2D52] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {p}
-                      </button>
-                    </React.Fragment>
-                  ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
-              >
-                <span className="hidden sm:inline mr-1">Next</span><ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
 
@@ -872,15 +1065,18 @@ export function AdminRequests() {
 
       {/* Admin Request Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] overflow-y-auto bg-white p-6 no-scrollbar">
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
+          <div className="px-6 pt-6 pb-0">
+            <DialogHeader>
+              <DialogTitle className="text-lg font-bold text-slate-900">{editingRequest ? 'Edit Procurement Request' : 'Create Procurement Request'}</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500">
+                Submit a request for all classrooms across the school, or for a specific teacher issue. This will be verified and approved by the Super Admin.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
 
-          <form onSubmit={handleFormSubmit} className="space-y-4 pt-2">
+          <form onSubmit={handleFormSubmit} id="admin-request-form" className="flex-1 overflow-y-auto">
+            <div className="space-y-4 pt-2 px-6 pb-2">
             
             {/* Target Assignment Selection */}
             <div className="space-y-1.5">
@@ -1036,7 +1232,7 @@ export function AdminRequests() {
                   name="category"
                   value={formData.category}
                   onChange={handleInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+                  className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap"
                 >
                 <option value="">Select category</option>{categories.map(cat => (
                     <option key={cat} value={cat}>{cat}</option>
@@ -1075,13 +1271,13 @@ export function AdminRequests() {
                       className="w-full h-full object-cover"
                     />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{imageFile.name}</p>
+                  <div className="flex-1 flex flex-col min-w-0">
+                    <p className="text-xs font-semibold text-slate-700" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>{imageFile.name}</p>
                     <p className="text-[10px] text-slate-400 mt-0.5">{(imageFile.size / 1024).toFixed(0)} KB</p>
                     <button
                       type="button"
                       onClick={handleClearImage}
-                      className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
+                      className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit"
                     >
                       Remove
                     </button>
@@ -1139,25 +1335,215 @@ export function AdminRequests() {
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none"
               />
             </div>
-
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => { setIsModalOpen(false); setEditingRequest(null); }}
-                className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
-              >
-                {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
-              </Button>
-            </DialogFooter>
+            </div>
           </form>
+          <DialogFooter className="px-6 py-3 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setIsModalOpen(false); setEditingRequest(null); }}
+              className="rounded-xl h-9 text-xs font-semibold px-5"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="admin-request-form"
+              disabled={submitting}
+              className="rounded-xl h-9 px-5 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]"
+            >
+              {submitting ? (imageFile ? 'Uploading & Saving...' : 'Saving...') : editingRequest ? 'Save Changes' : 'Submit Request'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Purchase Modal */}
+      <Dialog open={isPurchaseModalOpen} onOpenChange={setIsPurchaseModalOpen}>
+        <DialogContent className="sm:max-w-lg rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-bold text-slate-900">Record Purchase</DialogTitle>
+            <DialogDescription className="text-sm text-slate-600">
+              {selectedRequest?.item && `Complete the purchase for: ${selectedRequest.item}`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {/* Amount Spent */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Amount Spent <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={payFormData.amountSpent}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, amountSpent: e.target.value }))}
+                placeholder="0.00"
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              />
+            </div>
+
+            {/* Payment Method */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Payment Method <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={payFormData.paymentMethod}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, paymentMethod: e.target.value }))}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              >
+                <option>Credit Card</option>
+                <option>Debit Card</option>
+                <option>Cash</option>
+                <option>Check</option>
+                <option>Bank Transfer</option>
+              </select>
+            </div>
+
+            {/* Purchase Date */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Purchase Date
+              </label>
+              <input
+                type="date"
+                value={payFormData.purchaseDate}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, purchaseDate: e.target.value }))}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]"
+              />
+            </div>
+
+            {/* Bill/Receipt Image Upload */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Bill / Receipt Image
+              </label>
+              {!billImageFile ? (
+                <label className="block relative w-full border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer hover:border-slate-400 transition-colors bg-slate-50/30">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBillImageChange}
+                    className="hidden"
+                  />
+                  <div className="flex flex-col items-center justify-center text-center gap-2">
+                    <ImageIcon className="w-8 h-8 text-slate-300" />
+                    <div>
+                      <p className="text-xs font-semibold text-slate-700">Upload bill/receipt</p>
+                      <p className="text-[10px] text-slate-500">PNG, JPG, GIF up to 5MB</p>
+                    </div>
+                  </div>
+                </label>
+              ) : (
+                <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
+                    <p className="text-[10px] text-slate-500">{(billImageFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearBillImage}
+                    className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <X className="w-3 h-3" /> Remove
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Notes */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                Payment Notes
+              </label>
+              <textarea
+                value={payFormData.paymentNotes}
+                onChange={(e) => setPayFormData(prev => ({ ...prev, paymentNotes: e.target.value }))}
+                placeholder="Any additional notes about this purchase..."
+                rows={3}
+                className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-2 border-t border-slate-50">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsPurchaseModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handlePurchaseSubmit}
+              disabled={submitting || !payFormData.amountSpent}
+              className="w-full sm:w-auto rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting ? 'Recording...' : 'Record Purchase'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Start Processing Modal */}
+      <Dialog open={isStartProcessingModalOpen} onOpenChange={setIsStartProcessingModalOpen}>
+        <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl bg-white p-5">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <ArrowRight className="w-4 h-4 text-[#0F2D52]" /> Processing
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Set the date this request is expected to be completed.
+            </DialogDescription>
+          </DialogHeader>
+          {startProcessingRequest && (
+            <div className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-xs space-y-1 my-2">
+              <p className="font-semibold text-slate-700">Item: <span className="font-extrabold text-slate-900">{startProcessingRequest.item}</span></p>
+              <p className="text-slate-500">Requested by: <span className="font-bold text-slate-700">{startProcessingRequest.requesterName}</span></p>
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+              Expected Completion Date <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="date"
+              value={expectedCompletionDate}
+              min={getTodayDateString()}
+              onChange={(e) => {
+                setExpectedCompletionDate(e.target.value);
+                const validation = validateFutureDate(e.target.value);
+                setDateError(validation.isValid ? null : validation.error || null);
+              }}
+              className={`w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border rounded-xl focus:outline-none transition-colors ${
+                dateError
+                  ? 'border-red-300 focus:border-red-500 bg-red-50'
+                  : 'border-slate-200 focus:border-[#0F2D52]'
+              }`}
+            />
+            {dateError && (
+              <div className="flex items-start gap-2 mt-2 p-2.5 bg-red-50 border border-red-200 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-red-700 font-medium">{dateError}</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2 pt-3 border-t border-slate-50">
+            <Button type="button" variant="outline" onClick={() => setIsStartProcessingModalOpen(false)}
+              className="w-full sm:w-auto rounded-xl h-10 text-xs font-semibold">Cancel</Button>
+            <Button
+              onClick={handleStartProcessing}
+              disabled={!expectedCompletionDate || !!dateError}
+              className="w-full sm:w-auto rounded-xl h-10 border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-xs px-5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+              <ArrowRight className="w-4 h-4 mr-1.5" /> Confirm & Start
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

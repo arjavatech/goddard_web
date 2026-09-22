@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Download, Loader2, Printer, Zap } from 'lucide-react';
+import { Download, Loader2, Printer, Zap, List, Grid3x3 } from 'lucide-react';
 import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService } from '../../services/api/tapTime';
 import { Button } from '../../components/ui/button';
@@ -21,15 +21,106 @@ const DAY_KEYS = [
   { key: 'fri', label: 'Friday' },
 ] as const;
 
+function DayCard({ day, label, entries, hours, completed }: { day: string; label: string; entries: number; hours: string; completed: boolean }) {
+  const isBold = DAY_KEYS.findIndex(d => d.key === day) % 2 === 0;
+  return (
+    <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
+      <dl className="grid gap-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className={`flex-shrink-0 ${isBold ? 'font-semibold' : 'font-normal'} uppercase tracking-wider text-slate-500 ${completed ? 'text-slate-700' : 'text-slate-300'}`}>
+            {label}
+          </dt>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 pt-2 border-t border-slate-100">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Entries</dt>
+          <dd className={`text-right truncate font-semibold ${completed ? 'text-slate-900' : 'text-slate-300'}`}>
+            {completed ? (entries > 0 ? entries : '—') : '—'}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Hours</dt>
+          <dd className={`text-right truncate font-semibold ${completed ? 'text-slate-900' : 'text-slate-300'}`}>
+            {completed ? hours : '—'}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function DaysSummaryCard({ data }: { data: any }) {
+  const hasOvertime = data.overtime_hours !== '00:00';
+  return (
+    <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
+      <dl className="grid gap-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Total</dt>
+          <dd className="text-right truncate font-semibold text-[#0F2D52]">{data.total_hours || '00:00'}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 pt-2 border-t border-slate-100">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Overtime</dt>
+          <dd className={`text-right truncate font-semibold rounded px-2 py-0.5 ${
+            hasOvertime
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'text-slate-700'
+          }`}>
+            {data.overtime_hours || '00:00'}
+          </dd>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
+function PeriodCard({ period, loading, downloadingPeriod, onSelect, onDownload, onPrint }: { period: any; loading: boolean; downloadingPeriod: any; onSelect: () => void; onDownload: () => void; onPrint: () => void }) {
+  return (
+    <div className="rounded-2xl border border-slate-100 p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden">
+      <dl className="grid gap-3 text-xs sm:text-sm text-slate-600">
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Start Date</dt>
+          <dd className="text-right truncate font-semibold text-slate-900">{formatDate(period.start_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0">
+          <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">End Date</dt>
+          <dd className="text-right truncate font-semibold text-slate-900">{formatDate(period.end_date)}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 pt-2 border-t border-slate-100">
+          <Button size="sm" variant="outline" onClick={onSelect} disabled={loading} className="flex-1">
+            View
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            disabled={downloadingPeriod?.start_date === period.start_date}
+            onClick={onDownload}
+            title="Download PDF"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+          <Button
+            size="icon"
+            variant="outline"
+            disabled={downloadingPeriod?.start_date === period.start_date}
+            onClick={onPrint}
+            title="Print PDF"
+          >
+            <Printer className="h-4 w-4" />
+          </Button>
+        </div>
+      </dl>
+    </div>
+  );
+}
+
 function DayTable({ data, completedWeekdays }: { data: any; completedWeekdays: number }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-slate-100">
-      <table className="w-full min-w-[400px] text-sm border border-slate-200">
-        <thead className="bg-slate-50/80 border-b border-slate-200">
+      <table className="w-full min-w-[400px] text-sm">
+        <thead className="bg-slate-50/80">
           <tr>
-            <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500 w-1/2">Day</th>
-            <th className="px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider text-slate-500 w-1/4">Entries</th>
-            <th className="px-4 py-3.5 text-right text-xs font-bold uppercase tracking-wider text-slate-500 w-1/4">Hours</th>
+            <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Day</th>
+            <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Entries</th>
+            <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Hours</th>
           </tr>
         </thead>
         <tbody>
@@ -37,32 +128,33 @@ function DayTable({ data, completedWeekdays }: { data: any; completedWeekdays: n
             const isCompleted = idx < completedWeekdays;
             const entries = data[`${day.key}_entries`] || 0;
             const hours = data[day.key] || '00:00';
+            const isBold = idx % 2 === 0;
             return (
-              <tr key={day.key} className="border-b border-slate-200 transition-colors hover:bg-slate-50">
-                <td className={`px-4 py-4 font-medium ${isCompleted ? 'text-[#0F2D52]' : 'text-slate-400 opacity-40'}`}>
+              <tr key={day.key} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                <td className={`px-4 py-4 ${isBold ? 'font-semibold' : 'font-normal'} ${isCompleted ? 'text-slate-600' : 'text-slate-300'}`}>
                   {day.label}
                 </td>
-                <td className={`px-4 py-4 text-center ${isCompleted ? 'text-slate-600' : 'text-slate-400 opacity-40'}`}>
+                <td className={`px-4 py-4 ${isCompleted ? 'text-slate-600' : 'text-slate-300'}`}>
                   {isCompleted ? (entries > 0 ? entries : '—') : '—'}
                 </td>
-                <td className={`px-4 py-4 text-right ${isCompleted ? 'text-slate-600' : 'text-slate-400 opacity-40'}`}>
+                <td className={`px-4 py-4 font-semibold ${isCompleted ? 'text-slate-700' : 'text-slate-300'}`}>
                   {isCompleted ? hours : '—'}
                 </td>
               </tr>
             );
           })}
-          <tr className="border-b border-slate-200 bg-slate-50 transition-colors hover:bg-slate-100">
+          <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
             <td className="px-4 py-4 font-bold text-[#0F2D52]">Total</td>
-            <td className="px-4 py-4 text-center"></td>
-            <td className="px-4 py-4 text-right font-bold text-[#0F2D52]">{data.total_hours || '00:00'}</td>
+            <td className="px-4 py-4"></td>
+            <td className="px-4 py-4 font-bold text-[#0F2D52]">{data.total_hours || '00:00'}</td>
           </tr>
-          <tr className="border-b border-slate-200 transition-colors hover:bg-slate-50">
+          <tr className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
             <td className="px-4 py-4 font-bold text-[#0F2D52]">Overtime</td>
-            <td className="px-4 py-4 text-center"></td>
-            <td className={`px-4 py-4 text-right font-bold ${
+            <td className="px-4 py-4"></td>
+            <td className={`px-4 py-4 font-semibold ${
               data.overtime_hours !== '00:00'
                 ? 'bg-yellow-100 text-yellow-800 rounded px-2 py-0.5'
-                : 'text-slate-600'
+                : 'text-slate-700'
             }`}>
               {data.overtime_hours || '00:00'}
             </td>
@@ -83,6 +175,8 @@ export function EmployeeWeeklyReport() {
   const [downloadingPeriod, setDownloadingPeriod] = useState<any>(null);
   const [pdfAction, setPdfAction] = useState<'download' | 'print' | null>(null);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 640);
+  const [viewMode, setViewMode] = useState<'table' | 'card'>(typeof window !== 'undefined' && window.innerWidth < 640 ? 'card' : 'table');
+  const [historyViewMode, setHistoryViewMode] = useState<'table' | 'card'>(typeof window !== 'undefined' && window.innerWidth < 640 ? 'card' : 'table');
 
   const detailRef = useRef<HTMLDivElement>(null);
 
@@ -316,83 +410,174 @@ export function EmployeeWeeklyReport() {
               {/* Current Week Tab */}
               {tab === 'current' && current && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-sm font-bold text-[#0F2D52]">Week — {periodLabel(current.period)}</h3>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" variant="outline" onClick={() => generatePdf(current, 'print')}>
-                        <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                    <h3 className="text-sm font-bold text-[#0F2D52]">Week — {periodLabel(current.period)}</h3>
+                    <div className="flex gap-2 w-full sm:w-auto">
+                      <Button size="icon" variant="outline" onClick={() => generatePdf(current, 'print')} title="Print" className="flex-1 sm:flex-none">
+                        <Printer className="h-4 w-4" />
                       </Button>
-                      <Button size="sm" variant="outline" onClick={() => generatePdf(current, 'download')}>
+                      <Button size="sm" variant="outline" onClick={() => generatePdf(current, 'download')} className="flex-1 sm:flex-none">
                         <Download className="mr-1.5 h-3.5 w-3.5" /> Download
                       </Button>
                     </div>
                   </div>
-                  <DayTable data={current} completedWeekdays={current.completed_weekdays} />
+
+                  {/* View Toggle */}
+                  <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10 w-fit">
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('table')}
+                      className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                        viewMode === 'table'
+                          ? 'bg-white text-[#0F2D52] shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                      Table
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('card')}
+                      className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                        viewMode === 'card'
+                          ? 'bg-white text-[#0F2D52] shadow-xs'
+                          : 'text-slate-500 hover:text-slate-800'
+                      }`}
+                    >
+                      <Grid3x3 className="h-3.5 w-3.5" />
+                      Cards
+                    </button>
+                  </div>
+
+                  {/* Card View */}
+                  {viewMode === 'card' ? (
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {DAY_KEYS.map((day, idx) => (
+                        <DayCard
+                          key={day.key}
+                          day={day.key}
+                          label={day.label}
+                          entries={current[`${day.key}_entries`] || 0}
+                          hours={current[day.key] || '00:00'}
+                          completed={idx < current.completed_weekdays}
+                        />
+                      ))}
+                      <DaysSummaryCard data={current} />
+                    </div>
+                  ) : (
+                    <DayTable data={current} completedWeekdays={current.completed_weekdays} />
+                  )}
                 </div>
               )}
 
               {/* History Tab */}
               {tab === 'history' && (
                 <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <div></div>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10 w-fit">
+                      <button
+                        type="button"
+                        onClick={() => setHistoryViewMode('table')}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                          historyViewMode === 'table'
+                            ? 'bg-white text-[#0F2D52] shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <List className="h-3.5 w-3.5" />
+                        Table
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setHistoryViewMode('card')}
+                        className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                          historyViewMode === 'card'
+                            ? 'bg-white text-[#0F2D52] shadow-xs'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        <Grid3x3 className="h-3.5 w-3.5" />
+                        Cards
+                      </button>
+                    </div>
                     <PageSizeSelector pageSize={historyItemsPerPage} onPageSizeChange={handleHistoryPageSizeChange} />
                   </div>
 
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-xs">
-                    <table className="w-full text-sm">
-                      <thead className="bg-slate-50/80 border-b border-slate-200">
-                        <tr>
-                          <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Start Date</th>
-                          <th className="px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">End Date</th>
-                          <th className="px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider text-slate-500">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paginatedHistoryItems.length > 0 ? (
-                          paginatedHistoryItems.map((period: any, idx: number) => (
-                            <tr key={idx} className="border-b border-slate-200 transition-colors hover:bg-slate-50">
-                              <td className="px-4 py-4 font-medium text-[#0F2D52]">{formatDate(period.start_date)}</td>
-                              <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
-                              <td className="px-4 py-4 text-center">
-                                <div className="flex items-center justify-center gap-2">
-                                  <Button size="sm" variant="outline" onClick={() => selectPeriod(period)} disabled={loading}>
-                                    View
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    disabled={downloadingPeriod?.start_date === period.start_date}
-                                    onClick={() => handleDownloadPeriod(period)}
-                                    title="Download PDF"
-                                  >
-                                    <Download className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="outline"
-                                    disabled={downloadingPeriod?.start_date === period.start_date}
-                                    onClick={() => handlePrintPeriod(period)}
-                                    title="Print PDF"
-                                  >
-                                    <Printer className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </td>
+                  {historyViewMode === 'card' ? (
+                    <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                      {paginatedHistoryItems.length > 0 ? (
+                        paginatedHistoryItems.map((period: any, idx: number) => (
+                          <PeriodCard
+                            key={idx}
+                            period={period}
+                            loading={loading}
+                            downloadingPeriod={downloadingPeriod}
+                            onSelect={() => selectPeriod(period)}
+                            onDownload={() => handleDownloadPeriod(period)}
+                            onPrint={() => handlePrintPeriod(period)}
+                          />
+                        ))
+                      ) : (
+                        <div className="col-span-full py-12 text-center text-slate-500">No history available</div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden shadow-xs">
+                      <div className="overflow-x-auto">
+                        <table className="w-full min-w-[600px] text-sm">
+                          <thead className="bg-slate-50/80">
+                            <tr>
+                              <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Start Date</th>
+                              <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">End Date</th>
+                              <th className="border-y border-slate-200/85 px-4 py-3.5 text-center text-xs font-bold uppercase tracking-wider text-slate-500">Actions</th>
                             </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan={3} className="px-4 py-8 text-center text-slate-400">
-                              No history available
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          </thead>
+                          <tbody>
+                            {paginatedHistoryItems.length > 0 ? (
+                              paginatedHistoryItems.map((period: any, idx: number) => (
+                                <tr key={idx} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.start_date)}</td>
+                                  <td className="px-4 py-4 text-slate-600">{formatDate(period.end_date)}</td>
+                                  <td className="px-4 py-4 text-center">
+                                    <div className="flex items-center justify-center gap-2">
+                                      <Button size="sm" variant="outline" onClick={() => selectPeriod(period)} disabled={loading}>
+                                        View
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="outline"
+                                        disabled={downloadingPeriod?.start_date === period.start_date}
+                                        onClick={() => handleDownloadPeriod(period)}
+                                        title="Download PDF"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        variant="outline"
+                                        disabled={downloadingPeriod?.start_date === period.start_date}
+                                        onClick={() => handlePrintPeriod(period)}
+                                        title="Print PDF"
+                                      >
+                                        <Printer className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))
+                            ) : (
+                              <tr>
+                                <td colSpan={3} className="px-4 py-8 text-center text-slate-400">
+                                  No history available
+                                </td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
 
                   {history.length > 0 && (
                     <Pagination
@@ -407,21 +592,71 @@ export function EmployeeWeeklyReport() {
                   {/* Detail section — shown below history list when a period is selected */}
                   {selected && !selected.period.is_current && (
                     <div className="mt-8 border-t border-slate-200 pt-8" ref={detailRef}>
-                      <div className="mb-6 flex items-center justify-between">
-                        <div>
-                          <h3 className="text-sm font-bold text-[#0F2D52]">Detail — {periodLabel(selected.period)}</h3>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => generatePdf(selected, 'print')}>
-                            <Printer className="mr-1.5 h-3.5 w-3.5" /> Print
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+                        <h3 className="text-sm font-bold text-[#0F2D52]">Detail — {periodLabel(selected.period)}</h3>
+                        <div className="flex gap-2 w-full sm:w-auto">
+                          <Button size="icon" variant="outline" onClick={() => generatePdf(selected, 'print')} title="Print" className="flex-1 sm:flex-none">
+                            <Printer className="h-4 w-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => generatePdf(selected, 'download')}>
+                          <Button size="sm" variant="outline" onClick={() => generatePdf(selected, 'download')} className="flex-1 sm:flex-none">
                             <Download className="mr-1.5 h-3.5 w-3.5" /> Download
                           </Button>
                         </div>
                       </div>
 
-                      <DayTable data={selected} completedWeekdays={5} />
+                      <div className="mt-4 flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 h-10 w-fit">
+                        <button
+                          type="button"
+                          onClick={() => setHistoryViewMode('table')}
+                          className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                            historyViewMode === 'table'
+                              ? 'bg-white text-[#0F2D52] shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <List className="h-3.5 w-3.5" />
+                          Table
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setHistoryViewMode('card')}
+                          className={`flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-bold ${
+                            historyViewMode === 'card'
+                              ? 'bg-white text-[#0F2D52] shadow-xs'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          <Grid3x3 className="h-3.5 w-3.5" />
+                          Cards
+                        </button>
+                      </div>
+
+                      {historyViewMode === 'card' ? (
+                        <div className="mt-4 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+                          <DayCard
+                            day="summary"
+                            label="Summary"
+                            entries={0}
+                            hours=""
+                            completed={true}
+                          />
+                          {DAY_KEYS.map((day, idx) => (
+                            <DayCard
+                              key={day.key}
+                              day={day.key}
+                              label={day.label}
+                              entries={selected[`${day.key}_entries`] || 0}
+                              hours={selected[day.key] || '00:00'}
+                              completed={true}
+                            />
+                          ))}
+                          <DaysSummaryCard data={selected} />
+                        </div>
+                      ) : (
+                        <div className="mt-4">
+                          <DayTable data={selected} completedWeekdays={5} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

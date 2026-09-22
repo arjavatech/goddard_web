@@ -12,7 +12,7 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchParentDetails } from '../../services/api/admin';
+import { fetchParentDetails, revokeStudentFormAssignment } from '../../services/api/admin';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
@@ -32,6 +32,7 @@ interface Form {
   recentPdfLink: string | null;
   approvedOn: string | null;
   manualPdfUploadedAt?: string | null;
+  submissionSource?: string;
 }
 interface ChildInfo {
   id: string;
@@ -131,6 +132,11 @@ export function ParentDetails() {
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<{ form: Form; childName: string } | null>(null);
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [revokeFormData, setRevokeFormData] = useState<{ form: Form; childId: string } | null>(null);
+  const [revokeNotes, setRevokeNotes] = useState('');
+  const [revokeTargetStatus, setRevokeTargetStatus] = useState<'in_progress' | 'rejected'>('in_progress');
+  const [isRevoking, setIsRevoking] = useState(false);
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
@@ -498,6 +504,58 @@ export function ParentDetails() {
     }
     setIsReviewDialogOpen(false);
   };
+
+  const handleRevoke = async () => {
+    if (!revokeFormData || !userData?.parentId) {
+      showToast('error', 'User information missing');
+      return;
+    }
+
+    if (!revokeNotes.trim()) {
+      showToast('error', 'Please provide a reason');
+      return;
+    }
+
+    setIsRevoking(true);
+    try {
+      if (revokeFormData.form.studentFormAssignmentId) {
+        await revokeStudentFormAssignment(
+          revokeFormData.form.studentFormAssignmentId,
+          revokeNotes,
+          userData.parentId,
+          revokeTargetStatus
+        );
+
+        const displayStatus = revokeTargetStatus === 'rejected' ? 'Rejected' : 'In Progress';
+        setParent(current => {
+          if (!current) return current;
+          return {
+            ...current,
+            children: current.children.map(child => ({
+              ...child,
+              forms: child.forms.map(form =>
+                form.id === revokeFormData.form.id
+                  ? { ...form, status: displayStatus as FormStatus, lastUpdated: new Date().toLocaleDateString() }
+                  : form
+              )
+            }))
+          };
+        });
+
+        showToast('success', `Form ${displayStatus.toLowerCase()} successfully`);
+        setIsRevokeDialogOpen(false);
+        setRevokeNotes('');
+        setRevokeFormData(null);
+        setRevokeTargetStatus('in_progress');
+      }
+    } catch (error) {
+      console.error('Error revoking form:', error);
+      showToast('error', 'Failed to revoke form approval');
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -913,7 +971,7 @@ export function ParentDetails() {
                                         <span>View Form</span>
                                       </Button>
                                     </Link>}
-                                    {form.status !== 'Approved' && form.studentFormAssignmentId && (
+                                    {form.studentFormAssignmentId && isAdminOrSuperAdmin && (
                                       <Button
                                         size="sm"
                                         variant="outline"
@@ -924,7 +982,7 @@ export function ParentDetails() {
                                         }}
                                       >
                                         <Upload className="h-3.5 w-3.5 mr-1" />
-                                        Upload PDF
+                                        {form.status === 'Approved' ? 'Replace PDF' : 'Upload PDF'}
                                       </Button>
                                     )}
                                     {form.status === 'Submitted' && (
@@ -938,6 +996,20 @@ export function ParentDetails() {
                                           Revise
                                         </Button>
                                       </div>
+                                    )}
+                                    {form.status === 'Approved' && isAdminOrSuperAdmin && (
+                                      <Button
+                                        size="sm"
+                                        className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white text-xs font-bold"
+                                        onClick={() => {
+                                          setRevokeTargetStatus('in_progress');
+                                          setRevokeFormData({ form, childId: child.id });
+                                          setIsRevokeDialogOpen(true);
+                                        }}
+                                        disabled={isRevoking}
+                                      >
+                                        Change Status
+                                      </Button>
                                     )}
                                   </div>
                                 </div>
@@ -1075,8 +1147,77 @@ export function ParentDetails() {
           studentName={selectedFormForUpload.childName}
           uploadedBy={userData?.email || userData?.name || 'Admin'}
           formType="student"
+          isReplacing={selectedFormForUpload.form.status === 'Approved'}
         />
       )}
+
+      {/* Revoke Approval Dialog */}
+      <Dialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0">
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
+            <DialogTitle className="text-lg font-bold text-slate-900">Change Form Status</DialogTitle>
+          </div>
+          <div className="flex-shrink-0 px-6 py-4 space-y-4">
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">New Status</label>
+              <Select
+                value={revokeTargetStatus}
+                onValueChange={(v) => setRevokeTargetStatus(v as 'in_progress' | 'rejected')}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="in_progress">Send Back for Revision</SelectItem>
+                  <SelectItem value="rejected">Reject</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Reason <span className="text-red-500">*</span>
+              </label>
+              <Textarea
+                placeholder={revokeTargetStatus === 'rejected'
+                  ? 'Provide a reason for rejecting this form...'
+                  : 'Provide a reason for sending back for revision...'}
+                value={revokeNotes}
+                onChange={(e) => setRevokeNotes(e.target.value)}
+                className="h-24 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]"
+              />
+            </div>
+          </div>
+          <div className="flex-shrink-0 px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button
+              variant="outline"
+              className="h-10 border-slate-200 hover:bg-slate-50 rounded-xl text-xs font-bold text-slate-600 px-4"
+              onClick={() => {
+                setIsRevokeDialogOpen(false);
+                setRevokeNotes('');
+                setRevokeFormData(null);
+                setRevokeTargetStatus('in_progress');
+              }}
+              disabled={isRevoking}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRevoke}
+              className="h-10 rounded-xl text-xs font-bold px-4 bg-[#0F2D52] hover:bg-[#1E4B83] text-white transition-all"
+              disabled={isRevoking || !revokeNotes.trim()}
+            >
+              {isRevoking ? (
+                <span className="flex items-center">
+                  <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                  {revokeTargetStatus === 'rejected' ? 'Rejecting...' : 'Sending...'}
+                </span>
+              ) : (
+                revokeTargetStatus === 'rejected' ? 'Reject' : 'Send Back'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }

@@ -67,7 +67,7 @@ export const TapTimeService = {
         period: z.object({ start_date: z.string(), end_date: z.string(), is_current: z.boolean() }),
         next_period_start: z.string(),
         time_worked: z.string(),
-        entries: z.number(),
+        days: z.number(),
         items: z.array(z.object({
           date: z.string().nullable(),
           check_in_time: z.string().nullable(),
@@ -89,7 +89,7 @@ export const TapTimeService = {
         frequency: z.string(),
         period: z.object({ start_date: z.string(), end_date: z.string(), is_current: z.boolean() }),
         time_worked: z.string(),
-        entries: z.number(),
+        days: z.number(),
         items: z.array(z.object({
           date: z.string().nullable(),
           check_in_time: z.string().nullable(),
