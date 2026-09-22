@@ -394,7 +394,7 @@ export function WeeklyReport() {
                           <div className="mt-6 grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                             {paginatedHistory.length ? (
                               paginatedHistory.map((period, idx) => (
-                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => { void selectPeriod(period, false); void selectPeriod(period, false); }} onDownload={() => void downloadPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
+                                <HistoryCard key={idx} period={period} current={current} selected={selected} onSelect={() => { void selectPeriod(period, false); void selectPeriod(period, false); }} onDownload={() => void downloadPeriodPdf(period)} onPrint={() => void printPeriodPdf(period)} loading={loading} downloadingPeriod={downloadingPeriod} />
                               ))
                             ) : (
                               <div className="col-span-full py-20 text-center">
@@ -652,15 +652,15 @@ function WeeklyCard({ item, completedWeekdays = 5 }: { item: any; completedWeekd
   );
 }
 
-function HistoryCard({ period, current, selected, onSelect, onDownload, loading, downloadingPeriod }: { period: any; current: any; selected: any; onSelect: () => void; onDownload: () => void; loading: boolean; downloadingPeriod: any }) {
+function HistoryCard({ period, current, selected, onSelect, onDownload, onPrint, loading, downloadingPeriod }: { period: any; current: any; selected: any; onSelect: () => void; onDownload: () => void; onPrint: () => void; loading: boolean; downloadingPeriod: any }) {
   const isSelected = selected?.period.start_date === period.start_date && selected?.period.end_date === period.end_date;
   return (
     <div className={`rounded-2xl border p-4 sm:p-5 shadow-xs transition-all hover:shadow-md bg-white overflow-hidden ${
       isSelected ? 'border-[#1a6fc4] bg-blue-50' : 'border-slate-100'
     }`}>
       <div className="min-w-0">
-        <p className="font-bold text-[#0F2D52] truncate">{periodLabel(period)}</p>
-        <p className="mt-1 text-xs font-medium text-slate-400 truncate">Weekly Report</p>
+        <p className="font-bold text-[#0F2D52] text-sm sm:text-base">{periodLabel(period)}</p>
+        <p className="mt-1 text-xs font-medium text-slate-400">Weekly Report</p>
       </div>
       <dl className="mt-4 grid gap-2 border-t border-slate-100 pt-3 text-xs sm:text-sm text-slate-600">
         <div className="flex justify-between gap-2 min-w-0">
@@ -679,6 +679,10 @@ function HistoryCard({ period, current, selected, onSelect, onDownload, loading,
         <Button size="icon" variant="outline" disabled={downloadingPeriod?.start_date === period.start_date} onClick={onDownload} className="flex-1 min-w-0 px-2 sm:px-3">
           <Download className="h-3.5 w-3.5 flex-shrink-0" />
           <span className="sm:hidden ml-1 text-xs">PDF</span>
+        </Button>
+        <Button size="icon" variant="outline" disabled={downloadingPeriod?.start_date === period.start_date} onClick={onPrint} className="flex-1 min-w-0 px-2 sm:px-3" title="Print PDF">
+          <Printer className="h-3.5 w-3.5 flex-shrink-0" />
+          <span className="sm:hidden ml-1 text-xs">Print</span>
         </Button>
       </div>
     </div>

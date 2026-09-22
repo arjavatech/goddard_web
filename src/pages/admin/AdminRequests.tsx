@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Papa from 'papaparse';
 import { AdminLayout } from './AdminLayout';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
+import { Pagination } from '../../components/ui/pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
 import { useToast } from '../../contexts/ToastContext';
@@ -14,8 +18,8 @@ import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { getTodayDateString, validateFutureDate } from '../../lib/utils';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
-  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap,
-  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2, AlertCircle
+  ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap, CreditCard,
+  LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2, AlertCircle, Download, Receipt, Package
 } from 'lucide-react';
 
 export function AdminRequests() {
@@ -37,9 +41,13 @@ export function AdminRequests() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [scopeFilter, setScopeFilter] = useState<string>('all');
   
-  const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024 ? 'cards' : 'table';
+    }
+    return 'table';
+  });
   const [sortConfig, setSortConfig] = useState<{ key: keyof Request, direction: 'asc' | 'desc' } | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -68,7 +76,6 @@ export function AdminRequests() {
     setSortConfig(null);
     setScopeFilter('all');
     setStatusFilter('all');
-    setCurrentPage(1);
   };
 
   // Modal states
@@ -155,6 +162,14 @@ export function AdminRequests() {
   useEffect(() => {
     loadData();
   }, [userData?.schoolId]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setViewMode(window.innerWidth < 1024 ? 'cards' : 'table');
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -395,22 +410,8 @@ export function AdminRequests() {
     return 0;
   });
 
-  const requestSort = (key: keyof Request) => {
-    let direction: 'asc' | 'desc' = 'asc';
-    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
-      direction = 'desc';
-    }
-    setSortConfig({ key, direction });
-  };
-
-  const totalPages = Math.max(1, Math.ceil(sortedRequests.length / recordsPerPage));
-  const paginatedRequests = sortedRequests.slice((currentPage - 1) * recordsPerPage, currentPage * recordsPerPage);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [totalPages, currentPage]);
+  const { currentPage, totalPages, paginatedData, itemsPerPage, setCurrentPage } =
+    usePagination({ data: sortedRequests, itemsPerPage: recordsPerPage });
 
   const getStatusBadgeClass = (status: RequestStatus) => {
     switch (status) {
@@ -436,28 +437,137 @@ export function AdminRequests() {
     }
   };
 
-  const getStatusLabel = (status: RequestStatus) => {
-    switch (status) {
-      case 'Pending':
-        return 'Submitted';
-      case 'In Progress':
-        return 'In Progress';
-      case 'Completed':
-        return 'Completed';
-      default:
-        return status;
+  // Action cell (shared between card and table)
+  const ActionCell = ({ req }: { req: Request }) => {
+    if (req.status === 'Completed') {
+      return (
+        <div className="text-right flex flex-col items-end gap-0.5">
+          <div className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-white border-2 border-transparent flex items-center justify-center">
+            <p className="text-[8px] sm:text-xs md:text-sm font-bold text-emerald-700 whitespace-nowrap">Spent: ${req.amountSpent?.toFixed(2)}</p>
+          </div>
+          <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">via {req.paymentMethod} on {req.purchaseDate}</p>
+          {req.paidByName && (
+            <p className="text-[7px] sm:text-xs text-slate-400 px-1.5 sm:px-2 md:px-3">Completed by: {req.paidByName}</p>
+          )}
+        </div>
+      );
     }
+    if (req.status === 'Pending') {
+      return (
+        <div className="flex justify-end">
+          <Button
+            onClick={() => handleOpenStartProcessing(req)}
+            disabled={validatingId === req.id}
+            className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+          >
+            {validatingId === req.id ? (
+              <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 sm:h-3 w-2.5 sm:w-3 inline-block" />
+            ) : (
+              <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+            )}
+            <span className="hidden sm:inline">Processing</span>
+            <span className="inline sm:hidden text-[7px]">Processing</span>
+          </Button>
+        </div>
+      );
+    }
+    // In Progress
+    return (
+      <div className="flex justify-end">
+        <Button
+          onClick={() => handleOpenPurchaseModal(req)}
+          className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+        >
+          <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
+          <span className="hidden sm:inline text-[7px] sm:text-[8px] md:text-[9px]">Record Purchase</span>
+          <span className="inline sm:hidden text-[6px]">Record</span>
+        </Button>
+      </div>
+    );
+  };
+
+  const getStatusLabel = (status: RequestStatus) => status === 'Pending' ? 'Submitted' : status;
+
+  // Export helpers
+  const exportToCSV = () => {
+    const rows = searchedAndFiltered.map(r => ({
+      Item: r.item,
+      Category: r.category || '',
+      Quantity: r.quantity,
+      Scope: r.scope,
+      'Classroom / Teacher': r.classroomName || r.teacherName || '',
+      Requester: r.requesterName,
+      Role: r.requesterRole,
+      Status: r.status,
+      'Product Link': r.productLink || '',
+      Notes: r.notes || '',
+      'Amount Spent': r.amountSpent ?? '',
+      'Payment Method': r.paymentMethod || '',
+      'Purchase Date': r.purchaseDate || '',
+      'Payment Notes': r.paymentNotes || '',
+      'Created At': new Date(r.createdAt).toLocaleString(),
+    }));
+    const csv = Papa.unparse(rows);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `requests_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportToPDF = () => {
+    const win = window.open('', '_blank');
+    if (!win) return;
+    const rows = searchedAndFiltered.map(r => `
+      <tr>
+        <td>${r.item}</td>
+        <td>${r.requesterName}</td>
+        <td style="text-transform:capitalize">${r.scope}</td>
+        <td>${r.classroomName || r.teacherName || '-'}</td>
+        <td><span class="badge badge-${r.status.toLowerCase().replace(' ', '-')}">${r.status}</span></td>
+        <td>${new Date(r.createdAt).toLocaleDateString()}</td>
+        <td>${r.amountSpent != null ? '$' + r.amountSpent.toFixed(2) : '-'}</td>
+      </tr>`).join('');
+    win.document.write(`<!DOCTYPE html><html><head><title>Requests Export</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 11px; padding: 20px; color: #1e293b; }
+        h1 { font-size: 18px; color: #0F2D52; margin-bottom: 4px; }
+        p { font-size: 11px; color: #64748b; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #0F2D52; color: #fff; padding: 8px 10px; text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: .5px; }
+        td { padding: 7px 10px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+        tr:nth-child(even) td { background: #f8fafc; }
+        .badge { padding: 2px 8px; border-radius: 99px; font-size: 10px; font-weight: 700; }
+        .badge-pending { background:#fef3c7; color:#b45309; }
+        .badge-in-progress { background:#dbeafe; color:#1d4ed8; }
+        .badge-completed { background:#d1fae5; color:#065f46; }
+        @media print { body { padding: 0; } }
+      </style></head><body>
+      <h1>Admin — Requests Queue</h1>
+      <p>Exported on ${new Date().toLocaleString()} &nbsp;|&nbsp; ${searchedAndFiltered.length} records</p>
+      <table>
+        <thead><tr>
+          <th>Item</th><th>Requester</th><th>Scope</th><th>Target</th>
+          <th>Status</th><th>Date</th><th>Amount</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <script>window.onload=()=>{window.print();}</script>
+      </body></html>`);
+    win.document.close();
   };
 
   return (
     <AdminLayout>
-      <div className="space-y-6 mx-auto px-4 py-6">
-        
-        {/* Upper Header Row */}
+      <div className="space-y-5 sm:space-y-6 mx-auto px-4 sm:px-6 py-6 overflow-x-hidden">
+
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between my-5 gap-4 mt-16 sm:mt-14 bg-white p-6 rounded-2xl border border-slate-100 shadow-xs">
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-              <ShoppingBag className="w-6 h-6 text-[#0F2D52]" /> Procurement Request Board
+            <h1 className="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight flex items-start sm:items-center gap-2">
+              <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 mt-0.5 sm:mt-0 shrink-0 text-[#0F2D52]" /> Requests
             </h1>
             <p className="text-xs text-slate-500 mt-1">
               Create and manage procurement requests for the school or specific teachers.
@@ -467,7 +577,7 @@ export function AdminRequests() {
           {activeTab !== 'employee' && (
             <Button
               onClick={handleOpenModal}
-              className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2"
+              className="rounded-xl h-11 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] hover:from-[#091629] text-white font-bold text-xs shadow-md flex items-center gap-2 self-start sm:self-auto"
             >
               <Plus className="w-4 h-4" /> Create Request
             </Button>
@@ -485,7 +595,7 @@ export function AdminRequests() {
             ]).map(tab => (
               <button
                 key={tab.key}
-                onClick={() => { setActiveTab(tab.key); setSearchTerm(''); setStatusFilter('all'); setScopeFilter('all'); setCurrentPage(1); }}
+                onClick={() => setActiveTab(tab.key)}
                 className={`whitespace-nowrap px-4 sm:px-5 py-3 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
                   activeTab === tab.key ? 'border-[#0f2d52] text-[#0f2d52]' : 'border-transparent text-slate-400 hover:text-slate-600'
                 }`}
@@ -506,7 +616,7 @@ export function AdminRequests() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search by item..."
+                placeholder="Search by requested item or requester name..."
                 value={searchTerm}
                 onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
                 className="w-full pl-10 pr-10 py-2.5 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] transition-colors"
@@ -536,6 +646,29 @@ export function AdminRequests() {
                   </span>
                 )}
               </Button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-10 rounded-xl bg-white text-[#0F2D52] border border-slate-200 hover:bg-slate-50 transition-all font-bold text-xs px-3 sm:px-4 flex-shrink-0 flex items-center gap-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Export</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={exportToCSV} className="flex items-center gap-2 cursor-pointer">
+                    <Package className="w-4 h-4" />
+                    <span>Export as CSV</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={exportToPDF} className="flex items-center gap-2 cursor-pointer">
+                    <Receipt className="w-4 h-4" />
+                    <span>Export as PDF</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <Button
                 variant="outline"
@@ -592,13 +725,13 @@ export function AdminRequests() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-xs sm:text-sm font-medium text-slate-500">Assignment Level</label>
+                  <label className="text-xs sm:text-sm font-medium text-slate-500">Scope</label>
                   <select
                     value={scopeFilter}
                     onChange={e => { setScopeFilter(e.target.value); setCurrentPage(1); }}
                     className="w-full px-3 py-2.5 text-xs bg-white border border-slate-200 rounded-xl text-slate-700 focus:outline-none focus:border-[#0F2D52] transition-colors"
                   >
-                    <option value="all">All Levels</option>
+                    <option value="all">All Scopes</option>
                     <option value="school">Entire School</option>
                     <option value="classroom">Specific Classroom</option>
                     <option value="teacher">Specific Employee</option>
@@ -642,8 +775,8 @@ export function AdminRequests() {
             </select>
             <div className="flex rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
               <button
-                onClick={() => setViewMode('card')}
-                className={`rounded-md p-1.5 transition-colors ${viewMode === 'card' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                onClick={() => setViewMode('cards')}
+                className={`rounded-md p-1.5 transition-colors ${viewMode === 'cards' ? 'bg-[#0F2D52] text-white' : 'text-slate-400 hover:text-slate-600'}`}
               >
                 <LayoutGrid className="h-4 w-4" />
               </button>
@@ -670,13 +803,13 @@ export function AdminRequests() {
             </div>
             <h3 className="text-base font-bold text-slate-900 mb-1">No requests found</h3>
             <p className="text-sm text-slate-500 max-w-sm mx-auto">
-              No matching items for this role and status filter.
+              No matching items for the selected filters and criteria.
             </p>
           </div>
-        ) : viewMode === 'card' ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        ) : viewMode === 'cards' ? (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <AnimatePresence mode="popLayout">
-              {paginatedRequests.map((req, idx) => (
+              {paginatedData.map((req, idx) => (
                 <motion.div
                   key={req.id}
                   initial={{ opacity: 0, y: 15 }}
@@ -807,49 +940,43 @@ export function AdminRequests() {
         ) : (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[960px] table-fixed text-left border-collapse text-sm">
-                <colgroup>
-                  <col className="w-[18%]" />
-                  <col className="w-[14%]" />
-                  <col className="w-[5%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[9%]" />
-                  <col className="w-[10%]" />
-                  <col className="w-[11%]" />
-                  <col className="w-[10%]" />
-                </colgroup>
+              <table className="w-full text-left border-collapse text-sm">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('item')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'item' ? { key: 'item', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'item', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Item {sortConfig?.key === 'item' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Item {sortConfig?.key === 'item' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 transition-colors leading-5">
-                      Target<br />Assignment
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Requester
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('quantity')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Scope
+                    </th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Target
+                    </th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'status' ? { key: 'status', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'status', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Qty {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Status {sortConfig?.key === 'status' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors whitespace-nowrap" onClick={() => requestSort('status')}>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => setSortConfig(sc => sc?.key === 'createdAt' ? { key: 'createdAt', direction: sc.direction === 'asc' ? 'desc' : 'asc' } : { key: 'createdAt', direction: 'asc' })}>
                       <div className="flex items-center gap-1.5">
-                        Status {sortConfig?.key === 'status' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
+                        Date {sortConfig?.key === 'createdAt' && (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />)}
                       </div>
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 cursor-pointer hover:bg-slate-100/80 transition-colors" onClick={() => requestSort('createdAt')}>
-                      <div className="flex items-center gap-1.5">
-                        Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-[#0F2D52]" /> : <ArrowDown className="w-3.5 h-3.5 text-[#0F2D52]" />) : null}
-                      </div>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700">
+                      Amount
                     </th>
-                    <th className="px-4 py-3 font-semibold text-slate-700 leading-5">Expected<br />Completion</th>
-                    <th className="px-2 py-3 font-semibold text-slate-700">Amount</th>
-                    <th className="px-2 py-3 font-semibold text-slate-700">Actions</th>
+                    <th className="px-4 py-3 text-xs sm:text-sm font-semibold text-slate-700 text-right min-w-[160px]">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {paginatedRequests.map((req) => (
+                  {paginatedData.map((req) => (
                     <tr key={req.id} className="hover:bg-slate-50/40 transition-colors group">
                       <td className="px-4 py-3.5 text-slate-900">
                         <div className="flex gap-3 items-start">
@@ -861,12 +988,8 @@ export function AdminRequests() {
                             </div>
                           )}
                           <div className="flex flex-col gap-0.5">
-                            <span className="font-semibold text-sm line-clamp-2">{req.item}</span>
+                            <span className="font-semibold text-xs sm:text-sm line-clamp-2">{req.item}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">{req.category || 'Supplies'}</span>
-                            <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
-                              <span className="font-semibold text-slate-700">{req.requesterName}</span>
-                              <span className="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.2 rounded font-bold uppercase">{req.requesterRole}</span>
-                            </p>
                             {req.productLink && (
                               <a href={req.productLink} target="_blank" rel="noopener noreferrer" className="text-[#1a6fc4] hover:text-[#0F2D52] hover:underline inline-flex items-center gap-1 text-[10px] font-medium w-fit mt-0.5">
                                 <Link2 className="w-3 h-3" /> View Product
@@ -875,75 +998,45 @@ export function AdminRequests() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-600">
-                        {req.scope === 'classroom' && (
-                          <>Target: <span className="font-bold text-slate-700">Classroom ({req.classroomName})</span></>
-                        )}
-                        {req.scope === 'teacher' && (
-                          <>Target: <span className="font-bold text-slate-700">Employee ({req.teacherName})</span></>
-                        )}
-                        {req.scope === 'school' && (
-                          <>Target: <span className="font-bold text-slate-700">Entire School</span></>
-                        )}
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-700 font-medium whitespace-nowrap">
+                        {req.requesterName}
                       </td>
-                      <td className="px-4 py-3.5 font-semibold text-slate-700">
-                        {req.quantity}
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600 capitalize">
+                        {req.scope}
+                      </td>
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-600">
+                        {req.scope === 'classroom' && req.classroomName}
+                        {req.scope === 'teacher' && req.teacherName}
+                        {req.scope === 'school' && 'Entire School'}
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">
-                        <div className="flex flex-col items-start gap-1">
-                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                            {getStatusIcon(req.status)}
-                            {getStatusLabel(req.status)}
-                          </span>
-                        </div>
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                          {getStatusIcon(req.status)}
+                          {getStatusLabel(req.status)}
+                        </span>
                       </td>
-                      <td className="px-4 py-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">
+                      <td className="px-4 py-3.5 text-xs sm:text-sm text-slate-500 font-medium whitespace-nowrap">
                         {new Date(req.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-4 py-3.5 text-xs font-semibold whitespace-nowrap">
-                        {req.expectedCompletionDate ? (
-                          <span className="text-blue-600">{new Date(req.expectedCompletionDate).toLocaleDateString()}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                   
-                      <td className="px-2 py-3.5">
+                      <td className="px-4 py-3.5 text-center">
                         {req.status === 'Completed' && req.amountSpent !== undefined ? (
                           <div className="text-xs">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">Amount Spent</p>
-                            <span className="font-extrabold text-emerald-700">${req.amountSpent.toFixed(2)}</span>
+                            <p className="font-bold text-emerald-700">${req.amountSpent.toFixed(2)}</p>
                             {req.paymentMethod && <p className="text-[10px] text-slate-400 mt-0.5">{req.paymentMethod}</p>}
-                            {req.paidByName && <p className="text-[10px] text-slate-400 mt-0.5">Completed by: {req.paidByName}</p>}
                           </div>
                         ) : (
                           <span className="text-slate-300 text-xs">—</span>
                         )}
                       </td>
-                      <td className="px-2 py-3.5">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 rounded-lg text-xs disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3" /></Button>
-                          <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleDelete(req)} className="h-7 px-2 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>
-                          {req.status === 'Pending' && (
-                            <button
-                              onClick={() => handleOpenStartProcessing(req)}
-                              disabled={validatingId === req.id}
-                              className="h-7 px-2 rounded-lg text-xs border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold flex items-center gap-1 transition-colors whitespace-nowrap disabled:opacity-50"
-                            >
-                              {validatingId === req.id
-                                ? <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 w-2.5 inline-block" />
-                                : <ArrowRight className="w-3 h-3" />}
-                              Processing
-                            </button>
+                      <td className="px-4 py-3.5 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          {req.status !== 'Completed' && (
+                            <>
+                              <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
+                              <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => handleDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
+                            </>
                           )}
-                          {req.status === 'In Progress' && (
-                            <button
-                              onClick={() => handleOpenPurchaseModal(req)}
-                              className="h-7 px-2 rounded-lg text-xs text-emerald-600 font-semibold border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 flex items-center gap-1 transition-colors whitespace-nowrap"
-                            >
-                              <CheckCircle2 className="w-3 h-3" /> Record Purchase
-                            </button>
-                          )}
+                          <ActionCell req={req} />
                         </div>
                       </td>
                     </tr>
@@ -956,47 +1049,15 @@ export function AdminRequests() {
 
         {/* Pagination Controls */}
         {!loading && sortedRequests.length > 0 && (
-          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-3 text-sm">
+          <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
             <div className="text-slate-500 text-xs sm:text-sm">
               Showing <span className="font-semibold text-slate-900">{(currentPage - 1) * recordsPerPage + 1}</span>–<span className="font-semibold text-slate-900">{Math.min(currentPage * recordsPerPage, sortedRequests.length)}</span> of <span className="font-semibold text-slate-900">{sortedRequests.length}</span>
             </div>
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
-              >
-                <ChevronLeft className="w-4 h-4" /><span className="hidden sm:inline ml-1">Prev</span>
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
-                  .map((p, i, arr) => (
-                    <React.Fragment key={p}>
-                      {i > 0 && arr[i - 1] !== p - 1 && (
-                        <span className="px-1 text-slate-400 text-xs">…</span>
-                      )}
-                      <button
-                        onClick={() => setCurrentPage(p)}
-                        className={`w-8 h-8 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl text-xs font-semibold transition-colors ${currentPage === p ? 'bg-[#0F2D52] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
-                      >
-                        {p}
-                      </button>
-                    </React.Fragment>
-                  ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="h-9 px-3 border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl"
-              >
-                <span className="hidden sm:inline mr-1">Next</span><ChevronRight className="w-4 h-4" />
-              </Button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
           </div>
         )}
 

@@ -635,7 +635,7 @@ export function EmployeeRequests() {
                     <div className="flex items-center gap-1">Date {sortConfig?.key === 'createdAt' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-3 h-3 text-[#0F2D52]" /> : <ArrowDown className="w-3 h-3 text-[#0F2D52]" />) : null}</div>
                   </th>
                   <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px] leading-4">Expected<br />Completion</th>
-                  {hasActions && <th className="text-left px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">Actions</th>}
+                  {hasActions && <th className="text-center px-3 py-2.5 font-bold text-slate-500 uppercase tracking-wider text-[9px] sm:text-[10px]">Actions</th>}
                 </tr>
               </thead>
               <tbody>
@@ -685,7 +685,7 @@ export function EmployeeRequests() {
                     </td>
                     {hasActions && (
                       <td className="px-3 py-2.5 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center gap-1">
                           <Button variant="outline" size="sm" onClick={() => setSelectedRequest(req)} className="h-7 px-2 text-[10px]"><Eye className="w-3 h-3 mr-1" />View</Button>
                           <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => handleOpenEdit(req)} className="h-7 px-2 text-[10px] disabled:opacity-40 disabled:cursor-not-allowed"><Pencil className="w-3 h-3 mr-1" />Edit</Button>
                           <Button variant="outline" size="sm" disabled={req.status !== 'Pending'} onClick={() => setRequestToDelete(req)} className="h-7 px-2 text-[10px] text-red-600 hover:text-red-700 disabled:opacity-40 disabled:cursor-not-allowed"><Trash2 className="w-3 h-3" /></Button>

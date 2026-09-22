@@ -589,7 +589,7 @@ export function SuperAdminRequests() {
           <Button
             onClick={() => handleOpenStartProcessing(req)}
             disabled={validatingId === req.id}
-            className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+            className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg border-2 border-[#0F2D52] text-[#0F2D52] bg-white hover:bg-[#0F2D52] hover:text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
           >
             {validatingId === req.id ? (
               <span className="animate-spin rounded-full border-2 border-current border-t-transparent h-2.5 sm:h-3 w-2.5 sm:w-3 inline-block" />
@@ -607,11 +607,11 @@ export function SuperAdminRequests() {
       <div className="flex justify-end">
         <Button
           onClick={() => handleOpenPurchaseModal(req)}
-          className="h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
+          className="w-[88px] sm:w-[102px] md:w-[110px] h-7 sm:h-8 md:h-9 px-1.5 sm:px-2 md:px-3 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white font-bold text-[8px] sm:text-[9px] md:text-xs shadow-sm flex items-center justify-center gap-0.5 sm:gap-1 md:gap-2 transition-colors whitespace-nowrap"
         >
           <CreditCard className="w-2.5 sm:w-3 h-2.5 sm:h-3 shrink-0" />
-          <span className="hidden sm:inline">Record Purchase</span>
-          <span className="inline sm:hidden text-[7px]">Record</span>
+          <span className="hidden sm:inline text-[7px] sm:text-[8px] md:text-[9px]">Record Purchase</span>
+          <span className="inline sm:hidden text-[6px]">Record</span>
         </Button>
       </div>
     );
