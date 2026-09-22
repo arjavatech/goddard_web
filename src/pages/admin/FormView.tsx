@@ -7,9 +7,10 @@ import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { Calendar, User, School, ChevronLeft, CheckCircle, XCircle, ChevronRight } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
-import { reviewStudentFormAssignment, getFormResumeLink, getStudentManualPdfUrl, deleteStudentManualPdf } from '../../services/api/admin';
+import { reviewStudentFormAssignment, revokeStudentFormAssignment, getFormResumeLink, getStudentManualPdfUrl, deleteStudentManualPdf } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -49,9 +50,12 @@ export function FormView() {
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
+  const [isRevoking, setIsRevoking] = useState(false);
+  const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
+  const [revokeNotes, setRevokeNotes] = useState('');
   const [resolvedResumeLink, setResolvedResumeLink] = useState<string | null>(null);
   const [numPages, setNumPages] = useState<number | null>(null);
   const [pageNumber, setPageNumber] = useState(1);
@@ -314,6 +318,43 @@ export function FormView() {
       setIsRejecting(false);
     }
   };
+
+  // Handle form approval revocation
+  const handleRevoke = async () => {
+    if (!studentFormAssignmentId) {
+      showToast('error', 'Unable to revoke form: Assignment ID is missing');
+      return;
+    }
+
+    if (!user?.id) {
+      showToast('error', 'Unable to revoke form: User not authenticated');
+      return;
+    }
+
+    if (!revokeNotes.trim()) {
+      showToast('error', 'Please provide a reason for revoking the approval');
+      return;
+    }
+
+    setIsRevoking(true);
+    try {
+      await revokeStudentFormAssignment(studentFormAssignmentId, revokeNotes, user.id);
+      showToast('success', 'Form approval revoked successfully');
+      setIsRevokeDialogOpen(false);
+      setRevokeNotes('');
+
+      // Navigate back after a short delay
+      setTimeout(() => {
+        navigate(returnPath);
+      }, 1500);
+    } catch (error) {
+      console.error('Error revoking form:', error);
+      showToast('error', 'Failed to revoke form approval');
+    } finally {
+      setIsRevoking(false);
+    }
+  };
+
   const selectedUrl = getFormUrl();
   const embeddedResize = useEmbeddedFormResize(selectedUrl);
 
@@ -477,7 +518,25 @@ export function FormView() {
 
           <div className="mt-8 flex justify-end pt-6 border-t border-slate-100">
             {isApproved || isViewOnly ? (
-              <div className="flex items-center gap-2 text-green-600">
+              <div className="flex items-center gap-2">
+                {isApproved && !isManualUpload && !isViewOnly && (
+                  <Button
+                    onClick={() => setIsRevokeDialogOpen(true)}
+                    variant="outline"
+                    size="sm"
+                    className="text-amber-700 bg-amber-50 border-amber-100 hover:bg-amber-100/50"
+                    disabled={isRevoking}
+                  >
+                    {isRevoking ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin h-4 w-4 mr-1 border-2 border-amber-700 border-t-transparent rounded-full" />
+                        Revoking...
+                      </span>
+                    ) : (
+                      'Revoke Approval'
+                    )}
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -558,6 +617,52 @@ export function FormView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Revoke Approval Dialog */}
+      <Dialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Revoke Form Approval</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Are you sure you want to revoke the approval for this form? This will move it back to "In Progress" status.
+            </p>
+            <Textarea
+              placeholder="Please provide a reason for revoking the approval..."
+              value={revokeNotes}
+              onChange={(e) => setRevokeNotes(e.target.value)}
+              className="min-h-[80px]"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsRevokeDialogOpen(false);
+                setRevokeNotes('');
+              }}
+              disabled={isRevoking}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRevoke}
+              variant="destructive"
+              disabled={isRevoking || !revokeNotes.trim()}
+            >
+              {isRevoking ? (
+                <span className="flex items-center">
+                  <span className="animate-spin h-4 w-4 mr-1 border-2 border-white border-t-transparent rounded-full" />
+                  Revoking...
+                </span>
+              ) : (
+                'Revoke Approval'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
 
   </AdminLayout>;
