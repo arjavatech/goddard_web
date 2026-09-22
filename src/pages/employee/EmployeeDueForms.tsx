@@ -918,8 +918,7 @@ export function EmployeeDueForms() {
                             </th>
                             <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Form</th>
                             <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden sm:table-cell">Employee</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Role</th>
-                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell">Email</th>
+                            <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden md:table-cell w-48">Email</th>
                             <th className="text-left py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80 hidden lg:table-cell">Due Date</th>
                             <th className="text-center py-3.5 px-3 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Status</th>
                             <th className="text-right py-3.5 px-6 text-xs font-bold uppercase tracking-wider text-slate-500 border-y border-slate-200/85 bg-slate-50/80">Actions</th>
@@ -944,11 +943,8 @@ export function EmployeeDueForms() {
                               <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden sm:table-cell max-w-0">
                                 <div className="truncate">{form.employeeName}</div>
                               </td>
-                              <td className="py-4 px-3 text-sm font-semibold text-slate-700 hidden md:table-cell max-w-0">
-                                <div className="truncate">{form.employeeType}</div>
-                              </td>
-                              <td className="py-4 px-3 text-xs hidden md:table-cell max-w-0">
-                                <div className="overflow-x-auto scrollbar-thin max-w-[180px] font-bold text-slate-800 whitespace-nowrap">{form.employeeEmail}</div>
+                              <td className="py-4 px-3 text-xs hidden md:table-cell w-48 max-w-[12rem]">
+                                <div className="truncate font-semibold text-slate-700">{form.employeeEmail}</div>
                               </td>
                               <td className="py-4 px-3 text-xs font-semibold text-slate-700 hidden lg:table-cell">
                                 <span className={isOverdue(form.dueDate) && form.status !== 'completed' ? 'text-red-600 font-bold' : form.dueDate ? '' : 'text-slate-400'}>
