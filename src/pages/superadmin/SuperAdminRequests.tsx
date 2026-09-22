@@ -20,7 +20,7 @@ import {
   ShoppingBag, Search, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign,
   LayoutGrid, TableProperties, Plus, Filter, School, User, GraduationCap, ArrowRight,
-  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle
+  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle, FileText
 } from 'lucide-react';
 
 export function SuperAdminRequests() {
@@ -1218,7 +1218,19 @@ export function SuperAdminRequests() {
                       {req.billImageUrl && (
                         <div>
                           <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Receipt className="w-3 h-3" /> Receipt / Bill</p>
-                          <img src={req.billImageUrl} alt="Receipt" className="w-full max-h-40 object-contain rounded-lg border border-emerald-100 bg-white" />
+                          {req.billImageUrl.toLowerCase().includes('.pdf') ? (
+                            <a
+                              href={req.billImageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-emerald-100 bg-white hover:bg-emerald-50 transition-colors text-emerald-700 text-xs font-semibold"
+                            >
+                              <FileText className="w-4 h-4 flex-shrink-0" />
+                              View Receipt (PDF)
+                            </a>
+                          ) : (
+                            <img src={req.billImageUrl} alt="Receipt" className="w-full max-h-40 object-contain rounded-lg border border-emerald-100 bg-white" />
+                          )}
                         </div>
                       )}
                     </div>
