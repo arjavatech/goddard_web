@@ -385,6 +385,8 @@ export const RequestService = {
           billImageBase64,
           billImageName,
           billImageContentType,
+          paid_by_user_id: details.paidByUserId,
+          paid_by_name:    details.paidByName,
         },
       },
       z.any()
