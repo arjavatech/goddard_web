@@ -3,11 +3,10 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
@@ -82,6 +81,8 @@ export function EmployeeFormsManagement() {
   const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
+  const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
@@ -571,28 +572,67 @@ export function EmployeeFormsManagement() {
 
       {/* Assign to Employee Dialog */}
       <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6 overflow-visible" onInteractOutside={() => { setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}>
           <DialogHeader className="mb-4">
             <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to Employee</DialogTitle>
           </DialogHeader>
-          <div className="py-2 space-y-4">
+          <div className="py-2 space-y-4 overflow-visible">
             <p className="text-sm text-slate-600">
               Assigning form: <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong>
             </p>
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Select Employee</label>
-              <Select value={selectedEmployeeId} onValueChange={setSelectedEmployeeId}>
-                <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]">
-                  <SelectValue placeholder="Choose an employee..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border-slate-100 shadow-lg">
-                  {employees.map(emp => (
-                    <SelectItem key={emp.id} value={emp.id} className="text-sm">
-                      {emp.firstName} {emp.lastName} ({emp.employeeType})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => { setEmployeeSearchOpen(!employeeSearchOpen); setEmployeeSearchQuery(''); }}
+                  className="w-full h-10 flex items-center justify-between px-3 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
+                >
+                  <span className={selectedEmployeeId ? 'text-slate-900' : 'text-slate-400'}>
+                    {selectedEmployeeId
+                      ? (() => { const e = employees.find(e => e.id === selectedEmployeeId); return e ? `${e.firstName} ${e.lastName} (${e.employeeType})` : 'Choose an employee...'; })()
+                      : 'Choose an employee...'}
+                  </span>
+                  <ChevronsUpDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                </button>
+
+                {employeeSearchOpen && (
+                  <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="p-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Search employee..."
+                        value={employeeSearchQuery}
+                        onChange={(e) => setEmployeeSearchQuery(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white"
+                      />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto pb-1">
+                      {(() => {
+                        const filtered = employees.filter(emp =>
+                          `${emp.firstName} ${emp.lastName} ${emp.employeeType}`.toLowerCase().includes(employeeSearchQuery.toLowerCase())
+                        );
+                        return filtered.length === 0
+                          ? <div className="text-sm text-slate-400 py-4 text-center">No employee found</div>
+                          : filtered.map(emp => (
+                              <button
+                                key={emp.id}
+                                type="button"
+                                onClick={() => { setSelectedEmployeeId(emp.id); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
+                              >
+                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === emp.id ? 'opacity-100' : 'opacity-0'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-slate-900 truncate">{emp.firstName} {emp.lastName}</div>
+                                </div>
+                              </button>
+                            ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
