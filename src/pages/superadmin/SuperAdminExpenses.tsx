@@ -8,6 +8,8 @@ import { Pagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
 import { RequestService, type Request, type RequestExpenseData } from '../../services/api/requests';
 import { fetchRequestSettings } from '../../services/api/settings';
+import { fetchClassrooms, fetchAdminUsers, type Classroom, type AdminUser } from '../../services/api/admin';
+import { EmployeeService, type Employee } from '../../services/api/employee';
 import { useToast } from '../../contexts/ToastContext';
 import { useUserContext } from '../../contexts/UserContext';
 import {
@@ -100,6 +102,8 @@ export function SuperAdminExpenses() {
   const [billImageFile, setBillImageFile] = useState<File | null>(null);
   const [categories, setCategories] = useState<string[]>([]);
   const [locationOptions, setLocationOptions] = useState<string[]>([]);
+  const [classrooms, setClassrooms] = useState<Classroom[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [step, setStep] = useState<1 | 2>(1);
   const [ledgerView, setLedgerView] = useState<'cards' | 'table'>('table');
   const [ledgerSearchTerm, setLedgerSearchTerm] = useState('');
@@ -115,15 +119,34 @@ export function SuperAdminExpenses() {
     if (!userData?.schoolId) return;
     setLoading(true);
     try {
-      const [reqList, data, requestSettings] = await Promise.all([
+      const [reqList, data, requestSettings, classroomList, empList, adminList] = await Promise.all([
         RequestService.fetchRequests(userData.schoolId),
         RequestService.fetchExpenseData(userData.schoolId),
-        fetchRequestSettings(userData.schoolId)
+        fetchRequestSettings(userData.schoolId),
+        fetchClassrooms(userData.schoolId),
+        EmployeeService.fetchEmployees(userData.schoolId),
+        fetchAdminUsers(userData.schoolId)
       ]);
       setRequests(reqList);
       setExpenseData(data);
       setCategories(requestSettings.requestCategories.map(item => item.label));
       setLocationOptions(requestSettings.location.map(item => item.label));
+      setClassrooms(classroomList);
+      const activeEmployees = empList.filter(e => e.status === 'active');
+      const adminsAsEmployees: Employee[] = adminList.map(admin => ({
+        id: admin.id,
+        userId: admin.id,
+        firstName: admin.first_name,
+        lastName: admin.last_name,
+        email: admin.email,
+        phone: '',
+        address: '',
+        employeeType: admin.role,
+        joinedOn: '',
+        schoolId: admin.school_id,
+        status: 'active'
+      }));
+      setEmployees([...activeEmployees, ...adminsAsEmployees]);
     } catch {
       showToast('error', 'Failed to load expense metrics.', 'Error');
     } finally {
@@ -145,6 +168,14 @@ export function SuperAdminExpenses() {
   const handleAddExpense = async () => {
     if (!form.item.trim() || !form.amountSpent || !form.requesterName.trim()) {
       showToast('error', 'Item, requester name, and amount are required.', 'Validation');
+      return;
+    }
+    if (form.scope === 'classroom' && !form.classroomName.trim()) {
+      showToast('error', 'Please select a classroom.', 'Validation');
+      return;
+    }
+    if (form.scope === 'teacher' && !form.teacherName.trim()) {
+      showToast('error', 'Please enter a teacher name.', 'Validation');
       return;
     }
     if (form.paymentMethod === 'Other' && !form.paymentMethodOther.trim()) {
@@ -659,14 +690,34 @@ export function SuperAdminExpenses() {
 
                 {form.scope === 'classroom' && (
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Classroom Name</label>
-                    <Input value={form.classroomName} onChange={e => setForm(f => ({ ...f, classroomName: e.target.value }))} placeholder="e.g. Preschool A" className="mt-1 h-9 text-sm" />
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Classroom Name <span className="text-red-500">*</span></label>
+                    <select
+                      value={form.classroomName}
+                      onChange={e => setForm(f => ({ ...f, classroomName: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20"
+                    >
+                      <option value="">Select classroom...</option>
+                      {classrooms.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
                 {form.scope === 'teacher' && (
                   <div>
-                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Teacher Name</label>
-                    <Input value={form.teacherName} onChange={e => setForm(f => ({ ...f, teacherName: e.target.value }))} placeholder="e.g. Sarah Jenkins" className="mt-1 h-9 text-sm" />
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Teacher Name <span className="text-red-500">*</span></label>
+                    <select
+                      value={form.teacherName}
+                      onChange={e => setForm(f => ({ ...f, teacherName: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20"
+                    >
+                      <option value="">Select teacher / admin...</option>
+                      {employees.map(e => (
+                        <option key={e.id} value={`${e.firstName} ${e.lastName}`}>
+                          {e.firstName} {e.lastName}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 )}
 
@@ -793,7 +844,8 @@ export function SuperAdminExpenses() {
 
           {/* Validation flags */}
           {(() => {
-            const step1Valid = form.item.trim().length > 0;
+            const step1Valid = form.item.trim().length > 0 &&
+              (form.scope === 'classroom' ? form.classroomName.trim().length > 0 : form.scope === 'teacher' ? form.teacherName.trim().length > 0 : true);
             const step2Valid = parseFloat(form.amountSpent) > 0 && (form.paymentMethod !== 'Other' || form.paymentMethodOther.trim().length > 0);
 
             return (
