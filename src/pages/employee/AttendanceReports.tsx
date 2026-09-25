@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ChevronDown, Clock, DollarSign, Download, Grid3x3, List, Printer } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronDown, Clock, DollarSign, Download, Grid3x3, List, Printer, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
 
 type ReportTab = 'day' | 'range' | 'pending' | 'salary';
@@ -558,8 +559,24 @@ export function AttendanceReports() {
 }
 
 function SnapThumb({ url, label }: { url?: string; label: string }) {
+  const [open, setOpen] = useState(false);
   if (!url) return <span className="text-slate-400 text-xs">—</span>;
-  return <img src={url} alt={label} className="h-10 w-10 rounded-lg object-cover cursor-pointer border border-slate-200 hover:opacity-80 transition-opacity" onClick={() => window.open(url, '_blank')} />;
+  return (
+    <>
+      <img src={url} alt={label} className="h-10 w-10 rounded-lg object-cover cursor-pointer border border-slate-200 hover:opacity-80 transition-opacity" onClick={() => setOpen(true)} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg flex flex-col items-center gap-4">
+          <DialogHeader>
+            <DialogTitle>{label}</DialogTitle>
+          </DialogHeader>
+          <img src={url} alt={label} className="max-h-[70vh] w-full object-contain rounded-xl" />
+          <DialogFooter>
+            <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => setOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }
 
 function TabButton({ active, icon: Icon, onClick, children }: { active: boolean; icon: typeof CalendarDays; onClick: () => void; children: React.ReactNode }) {
