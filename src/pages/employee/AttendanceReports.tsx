@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CalendarDays, ChevronDown, Clock, DollarSign, Download, Grid3x3, List, Printer } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronDown, Clock, DollarSign, Download, Grid3x3, List, Printer, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
 
 type ReportTab = 'day' | 'range' | 'pending' | 'salary';
@@ -494,9 +495,17 @@ export function AttendanceReports() {
                                 <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Check In</dt>
                                 <dd className="text-right truncate">{record.check_in_time ? displayTime(record.check_in_time) : '—'}</dd>
                               </div>
+                              <div className="flex justify-between gap-2 min-w-0 items-center">
+                                <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Check-In Photo</dt>
+                                <dd className="text-right"><SnapThumb url={record.check_in_snap} label="Check-in photo" /></dd>
+                              </div>
                               <div className="flex justify-between gap-2 min-w-0">
                                 <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Check Out</dt>
                                 <dd className="text-right truncate">{displayTime(record.check_out_time)}</dd>
+                              </div>
+                              <div className="flex justify-between gap-2 min-w-0 items-center">
+                                <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Check-Out Photo</dt>
+                                <dd className="text-right"><SnapThumb url={record.check_out_snap} label="Check-out photo" /></dd>
                               </div>
                               <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
                                 <dt className="flex-shrink-0 font-bold uppercase tracking-wider text-slate-500">Worked</dt>
@@ -510,12 +519,14 @@ export function AttendanceReports() {
                       </div>
                     ) : (
                       <div className="mt-6 overflow-x-auto rounded-xl border border-slate-100">
-                        <table className="w-full min-w-[720px] text-sm">
+                        <table className="w-full min-w-[960px] text-sm">
                           <thead className="bg-slate-50/80">
                             <tr>
                               <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Date</th>
                               <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Check In</th>
+                              <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Check-In Photo</th>
                               <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Check Out</th>
+                              <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Check-Out Photo</th>
                               <th className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500">Worked</th>
                             </tr>
                           </thead>
@@ -524,11 +535,13 @@ export function AttendanceReports() {
                               <tr key={record.key} className="border-b border-slate-50 transition-colors hover:bg-[#F8FAFC]">
                                 <td className="px-4 py-4 text-slate-600">{rowDate(record, selectedDateLabel)}</td>
                                 <td className="px-4 py-4 text-slate-600">{record.check_in_time ? displayTime(record.check_in_time) : '—'}</td>
+                                <td className="px-4 py-4 flex items-center justify-center"><SnapThumb url={record.check_in_snap} label="Check-in photo" /></td>
                                 <td className="px-4 py-4">{record.check_out_time ? <span className="text-slate-600">{displayTime(record.check_out_time)}</span> : <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700">Pending</span>}</td>
+                                <td className="px-4 py-4 flex items-center justify-center"><SnapThumb url={record.check_out_snap} label="Check-out photo" /></td>
                                 <td className="px-4 py-4 font-semibold text-slate-700">{record.time_worked || '—'}</td>
                               </tr>
                             )) : (
-                              <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={4}>No attendance records found for this selection.</td></tr>
+                              <tr><td className="px-4 py-12 text-center text-slate-500" colSpan={6}>No attendance records found for this selection.</td></tr>
                             )}
                           </tbody>
                         </table>
@@ -542,6 +555,27 @@ export function AttendanceReports() {
         </div>
       </main>
     </EmployeeLayout>
+  );
+}
+
+function SnapThumb({ url, label }: { url?: string; label: string }) {
+  const [open, setOpen] = useState(false);
+  if (!url) return <span className="text-slate-400 text-xs">—</span>;
+  return (
+    <>
+      <img src={url} alt={label} className="h-10 w-10 rounded-lg object-cover cursor-pointer border border-slate-200 hover:opacity-80 transition-opacity" onClick={() => setOpen(true)} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-lg flex flex-col items-center gap-4">
+          <DialogHeader>
+            <DialogTitle>{label}</DialogTitle>
+          </DialogHeader>
+          <img src={url} alt={label} className="max-h-[70vh] w-full object-contain rounded-xl" />
+          <DialogFooter>
+            <Button className="bg-[#0F2D52] text-white hover:bg-[#173d69] hover:text-white" onClick={() => setOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 
