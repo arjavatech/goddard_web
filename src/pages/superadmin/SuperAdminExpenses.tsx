@@ -42,8 +42,8 @@ function StatCard({
   };
   const c = colorMap[color];
   return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
-      <Card className="border border-slate-100 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} className="h-full">
+      <Card className="border border-slate-100 bg-white rounded-2xl shadow-sm hover:shadow-md transition-shadow h-full">
         <CardContent className="p-5">
           <div className="flex items-start justify-between">
             <div className="space-y-1">
@@ -329,8 +329,8 @@ export function SuperAdminExpenses() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
 
             {/* Hero card — Total Spent */}
-            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-              <Card className="border-0 rounded-2xl overflow-hidden bg-[#0F2D52] text-white shadow-lg relative lg:col-span-1">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="h-full">
+              <Card className="border-0 rounded-2xl overflow-hidden bg-[#0F2D52] text-white shadow-lg relative h-full">
                 <div className="absolute inset-0 bg-gradient-to-br from-[#0F2D52] via-[#1a3d6e] to-[#0a1f3a]" />
                 <div className="absolute -right-6 -bottom-6 opacity-[0.07]">
                   <DollarSign className="w-32 h-32" />
