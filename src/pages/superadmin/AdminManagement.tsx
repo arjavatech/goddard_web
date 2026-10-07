@@ -149,9 +149,10 @@ export function AdminManagement() {
         adminEmail.trim(),
         adminFirstName.trim(),
         adminLastName.trim(),
-        userData.schoolId
+        userData.schoolId,
+        adminPhone.trim() || undefined
       );
-      
+
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
       setIsAddDialogOpen(false);
       resetForm();
@@ -238,7 +239,7 @@ export function AdminManagement() {
     setAdminFirstName(admin.first_name);
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
-    setAdminPhone(''); // Phone not available in current data
+    setAdminPhone(admin.phone_number || '');
     setEmailError(''); // Clear any existing email errors
     setIsEditDialogOpen(true);
   };
@@ -254,9 +255,9 @@ export function AdminManagement() {
         adminPhone.trim() || undefined
       );
       
-      setAdmins(admins.map(admin => 
-        admin.id === selectedAdmin.id 
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim() }
+      setAdmins(admins.map(admin =>
+        admin.id === selectedAdmin.id
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null }
           : admin
       ));
       
@@ -727,14 +728,24 @@ export function AdminManagement() {
                   placeholder="Enter admin email"
                   required
                   className={`w-full h-10 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all bg-white ${
-                    emailError 
-                      ? 'border-red-400 focus:ring-red-100 focus:border-red-500' 
+                    emailError
+                      ? 'border-red-400 focus:ring-red-100 focus:border-red-500'
                       : 'border-slate-200 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]'
                   }`}
                 />
                 {emailError && (
                   <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>
                 )}
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+                <Input
+                  type="tel"
+                  value={adminPhone}
+                  onChange={(e) => setAdminPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                />
               </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
