@@ -195,7 +195,7 @@ function ProfileContent() {
           <div className="grid grid-cols-3 divide-x divide-slate-100 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
             <StatCell icon={<Shield className="w-4 h-4 text-[#1a6fc4]" />} label="Role" value={roleLabel} />
             <StatCell icon={<CheckCircle2 className="w-4 h-4 text-emerald-500" />} label="Status" value="Active" />
-            <StatCell icon={<Calendar className="w-4 h-4 text-amber-500" />} label="Member Since" value={joinedDate} />
+            {/* <StatCell icon={<Calendar className="w-4 h-4 text-amber-500" />} label="Member Since" value={joinedDate} /> */}
           </div>
         </CardContent>
       </Card>
