@@ -261,7 +261,7 @@ export function FormView() {
     setIsApproving(true);
     try {
       if (isEmployeeForm && schoolId) {
-        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Approved', notes);
+        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'approved', notes);
       } else {
         await reviewStudentFormAssignment(studentFormAssignmentId, 'approved', notes, user.id);
       }
@@ -300,7 +300,7 @@ export function FormView() {
     setIsRejecting(true);
     try {
       if (isEmployeeForm && schoolId) {
-        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'Rejected', notes);
+        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'rejected', notes);
       } else {
         await reviewStudentFormAssignment(studentFormAssignmentId, 'rejected', notes, user.id);
       }
@@ -556,11 +556,11 @@ export function FormView() {
                         try {
                           if (studentFormAssignmentId && schoolId) {
                             await deleteStudentManualPdf(studentFormAssignmentId, schoolId);
-                            showToast('PDF removed successfully', 'success');
+                            showToast('success', 'PDF removed successfully');
                             navigate(-1);
                           }
                         } catch (error) {
-                          showToast('Failed to remove PDF', 'error');
+                          showToast('error', 'Failed to remove PDF');
                         } finally {
                           setIsRemovingUpload(false);
                         }
