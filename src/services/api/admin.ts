@@ -1029,6 +1029,7 @@ export type AdminUser = {
   role: string;
   is_verified: boolean;
   school_id: string;
+  phone_number?: string | null;
   taptime_employee_id?: string | null;
   taptime_pin?: string | null;
 };
@@ -1049,6 +1050,7 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         role: z.string(),
         is_verified: z.boolean(),
         school_id: z.string(),
+        phone_number: z.string().nullable().optional(),
         taptime_employee_id: z.string().nullable().optional(),
         taptime_pin: z.string().nullable().optional()
       }))
