@@ -365,7 +365,7 @@ export function SalaryReport() {
                               <table className="w-full min-w-[600px] text-sm">
                                 <thead className="bg-slate-50/80">
                                   <tr>
-                                    {['Employee', 'PIN', 'Days', 'Time Worked'].map((header) => (
+                                    {['Employee', 'PIN', 'Days', 'Time Worked', 'Total Hours'].map((header) => (
                                       <th
                                         key={header}
                                         className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
@@ -383,11 +383,12 @@ export function SalaryReport() {
                                         <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
                                         <td className="px-4 py-4 text-slate-600">{item.days}</td>
                                         <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                        <td className="px-4 py-4 text-slate-600">{toDecimalHours(item.time_worked)}</td>
                                       </tr>
                                     ))
                                   ) : (
                                     <tr>
-                                      <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                      <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                                         No attendance records in this period.
                                       </td>
                                     </tr>
