@@ -15,6 +15,15 @@ import { usePagination } from '../../hooks/usePagination';
 const formatDate = (value: string) => new Date(`${value}T00:00:00`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 const periodLabel = (period: any) => `${formatDate(period.start_date)} – ${formatDate(period.end_date)}`;
 
+const toDecimalHours = (timeWorked: string): string => {
+  const parts = timeWorked?.split(':');
+  if (!parts || parts.length < 2) return '—';
+  const hours = parseInt(parts[0], 10);
+  const minutes = parseInt(parts[1], 10);
+  if (isNaN(hours) || isNaN(minutes)) return '—';
+  return (hours + minutes / 60).toFixed(2);
+};
+
 export function SalaryReport() {
   const { userData } = useUserContext();
   const canManage = ['admin', 'superadmin'].includes(userData?.role?.toLowerCase() || '');
@@ -92,12 +101,13 @@ export function SalaryReport() {
 
     autoTable(doc, {
       startY: 104,
-      head: [['Employee', 'PIN', 'Days', 'Time Worked']],
+      head: [['Employee', 'PIN', 'Days', 'Time Worked', 'Total Hours']],
       body: reportData.items.map((item: any) => [
         item.name || '—',
         item.pin || '—',
         String(item.days),
         item.time_worked,
+        toDecimalHours(item.time_worked),
       ]),
       theme: 'grid',
       headStyles: { fillColor: [15, 45, 82], textColor: 255, fontStyle: 'bold' },
@@ -275,7 +285,7 @@ export function SalaryReport() {
                                   <table className="w-full min-w-[600px] text-sm">
                                     <thead className="bg-slate-50/80">
                                       <tr>
-                                        {['Employee', 'PIN', 'Days', 'Time Worked'].map((header) => (
+                                        {['Employee', 'PIN', 'Days', 'Time Worked', 'Total Hours'].map((header) => (
                                           <th
                                             key={header}
                                             className="border-y border-slate-200/85 px-4 py-3.5 text-left text-xs font-bold uppercase tracking-wider text-slate-500"
@@ -293,11 +303,12 @@ export function SalaryReport() {
                                             <td className="px-4 py-4 text-slate-600">{item.pin || '—'}</td>
                                             <td className="px-4 py-4 text-slate-600">{item.days}</td>
                                             <td className="px-4 py-4 font-semibold text-slate-700">{item.time_worked}</td>
+                                            <td className="px-4 py-4 text-slate-600">{toDecimalHours(item.time_worked)}</td>
                                           </tr>
                                         ))
                                       ) : (
                                         <tr>
-                                          <td colSpan={4} className="px-4 py-8 text-center text-slate-400">
+                                          <td colSpan={5} className="px-4 py-8 text-center text-slate-400">
                                             No attendance records in this period.
                                           </td>
                                         </tr>
@@ -528,6 +539,10 @@ function SalaryCard({ item }: { item: any }) {
         <div className="flex justify-between gap-2 min-w-0 font-semibold text-slate-800">
           <dt className="flex-shrink-0">Time Worked</dt>
           <dd className="text-right truncate">{item.time_worked}</dd>
+        </div>
+        <div className="flex justify-between gap-2 min-w-0 text-slate-600">
+          <dt className="flex-shrink-0">Total Hours</dt>
+          <dd className="text-right truncate">{toDecimalHours(item.time_worked)}</dd>
         </div>
       </dl>
     </div>
