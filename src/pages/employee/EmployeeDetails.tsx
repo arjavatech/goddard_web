@@ -351,8 +351,7 @@ export function EmployeeDetails() {
     try {
       const { storage_key, upload_url } = await documentUploadIntent(docUploading.id, data.file);
       await fetch(upload_url, { method: 'PUT', body: data.file, headers: { 'Content-Type': data.file.type } });
-      await completeDocumentUpload(docUploading.id, { storage_key, file_name: data.file.name, content_type: data.file.type, file_size_bytes: data.file.size });
-      await reviewDocument(docUploading.id, 'approved', undefined, undefined, data.approvedFormName);
+      await completeDocumentUpload(docUploading.id, { storage_key, file_name: data.file.name, content_type: data.file.type, file_size_bytes: data.file.size, auto_approve: true, approved_form_name: data.approvedFormName });
       const result = await fetchDocumentAssignments({ school_id: schoolId, audience: 'employee', limit: 1000 });
       const employeeName = employee ? `${employee.firstName} ${employee.lastName}` : '';
       setEmployeeDocs(result.items.filter(d => d.subject_name === employeeName));

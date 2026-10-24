@@ -670,8 +670,7 @@ export function ParentDetails() {
     try {
       const { storage_key, upload_url } = await documentUploadIntent(docUploading.doc.id, data.file);
       await fetch(upload_url, { method: 'PUT', body: data.file, headers: { 'Content-Type': data.file.type } });
-      await completeDocumentUpload(docUploading.doc.id, { storage_key, file_name: data.file.name, content_type: data.file.type, file_size_bytes: data.file.size });
-      await reviewDocument(docUploading.doc.id, 'approved', undefined, data.formAcademicYear, data.approvedFormName);
+      await completeDocumentUpload(docUploading.doc.id, { storage_key, file_name: data.file.name, content_type: data.file.type, file_size_bytes: data.file.size, auto_approve: true, approved_form_name: data.approvedFormName, form_academic_year: data.formAcademicYear });
       const result = await fetchDocumentAssignments({ school_id: schoolId!, audience: 'student', limit: 1000 });
       const grouped: Record<string, DocumentAssignment[]> = {};
       result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
