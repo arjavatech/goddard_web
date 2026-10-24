@@ -159,7 +159,26 @@ export function DocumentWorkspace({ audience, mode }:Props) {
                 <p className="max-w-md truncate text-xs text-slate-500">{item.instructions||'No instructions'}</p>
               </td>
               <td className="p-4 text-slate-600">{displayDate(item.due_date)}</td>
-              <td className="p-4 text-slate-600">{item.submitted}/{item.total} submitted · {item.approved} approved</td>
+              <td className="p-4">
+                <div className="space-y-1.5 min-w-[140px]">
+                  {item.total > 0 && (
+                    <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                      {item.approved > 0 && <div className="bg-emerald-500" style={{width:`${item.approved/item.total*100}%`}}/>}
+                      {item.submitted > 0 && <div className="bg-blue-400" style={{width:`${item.submitted/item.total*100}%`}}/>}
+                      {item.rejected > 0 && <div className="bg-rose-500" style={{width:`${item.rejected/item.total*100}%`}}/>}
+                      {item.pending > 0 && <div className="bg-amber-400" style={{width:`${item.pending/item.total*100}%`}}/>}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[11px] font-medium">
+                    <span className="text-slate-500">{item.total} total</span>
+                    {item.approved > 0 && <span className="text-emerald-600">{item.approved} approved</span>}
+                    {item.submitted > 0 && <span className="text-blue-600">{item.submitted} submitted</span>}
+                    {item.rejected > 0 && <span className="text-rose-600">{item.rejected} rejected</span>}
+                    {item.pending > 0 && <span className="text-amber-600">{item.pending} pending</span>}
+                    {item.total === 0 && <span className="text-slate-400">No assignments yet</span>}
+                  </div>
+                </div>
+              </td>
               <td className="p-4">
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{item.status}</span></td>
                 <td className="p-4 text-right">
