@@ -719,48 +719,49 @@ export function AdminDashboard() {
               <p className="text-xs text-slate-400">Completion percentage by classroom</p>
             </div>
 
-            <div className="h-64 my-4 overflow-x-auto">
+            <div className="my-4 overflow-x-auto overflow-y-hidden">
               {barData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
+                <div className="h-64 flex items-center justify-center text-xs text-slate-400">No classroom data available</div>
               ) : (
-                <div style={{ minWidth: `${Math.max(barData.length * 80, 320)}px`, height: '100%' }}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
-                    <BarChart data={barData} margin={{ top: 10, right: 16, left: -25, bottom: 56 }}>
-                      <XAxis
-                        dataKey="name"
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        tick={(props) => {
-                          const { x, y, payload } = props;
-                          const words = (payload.value as string).split(' ');
-                          const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
-                          const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
-                          return (
-                            <text x={x} y={(y as number) + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
-                              <tspan x={x} dy={0}>{line1}</tspan>
-                              {line2 && <tspan x={x} dy={13}>{line2}</tspan>}
-                            </text>
-                          );
-                        }}
-                      />
-                      <YAxis
-                        domain={[0, 100]}
-                        tickFormatter={(v) => `${v}%`}
-                        tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
-                        axisLine={false}
-                        tickLine={false}
-                      />
-                      <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(26, 111, 196, 0.04)', radius: 8 }} />
-                      <Bar dataKey="rate" radius={[6, 6, 0, 0]} maxBarSize={32}>
-                        {barData.map((entry, index) => {
-                          const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
-                          return <Cell key={`cell-${index}`} fill={color} />;
-                        })}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <BarChart
+                  width={Math.max(barData.length * 80, 320)}
+                  height={256}
+                  data={barData}
+                  margin={{ top: 10, right: 16, left: -25, bottom: 56 }}
+                >
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    tick={(props) => {
+                      const { x, y, payload } = props;
+                      const words = (payload.value as string).split(' ');
+                      const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
+                      const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
+                      return (
+                        <text x={x} y={(y as number) + 8} textAnchor="middle" fill="#94a3b8" fontSize={10} fontWeight={600}>
+                          <tspan x={x} dy={0}>{line1}</tspan>
+                          {line2 && <tspan x={x} dy={13}>{line2}</tspan>}
+                        </text>
+                      );
+                    }}
+                  />
+                  <YAxis
+                    domain={[0, 100]}
+                    tickFormatter={(v) => `${v}%`}
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 600 }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <Tooltip content={<CustomBarTooltip />} cursor={{ fill: 'rgba(26, 111, 196, 0.04)', radius: 8 }} />
+                  <Bar dataKey="rate" radius={[6, 6, 0, 0]} maxBarSize={32}>
+                    {barData.map((entry, index) => {
+                      const color = entry.rate === 100 ? '#10b981' : entry.rate >= 60 ? '#1a6fc4' : '#f59e0b';
+                      return <Cell key={`cell-${index}`} fill={color} />;
+                    })}
+                  </Bar>
+                </BarChart>
               )}
             </div>
 
