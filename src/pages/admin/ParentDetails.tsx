@@ -15,6 +15,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { fetchParentDetails, revokeStudentFormAssignment, updateApprovedFormMetadata } from '../../services/api/admin';
 import { fetchDocumentAssignments, reviewDocument, documentFileUrl, documentUploadIntent, completeDocumentUpload, updateDocumentMetadata, changeDocumentStatus, DocumentAssignment } from '../../services/api/documentRequests';
 import { ApproveFormModal } from '../../components/admin/ApproveFormModal';
+import { UploadDocumentModal } from '../../components/admin/UploadDocumentModal';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
@@ -151,7 +152,8 @@ export function ParentDetails() {
   const [docRejecting, setDocRejecting] = useState<{ doc: DocumentAssignment } | null>(null);
   const [isRejectingDoc, setIsRejectingDoc] = useState(false);
   const [docRejectReason, setDocRejectReason] = useState('');
-  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [docUploading, setDocUploading] = useState<{ doc: DocumentAssignment; childName: string } | null>(null);
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [docEditingMeta, setDocEditingMeta] = useState<{ doc: DocumentAssignment; childName: string } | null>(null);
   const [isSavingDocMeta, setIsSavingDocMeta] = useState(false);
   const [docChangingStatus, setDocChangingStatus] = useState<{ doc: DocumentAssignment } | null>(null);
@@ -662,21 +664,24 @@ export function ParentDetails() {
     }
   };
 
-  const handleDocUpload = async (docId: string, file: File) => {
-    setUploadingDocId(docId);
+  const handleDocUploadWithApproval = async (data: { file: File; approvedFormName: string; formAcademicYear?: string }) => {
+    if (!docUploading) return;
+    setIsUploadingDoc(true);
     try {
-      const { storage_key, upload_url } = await documentUploadIntent(docId, file);
-      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      await completeDocumentUpload(docId, { storage_key, file_name: file.name, content_type: file.type, file_size_bytes: file.size });
+      const { storage_key, upload_url } = await documentUploadIntent(docUploading.doc.id, data.file);
+      await fetch(upload_url, { method: 'PUT', body: data.file, headers: { 'Content-Type': data.file.type } });
+      await completeDocumentUpload(docUploading.doc.id, { storage_key, file_name: data.file.name, content_type: data.file.type, file_size_bytes: data.file.size });
+      await reviewDocument(docUploading.doc.id, 'approved', undefined, data.formAcademicYear, data.approvedFormName);
       const result = await fetchDocumentAssignments({ school_id: schoolId!, audience: 'student', limit: 1000 });
       const grouped: Record<string, DocumentAssignment[]> = {};
       result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
       setChildDocuments(grouped);
-      showToast('success', 'Document uploaded successfully');
+      setDocUploading(null);
+      showToast('success', 'Document uploaded and approved');
     } catch {
       showToast('error', 'Upload failed');
     } finally {
-      setUploadingDocId(null);
+      setIsUploadingDoc(false);
     }
   };
 
@@ -1377,18 +1382,14 @@ export function ParentDetails() {
                                         </div>
                                       )}
                                       {/* Upload / Re-upload — admin only */}
-                                      {isAdminOrSuperAdmin && (doc.status === 'pending' || doc.status === 'overdue' || doc.status === 'submitted' || doc.status === 'approved') && (
-                                        <>
-                                          <input type="file" id={`doc-upload-${doc.id}`} className="hidden"
-                                            onChange={e => { const f = e.target.files?.[0]; if (f) handleDocUpload(doc.id, f); e.target.value = ''; }} />
-                                          <Button variant="outline" size="sm"
-                                            className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
-                                            disabled={uploadingDocId === doc.id}
-                                            onClick={() => document.getElementById(`doc-upload-${doc.id}`)?.click()}>
-                                            <Upload className="h-3.5 w-3.5 mr-1" />
-                                            {uploadingDocId === doc.id ? 'Uploading...' : (doc.status === 'approved' || doc.status === 'submitted') ? 'Re-upload' : 'Upload'}
-                                          </Button>
-                                        </>
+                                      {isAdminOrSuperAdmin && (doc.status === 'pending' || doc.status === 'overdue' || doc.status === 'submitted' || doc.status === 'approved' || doc.status === 'rejected') && (
+                                        <Button variant="outline" size="sm"
+                                          className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                          disabled={isUploadingDoc && docUploading?.doc.id === doc.id}
+                                          onClick={() => setDocUploading({ doc, childName: `${child.firstName} ${child.lastName}` })}>
+                                          <Upload className="h-3.5 w-3.5 mr-1" />
+                                          {(doc.status === 'approved' || doc.status === 'submitted' || doc.status === 'rejected') ? 'Re-upload' : 'Upload'}
+                                        </Button>
                                       )}
                                       {/* Approve + Reject — submitted docs, admin only */}
                                       {doc.status === 'submitted' && isAdminOrSuperAdmin && (
@@ -1576,6 +1577,17 @@ export function ParentDetails() {
           initialAcademicYear={docApproving.doc.form_academic_year || undefined}
         />
       )}
+
+      <UploadDocumentModal
+        open={!!docUploading}
+        onClose={() => setDocUploading(null)}
+        onConfirm={handleDocUploadWithApproval}
+        isStudent={true}
+        documentName={docUploading?.doc.document_name || ''}
+        personName={docUploading?.childName || ''}
+        uploaderEmail={userData?.email}
+        isSubmitting={isUploadingDoc}
+      />
 
       {/* Reject Document Dialog */}
       <Dialog open={!!docRejecting} onOpenChange={open => { if (!open && !isRejectingDoc) { setDocRejecting(null); setDocRejectReason(''); } }}>
