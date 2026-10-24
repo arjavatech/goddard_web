@@ -12,7 +12,9 @@ type NavCountsContextValue = {
   studentFormsReview: number;
   employeeFormsDue: number;
   employeeFormsReview: number;
+  studentDocsDue: number;
   studentDocsReview: number;
+  employeeDocsDue: number;
   employeeDocsReview: number;
   formsPending: number;
   docsPending: number;
@@ -26,7 +28,9 @@ const ZERO_ADMIN: AdminNavCounts = {
   student_forms_review: 0,
   employee_forms_due: 0,
   employee_forms_review: 0,
+  student_docs_due: 0,
   student_docs_review: 0,
+  employee_docs_due: 0,
   employee_docs_review: 0,
 };
 
@@ -78,7 +82,9 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     studentFormsReview: adminCounts.student_forms_review,
     employeeFormsDue: adminCounts.employee_forms_due,
     employeeFormsReview: adminCounts.employee_forms_review,
+    studentDocsDue: adminCounts.student_docs_due,
     studentDocsReview: adminCounts.student_docs_review,
+    employeeDocsDue: adminCounts.employee_docs_due,
     employeeDocsReview: adminCounts.employee_docs_review,
     formsPending: myCounts.forms_pending,
     docsPending: myCounts.docs_pending,

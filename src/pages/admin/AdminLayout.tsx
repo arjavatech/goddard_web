@@ -34,7 +34,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures } = useUserContext();
-  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsReview, employeeDocsReview } = useNavCounts();
+  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
@@ -128,8 +128,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
       label: 'Documents',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsReview }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsReview }] : []),
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview }] : []),
       ],
     }] : []),
     ...(schoolFeatures.taptimeEnabled ? [{

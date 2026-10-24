@@ -5,7 +5,9 @@ const AdminNavCountsSchema = z.object({
   student_forms_review: z.number(),
   employee_forms_due: z.number(),
   employee_forms_review: z.number(),
+  student_docs_due: z.number(),
   student_docs_review: z.number(),
+  employee_docs_due: z.number(),
   employee_docs_review: z.number(),
 });
 
