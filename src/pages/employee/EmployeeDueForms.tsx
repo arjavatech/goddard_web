@@ -16,6 +16,7 @@ import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { Link } from 'react-router-dom';
@@ -78,7 +79,7 @@ export function EmployeeDueForms() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
-
+  const { refreshCounts } = useNavCounts();
   const schoolId = userData?.schoolId;
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
@@ -195,7 +196,6 @@ export function EmployeeDueForms() {
 
         assignments.forEach(assignment => {
           const employee = employeeMap.get(assignment.employeeId);
-          if (!employee) return;
           const formName = assignment.formName || 'Employee Form';
           const dueDate = assignment.dueDate || null;
 
@@ -219,9 +219,11 @@ export function EmployeeDueForms() {
             formId: assignment.formId,
             formName,
             employeeId: assignment.employeeId,
-            employeeName: `${employee.firstName} ${employee.lastName}`,
-            employeeType: employee.employeeType || 'Employee',
-            employeeEmail: employee.email,
+            employeeName: employee
+              ? `${employee.firstName} ${employee.lastName}`
+              : `${assignment.employeeFirstName ?? ''} ${assignment.employeeLastName ?? ''}`.trim(),
+            employeeType: employee?.employeeType || 'Employee',
+            employeeEmail: employee?.email || '',
             dueDate,
             status,
             assignedDate: assignment.assignedOn ?? ''
@@ -235,6 +237,7 @@ export function EmployeeDueForms() {
       } finally {
         if (isMounted) {
           setLoading(false);
+          refreshCounts();
         }
       }
     })();

@@ -20,6 +20,7 @@ import { StatCard } from '../../components/ui/stat-card';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
 type LocalDueForm = Omit<DueForm, 'status'> & { status: DueFormStatus };
@@ -50,6 +51,7 @@ export function DueForms() {
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
   const { showToast } = useToast();
   const { userData } = useUserContext();
+  const { refreshCounts } = useNavCounts();
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<LocalDueForm | null>(null);
 
@@ -242,6 +244,7 @@ export function DueForms() {
       } finally {
         if (isMounted) {
           setLoading(false);
+          refreshCounts();
         }
       }
     })();
