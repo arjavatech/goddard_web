@@ -200,8 +200,8 @@ export function DueForms() {
                 status = 'overdue';
               }
 
-              // Skip completed and submitted forms
-              if (status === 'completed' || status === 'submitted') {
+              // Skip completed, submitted, and in_progress (awaiting admin approval) forms
+              if (status === 'completed' || status === 'submitted' || status === 'in_progress') {
                 return;
               }
               
@@ -489,7 +489,6 @@ export function DueForms() {
   const stats = {
     total: dueForms.length,
     pending: dueForms.filter(f => f.status === 'pending').length,
-    in_progress: dueForms.filter(f => f.status === 'in_progress').length,
     overdue: dueForms.filter(f => f.status === 'overdue').length
   };
 
@@ -554,22 +553,6 @@ export function DueForms() {
                 </div>
                 <div className="p-2.5 bg-amber-50 rounded-xl flex-shrink-0 ml-2">
                   <Clock className="h-4 w-4 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
-                    In Progress
-                  </p>
-                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.in_progress}</p>
-                </div>
-                <div className="p-2.5 bg-blue-50 rounded-xl flex-shrink-0 ml-2">
-                  <Clock className="h-4 w-4 text-blue-600" />
                 </div>
               </div>
             </CardContent>
@@ -685,7 +668,7 @@ export function DueForms() {
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
-                      options={['pending', 'in_progress', 'overdue']}
+                      options={['pending', 'overdue']}
                       placeholder="Select statuses"
                       label="Status"
                     />
@@ -820,12 +803,6 @@ export function DueForms() {
                     disabled={filteredForms.filter(f => f.status === 'pending').length === 0 || bulkRemindLoading}
                   >
                     Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id), true)}
-                    disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0 || bulkRemindLoading}
-                  >
-                    Remind In Progress ({filteredForms.filter(f => f.status === 'in_progress').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id), true)}
