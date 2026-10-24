@@ -5,6 +5,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
@@ -26,6 +27,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolFeatures, isReady } = useUserContext();
+  const { formsPending, docsPending } = useNavCounts();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -66,7 +68,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     {
       label: 'Workspace',
       items: [
-        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard` },
+        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsPending },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
         ...(schoolFeatures.taptimeEnabled
           ? [
@@ -74,7 +76,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
             { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/employee/weekly-report` },
           ]
           : []),
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents` },
+        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending },
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
       ],
     }
@@ -136,6 +138,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
                         <span className={cn('text-sm truncate', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                        {!!item.badge && item.badge > 0 && (
+                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -193,6 +200,11 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
                         <span className={cn('text-sm truncate', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        {!!item.badge && item.badge > 0 && (
+                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}

@@ -17,6 +17,7 @@ interface UserContextValue {
   schoolPhone: string;
   schoolEmail: string;
   schoolAddress: string;
+  schoolWebsiteUrl: string;
   loading: boolean;
   error: string | null;
   refreshUserData: () => Promise<void>;
@@ -59,6 +60,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [schoolPhone, setSchoolPhone] = useState('');
   const [schoolEmail, setSchoolEmail] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
+  const [schoolWebsiteUrl, setSchoolWebsiteUrl] = useState('https://goddardschool.com');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -75,6 +77,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setSchoolPhone('');
     setSchoolEmail('');
     setSchoolAddress('');
+    setSchoolWebsiteUrl('https://goddardschool.com');
     setError(null);
     setLoading(false);
     setIsReady(true);
@@ -125,6 +128,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
             if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
             if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
+            if (data.schoolData?.settings?.website_url) setSchoolWebsiteUrl(data.schoolData.settings.website_url);
             setProfileGeneration(authGeneration);
 
             return;
@@ -182,9 +186,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolPhone = profileIsCurrent ? schoolPhone : '';
   const visibleSchoolEmail = profileIsCurrent ? schoolEmail : '';
   const visibleSchoolAddress = profileIsCurrent ? schoolAddress : '';
+  const visibleSchoolWebsiteUrl = profileIsCurrent ? schoolWebsiteUrl : 'https://goddardschool.com';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
       {children}
     </UserContext.Provider>
   );

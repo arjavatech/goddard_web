@@ -11,18 +11,18 @@ export function Footer() {
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showEmployeeGuideModal, setShowEmployeeGuideModal] = useState(false);
-  const { schoolName, schoolPhone, schoolEmail, schoolAddress, userData } = useUserContext();
+  const { schoolName, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, userData } = useUserContext();
 
   const isEmployee = userData?.role?.toLowerCase() === 'employee';
 
   return (
-    <footer className="w-full bg-[#1a3a5c]">
+    <footer className="w-full bg-[#0F2D52]">
       {/* Main content grid */}
-      <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
-          
+      <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-5 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
+
           {/* Brand column */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-2 space-y-2">
             <img
               src="/gs_logo_lynnwood.png"
               alt="The Goddard School"
@@ -33,7 +33,7 @@ export function Footer() {
                 ? 'Supporting our dedicated staff with the tools and documentation needed to deliver exceptional early childhood education.'
                 : 'Quality early childhood education through play-based learning — nurturing curious, confident, and creative kids since 1988.'}
             </p>
-            <div className="flex flex-col gap-2 pt-1">
+            <div className="flex flex-col gap-1.5">
               {schoolPhone && (
                 <a href={`tel:${schoolPhone}`}
                   className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
@@ -67,17 +67,17 @@ export function Footer() {
           <div className="hidden lg:block" />
 
           {/* Resources column */}
-          <div className="space-y-4 min-w-[200px]">
+          <div className="space-y-2 min-w-[200px]">
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
-            <ul className="space-y-2.5">
-             
+            <ul className="space-y-1.5">
+
                 <li>
                   <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
                     <HelpCircle className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
                     <span className="font-medium">Help Center</span>
                   </button>
                 </li>
-              
+
               <li>
                 {isEmployee ? (
                   <button onClick={() => setShowEmployeeGuideModal(true)} className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
@@ -92,10 +92,10 @@ export function Footer() {
                 )}
               </li>
               <li>
-                <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                <a href={schoolWebsiteUrl} target="_blank" rel="noopener noreferrer"
                   className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
                   <Globe className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                  <span className="font-medium">Goddard School</span>
+                  <span className="font-medium">{schoolName || 'The Goddard School'}</span>
                 </a>
               </li>
             </ul>
@@ -105,8 +105,8 @@ export function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-white/10 bg-[#16314f]">
-        <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="border-t border-white/10 bg-[#0a2340]">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3">
           <p className="text-xs text-slate-400 text-center sm:text-left">
             © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
           </p>
@@ -184,12 +184,7 @@ export function Footer() {
             </div>
           </DialogHeader>
           <div className="py-3">
-            <HelpCenterContent role="parent" />
-          </div>
-          <div className="border-t border-slate-100 pt-3 flex justify-end">
-            <Button variant="outline" onClick={() => setShowHelpModal(false)} className="h-9 px-4 text-sm rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] transition-all duration-200">
-              Close
-            </Button>
+            <HelpCenterContent role="parent" onClose={() => setShowHelpModal(false)} />
           </div>
         </DialogContent>
       </Dialog>

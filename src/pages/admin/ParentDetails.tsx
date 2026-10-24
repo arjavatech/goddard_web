@@ -3,7 +3,7 @@ import { AdminLayout } from './AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp, Phone, MapPin, Upload } from 'lucide-react';
+import { Mail as MailIcon, Calendar, School, CheckCircle, AlertCircle, FileText, ChevronLeft, Eye, Users, Download, Printer, ChevronDown, ChevronUp, Phone, MapPin, Upload, Pencil } from 'lucide-react';
 import { Badge } from '../../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -12,7 +12,9 @@ import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
-import { fetchParentDetails, revokeStudentFormAssignment } from '../../services/api/admin';
+import { fetchParentDetails, revokeStudentFormAssignment, updateApprovedFormMetadata } from '../../services/api/admin';
+import { fetchDocumentAssignments, reviewDocument, documentFileUrl, documentUploadIntent, completeDocumentUpload, updateDocumentMetadata, changeDocumentStatus, DocumentAssignment } from '../../services/api/documentRequests';
+import { ApproveFormModal } from '../../components/admin/ApproveFormModal';
 import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
@@ -33,6 +35,8 @@ interface Form {
   approvedOn: string | null;
   manualPdfUploadedAt?: string | null;
   submissionSource?: string;
+  formAcademicYear?: string | null;
+  approvedFormName?: string | null;
 }
 interface ChildInfo {
   id: string;
@@ -132,11 +136,28 @@ export function ParentDetails() {
   const [selectedFormForUpload, setSelectedFormForUpload] = useState<{ form: Form; childName: string } | null>(null);
   const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [editingFormMeta, setEditingFormMeta] = useState<{ form: Form; childName: string } | null>(null);
+  const [isSavingMeta, setIsSavingMeta] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
   const [revokeFormData, setRevokeFormData] = useState<{ form: Form; childId: string } | null>(null);
   const [revokeNotes, setRevokeNotes] = useState('');
   const [revokeTargetStatus, setRevokeTargetStatus] = useState<'in_progress' | 'rejected'>('in_progress');
   const [isRevoking, setIsRevoking] = useState(false);
+  const [childDocuments, setChildDocuments] = useState<Record<string, DocumentAssignment[]>>({});
+  const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+  const [docApproving, setDocApproving] = useState<{ doc: DocumentAssignment; childName: string } | null>(null);
+  const [isApprovingDoc, setIsApprovingDoc] = useState(false);
+  const [docLoadingAction, setDocLoadingAction] = useState<{ docId: string; action: 'download' | 'print' } | null>(null);
+  const [docRejecting, setDocRejecting] = useState<{ doc: DocumentAssignment } | null>(null);
+  const [isRejectingDoc, setIsRejectingDoc] = useState(false);
+  const [docRejectReason, setDocRejectReason] = useState('');
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [docEditingMeta, setDocEditingMeta] = useState<{ doc: DocumentAssignment; childName: string } | null>(null);
+  const [isSavingDocMeta, setIsSavingDocMeta] = useState(false);
+  const [docChangingStatus, setDocChangingStatus] = useState<{ doc: DocumentAssignment } | null>(null);
+  const [isChangingDocStatus, setIsChangingDocStatus] = useState(false);
+  const [docChangeStatusReason, setDocChangeStatusReason] = useState('');
+  const [docTargetStatus, setDocTargetStatus] = useState<'pending' | 'rejected'>('pending');
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
@@ -215,7 +236,9 @@ export function ParentDetails() {
                 studentFormAssignmentId: form.student_form_assignment_id || form.studentFormAssignmentId || null,
                 recentPdfLink: form.recent_pdf_link || form.recentPdfLink || null,
                 approvedOn: form.approved_on || form.approvedOn || null,
-                manualPdfUploadedAt: form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null
+                manualPdfUploadedAt: form.manual_pdf_uploaded_at || form.manualPdfUploadedAt || null,
+                formAcademicYear: form.form_academic_year || form.formAcademicYear || null,
+                approvedFormName: form.approved_form_name || form.approvedFormName || null,
               } satisfies Form;
 
 
@@ -329,37 +352,47 @@ export function ParentDetails() {
     };
   }, [parentId, refreshKey]);
 
+  // Fetch all student document assignments for this school, grouped by child name
+  useEffect(() => {
+    if (!schoolId) return;
+    setIsLoadingDocuments(true);
+    fetchDocumentAssignments({ school_id: schoolId, audience: 'student', limit: 1000 })
+      .then(result => {
+        const grouped: Record<string, DocumentAssignment[]> = {};
+        result.items.forEach(doc => {
+          if (!grouped[doc.subject_name]) grouped[doc.subject_name] = [];
+          grouped[doc.subject_name].push(doc);
+        });
+        setChildDocuments(grouped);
+      })
+      .catch(() => {})
+      .finally(() => setIsLoadingDocuments(false));
+  }, [schoolId, refreshKey]);
+
   const selectedChild = useMemo(() => parent?.children.find(child => child.id === selectedChildId) || parent?.children[0], [parent?.children, selectedChildId]);
 
-  // Extract all available years from forms based on approved_on date
-  const availableYears = useMemo(() => {
+  // Extract all available academic years from formAcademicYear field
+  const availableAcademicYears = useMemo(() => {
     if (!parent) return [];
-    const yearsSet = new Set<number>();
+    const yearsSet = new Set<string>();
 
     parent.children.forEach(child => {
       child.forms.forEach(form => {
-        if (form.approvedOn) {
-          try {
-            const date = new Date(form.approvedOn);
-            if (!isNaN(date.getTime())) {
-              yearsSet.add(date.getFullYear());
-            }
-          } catch (e) {
-            const yearMatch = form.approvedOn.match(/\d{4}/);
-            if (yearMatch) {
-              yearsSet.add(parseInt(yearMatch[0]));
-            }
-          }
-        }
+        if (form.formAcademicYear) yearsSet.add(form.formAcademicYear);
       });
     });
 
-    // Always include current year to ensure filter is always visible
-    const currentYear = new Date().getFullYear();
-    yearsSet.add(currentYear);
+    // Also include years from document assignments
+    Object.values(childDocuments).flat().forEach(doc => {
+      if (doc.form_academic_year) yearsSet.add(doc.form_academic_year);
+    });
 
-    return Array.from(yearsSet).sort((a, b) => b - a);
-  }, [parent]);
+    // Always include current academic year so the filter is always visible
+    const y = new Date().getFullYear();
+    yearsSet.add(`${y}-${y + 1}`);
+
+    return Array.from(yearsSet).sort((a, b) => b.localeCompare(a));
+  }, [parent, childDocuments]);
   const openReviewDialog = (form: Form, action: 'approve' | 'reject') => {
     setSelectedForm(form);
     setFormAction(action);
@@ -388,7 +421,7 @@ export function ParentDetails() {
         ? childName.replace(/\s+/g, '_') 
         : `${selectedChild?.firstName || 'student'}_${selectedChild?.lastName || ''}`;
         
-      link.download = `${form.title.replace(/\s+/g, '_')}_${formattedChildName}.pdf`;
+      link.download = `${form.approvedFormName || `${form.title.replace(/\s+/g, '_')}_${formattedChildName}`}.pdf`;
 
       // Trigger download
       document.body.appendChild(link);
@@ -503,6 +536,183 @@ export function ParentDetails() {
       setIsReviewing(false);
     }
     setIsReviewDialogOpen(false);
+  };
+
+  const handleEditMetaConfirm = async (data: { formAcademicYear?: string; approvedFormName: string }) => {
+    if (!editingFormMeta?.form.studentFormAssignmentId || !schoolId) return;
+    setIsSavingMeta(true);
+    try {
+      await updateApprovedFormMetadata(
+        editingFormMeta.form.studentFormAssignmentId,
+        schoolId,
+        data.formAcademicYear,
+        data.approvedFormName,
+      );
+      setRefreshKey(k => k + 1);
+      setEditingFormMeta(null);
+      showToast('success', 'Form details updated');
+    } catch {
+      showToast('error', 'Failed to update form details');
+    } finally {
+      setIsSavingMeta(false);
+    }
+  };
+
+  const handleDocApproveConfirm = async (data: { formAcademicYear?: string; approvedFormName: string }) => {
+    if (!docApproving || !schoolId) return;
+    setIsApprovingDoc(true);
+    try {
+      await reviewDocument(docApproving.doc.id, 'approved', undefined, data.formAcademicYear, data.approvedFormName);
+      const result = await fetchDocumentAssignments({ school_id: schoolId, audience: 'student', limit: 1000 });
+      const grouped: Record<string, DocumentAssignment[]> = {};
+      result.items.forEach(doc => {
+        if (!grouped[doc.subject_name]) grouped[doc.subject_name] = [];
+        grouped[doc.subject_name].push(doc);
+      });
+      setChildDocuments(grouped);
+      setDocApproving(null);
+      showToast('success', 'Document approved successfully');
+    } catch {
+      showToast('error', 'Failed to approve document');
+    } finally {
+      setIsApprovingDoc(false);
+    }
+  };
+
+  const handleDocDownload = async (doc: DocumentAssignment) => {
+    if (!doc.latest_submission_id) return;
+    try {
+      const { url } = await documentFileUrl(doc.latest_submission_id, true);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = doc.approved_form_name || doc.latest_file_name || doc.document_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch {
+      showToast('error', 'Failed to download document');
+    }
+  };
+
+  const handleDocDownloadFile = async (doc: DocumentAssignment) => {
+    if (!doc.latest_submission_id) return;
+    setDocLoadingAction({ docId: doc.id, action: 'download' });
+    try {
+      const { url } = await documentFileUrl(doc.latest_submission_id, true);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = doc.approved_form_name || doc.latest_file_name || doc.document_name;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      showToast('error', 'Download failed');
+    } finally {
+      setDocLoadingAction(null);
+    }
+  };
+
+  const handleDocPrint = async (doc: DocumentAssignment) => {
+    if (!doc.latest_submission_id) return;
+    setDocLoadingAction({ docId: doc.id, action: 'print' });
+    try {
+      const { url } = await documentFileUrl(doc.latest_submission_id, false);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const printWindow = window.open(blobUrl, '_blank');
+      if (printWindow) {
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.onafterprint = () => { printWindow.close(); window.URL.revokeObjectURL(blobUrl); };
+          }, 1000);
+        };
+        setTimeout(() => { setDocLoadingAction(null); window.URL.revokeObjectURL(blobUrl); }, 3000);
+        showToast('success', 'Print dialog opening...');
+      } else {
+        throw new Error('Popup blocked');
+      }
+    } catch (err: any) {
+      showToast('error', err?.message === 'Popup blocked' ? 'Allow popups to print' : 'Print failed');
+      setDocLoadingAction(null);
+    }
+  };
+
+  const handleDocRejectConfirm = async () => {
+    if (!docRejecting) return;
+    setIsRejectingDoc(true);
+    try {
+      await reviewDocument(docRejecting.doc.id, 'rejected', docRejectReason);
+      const result = await fetchDocumentAssignments({ school_id: schoolId!, audience: 'student', limit: 1000 });
+      const grouped: Record<string, DocumentAssignment[]> = {};
+      result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
+      setChildDocuments(grouped);
+      setDocRejecting(null);
+      setDocRejectReason('');
+      showToast('success', 'Document rejected');
+    } catch {
+      showToast('error', 'Failed to reject document');
+    } finally {
+      setIsRejectingDoc(false);
+    }
+  };
+
+  const handleDocUpload = async (docId: string, file: File) => {
+    setUploadingDocId(docId);
+    try {
+      const { storage_key, upload_url } = await documentUploadIntent(docId, file);
+      await fetch(upload_url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+      await completeDocumentUpload(docId, { storage_key, file_name: file.name, content_type: file.type, file_size_bytes: file.size });
+      const result = await fetchDocumentAssignments({ school_id: schoolId!, audience: 'student', limit: 1000 });
+      const grouped: Record<string, DocumentAssignment[]> = {};
+      result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
+      setChildDocuments(grouped);
+      showToast('success', 'Document uploaded successfully');
+    } catch {
+      showToast('error', 'Upload failed');
+    } finally {
+      setUploadingDocId(null);
+    }
+  };
+
+  const handleDocMetadataSave = async (data: { formAcademicYear?: string; approvedFormName: string }) => {
+    if (!docEditingMeta || !schoolId) return;
+    setIsSavingDocMeta(true);
+    try {
+      await updateDocumentMetadata(docEditingMeta.doc.id, {
+        school_id: schoolId,
+        form_academic_year: data.formAcademicYear || undefined,
+        approved_form_name: data.approvedFormName || undefined,
+      });
+      const result = await fetchDocumentAssignments({ school_id: schoolId, audience: 'student', limit: 1000 });
+      const grouped: Record<string, DocumentAssignment[]> = {};
+      result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
+      setChildDocuments(grouped);
+      setDocEditingMeta(null);
+      showToast('success', 'Document metadata updated');
+    } catch { showToast('error', 'Failed to update metadata'); }
+    finally { setIsSavingDocMeta(false); }
+  };
+
+  const handleDocChangeStatus = async () => {
+    if (!docChangingStatus || !schoolId) return;
+    setIsChangingDocStatus(true);
+    try {
+      await changeDocumentStatus(docChangingStatus.doc.id, { status: docTargetStatus, reason: docChangeStatusReason || undefined });
+      const result = await fetchDocumentAssignments({ school_id: schoolId, audience: 'student', limit: 1000 });
+      const grouped: Record<string, DocumentAssignment[]> = {};
+      result.items.forEach(d => { if (!grouped[d.subject_name]) grouped[d.subject_name] = []; grouped[d.subject_name].push(d); });
+      setChildDocuments(grouped);
+      setDocChangingStatus(null);
+      setDocChangeStatusReason('');
+      showToast('success', 'Document status updated');
+    } catch { showToast('error', 'Failed to change status'); }
+    finally { setIsChangingDocStatus(false); }
   };
 
   const handleRevoke = async () => {
@@ -728,7 +938,7 @@ export function ParentDetails() {
                     {parent.children.length} children{parent.children.length === 1 ? '' : 's'}
                   </p>
                 </div>
-                {availableYears.length > 0 && (
+                {availableAcademicYears.length > 0 && (
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-slate-400" />
                     <Select value={selectedYear} onValueChange={setSelectedYear}>
@@ -737,8 +947,8 @@ export function ParentDetails() {
                       </SelectTrigger>
                       <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
                         <SelectItem value="all" className="cursor-pointer">All Years</SelectItem>
-                        {availableYears.map(year => (
-                          <SelectItem key={year} value={year.toString()} className="cursor-pointer">
+                        {availableAcademicYears.map(year => (
+                          <SelectItem key={year} value={year} className="cursor-pointer">
                             {year}
                           </SelectItem>
                         ))}
@@ -769,21 +979,13 @@ export function ParentDetails() {
                   const draftPct = totalForms > 0 ? (draftForms / totalForms) * 100 : 0;
                   const childFilteredForms = selectedYear === 'all'
                     ? child.forms
-                    : child.forms.filter(form => {
-                      if (!form.approvedOn) return true;
-                      try {
-                        const date = new Date(form.approvedOn);
-                        if (!isNaN(date.getTime())) {
-                          return date.getFullYear().toString() === selectedYear;
-                        }
-                      } catch (e) {
-                        const yearMatch = form.approvedOn.match(/\d{4}/);
-                        if (yearMatch) {
-                          return yearMatch[0] === selectedYear;
-                        }
-                      }
-                      return true;
-                    });
+                    : child.forms.filter(form =>
+                        !form.formAcademicYear || form.formAcademicYear === selectedYear
+                      );
+                  const childDocs = childDocuments[`${child.firstName} ${child.lastName}`] || [];
+                  const childFilteredDocs = selectedYear === 'all'
+                    ? childDocs
+                    : childDocs.filter(d => !d.form_academic_year || d.form_academic_year === selectedYear);
 
                   return (
                     <Card
@@ -812,6 +1014,8 @@ export function ParentDetails() {
                                 <span>Class: {child.classroom.name}</span>
                                 <span className="h-1 w-1 rounded-full bg-slate-355" />
                                 <span>DOB: {child.dob}</span>
+                                <span className="h-1 w-1 rounded-full bg-slate-355" />
+                                <span>{totalForms} forms · {childDocs.length} docs</span>
                               </div>
                             </div>
                           </div>
@@ -834,11 +1038,38 @@ export function ParentDetails() {
                           </div>
                         </div>
                         
-                        {totalForms > 0 && (
-                          <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1 flex">
-                            {approvedPct > 0 && <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${approvedPct}%` }} />}
-                            {pendingPct > 0 && <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${pendingPct}%` }} />}
-                            {draftPct > 0 && <div className="h-full bg-slate-300 transition-all duration-500" style={{ width: `${draftPct}%` }} />}
+                        {(totalForms > 0 || childDocs.length > 0) && (
+                          <div className="mt-1.5 space-y-1">
+                            {totalForms > 0 && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 w-8 flex-shrink-0">Forms</span>
+                                <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                                  {approvedPct > 0 && <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${approvedPct}%` }} />}
+                                  {pendingPct > 0 && <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${pendingPct}%` }} />}
+                                  {draftPct > 0 && <div className="h-full bg-slate-300 transition-all duration-500" style={{ width: `${draftPct}%` }} />}
+                                </div>
+                                <span className="text-[9px] font-semibold tabular-nums text-slate-400 w-7 text-right flex-shrink-0">{approvedForms}/{totalForms}</span>
+                              </div>
+                            )}
+                            {childDocs.length > 0 && (() => {
+                              const appDocs = childDocs.filter(d => d.status === 'approved').length;
+                              const subDocs = childDocs.filter(d => d.status === 'submitted').length;
+                              const pendDocs = childDocs.length - appDocs - subDocs;
+                              const appDocPct = (appDocs / childDocs.length) * 100;
+                              const subDocPct = (subDocs / childDocs.length) * 100;
+                              const pendDocPct = (pendDocs / childDocs.length) * 100;
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 w-8 flex-shrink-0">Docs</span>
+                                  <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden flex">
+                                    {appDocPct > 0 && <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${appDocPct}%` }} />}
+                                    {subDocPct > 0 && <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${subDocPct}%` }} />}
+                                    {pendDocPct > 0 && <div className="h-full bg-slate-300 transition-all duration-500" style={{ width: `${pendDocPct}%` }} />}
+                                  </div>
+                                  <span className="text-[9px] font-semibold tabular-nums text-slate-400 w-7 text-right flex-shrink-0">{appDocs}/{childDocs.length}</span>
+                                </div>
+                              );
+                            })()}
                           </div>
                         )}
                       </div>
@@ -861,9 +1092,20 @@ export function ParentDetails() {
                               <div key={form.id} className="border border-slate-100 rounded-xl p-4 bg-slate-50/20 hover:bg-slate-50/40 hover:border-slate-200 transition-all">
                                 <div className="flex flex-col gap-3">
                                   <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
-                                      <h3 className="font-bold text-sm text-slate-800 truncate">{form.title}</h3>
+                                    <div className="flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-4 w-4 text-[#0F2D52] flex-shrink-0" />
+                                        <h3 className="font-bold text-sm text-slate-800 truncate">{form.title}</h3>
+                                      </div>
+                                      {form.status === 'Approved' && isAdminOrSuperAdmin && (
+                                        <button
+                                          onClick={() => setEditingFormMeta({ form, childName: `${child.firstName} ${child.lastName}` })}
+                                          className="flex items-center gap-1 text-xs font-semibold text-[#0F2D52] hover:text-[#1E4B83] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg transition-colors flex-shrink-0"
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                          Edit
+                                        </button>
+                                      )}
                                     </div>
                                     <div className="mt-2.5">
                                       <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
@@ -909,6 +1151,16 @@ export function ParentDetails() {
                                         }
                                         return null;
                                       })()}
+                                      {form.status === 'Approved' && form.formAcademicYear && (
+                                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                          {form.formAcademicYear}
+                                        </span>
+                                      )}
+                                      {form.status === 'Approved' && form.approvedFormName && (
+                                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[180px]" title={form.approvedFormName}>
+                                          {form.approvedFormName}
+                                        </span>
+                                      )}
                                     </div>
                                     <p className="text-xs text-slate-500 font-semibold mt-1.5 leading-relaxed">
                                       {form.description}
@@ -1027,6 +1279,148 @@ export function ParentDetails() {
                                   : `No forms found for ${child.firstName} ${child.lastName} in ${selectedYear}.`
                                 }
                               </p>
+                            </div>
+                          )}
+
+                          {/* Documents Section */}
+                          {child.childStatus !== 'archive' && (
+                            <div className="mt-2 pt-4 border-t border-slate-100">
+                              <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                Documents
+                                <span className="text-[10px] font-semibold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full normal-case tracking-normal">
+                                  {childDocs.length}
+                                </span>
+                              </h4>
+
+                              {isLoadingDocuments ? (
+                                <div className="space-y-2">
+                                  {[1, 2].map(i => (
+                                    <div key={i} className="h-16 rounded-xl bg-slate-100 animate-pulse" />
+                                  ))}
+                                </div>
+                              ) : childFilteredDocs.length === 0 ? (
+                                <p className="text-xs text-slate-400 font-semibold text-center py-4">
+                                  {childDocs.length === 0 ? 'No documents assigned.' : `No documents found in ${selectedYear}.`}
+                                </p>
+                              ) : (
+                                childFilteredDocs.map(doc => (
+                                  <div key={doc.id} className="border border-slate-100 rounded-xl p-4 bg-slate-50/20 hover:bg-slate-50/40 hover:border-slate-200 transition-all mb-3">
+                                    <div className="flex items-center justify-between gap-2 mb-2">
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <FileText className="h-4 w-4 text-indigo-400 flex-shrink-0" />
+                                        <h3 className="font-bold text-sm text-slate-800 truncate">{doc.document_name}</h3>
+                                      </div>
+                                      {doc.status === 'approved' && isAdminOrSuperAdmin && (
+                                        <button onClick={() => setDocEditingMeta({ doc, childName: `${child.firstName} ${child.lastName}` })}
+                                          className="flex items-center gap-1 text-xs font-semibold text-[#0F2D52] hover:text-[#1E4B83] bg-slate-100 hover:bg-slate-200 px-2 py-1 rounded-lg transition-colors flex-shrink-0">
+                                          <Pencil className="h-3 w-3" />
+                                          Edit
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2 mt-1">
+                                      <span className={`text-[10px] font-extrabold uppercase tracking-wider ${
+                                        doc.status === 'approved' ? 'text-emerald-600' :
+                                        doc.status === 'rejected' ? 'text-red-600' :
+                                        doc.status === 'submitted' ? 'text-amber-600' : 'text-slate-500'
+                                      }`}>
+                                        {doc.status === 'submitted' ? 'Pending Approval' : doc.status.charAt(0).toUpperCase() + doc.status.slice(1)}
+                                      </span>
+
+                                      {doc.reviewed_at && doc.status === 'approved' && (
+                                        <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                                          Approved {new Date(doc.reviewed_at).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                      {doc.form_academic_year && (
+                                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                          {doc.form_academic_year}
+                                        </span>
+                                      )}
+                                      {doc.approved_form_name && (
+                                        <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full truncate max-w-[180px]" title={doc.approved_form_name}>
+                                          {doc.approved_form_name}
+                                        </span>
+                                      )}
+                                      {doc.due_date && doc.status !== 'approved' && (
+                                        <span className="text-[10px] text-slate-400 font-medium">
+                                          Due {new Date(doc.due_date).toLocaleDateString()}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {doc.status === 'rejected' && doc.rejection_reason && (
+                                      <p className="text-xs text-red-600 mt-1.5 font-medium">Reason: {doc.rejection_reason}</p>
+                                    )}
+
+                                    <div className="flex flex-wrap gap-2 items-center mt-3">
+                                      {/* Download + Print icons — approved docs with a file */}
+                                      {doc.status === 'approved' && doc.latest_submission_id && (
+                                        <div className="flex gap-1.5">
+                                          <Button variant="outline" size="icon" className="h-8 w-8 text-[#0F2D52] border-slate-200 hover:bg-slate-50 rounded-lg"
+                                            onClick={() => handleDocDownloadFile(doc)}
+                                            disabled={docLoadingAction?.docId === doc.id}
+                                            title="Download document">
+                                            {docLoadingAction?.docId === doc.id && docLoadingAction.action === 'download'
+                                              ? <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                                              : <Download className="h-4 w-4" />}
+                                          </Button>
+                                          <Button variant="outline" size="icon" className="h-8 w-8 text-slate-600 border-slate-200 hover:bg-slate-50 rounded-lg"
+                                            onClick={() => handleDocPrint(doc)}
+                                            disabled={docLoadingAction?.docId === doc.id}
+                                            title="Print document">
+                                            {docLoadingAction?.docId === doc.id && docLoadingAction.action === 'print'
+                                              ? <span className="animate-spin h-3.5 w-3.5 border-2 border-slate-400 border-t-transparent rounded-full" />
+                                              : <Printer className="h-4 w-4" />}
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {/* Upload / Re-upload — admin only */}
+                                      {isAdminOrSuperAdmin && (doc.status === 'pending' || doc.status === 'overdue' || doc.status === 'submitted' || doc.status === 'approved') && (
+                                        <>
+                                          <input type="file" id={`doc-upload-${doc.id}`} className="hidden"
+                                            onChange={e => { const f = e.target.files?.[0]; if (f) handleDocUpload(doc.id, f); e.target.value = ''; }} />
+                                          <Button variant="outline" size="sm"
+                                            className="h-8 rounded-lg text-xs font-bold text-slate-600 bg-white border border-slate-200 hover:bg-slate-50"
+                                            disabled={uploadingDocId === doc.id}
+                                            onClick={() => document.getElementById(`doc-upload-${doc.id}`)?.click()}>
+                                            <Upload className="h-3.5 w-3.5 mr-1" />
+                                            {uploadingDocId === doc.id ? 'Uploading...' : (doc.status === 'approved' || doc.status === 'submitted') ? 'Re-upload' : 'Upload'}
+                                          </Button>
+                                        </>
+                                      )}
+                                      {/* Approve + Reject — submitted docs, admin only */}
+                                      {doc.status === 'submitted' && isAdminOrSuperAdmin && (
+                                        <div className="flex gap-1.5">
+                                          <Button variant="outline" size="sm"
+                                            className="h-8 rounded-lg text-emerald-700 bg-emerald-50 border border-emerald-100 hover:bg-emerald-100/50 text-xs font-bold"
+                                            onClick={() => setDocApproving({ doc, childName: `${child.firstName} ${child.lastName}` })}>
+                                            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                                            Approve
+                                          </Button>
+                                          <Button variant="outline" size="sm"
+                                            className="h-8 rounded-lg text-amber-700 bg-amber-50 border border-amber-100 hover:bg-amber-100/50 text-xs font-bold"
+                                            onClick={() => { setDocRejecting({ doc }); setDocRejectReason(''); }}>
+                                            <AlertCircle className="h-3.5 w-3.5 mr-1" />
+                                            Reject
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {doc.status === 'approved' && isAdminOrSuperAdmin && (
+                                        <Button
+                                          size="sm"
+                                          className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1E4B83] text-white text-xs font-bold"
+                                          onClick={() => { setDocTargetStatus('pending'); setDocChangeStatusReason(''); setDocChangingStatus({ doc }); }}
+                                          disabled={isChangingDocStatus}
+                                        >
+                                          Change Status
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              )}
                             </div>
                           )}
                         </div>
@@ -1148,8 +1542,136 @@ export function ParentDetails() {
           uploadedBy={userData?.email || userData?.name || 'Admin'}
           formType="student"
           isReplacing={selectedFormForUpload.form.status === 'Approved'}
+          formTemplateName={selectedFormForUpload.form.title}
+          isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin'}
         />
       )}
+
+      {editingFormMeta && (
+        <ApproveFormModal
+          open={true}
+          onClose={() => setEditingFormMeta(null)}
+          onConfirm={handleEditMetaConfirm}
+          isEmployee={false}
+          formTemplateName={editingFormMeta.form.title}
+          personName={editingFormMeta.childName}
+          isEditable={isAdminOrSuperAdmin}
+          isSubmitting={isSavingMeta}
+          initialFormName={editingFormMeta.form.approvedFormName || undefined}
+          initialAcademicYear={editingFormMeta.form.formAcademicYear || undefined}
+        />
+      )}
+
+      {docApproving && (
+        <ApproveFormModal
+          open={true}
+          onClose={() => setDocApproving(null)}
+          onConfirm={handleDocApproveConfirm}
+          isEmployee={false}
+          formTemplateName={docApproving.doc.document_name}
+          personName={docApproving.childName}
+          isEditable={true}
+          isSubmitting={isApprovingDoc}
+          initialFormName={docApproving.doc.approved_form_name || undefined}
+          initialAcademicYear={docApproving.doc.form_academic_year || undefined}
+        />
+      )}
+
+      {/* Reject Document Dialog */}
+      <Dialog open={!!docRejecting} onOpenChange={open => { if (!open && !isRejectingDoc) { setDocRejecting(null); setDocRejectReason(''); } }}>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0">
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
+            <DialogTitle className="text-lg font-bold text-slate-900">Reject Document</DialogTitle>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-sm text-slate-600 font-semibold">{docRejecting?.doc.document_name}</p>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <Textarea
+              placeholder="Provide a reason for rejection..."
+              value={docRejectReason}
+              onChange={e => setDocRejectReason(e.target.value)}
+              className="h-24 rounded-xl border-slate-200 text-sm"
+            />
+          </div>
+          <div className="px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button variant="outline" className="h-10 rounded-xl text-xs font-bold border-slate-200"
+              onClick={() => { setDocRejecting(null); setDocRejectReason(''); }}
+              disabled={isRejectingDoc}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDocRejectConfirm}
+              className="h-10 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 text-white"
+              disabled={isRejectingDoc || !docRejectReason.trim()}>
+              {isRejectingDoc ? 'Rejecting...' : 'Reject'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Document Metadata Modal */}
+      {docEditingMeta && (
+        <ApproveFormModal
+          open={true}
+          onClose={() => setDocEditingMeta(null)}
+          onConfirm={handleDocMetadataSave}
+          isEmployee={false}
+          formTemplateName={docEditingMeta.doc.document_name}
+          personName={docEditingMeta.childName}
+          isEditable={true}
+          isSubmitting={isSavingDocMeta}
+          initialFormName={docEditingMeta.doc.approved_form_name || undefined}
+          initialAcademicYear={docEditingMeta.doc.form_academic_year || undefined}
+          title="Edit Document Metadata"
+          confirmLabel="Save Changes"
+        />
+      )}
+
+      {/* Change Document Status Dialog */}
+      <Dialog open={!!docChangingStatus} onOpenChange={open => { if (!open && !isChangingDocStatus) { setDocChangingStatus(null); setDocChangeStatusReason(''); } }}>
+        <DialogContent className="w-[95vw] max-w-sm sm:max-w-md rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-2xl p-0 gap-0">
+          <div className="flex-shrink-0 px-6 py-4 border-b bg-slate-50/50">
+            <DialogTitle className="text-lg font-bold text-slate-900">Change Document Status</DialogTitle>
+          </div>
+          <div className="px-6 py-4 space-y-3">
+            <p className="text-sm font-semibold text-slate-600">{docChangingStatus?.doc.document_name}</p>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">New Status</label>
+            <Select value={docTargetStatus} onValueChange={v => setDocTargetStatus(v as 'pending' | 'rejected')}>
+              <SelectTrigger className="h-10 rounded-xl border-slate-200 text-sm focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="pending">Send Back (Pending)</SelectItem>
+                <SelectItem value="rejected">Reject</SelectItem>
+              </SelectContent>
+            </Select>
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-500">
+              Reason {docTargetStatus === 'rejected' && <span className="text-red-500">*</span>}
+            </label>
+            <Textarea
+              value={docChangeStatusReason}
+              onChange={e => setDocChangeStatusReason(e.target.value)}
+              placeholder="Provide a reason..."
+              className="h-20 rounded-xl border-slate-200 text-sm"
+            />
+          </div>
+          <div className="px-6 py-4 border-t bg-slate-50/20 flex gap-3 justify-end">
+            <Button variant="outline" className="h-10 rounded-xl text-xs font-bold border-slate-200"
+              onClick={() => { setDocChangingStatus(null); setDocChangeStatusReason(''); }}
+              disabled={isChangingDocStatus}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDocChangeStatus}
+              disabled={isChangingDocStatus || (docTargetStatus === 'rejected' && !docChangeStatusReason.trim())}
+              className="h-10 rounded-xl text-xs font-bold bg-[#0F2D52] hover:bg-[#1E4B83] text-white">
+              {isChangingDocStatus ? 'Updating...' : 'Confirm'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Revoke Approval Dialog */}
       <Dialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>

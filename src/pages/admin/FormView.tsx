@@ -12,6 +12,7 @@ import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { Loading } from '../../components/ui/loading';
 import { reviewStudentFormAssignment, revokeStudentFormAssignment, getFormResumeLink, getStudentManualPdfUrl, deleteStudentManualPdf } from '../../services/api/admin';
 import { EmployeeService } from '../../services/api/employee';
+import { ApproveFormModal } from '../../components/admin/ApproveFormModal';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
@@ -52,6 +53,8 @@ export function FormView() {
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
+  const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
+  const isEditable = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
@@ -246,32 +249,31 @@ export function FormView() {
     navigate(returnPath);
   };
 
-  // Handle form approval
-  const handleApprove = async () => {
+  // Handle form approval — open modal to capture year/name first
+  const handleApprove = () => {
     if (!studentFormAssignmentId) {
       showToast('error', 'Unable to approve form: Assignment ID is missing');
       return;
     }
-
     if (!user?.id) {
       showToast('error', 'Unable to approve form: User not authenticated');
       return;
     }
+    setIsApproveModalOpen(true);
+  };
 
+  const handleApproveConfirm = async (data: { formAcademicYear?: string; approvedFormName: string }) => {
+    if (!studentFormAssignmentId || !user?.id) return;
     setIsApproving(true);
     try {
       if (isEmployeeForm && schoolId) {
-        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'approved', notes);
+        await EmployeeService.reviewEmployeeForm(studentFormAssignmentId, schoolId, 'approved', notes, data.approvedFormName);
       } else {
-        await reviewStudentFormAssignment(studentFormAssignmentId, 'approved', notes, user.id);
+        await reviewStudentFormAssignment(studentFormAssignmentId, 'approved', notes, user.id, data.formAcademicYear, data.approvedFormName);
       }
-
+      setIsApproveModalOpen(false);
       showToast('success', 'Form approved successfully');
-
-      // Navigate back after a short delay
-      setTimeout(() => {
-        navigate(returnPath);
-      }, 1500);
+      setTimeout(() => { navigate(returnPath); }, 1500);
     } catch (error) {
       console.error('Error approving form:', error);
       showToast('error', 'Failed to approve form');
@@ -617,6 +619,18 @@ export function FormView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Approve Form Modal */}
+      <ApproveFormModal
+        open={isApproveModalOpen}
+        onClose={() => setIsApproveModalOpen(false)}
+        onConfirm={handleApproveConfirm}
+        isEmployee={!!isEmployeeForm}
+        formTemplateName={formData?.title || ''}
+        personName={childName || employeeName || ''}
+        isEditable={isEditable}
+        isSubmitting={isApproving}
+      />
 
       {/* Revoke Approval Dialog */}
       <Dialog open={isRevokeDialogOpen} onOpenChange={setIsRevokeDialogOpen}>

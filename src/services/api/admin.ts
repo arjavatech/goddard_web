@@ -267,7 +267,9 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
           approved_on: form.approved_on || null,
           assigned_at: form.assigned_at || null,
           due_date: form.due_date || null,
-          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null,
+          form_academic_year: form.form_academic_year || null,
+          approved_form_name: form.approved_form_name || null
         }))
       }))
     });
@@ -375,7 +377,9 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           due_date: form.due_date || null,
           updated_at: form.updated_at || null,
           created_at: form.created_at || null,
-          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null,
+          form_academic_year: form.form_academic_year || null,
+          approved_form_name: form.approved_form_name || null
         }))
       }))
     };
@@ -795,14 +799,20 @@ export async function reviewStudentFormAssignment(
   assignmentId: string,
   status: 'approved' | 'rejected',
   notes: string,
-  approvedBy: string
+  approvedBy: string,
+  formAcademicYear?: string,
+  approvedFormName?: string,
 ): Promise<void> {
-  const requestBody = {
+  const requestBody: Record<string, unknown> = {
     assignment_id: assignmentId,
     status,
     notes,
-    approved_by: approvedBy
+    approved_by: approvedBy,
   };
+  if (status === 'approved') {
+    if (formAcademicYear) requestBody.form_academic_year = formAcademicYear;
+    if (approvedFormName) requestBody.approved_form_name = approvedFormName;
+  }
 
   const responseSchema = z.object({
     success: z.boolean().optional(),
@@ -820,6 +830,21 @@ export async function reviewStudentFormAssignment(
     throw new Error('Failed to review form assignment');
   }
 }
+
+export const updateApprovedFormMetadata = (
+  assignmentId: string,
+  schoolId: string,
+  formAcademicYear?: string,
+  approvedFormName?: string,
+) => authedFetch({
+  method: 'PATCH',
+  url: `/student-form-assignments/${assignmentId}/approved-metadata`,
+  body: {
+    school_id: schoolId,
+    ...(formAcademicYear !== undefined && { form_academic_year: formAcademicYear }),
+    ...(approvedFormName !== undefined && { approved_form_name: approvedFormName }),
+  },
+}, z.any());
 
 export async function revokeStudentFormAssignment(
   assignmentId: string,

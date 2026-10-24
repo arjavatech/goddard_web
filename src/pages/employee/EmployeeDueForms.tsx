@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List } from 'lucide-react';
+import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List, Upload } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
@@ -19,6 +19,7 @@ import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { Link } from 'react-router-dom';
+import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
 
@@ -72,6 +73,9 @@ export function EmployeeDueForms() {
   }, []);
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
+  const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<LocalDueForm | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
 
@@ -175,7 +179,7 @@ export function EmployeeDueForms() {
     let isMounted = true;
     (async () => {
       try {
-        setLoading(true);
+        if (refreshKey === 0) setLoading(true);
         if (!schoolId) return;
 
         const [employees, assignments] = await Promise.all([
@@ -236,7 +240,7 @@ export function EmployeeDueForms() {
     return () => {
       isMounted = false;
     };
-  }, [schoolId]);
+  }, [schoolId, refreshKey]);
 
   const allRoles = useMemo(() => {
     const set = new Set<string>();
@@ -871,6 +875,20 @@ export function EmployeeDueForms() {
                                 </Button>
                               </Link>
                             )}
+                            {form.status !== 'completed' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedFormForUpload(form);
+                                  setIsManualUploadOpen(true);
+                                }}
+                                className="w-full h-9 text-xs font-bold rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200"
+                              >
+                                <Upload className="h-4 w-4 mr-1.5" />
+                                Upload PDF
+                              </Button>
+                            )}
                             <Button
                               size="sm"
                               variant="outline"
@@ -963,6 +981,20 @@ export function EmployeeDueForms() {
                                       </Button>
                                     </Link>
                                   )}
+                                  {form.status !== 'completed' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedFormForUpload(form);
+                                        setIsManualUploadOpen(true);
+                                      }}
+                                      className="h-8 px-3 text-xs rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200 font-bold"
+                                    >
+                                      <Upload className="h-3.5 w-3.5 mr-1" />
+                                      <span>Upload PDF</span>
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1007,6 +1039,28 @@ export function EmployeeDueForms() {
             )}
           </CardContent>
         </div>
+        {selectedFormForUpload && (
+          <ManualUploadModal
+            isOpen={isManualUploadOpen}
+            onClose={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+            }}
+            onSuccess={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+              showToast('success', 'PDF uploaded successfully');
+              setRefreshKey(k => k + 1);
+            }}
+            assignmentId={selectedFormForUpload.id}
+            schoolId={schoolId || ''}
+            studentName={selectedFormForUpload.employeeName}
+            uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}
+            formType="employee"
+            formTemplateName={selectedFormForUpload.formName}
+            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin'}
+          />
+        )}
       </motion.div>
     </AdminLayout>
   );

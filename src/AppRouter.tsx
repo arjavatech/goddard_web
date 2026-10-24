@@ -7,6 +7,7 @@ import { UserProvider, useUserContext } from './contexts/UserContext';
 import { AuthProvider } from './services/auth/useAuth';
 import { ToastProvider } from './contexts/ToastContext';
 import { NotificationsProvider } from './contexts/NotificationsContext';
+import { NavCountsProvider } from './contexts/NavCountsContext';
 import { AuthErrorBoundary } from './components/AuthErrorBoundary';
 import { Login } from './pages/Login';
 import { Signup } from './pages/Signup';
@@ -118,6 +119,7 @@ export function AppRouter() {
       <UserProvider>
         <ToastProvider>
           <NotificationsProvider>
+            <NavCountsProvider>
             <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
               <ScrollToTop />
               <Routes>
@@ -219,6 +221,7 @@ export function AppRouter() {
 
               </Routes>
             </BrowserRouter>
+            </NavCountsProvider>
           </NotificationsProvider>
         </ToastProvider>
       </UserProvider>

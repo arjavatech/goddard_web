@@ -55,6 +55,7 @@ export type EmployeeFormAssignment = {
   recentPdfLink?: string;
   submissionSource?: string;
   manualPdfUploadedAt?: string;
+  approvedFormName?: string;
   // Joined from employee_form_templates:
   formName?: string;
   filloutFormId?: string;
@@ -131,6 +132,7 @@ function mapAssignment(raw: any): EmployeeFormAssignment {
     recentPdfLink: raw.recent_pdf_link ?? undefined,
     submissionSource: raw.submission_source ?? undefined,
     manualPdfUploadedAt: raw.manual_pdf_uploaded_at ?? undefined,
+    approvedFormName: raw.approved_form_name ?? undefined,
     formName: raw.form_name ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     dueDate: raw.due_date ?? undefined,
@@ -423,18 +425,19 @@ export const EmployeeService = {
     schoolId: string,
     status: string,
     notes?: string,
+    approvedFormName?: string,
   ): Promise<EmployeeFormAssignment> {
+    const body: Record<string, unknown> = {
+      assignment_id: assignmentId,
+      school_id: schoolId,
+      status,
+      notes,
+    };
+    if (status === 'approved' && approvedFormName) {
+      body.approved_form_name = approvedFormName;
+    }
     const data = await authedFetch(
-      {
-        method: 'PUT',
-        url: '/employee-form-assignments/review',
-        body: {
-          assignment_id: assignmentId,
-          school_id: schoolId,
-          status,
-          notes,
-        },
-      },
+      { method: 'PUT', url: '/employee-form-assignments/review', body },
       z.any(),
     );
     return mapAssignment(data);
@@ -492,3 +495,24 @@ export const EmployeeService = {
     throw new Error('Form submission is handled by Fillout directly via webhook.');
   },
 };
+
+export const revokeEmployeeFormAssignment = (
+  assignmentId: string,
+  notes: string,
+  revokedBy: string,
+  targetStatus: 'in_progress' | 'rejected' = 'in_progress',
+) => authedFetch({
+  method: 'POST',
+  url: '/employee-form-assignments/revoke',
+  body: { assignment_id: assignmentId, notes, revoked_by: revokedBy, target_status: targetStatus },
+}, z.any()) as Promise<EmployeeFormAssignment>;
+
+export const updateApprovedEmployeeFormMetadata = (
+  assignmentId: string,
+  schoolId: string,
+  approvedFormName?: string,
+) => authedFetch({
+  method: 'PATCH',
+  url: `/employee-form-assignments/${assignmentId}/approved-metadata`,
+  body: { school_id: schoolId, ...(approvedFormName !== undefined && { approved_form_name: approvedFormName }) },
+}, z.any()) as Promise<EmployeeFormAssignment>;

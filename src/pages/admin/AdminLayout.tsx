@@ -8,6 +8,7 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
@@ -32,7 +33,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady, schoolFeatures } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures } = useUserContext();
+  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsReview, employeeDocsReview } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
@@ -113,21 +115,21 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       items: [
         ...(schoolFeatures.parentManagementEnabled ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due`, badge: studentFormsDue },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review`, badge: studentFormsReview },
         ] : []),
         ...(schoolFeatures.employeeManagementEnabled ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
-          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due`, badge: employeeFormsDue },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review`, badge: employeeFormsReview },
         ] : []),
       ],
     }] : []),
     ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
       label: 'Documents',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` }] : []),
+        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsReview }] : []),
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsReview }] : []),
       ],
     }] : []),
     ...(schoolFeatures.taptimeEnabled ? [{
@@ -211,6 +213,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
                         <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                        {!!item.badge && item.badge > 0 && (
+                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -268,6 +275,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
                         <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
                         <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                        {!!item.badge && item.badge > 0 && (
+                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                            {item.badge > 99 ? '99+' : item.badge}
+                          </span>
+                        )}
                       </Link>
                     );
                   })}
@@ -409,13 +421,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* ── Footer (outside main flex) ── */}
-      <footer className="w-full bg-[#1a3a5c]">
+      <footer className="w-full bg-[#0F2D52]">
         {/* Main body */}
-        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-5 pb-4 lg:ml-60 lg:max-w-none">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
 
             {/* ── Brand column ── */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-2">
               <img
                 src="/gs_logo_lynnwood.png"
                 alt="The Goddard School"
@@ -424,7 +436,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <p className="text-sm text-slate-300/70 leading-relaxed max-w-sm">
                 Empowering families through seamless enrollment management — built for The Goddard School's commitment to quality early childhood education.
               </p>
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-1.5">
                 {schoolPhone && (
                   <a href={`tel:${schoolPhone}`}
                     className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
@@ -455,9 +467,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Quick Navigation ── */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Quick Links</h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-1.5">
                 {[
                   { icon: <Home className="h-3.5 w-3.5" />, label: 'Dashboard', path: '/admin' },
                   { icon: <School className="h-3.5 w-3.5" />, label: 'Classrooms', path: '/admin/classrooms' },
@@ -478,9 +490,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Resources ── */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-1.5">
                 {!isSuperAdmin && (
                   <>
                     <li>
@@ -509,10 +521,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   </li>
                 )}
                 <li>
-                  <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                  <a href={schoolWebsiteUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
                     <Globe className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                    <span className="font-medium">Goddard School</span>
+                    <span className="font-medium">{schoolName || 'The Goddard School'}</span>
                   </a>
                 </li>
               </ul>
@@ -520,8 +532,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* ── Bottom bar ── */}
-          <div className="border-t border-white/10 mt-3">
-            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+          <div className="border-t border-white/10 mt-2">
+            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
               <p className="text-xs text-slate-400 text-center sm:text-left">
                 © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
               </p>
@@ -553,7 +565,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <DialogTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-blue-600" /> Help Center</DialogTitle>
             <DialogDescription>Find answers to common admin questions</DialogDescription>
           </DialogHeader>
-          <HelpCenterContent role="admin" />
+          <HelpCenterContent role="admin" onClose={() => setShowHelpModal(false)} />
         </DialogContent>
       </Dialog>
 
