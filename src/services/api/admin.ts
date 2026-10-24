@@ -1583,3 +1583,29 @@ export async function deleteStudentManualPdf(assignmentId: string, schoolId: str
     url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
   }, z.any());
 }
+
+export type FormAssignmentDetailItem = {
+  id: string;
+  child_id: string;
+  form_template_id: string;
+  form_name: string;
+  status: string | null;
+  student_name: string;
+  parent_id: string | null;
+  parent_name: string;
+  parent_email: string;
+  classroom_name: string | null;
+  assigned_at: string | null;
+};
+
+export async function fetchFormAssignmentsByTemplate(
+  schoolId: string,
+  formTemplateId: string,
+  status?: string,
+  search?: string,
+): Promise<FormAssignmentDetailItem[]> {
+  const params = new URLSearchParams({ school_id: schoolId, form_template_id: formTemplateId });
+  if (status) params.set('status', status);
+  if (search) params.set('search', search);
+  return authedFetch({ method: 'GET', url: `/student-form-assignments/list?${params}` }, z.any());
+}

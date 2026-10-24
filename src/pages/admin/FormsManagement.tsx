@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
@@ -47,6 +48,8 @@ const mapStatus = (status: string | null | undefined): FormStatus => {
   return 'active';
 };
 export function FormsManagement() {
+  const navigate = useNavigate();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [forms, setForms] = useState<Form[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -249,7 +252,7 @@ export function FormsManagement() {
       className: 'w-[18%]',
       hideInCardBody: true,
       cell: (form) => form.pdfFileName && schoolId ? (
-        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`}>
+        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`} onClick={e => e.stopPropagation()}>
           <Button variant="ghost" size="icon" title="View template" aria-label="View template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}><Eye className="h-3.5 w-3.5" /></Button>
           <Button variant="ghost" size="icon" title="Print template" aria-label="Print template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Open the PDF and use your browser print action.'); } }}><Printer className="h-3.5 w-3.5" /></Button>
           <Button variant="ghost" size="icon" title="Download template" aria-label="Download template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await getFormTemplatePdfUrl(form.id, schoolId, true), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to download PDF template'); } }}><Download className="h-3.5 w-3.5" /></Button>
@@ -262,6 +265,7 @@ export function FormsManagement() {
       className: 'w-[10%] text-center whitespace-nowrap',
       hideInCardBody: true,
       cell: (form) => (
+        <div onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
@@ -297,6 +301,7 @@ export function FormsManagement() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       )
     }
   ], [copiedFormId, schoolId, showToast]);
@@ -696,6 +701,7 @@ export function FormsManagement() {
                   itemsPerPage={itemsPerPage}
                   onPageChange={setCurrentPage}
                   onPageSizeChange={setItemsPerPage}
+                  onRowClick={(form) => navigate(`/${schoolSlug}/admin/forms/${form.id}`)}
                   gridClassName="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
                   renderCard={(form, dynamicColumns) => (
                     <div key={form.id} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">

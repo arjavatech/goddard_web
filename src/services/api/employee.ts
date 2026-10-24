@@ -516,3 +516,26 @@ export const updateApprovedEmployeeFormMetadata = (
   url: `/employee-form-assignments/${assignmentId}/approved-metadata`,
   body: { school_id: schoolId, ...(approvedFormName !== undefined && { approved_form_name: approvedFormName }) },
 }, z.any()) as Promise<EmployeeFormAssignment>;
+
+export type EmployeeFormAssignmentDetailItem = {
+  id: string;
+  employee_id: string;
+  employee_form_template_id: string;
+  form_name: string;
+  status: string | null;
+  employee_name: string;
+  employee_email: string | null;
+  assigned_at: string | null;
+};
+
+export async function fetchEmployeeFormAssignmentsByTemplate(
+  schoolId: string,
+  formTemplateId: string,
+  status?: string,
+  search?: string,
+): Promise<EmployeeFormAssignmentDetailItem[]> {
+  const params = new URLSearchParams({ school_id: schoolId, form_template_id: formTemplateId });
+  if (status) params.set('status', status);
+  if (search) params.set('search', search);
+  return authedFetch({ method: 'GET', url: `/employee-form-assignments/list?${params}` }, z.any());
+}

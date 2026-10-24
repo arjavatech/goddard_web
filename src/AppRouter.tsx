@@ -27,6 +27,7 @@ import { DueForms } from './pages/admin/StudentDueForms';
 import { FormReviewQueue } from './pages/admin/FormReviewQueue';
 import { DocumentWorkspace } from './pages/admin/DocumentWorkspace';
 import { DocumentRequestAssignments } from './pages/admin/DocumentRequestAssignments';
+import { FormAssignmentsDetail } from './pages/admin/FormAssignmentsDetail';
 import { DocumentDueWorkspace } from './pages/admin/DocumentDueWorkspace';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
@@ -188,6 +189,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-forms" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormsManagement /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-forms/due" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDueForms /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-forms/review" element={<FeatureRoute feature="employeeManagementEnabled"><FormReviewQueue kind="employee" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/forms/:formId" element={<FeatureRoute feature="parentManagementEnabled"><FormAssignmentsDetail audience="student" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/employee-forms/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><FormAssignmentsDetail audience="employee" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentWorkspace audience="employee" mode="manage" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/due" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentDueWorkspace audience="employee" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentWorkspace audience="employee" mode="review" /></FeatureRoute>} />
