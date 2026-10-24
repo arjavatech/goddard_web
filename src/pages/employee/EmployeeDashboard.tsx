@@ -124,7 +124,7 @@ export function EmployeeDashboard() {
     const blob = await res.blob();
     const url = URL.createObjectURL(blob);
     const el = document.createElement('a');
-    el.href = url; el.download = `${a.formTitle}.pdf`;
+    el.href = url; el.download = `${a.approvedFormName || a.formTitle}.pdf`;
     document.body.appendChild(el); el.click(); el.remove();
     URL.revokeObjectURL(url);
   };

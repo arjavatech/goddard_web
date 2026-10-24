@@ -647,7 +647,7 @@ export function FormsDocuments({
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${form.rawData?.approved_form_name || form.title.replace(/\s+/g, '_')}.pdf`;
+      link.download = `${form.rawData?.approved_form_name || form.approved_form_name || form.title.replace(/\s+/g, '_')}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
