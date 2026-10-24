@@ -26,6 +26,7 @@ import { StudentManagement } from './pages/admin/StudentManagement';
 import { DueForms } from './pages/admin/StudentDueForms';
 import { FormReviewQueue } from './pages/admin/FormReviewQueue';
 import { DocumentWorkspace } from './pages/admin/DocumentWorkspace';
+import { DocumentRequestAssignments } from './pages/admin/DocumentRequestAssignments';
 import { DocumentDueWorkspace } from './pages/admin/DocumentDueWorkspace';
 import { FormView } from './pages/admin/FormView';
 import { HelpCenter } from './pages/admin/HelpCenter';
@@ -171,6 +172,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/documents/due" element={<FeatureRoute feature="parentManagementEnabled"><DocumentDueWorkspace audience="student" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/documents/review" element={<FeatureRoute feature="parentManagementEnabled"><DocumentWorkspace audience="student" mode="review" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/documents/review/:documentId" element={<FeatureRoute feature="parentManagementEnabled"><DocumentWorkspace audience="student" mode="review" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/documents/:requestId" element={<FeatureRoute feature="parentManagementEnabled"><DocumentRequestAssignments audience="student" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/forms/view/:formId" element={<FeatureRoute feature="parentManagementEnabled"><FormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/form-assignments" element={<FeatureRoute feature="parentManagementEnabled"><ClassroomFormAssignment /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/parents" element={<FeatureRoute feature="parentManagementEnabled"><ParentManagement /></FeatureRoute>} />
@@ -190,6 +192,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-documents/due" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentDueWorkspace audience="employee" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentWorkspace audience="employee" mode="review" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review/:documentId" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentWorkspace audience="employee" mode="review" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/employee-documents/:requestId" element={<FeatureRoute feature="employeeManagementEnabled"><DocumentRequestAssignments audience="employee" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />

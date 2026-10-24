@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Check, Eye, FileCheck2, Mail, MoreHorizontal, Pencil, Plus, RefreshCw, Search, Send, Upload, X } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
@@ -23,6 +24,8 @@ const displayDate = (value?:string) => value || '—';
 export function DocumentWorkspace({ audience, mode }:Props) {
   const { userData } = useUserContext();
   const schoolId = userData?.schoolId;
+  const navigate = useNavigate();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [requests, setRequests] = useState<DocumentRequest[]>([]);
   const [page, setPage] = useState({items:[] as DocumentAssignment[], total:0, page:1, limit:10});
   const [loading, setLoading] = useState(true); const [search,setSearch] = useState(''); const [status,setStatus] = useState('');
@@ -153,7 +156,7 @@ export function DocumentWorkspace({ audience, mode }:Props) {
           </thead>
           <tbody>{loading?<tr>
             <td colSpan={4} className="p-12 text-center text-slate-500">Loading document requests...</td>
-            </tr>:filtered.map(item=><tr key={item.id} className="border-t border-slate-100">
+            </tr>:filtered.map(item=><tr key={item.id} className="border-t border-slate-100 cursor-pointer hover:bg-[#F8FAFC] transition-colors duration-150" onClick={()=>navigate(`/${schoolSlug}/admin/${audience==='student'?'documents':'employee-documents'}/${item.id}`)}>
               <td className="p-4">
                 <p className="font-bold text-slate-800">{item.document_name}</p>
                 <p className="max-w-md truncate text-xs text-slate-500">{item.instructions||'No instructions'}</p>
@@ -181,7 +184,7 @@ export function DocumentWorkspace({ audience, mode }:Props) {
               </td>
               <td className="p-4">
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700">{item.status}</span></td>
-                <td className="p-4 text-right">
+                <td className="p-4 text-right" onClick={e=>e.stopPropagation()}>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-xl"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
