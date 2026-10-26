@@ -7,6 +7,7 @@ import { EmployeeService, type EmployeeFormAssignment } from '../../services/api
 import { RequestService } from '../../services/api/requests';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { StatusBadge } from '../../components/dashboard/StatusBadge';
 import { normalizeFormStatus, type NormalizedFormStatus } from '../../lib/formStatus';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -29,6 +30,7 @@ export function EmployeeDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
+  const { setFormsNeedingRevision } = useNavCounts();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [employee, setEmployee] = useState<import('../../services/api/employee').Employee | null>(null);
   const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
@@ -93,6 +95,10 @@ export function EmployeeDashboard() {
         }));
 
         setAssignments(enriched);
+
+        // Calculate and set count of forms needing revision for Dashboard badge
+        const needsRevisionCount = enriched.filter(a => a.normalizedStatus === 'Needs Revision').length;
+        setFormsNeedingRevision(needsRevisionCount);
       } catch (err) {
         if (isMounted) setError("We couldn't load your dashboard details right now. Please try again shortly.");
       } finally {
@@ -100,7 +106,7 @@ export function EmployeeDashboard() {
       }
     })();
     return () => { isMounted = false; };
-  }, [userData?.schoolId, location.key]);
+  }, [userData?.schoolId, location.key, setFormsNeedingRevision]);
 
   const totalForms = assignments.length;
   const completedForms = assignments.filter(a => a.normalizedStatus === 'Approved' || a.normalizedStatus === 'Submitted').length;

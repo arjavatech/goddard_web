@@ -4,11 +4,12 @@ import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown, Settings } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, type Employee } from '../../services/api/employee';
@@ -90,6 +91,9 @@ export function EmployeeFormsManagement() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
   const [itemsPerPage, setItemsPerPage] = usePageSize('empForm', 10);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -126,15 +130,40 @@ export function EmployeeFormsManagement() {
 
   useEffect(() => { fetchForms(); }, [schoolId]);
 
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      status: 'Status',
+      dueDate: 'Due Date',
+    };
+    return labels[sortBy] || 'Sort';
+  };
+
   const filteredForms = useMemo(() => forms.filter((form) => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'active'
       ? (form.status === 'active' || form.status === 'school_default')
       : (form.status === 'inactive');
-    return matchesSearch && matchesTab;
-  }), [forms, searchQuery, activeTab]);
+    const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
+    return matchesSearch && matchesTab && matchesStatus;
+  }), [forms, searchQuery, activeTab, statusFilter]);
 
-  const { currentPage, totalPages, paginatedData: paginatedForms, setCurrentPage } = usePagination({ data: filteredForms, itemsPerPage });
+  const sortedForms = useMemo(() => {
+    return [...filteredForms].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = a.name; bVal = b.name; break;
+        case 'status': aVal = a.status; bVal = b.status; break;
+        case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
+        default: aVal = a.name; bVal = b.name;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredForms, sortBy, sortOrder]);
+
+  const { currentPage, totalPages, paginatedData: paginatedForms, setCurrentPage } = usePagination({ data: sortedForms, itemsPerPage });
 
   const handleAddForm = async () => {
     if (!formName || !formLink) {
@@ -437,20 +466,52 @@ export function EmployeeFormsManagement() {
                 </TabsList>
               </Tabs>
 
-              {/* Search */}
-              <div className="relative">
+              {/* Search Bar */}
+              <div className="relative mb-3">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
-                <Input
-                  placeholder="Search forms..."
-                  className="pl-9 pr-9 h-10 rounded-xl border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                <Input 
+                  placeholder="Search forms..." 
+                  className="pl-9 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
                 />
-                {searchQuery && (
-                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md" onClick={() => setSearchQuery('')}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
+              </div>
+
+              {/* Status Filter and Sort By - Two Column Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status Filter</label>
+                  <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-xs font-semibold bg-white focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <SelectItem value="all" className="cursor-pointer text-xs">All Statuses</SelectItem>
+                      <SelectItem value="active" className="cursor-pointer text-xs">Active</SelectItem>
+                      <SelectItem value="inactive" className="cursor-pointer text-xs">Inactive</SelectItem>
+                      <SelectItem value="school_default" className="cursor-pointer text-xs">Default</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sort By</label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-10 justify-between rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-semibold transition-all">
+                        <span className="flex items-center gap-1.5">
+                          {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 text-slate-400" />}
+                          <span>{getSortLabel()}</span>
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
 

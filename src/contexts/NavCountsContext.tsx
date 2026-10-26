@@ -18,7 +18,9 @@ type NavCountsContextValue = {
   employeeDocsReview: number;
   formsPending: number;
   docsPending: number;
+  formsNeedingRevision: number;
   refreshCounts: () => void;
+  setFormsNeedingRevision: (count: number) => void;
 };
 
 const NavCountsContext = createContext<NavCountsContextValue | undefined>(undefined);
@@ -45,6 +47,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
 
   const [adminCounts, setAdminCounts] = useState<AdminNavCounts>(ZERO_ADMIN);
   const [myCounts, setMyCounts] = useState<MyNavCounts>(ZERO_MY);
+  const [overrideFormsNeedingRevision, setOverrideFormsNeedingRevision] = useState<number>(0);
   const lastFetchedAt = useRef<number>(0);
 
   const refresh = useCallback(async () => {
@@ -88,7 +91,9 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     employeeDocsReview: adminCounts.employee_docs_review,
     formsPending: myCounts.forms_pending,
     docsPending: myCounts.docs_pending,
+    formsNeedingRevision: overrideFormsNeedingRevision,
     refreshCounts: refresh,
+    setFormsNeedingRevision: setOverrideFormsNeedingRevision,
   };
 
   return <NavCountsContext.Provider value={value}>{children}</NavCountsContext.Provider>;

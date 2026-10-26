@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, ChevronRight, Clock, FileText, Search, Users, X, XCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ChevronRight, Clock, FileText, Search, Users, X, XCircle, Filter, ArrowUp, ArrowDown, List, LayoutGrid } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { StatCard } from '../../components/ui/stat-card';
 import { SortDropdown, SortOption, sortItems } from '../../components/ui/sort-dropdown';
 import { Pagination } from '../../components/ui/pagination';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { useUserContext } from '../../contexts/UserContext';
@@ -60,6 +61,13 @@ export function DocumentRequestAssignments({ audience }: Props) {
   const [sortBy, setSortBy] = useState('subject_name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [itemsPerPage, setItemsPerPage] = usePageSize(`doc-assignments-${audience}`, 25);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem(`docAssignmentsViewMode-${audience}`) as 'card' | 'table') || 'table');
+  
+  const handleViewModeChange = (mode: 'card' | 'table') => {
+    setViewMode(mode);
+    localStorage.setItem(`docAssignmentsViewMode-${audience}`, mode);
+  };
 
   useEffect(() => {
     if (!schoolId || !requestId) return;
@@ -145,57 +153,133 @@ export function DocumentRequestAssignments({ audience }: Props) {
         {/* Table card */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300">
 
-          {/* Controls */}
-          <div className="p-4 sm:p-5 border-b border-slate-50 bg-slate-50/50">
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1 min-w-0">
-                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 transition-colors ${search ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
+          {/* Controls - Matching Student Form Details structure */}
+          <div className="p-5">
+            {/* Search bar with Filter and Sort buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-4">
+              <div className="relative flex-1">
+                <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${search ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
                 <Input
                   placeholder={`Search ${audience === 'student' ? 'students or parents' : 'employees'}...`}
-                  className="pl-10 pr-8 h-9 transition-all rounded-xl focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white border-slate-200 text-sm placeholder:text-slate-400"
+                  className="pl-9 h-10 rounded-xl border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
                   value={search}
                   onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
                 />
-                {search && (
-                  <button
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    onClick={() => { setSearch(''); setCurrentPage(1); }}
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                )}
               </div>
-              <Select
-                value={statusFilter || 'all'}
-                onValueChange={v => { setStatusFilter(v === 'all' ? '' : v); setCurrentPage(1); }}
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowFilters(prev => !prev)}
+                  size="sm"
+                  className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all relative"
+                >
+                  {showFilters ? (
+                    <><X className="h-4 w-4 sm:mr-1.5" /><span className="hidden sm:inline"> Hide Filters</span></>
+                  ) : (
+                    <><Filter className="h-4 w-4 sm:mr-1.5 text-slate-400" /><span className="hidden sm:inline"> Filters</span></>
+                  )}
+                  {!showFilters && statusFilter && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-600 text-[10px] font-extrabold text-white animate-pulse">
+                      1
+                    </span>
+                  )}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-10 rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-bold transition-all">
+                      {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 sm:mr-1.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 sm:mr-1.5 text-slate-400" />}
+                      <span className="hidden sm:inline">
+                        {sortBy === 'subject_name' ? (sortOrder === 'asc' ? 'Name A-Z' : 'Name Z-A') : (sortOrder === 'asc' ? 'Status A-Z' : 'Status Z-A')}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('subject_name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('subject_name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('derived_status'); setSortOrder('asc'); }}>Status A-Z</DropdownMenuItem>
+                    <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('derived_status'); setSortOrder('desc'); }}>Status Z-A</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+
+            {/* Filter panel - matching Student Form Details */}
+            {showFilters && (
+              <div className="p-4 bg-slate-50/50 border border-slate-100 rounded-xl space-y-3 mt-4">
+                {statusFilter && (
+                  <div className="flex items-center justify-between border-b border-slate-100 pb-2 mb-2">
+                    <span className="text-xs text-slate-500 font-bold">
+                      1 filter applied
+                    </span>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setStatusFilter('')} 
+                      className="h-8 rounded-lg bg-white border-slate-200 text-slate-600 hover:bg-slate-50 text-[10px] font-extrabold transition-all"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Clear All
+                    </Button>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status</label>
+                  <Select value={statusFilter || 'all'} onValueChange={(v) => setStatusFilter(v === 'all' ? '' : v)}>
+                    <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-xs font-semibold bg-white focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]">
+                      <SelectValue placeholder="All statuses" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <SelectItem value="all" className="cursor-pointer text-xs">All statuses</SelectItem>
+                      <SelectItem value="pending" className="cursor-pointer text-xs">Pending</SelectItem>
+                      <SelectItem value="submitted" className="cursor-pointer text-xs">Submitted</SelectItem>
+                      <SelectItem value="approved" className="cursor-pointer text-xs">Approved</SelectItem>
+                      <SelectItem value="rejected" className="cursor-pointer text-xs">Rejected</SelectItem>
+                      <SelectItem value="overdue" className="cursor-pointer text-xs">Overdue</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Table header with view toggle - matching Student Form Details */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-slate-50 bg-slate-50/50">
+            <h3 className="text-sm font-bold text-slate-900">
+              Assignments ({filtered.length})
+            </h3>
+            <div className="flex items-center gap-1 bg-slate-100/80 p-1 rounded-xl border border-slate-200/50 shadow-xs">
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('table')}
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  viewMode === 'table'
+                    ? 'bg-white text-[#0F2D52] shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                }`}
               >
-                <SelectTrigger className="h-9 w-full sm:w-44 rounded-xl border-slate-200 bg-white text-sm shadow-none focus:ring-0">
-                  <SelectValue placeholder="All statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="overdue">Overdue</SelectItem>
-                </SelectContent>
-              </Select>
-              <SortDropdown
-                currentSortBy={sortBy}
-                currentSortOrder={sortOrder}
-                options={SORT_OPTIONS}
-                labels={SORT_LABELS}
-                onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
-                className="rounded-xl border-slate-200"
-              />
+                <List className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Table View</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleViewModeChange('card')}
+                className={`flex items-center gap-1 px-2.5 sm:px-3 py-2 rounded-lg text-[10px] font-bold transition-all ${
+                  viewMode === 'card'
+                    ? 'bg-white text-[#0F2D52] shadow-xs'
+                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50/50'
+                }`}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Card View</span>
+              </button>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-500">
+          {/* Table/Card View Content */}
+          {viewMode === 'table' ? (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-500">
                 <tr>
                   {audience === 'student' ? (
                     <>
@@ -264,6 +348,53 @@ export function DocumentRequestAssignments({ audience }: Props) {
               </tbody>
             </table>
           </div>
+          ) : (
+            // Card View
+            <div className="p-4 sm:p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {loading ? (
+                <div className="col-span-full p-12 text-center text-slate-500">Loading assignments...</div>
+              ) : paginatedData.length === 0 ? (
+                <div className="col-span-full p-12 text-center text-slate-400">
+                  {search || statusFilter ? 'No matching assignments.' : 'No assignments yet.'}
+                </div>
+              ) : paginatedData.map(item => {
+                const isNavigable = audience === 'student' ? !!item.parent_id : !!item.employee_id;
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-xl border border-slate-100 bg-white hover:shadow-md transition-all duration-200 ${
+                      isNavigable ? 'cursor-pointer' : ''
+                    }`}
+                    onClick={() => handleRowClick(item)}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-10 w-10 rounded-full bg-[#044ba0] text-white text-xs font-bold flex items-center justify-center shrink-0 select-none">
+                          {initials(item.subject_name)}
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{item.subject_name}</p>
+                          <p className="text-xs text-slate-500">{item.employee_email ?? item.parent_email ?? '—'}</p>
+                        </div>
+                      </div>
+                      {isNavigable && <ChevronRight className="h-4 w-4 text-slate-300 mt-1" />}
+                    </div>
+                    {audience === 'student' && item.parent_name && (
+                      <div className="mb-3 text-xs">
+                        <p className="text-slate-500">Parent: <span className="text-slate-700 font-semibold">{item.parent_name}</span></p>
+                        {item.classroom_name && <p className="text-slate-500">Class: <span className="text-slate-700 font-semibold">{item.classroom_name}</span></p>}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${STATUS_COLORS[item.derived_status] ?? 'bg-slate-100 text-slate-600'}`}>
+                        {item.derived_status}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Pagination */}
           {!loading && filtered.length > 0 && (

@@ -27,7 +27,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolFeatures, isReady } = useUserContext();
-  const { formsPending, docsPending } = useNavCounts();
+  const { formsPending, docsPending, formsNeedingRevision } = useNavCounts();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -68,7 +68,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     {
       label: 'Workspace',
       items: [
-        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsPending },
+        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
         ...(schoolFeatures.taptimeEnabled
           ? [
