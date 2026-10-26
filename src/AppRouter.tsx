@@ -50,6 +50,14 @@ import { SubdomainGuard } from './routes/security/SubdomainGuard';
 import { RequestsRouter, SuperAdminOnly } from './routes/security/ProcurementGuards';
 import { FeatureRoute } from './routes/security/FeatureRoute';
 
+// Survey pages
+import { SurveyManagement } from './pages/admin/SurveyManagement';
+import { SurveyCreate } from './pages/admin/SurveyCreate';
+import { SurveyReport } from './pages/admin/SurveyReport';
+import { AdminSurveys } from './pages/admin/AdminSurveys';
+import { EmployeeSurveys } from './pages/employee/EmployeeSurveys';
+import { ParentSurveys } from './pages/surveys/ParentSurveys';
+import { SurveyRespond } from './pages/surveys/SurveyRespond';
 // Employee pages
 import { EmployeeManagement } from './pages/employee/EmployeeManagement';
 import { EmployeeDetails } from './pages/employee/EmployeeDetails';
@@ -133,13 +141,17 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/dashboard" element={<App />} />
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<FeatureRoute feature="parentManagementEnabled"><ParentFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/documents" element={<FeatureRoute feature="parentManagementEnabled"><MyDocuments audience="student" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/dashboard/surveys" element={<ParentSurveys />} />
                   <Route path="/:schoolSlug/employee/dashboard" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDashboard /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="employee" /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/employee/surveys" element={<EmployeeSurveys />} />
                   <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
                 </Route>
+                {/* Public survey respond — no auth required for anonymous surveys */}
+                <Route path="/:schoolSlug/surveys/:surveyId/respond" element={<SurveyRespond />} />
                 <Route path="/employee/dashboard" element={<Navigate to="/" replace />} />
                 {/* Profile routes */}
                 <Route path="/:schoolSlug/profile" element={<ProfilePage />} />
@@ -201,6 +213,10 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<FeatureRoute feature="expenseManagementEnabled"><RequestsRouter /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/surveys" element={<SurveyManagement />} />
+                  <Route path="/:schoolSlug/admin/surveys/create" element={<SurveyCreate />} />
+                  <Route path="/:schoolSlug/admin/my-surveys" element={<AdminSurveys />} />
+                  <Route path="/:schoolSlug/admin/surveys/:surveyId" element={<SurveyReport />} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled">
                     <SuperAdminExpenses />

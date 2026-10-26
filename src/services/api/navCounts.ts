@@ -9,6 +9,7 @@ const AdminNavCountsSchema = z.object({
   student_docs_review: z.number(),
   employee_docs_due: z.number(),
   employee_docs_review: z.number(),
+  surveys_pending: z.number(),
 });
 
 export type AdminNavCounts = z.infer<typeof AdminNavCountsSchema>;
@@ -16,6 +17,7 @@ export type AdminNavCounts = z.infer<typeof AdminNavCountsSchema>;
 const MyNavCountsSchema = z.object({
   forms_pending: z.number(),
   docs_pending: z.number(),
+  surveys_pending: z.number(),
 });
 
 export type MyNavCounts = z.infer<typeof MyNavCountsSchema>;

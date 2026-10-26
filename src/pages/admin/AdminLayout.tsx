@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2, ClipboardList
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -34,7 +34,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures } = useUserContext();
-  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview } = useNavCounts();
+  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
 
   const handleLogout = async () => {
@@ -102,6 +102,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ] : []),
         ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
         ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
+        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
+        ...(!isSuperAdmin ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending }] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
         ...(schoolFeatures.expenseManagementEnabled ? [

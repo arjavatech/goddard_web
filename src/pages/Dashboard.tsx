@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ClipboardList, ChevronRight, Calendar } from 'lucide-react';
+import { listMySurveys, type MySurveyItem } from '../services/api/surveys';
 import { EnrollmentProgress } from '../components/dashboard/EnrollmentProgress';
 import { FormsDocuments } from '../components/dashboard/FormsDocuments';
 import { ParentLayout } from './parent/ParentLayout';
@@ -189,8 +191,11 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
   };
 }
 export function Dashboard() {
-  const { userData, loading: userLoading } = useUserContext();
+  const { userData, loading: userLoading, schoolSubdomain } = useUserContext();
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+  const [pendingSurveys, setPendingSurveys] = useState<MySurveyItem[]>([]);
   const [children, setChildren] = useState<DashboardChild[]>([]);
   const [childSpecificForms, setChildSpecificForms] = useState<ChildSpecificFormGroup[]>([]);
   const [familyForms, setFamilyForms] = useState<FamilyFormCard[]>([]);
@@ -201,7 +206,15 @@ export function Dashboard() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [yearFilter, setYearFilter] = useState<string>('all');
   const [formLoadingState, setFormLoadingState] = useState<{ childId: string; formId: string } | null>(null);
-  
+
+  useEffect(() => {
+    const schoolId = userData?.schoolId;
+    if (!schoolId) return;
+    listMySurveys({ schoolId }).then(data => {
+      setPendingSurveys(data.filter(s => !s.has_responded && s.status === 'published'));
+    }).catch(() => {});
+  }, [userData?.schoolId]);
+
   useEffect(() => {
     // Wait for user data to be loaded
     if (userLoading || !userData) {
@@ -416,6 +429,56 @@ export function Dashboard() {
                     />
                   </div>
                 )}
+              {/* Pending Surveys section */}
+              {pendingSurveys.length > 0 && (
+                <div className="animate-fade-in-up mt-4" style={{ animationDelay: '0.28s' }}>
+                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-4 border-b border-slate-50">
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-lg bg-[#EFF5FB] flex items-center justify-center">
+                          <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-extrabold text-slate-900">Pending Surveys</h3>
+                          <p className="text-xs text-slate-400">{pendingSurveys.length} survey{pendingSurveys.length !== 1 ? 's' : ''} awaiting your response</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => navigate(`${schoolPrefix}/dashboard/surveys`)}
+                        className="text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        View all <ChevronRight className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <div className="divide-y divide-slate-50">
+                      {pendingSurveys.slice(0, 2).map(survey => (
+                        <div key={survey.id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+                          <div className="h-9 w-9 rounded-xl bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                            <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-900 truncate">{survey.title}</p>
+                            <p className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
+                              {survey.question_count} questions
+                              {survey.expires_at && (
+                                <><span className="text-slate-300 mx-0.5">·</span>
+                                <Calendar className="h-3 w-3" />
+                                Expires {new Date(survey.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</>
+                              )}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => navigate(`${schoolPrefix}/surveys/${survey.id}/respond`)}
+                            className="shrink-0 text-xs font-bold text-[#0F2D52] bg-[#EFF5FB] hover:bg-[#dce9f5] px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                          >
+                            Fill Out <ChevronRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
               </div> : <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 sm:p-12 text-center shadow-sm">
                 <div className="text-base sm:text-lg font-bold text-slate-900 mb-2">No enrolled children found</div>
                 <div className="text-sm text-slate-500 mb-4 max-w-md mx-auto">

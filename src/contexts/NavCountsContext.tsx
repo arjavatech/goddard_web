@@ -18,6 +18,7 @@ type NavCountsContextValue = {
   employeeDocsReview: number;
   formsPending: number;
   docsPending: number;
+  surveysPending: number;
   formsNeedingRevision: number;
   refreshCounts: () => void;
   setFormsNeedingRevision: (count: number) => void;
@@ -34,9 +35,10 @@ const ZERO_ADMIN: AdminNavCounts = {
   student_docs_review: 0,
   employee_docs_due: 0,
   employee_docs_review: 0,
+  surveys_pending: 0,
 };
 
-const ZERO_MY: MyNavCounts = { forms_pending: 0, docs_pending: 0 };
+const ZERO_MY: MyNavCounts = { forms_pending: 0, docs_pending: 0, surveys_pending: 0 };
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -91,6 +93,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     employeeDocsReview: adminCounts.employee_docs_review,
     formsPending: myCounts.forms_pending,
     docsPending: myCounts.docs_pending,
+    surveysPending: isAdmin ? adminCounts.surveys_pending : myCounts.surveys_pending,
     formsNeedingRevision: overrideFormsNeedingRevision,
     refreshCounts: refresh,
     setFormsNeedingRevision: setOverrideFormsNeedingRevision,

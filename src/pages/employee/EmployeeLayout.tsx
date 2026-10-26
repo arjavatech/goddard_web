@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
-  BarChart2, FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Clock
+  BarChart2, FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Clock, ClipboardList
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -27,7 +27,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolFeatures, isReady } = useUserContext();
-  const { formsPending, docsPending, formsNeedingRevision } = useNavCounts();
+  const { formsPending, docsPending, formsNeedingRevision, surveysPending } = useNavCounts();
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -69,6 +69,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       label: 'Workspace',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
+        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending },
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
         ...(schoolFeatures.taptimeEnabled
           ? [
