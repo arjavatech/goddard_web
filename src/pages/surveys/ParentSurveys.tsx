@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { SortDropdown, sortItems } from '../../components/ui/sort-dropdown';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
+import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { listMySurveys, type MySurveyItem, AUDIENCE_LABELS, type SurveyAudience } from '../../services/api/surveys';
 import { ParentLayout } from '../parent/ParentLayout';
 import { useUserContext } from '../../contexts/UserContext';
@@ -195,7 +196,7 @@ export function ParentSurveys() {
           </div>
         )}
 
-        {/* Survey Cards */}
+        {/* Survey Cards Container with Records per page at top */}
         {loading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
@@ -215,99 +216,98 @@ export function ParentSurveys() {
               </div>
             ))}
           </div>
-        ) : sorted.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-14 text-center">
-            <ClipboardList className="h-10 w-10 mx-auto mb-4 text-slate-200" />
-            <p className="font-semibold text-slate-500">
-              {search || hasFilter ? 'No surveys match your search' : tab === 'pending' ? 'No pending surveys' : 'No completed surveys yet'}
-            </p>
-            <p className="text-sm text-slate-400 mt-1">
-              {search || hasFilter ? 'Try clearing your filters.' : tab === 'pending' ? "You're all caught up!" : 'Surveys you fill out will appear here.'}
-            </p>
-          </div>
         ) : (
-          <div className="space-y-4">
-            {pagedSurveys.map(survey => {
-              return (
-                <div key={survey.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                  <div className="p-5 space-y-4">
-                    <div className="flex items-start gap-3">
-                      <div className="h-10 w-10 rounded-xl bg-[#EFF5FB] flex items-center justify-center shrink-0 mt-0.5">
-                        <ClipboardList className="h-5 w-5 text-[#0F2D52]" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="font-extrabold text-slate-900 leading-snug">{survey.title}</h3>
-                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{survey.description}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${AUDIENCE_COLOR[survey.audience as SurveyAudience]}`}>
-                        {AUDIENCE_LABELS[survey.audience as SurveyAudience]}
-                      </span>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                        {survey.question_count} questions
-                      </span>
-                      {survey.expires_at && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                          <Calendar className="h-3 w-3" /> Expires {formatDate(survey.expires_at)}
-                        </span>
-                      )}
-                      {tab === 'completed' && survey.submitted_at && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibond bg-emerald-50 text-emerald-700">
-                          <CheckCircle className="h-3 w-3" /> Submitted {formatDate(survey.submitted_at)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="px-5 pb-4">
-                    {tab === 'pending' ? (
-                      <Button
-                        className="w-full rounded-xl bg-[#0F2D52] hover:bg-[#1a3a6b] text-white gap-1.5 shadow-sm"
-                        onClick={() => navigate(`${schoolPrefix}/surveys/${survey.id}/respond`)}
-                      >
-                        Fill Out <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    ) : (
-                      <Button variant="outline" className="w-full rounded-xl text-slate-600" disabled>
-                        <CheckCircle className="h-4 w-4 mr-2 text-emerald-500" /> Response Submitted
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Footer: records per page + pagination */}
-        {sorted.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>{sorted.length} survey{sorted.length !== 1 ? 's' : ''}</span>
-              <div className="flex items-center gap-2">
-                <span>Records per page:</span>
-                <Select value={String(itemsPerPage)} onValueChange={v => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                  <SelectTrigger className="h-8 w-16 rounded-lg text-xs border-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[5, 10, 25].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+            {/* Records per page selector - Top right */}
+            {sorted.length > 0 && (
+              <div className="flex justify-end items-center px-4 py-3 border-b border-slate-200 bg-white">
+                <PageSizeSelector
+                  pageSize={itemsPerPage}
+                  onPageSizeChange={(size) => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                  options={[5, 10, 25]}
+                />
               </div>
-            </div>
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-1">
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg" disabled={currentPage === 1} onClick={() => setCurrentPage(p => p - 1)}>‹</Button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <Button
-                    key={p}
-                    size="sm"
-                    className={cn('h-8 w-8 p-0 rounded-lg text-xs font-bold', p === currentPage ? 'bg-[#0F2D52] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')}
-                    onClick={() => setCurrentPage(p)}
-                  >{p}</Button>
-                ))}
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg" disabled={currentPage === totalPages} onClick={() => setCurrentPage(p => p + 1)}>›</Button>
+            )}
+
+            {/* Survey Cards */}
+            {sorted.length === 0 ? (
+              <div className="p-14 text-center">
+                <ClipboardList className="h-10 w-10 mx-auto mb-4 text-slate-200" />
+                <p className="font-semibold text-slate-500">
+                  {search || hasFilter ? 'No surveys match your search' : tab === 'pending' ? 'No pending surveys' : 'No completed surveys yet'}
+                </p>
+                <p className="text-sm text-slate-400 mt-1">
+                  {search || hasFilter ? 'Try clearing your filters.' : tab === 'pending' ? "You're all caught up!" : 'Surveys you fill out will appear here.'}
+                </p>
+              </div>
+            ) : (
+              <div className="p-4 space-y-4">
+                {pagedSurveys.map(survey => {
+                  return (
+                    <div key={survey.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
+                      <div className="p-5 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <div className="h-10 w-10 rounded-xl bg-[#EFF5FB] flex items-center justify-center shrink-0 mt-0.5">
+                            <ClipboardList className="h-5 w-5 text-[#0F2D52]" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="font-extrabold text-slate-900 leading-snug">{survey.title}</h3>
+                            <p className="text-xs text-slate-400 mt-1 line-clamp-2">{survey.description}</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${AUDIENCE_COLOR[survey.audience as SurveyAudience]}`}>
+                            {AUDIENCE_LABELS[survey.audience as SurveyAudience]}
+                          </span>
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
+                            {survey.question_count} questions
+                          </span>
+                          {survey.expires_at && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+                              <Calendar className="h-3 w-3" /> Expires {formatDate(survey.expires_at)}
+                            </span>
+                          )}
+                          {tab === 'completed' && survey.submitted_at && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                              <CheckCircle className="h-3 w-3" /> Submitted {formatDate(survey.submitted_at)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="px-5 pb-4">
+                        {tab === 'pending' ? (
+                          <Button
+                            className="w-full rounded-xl bg-[#0F2D52] hover:bg-[#1a3a6b] text-white gap-1.5 shadow-sm"
+                            onClick={() => navigate(`${schoolPrefix}/surveys/${survey.id}/respond`)}
+                          >
+                            Fill Out <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button variant="outline" className="w-full rounded-xl text-slate-600" disabled>
+                            <CheckCircle className="h-4 w-4 mr-2 text-emerald-500" /> Response Submitted
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Footer: survey count (left) + pagination (right) */}
+            {sorted.length > 0 && (
+              <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-200 px-4 py-3 bg-white">
+                <span>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, sorted.length)}–{Math.min(currentPage * itemsPerPage, sorted.length)} of {sorted.length}</span>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="outline" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>Prev</Button>
+                    <span className="text-xs text-slate-500 font-semibold px-2">{currentPage} / {totalPages}</span>
+                    <Button variant="outline" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>Next</Button>
+                  </div>
+                )}
               </div>
             )}
           </div>

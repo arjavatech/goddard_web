@@ -5,10 +5,12 @@ import {
   Edit, Trash2, ChevronRight, Clock, FileText, Bookmark, BookmarkCheck, Share2, Copy,
   EyeOff, UserCheck, Filter, Loader2
 } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
+import { DataTable } from '../../components/ui/data-table';
+import { Pagination } from '../../components/ui/pagination';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StatCard } from '../../components/ui/stat-card';
 import { Badge } from '../../components/ui/badge';
@@ -340,232 +342,168 @@ export function SurveyManagement() {
             )}
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-left text-[10px] uppercase tracking-wider text-slate-500 border-b border-slate-100">
-                <tr>
-                  <th className="p-4 font-bold">Survey</th>
-                  <th className="p-4 font-bold hidden md:table-cell">Audience</th>
-                  <th className="p-4 font-bold">Status</th>
-                  <th className="p-4 font-bold hidden md:table-cell">Type</th>
-                  <th className="p-4 font-bold hidden sm:table-cell">Responses</th>
-                  <th className="p-4 font-bold hidden lg:table-cell">Expires</th>
-                  <th className="p-4 font-bold text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  [...Array(5)].map((_, i) => (
-                    <tr key={i} className="border-t border-slate-50 animate-pulse">
-                      <td className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-9 w-9 rounded-xl bg-slate-200 shrink-0" />
-                          <div className="space-y-2 flex-1">
-                            <div className="h-3.5 bg-slate-200 rounded w-48" />
-                            <div className="h-3 bg-slate-200 rounded w-32" />
-                          </div>
+          {/* Table using DataTable component */}
+          <DataTable
+            loading={loading}
+            loadingMessage="Loading surveys..."
+            emptyMessage="No surveys found."
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={sorted.length}
+            itemsPerPage={itemsPerPage}
+            onPageSizeChange={setItemsPerPage}
+            onPageChange={setCurrentPage}
+            tableLayout="auto"
+            columns={[
+              { header: 'Survey', className: 'w-auto min-w-[200px]' },
+              { header: 'Audience', className: 'hidden md:table-cell w-1/6' },
+              { header: 'Status', className: 'w-1/6' },
+              { header: 'Type', className: 'hidden md:table-cell w-1/6' },
+              { header: 'Responses', className: 'hidden sm:table-cell w-1/6' },
+              { header: 'Expires', className: 'hidden lg:table-cell w-1/6' },
+              { header: 'Actions', className: 'w-1/6 text-right' },
+            ]}
+            rows={pagedSurveys.map(survey => {
+              const rate = responseRate(survey);
+              const sb = STATUS_BADGE[survey.status];
+              return (
+                <tr
+                  key={survey.id}
+                  className="border-b border-slate-50 hover:bg-[#F8FAFC] cursor-pointer transition-colors duration-150"
+                  onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
+                >
+                  {/* Survey info */}
+                  <td className="p-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-9 w-9 rounded-xl bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                        <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 truncate max-w-[200px] sm:max-w-[280px]">{survey.title}</p>
+                        <p className="text-xs text-slate-400 mt-0.5">{survey.question_count} questions · by {survey.created_by_name ?? '—'}</p>
+                      </div>
+                    </div>
+                  </td>
+                  {/* Audience */}
+                  <td className="p-4 hidden md:table-cell">
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${AUDIENCE_BADGE_COLOR[survey.audience]}`}>
+                      {survey.classroom_name ? survey.classroom_name.split(' — ')[0] : AUDIENCE_LABELS[survey.audience]}
+                    </span>
+                  </td>
+                  {/* Status */}
+                  <td className="p-4">
+                    <div className="flex flex-col gap-1">
+                      <Badge variant={sb.variant} className="text-xs w-fit">{sb.label}</Badge>
+                      {survey.is_template && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 w-fit">
+                          <BookmarkCheck className="h-2.5 w-2.5" /> Template
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  {/* Type */}
+                  <td className="p-4 hidden md:table-cell">
+                    {survey.is_anonymous ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
+                        <EyeOff className="h-3 w-3" /> Anonymous
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
+                        <UserCheck className="h-3 w-3" /> Identified
+                      </span>
+                    )}
+                  </td>
+                  {/* Response progress */}
+                  <td className="p-4 hidden sm:table-cell">
+                    {survey.status !== 'published' ? (
+                      <span className="text-slate-400 text-xs">Not published</span>
+                    ) : survey.total_targeted > 0 ? (
+                      <div className="space-y-1 min-w-[100px]">
+                        <div className="flex items-center justify-between text-xs text-slate-600">
+                          <span className="font-semibold">{survey.total_responded}</span>
+                          <span className="text-slate-400">/ {survey.total_targeted}</span>
                         </div>
-                      </td>
-                      <td className="p-4 hidden md:table-cell"><div className="h-5 bg-slate-200 rounded-full w-20" /></td>
-                      <td className="p-4"><div className="h-5 bg-slate-200 rounded-full w-16" /></td>
-                      <td className="p-4 hidden md:table-cell"><div className="h-5 bg-slate-200 rounded-full w-20" /></td>
-                      <td className="p-4 hidden sm:table-cell"><div className="h-3 bg-slate-200 rounded w-16" /></td>
-                      <td className="p-4 hidden lg:table-cell"><div className="h-3 bg-slate-200 rounded w-20" /></td>
-                      <td className="p-4"><div className="h-7 bg-slate-200 rounded-lg w-20 ml-auto" /></td>
-                    </tr>
-                  ))
-                ) : sorted.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-16 text-center">
-                      <div className="flex flex-col items-center gap-3 text-slate-400">
-                        <ClipboardList className="h-10 w-10 opacity-30" />
-                        <p className="font-medium">No surveys found</p>
-                        <p className="text-sm">
-                          {search || statusTab !== 'all' || hasFilter
-                            ? 'Try clearing your filters.'
-                            : 'Create your first survey to get started.'}
+                        <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
+                            style={{ width: `${rate}%` }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium">{rate}% response rate</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-0.5">
+                        <span className="text-xs font-semibold text-slate-700">{survey.total_responded}</span>
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          {survey.total_responded === 1 ? 'response' : 'responses'}
                         </p>
                       </div>
-                    </td>
-                  </tr>
-                ) : pagedSurveys.map(survey => {
-                  const rate = responseRate(survey);
-                  const sb = STATUS_BADGE[survey.status];
-                  return (
-                    <tr
-                      key={survey.id}
-                      className="border-t border-slate-50 hover:bg-[#F8FAFC] cursor-pointer transition-colors duration-150"
-                      onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
-                    >
-                      {/* Survey info */}
-                      <td className="p-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="h-9 w-9 rounded-xl bg-[#EFF5FB] flex items-center justify-center shrink-0">
-                            <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-bold text-slate-900 truncate max-w-[200px] sm:max-w-[280px]">{survey.title}</p>
-                            <p className="text-xs text-slate-400 mt-0.5">{survey.question_count} questions · by {survey.created_by_name ?? '—'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {/* Audience */}
-                      <td className="p-4 hidden md:table-cell">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${AUDIENCE_BADGE_COLOR[survey.audience]}`}>
-                          {survey.classroom_name ? survey.classroom_name.split(' — ')[0] : AUDIENCE_LABELS[survey.audience]}
-                        </span>
-                      </td>
-                      {/* Status */}
-                      <td className="p-4">
-                        <div className="flex flex-col gap-1">
-                          <Badge variant={sb.variant} className="text-xs w-fit">{sb.label}</Badge>
-                          {survey.is_template && (
-                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 w-fit">
-                              <BookmarkCheck className="h-2.5 w-2.5" /> Template
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      {/* Type */}
-                      <td className="p-4 hidden md:table-cell">
-                        {survey.is_anonymous ? (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                            <EyeOff className="h-3 w-3" /> Anonymous
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700">
-                            <UserCheck className="h-3 w-3" /> Identified
-                          </span>
-                        )}
-                      </td>
-                      {/* Response progress */}
-                      <td className="p-4 hidden sm:table-cell">
-                        {survey.status !== 'published' ? (
-                          <span className="text-slate-400 text-xs">Not published</span>
-                        ) : survey.total_targeted > 0 ? (
-                          <div className="space-y-1 min-w-[100px]">
-                            <div className="flex items-center justify-between text-xs text-slate-600">
-                              <span className="font-semibold">{survey.total_responded}</span>
-                              <span className="text-slate-400">/ {survey.total_targeted}</span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-500"
-                                style={{ width: `${rate}%` }}
-                              />
-                            </div>
-                            <p className="text-[10px] text-slate-400 font-medium">{rate}% response rate</p>
-                          </div>
-                        ) : (
-                          <div className="space-y-0.5">
-                            <span className="text-xs font-semibold text-slate-700">{survey.total_responded}</span>
-                            <p className="text-[10px] text-slate-400 font-medium">
-                              {survey.total_responded === 1 ? 'response' : 'responses'}
-                            </p>
-                          </div>
-                        )}
-                      </td>
-                      {/* Expiry */}
-                      <td className="p-4 hidden lg:table-cell">
-                        {survey.expires_at ? (
-                          <div className="flex items-center gap-1.5 text-xs text-slate-600">
-                            <Clock className="h-3 w-3 text-slate-400" />
-                            {formatDate(survey.expires_at)}
-                          </div>
-                        ) : (
-                          <span className="text-slate-400 text-xs">No expiry</span>
-                        )}
-                      </td>
-                      {/* Actions */}
-                      <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
+                    )}
+                  </td>
+                  {/* Expiry */}
+                  <td className="p-4 hidden lg:table-cell">
+                    {survey.expires_at ? (
+                      <div className="flex items-center gap-1.5 text-xs text-slate-600">
+                        <Clock className="h-3 w-3 text-slate-400" />
+                        {formatDate(survey.expires_at)}
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs">No expiry</span>
+                    )}
+                  </td>
+                  {/* Actions */}
+                  <td className="p-4 text-right" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center justify-end gap-1">
+                      <button
+                        onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F2D52] hover:bg-[#EFF5FB] transition-all"
+                        title="View Report"
+                      >
+                        <BarChart2 className="h-4 w-4" />
+                      </button>
+                      {survey.status === 'published' && (
+                        <button
+                          onClick={() => setShareSurvey(survey)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
+                          title="Share Link"
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </button>
+                      )}
+                      {survey.status === 'published' && (
+                        <button
+                          onClick={() => setPendingTemplate(survey)}
+                          className={cn('p-1.5 rounded-lg transition-all', survey.is_template ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50')}
+                          title={survey.is_template ? 'Remove from Templates' : 'Save as Template'}
+                        >
+                          {survey.is_template ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
+                        </button>
+                      )}
+                      {survey.total_responded === 0 && (
+                        <>
                           <button
-                            onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F2D52] hover:bg-[#EFF5FB] transition-all"
-                            title="View Report"
+                            onClick={() => navigate(`${schoolPrefix}/admin/surveys/create?edit=${survey.id}`)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
+                            title="Edit"
                           >
-                            <BarChart2 className="h-4 w-4" />
+                            <Edit className="h-4 w-4" />
                           </button>
-                          {survey.status === 'published' && (
-                            <button
-                              onClick={() => setShareSurvey(survey)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
-                              title="Share Link"
-                            >
-                              <Share2 className="h-4 w-4" />
-                            </button>
-                          )}
-                          {survey.status === 'published' && (
-                            <button
-                              onClick={() => setPendingTemplate(survey)}
-                              className={cn('p-1.5 rounded-lg transition-all', survey.is_template ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50')}
-                              title={survey.is_template ? 'Remove from Templates' : 'Save as Template'}
-                            >
-                              {survey.is_template ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-                            </button>
-                          )}
-                          {survey.total_responded === 0 && (
-                            <>
-                              <button
-                                onClick={() => navigate(`${schoolPrefix}/admin/surveys/create?edit=${survey.id}`)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                                title="Edit"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => setDeletingSurvey(survey)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                                title="Delete"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          <ChevronRight className="h-4 w-4 text-slate-300" />
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer: records per page + pagination */}
-          {sorted.length > 0 && (
-            <div className="border-t border-slate-100 px-4 py-3 space-y-3">
-              <div className="flex items-center justify-between text-xs text-slate-500">
-                <span>{sorted.length} survey{sorted.length !== 1 ? 's' : ''}</span>
-                <div className="flex items-center gap-2">
-                  <span>Records per page:</span>
-                  <Select value={String(itemsPerPage)} onValueChange={v => { setItemsPerPage(Number(v)); setCurrentPage(1); }}>
-                    <SelectTrigger className="h-8 w-16 rounded-lg text-xs border-slate-200">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[5, 10, 25].map(n => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {totalPages > 1 && (
-                <div className="flex items-center justify-center gap-1">
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>‹</Button>
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                    <Button
-                      key={p}
-                      size="sm"
-                      className={cn('h-8 w-8 p-0 rounded-lg text-xs font-bold', p === currentPage ? 'bg-[#0F2D52] text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')}
-                      onClick={() => setCurrentPage(p)}
-                    >{p}</Button>
-                  ))}
-                  <Button variant="outline" size="sm" className="h-8 w-8 p-0 rounded-lg" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>›</Button>
-                </div>
-              )}
-            </div>
-          )}
+                          <button
+                            onClick={() => setDeletingSurvey(survey)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      <ChevronRight className="h-4 w-4 text-slate-300" />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          />
         </div>
       </div>
 
