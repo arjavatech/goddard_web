@@ -299,33 +299,15 @@ export function ParentSurveys() {
 
             {/* Footer: survey count (left) + pagination (right) */}
             {sorted.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 px-4 py-3 border-t border-slate-200 bg-white">
-                <div className="text-xs text-slate-500 text-center sm:text-left">
-                  Showing <span className="font-semibold text-slate-900">{Math.min((currentPage - 1) * itemsPerPage + 1, sorted.length)}</span>–<span className="font-semibold text-slate-900">{Math.min(currentPage * itemsPerPage, sorted.length)}</span> of <span className="font-semibold text-slate-900">{sorted.length}</span>
-                </div>
-                <div className="flex items-center justify-center sm:justify-end gap-1.5">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
-                    disabled={currentPage === 1 || totalPages === 0}
-                    className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
-                  >
-                    Prev
-                  </Button>
-                  <span className="text-xs text-slate-500 font-semibold px-1 whitespace-nowrap">
-                    {totalPages === 0 ? '0 / 0' : `${currentPage} / ${totalPages}`}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200"
-                  >
-                    Next
-                  </Button>
-                </div>
+              <div className="flex items-center justify-between text-xs text-slate-500 border-t border-slate-200 px-4 py-3 bg-white">
+                <span>Showing {Math.min((currentPage - 1) * itemsPerPage + 1, sorted.length)}–{Math.min(currentPage * itemsPerPage, sorted.length)} of {sorted.length}</span>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-end gap-1">
+                    <Button variant="outline" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200" disabled={currentPage === 1} onClick={() => setCurrentPage(currentPage - 1)}>Prev</Button>
+                    <span className="text-xs text-slate-500 font-semibold px-2">{currentPage} / {totalPages}</span>
+                    <Button variant="outline" size="sm" className="h-8 px-3 rounded-xl text-xs font-bold border-slate-200" disabled={currentPage === totalPages} onClick={() => setCurrentPage(currentPage + 1)}>Next</Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
