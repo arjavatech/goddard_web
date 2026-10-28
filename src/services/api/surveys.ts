@@ -273,6 +273,21 @@ const q = (values: Record<string, string | number | boolean | undefined | null>)
 
 // ── API functions ─────────────────────────────────────────────────────────────
 
+/** Admin: get count of targeted users for a given audience selection */
+export async function getTargetCount(
+  schoolId: string,
+  audience: string,
+  classroomId?: string,
+): Promise<number> {
+  const params = new URLSearchParams({ school_id: schoolId, audience });
+  if (classroomId) params.set('classroom_id', classroomId);
+  const data = await authedFetch(
+    { method: 'GET', url: `/surveys/target-count?${params}` },
+    z.any(),
+  );
+  return (data as any)?.count ?? 0;
+}
+
 /** Admin: list all surveys for management table */
 export const listSurveys = (params: {
   schoolId: string;

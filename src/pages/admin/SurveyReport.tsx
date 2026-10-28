@@ -154,10 +154,11 @@ export function SurveyReport() {
   }
 
   const sb = STATUS_BADGE[report.status as SurveyStatus];
-  const rate = report.total_targeted > 0
+  const isAnonymous = report.is_anonymous;
+  const rate = !isAnonymous && report.total_targeted > 0
     ? `${((report.total_responded / report.total_targeted) * 100).toFixed(2)}%`
     : '—';
-  const pending = report.total_targeted > 0
+  const pending = !isAnonymous && report.total_targeted > 0
     ? report.total_targeted - report.total_responded
     : null;
 
@@ -234,7 +235,7 @@ export function SurveyReport() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <StatCard label="Targeted" value={report.total_targeted} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" />
+          <StatCard label="Targeted" value={isAnonymous ? '—' : report.total_targeted} icon={Users} iconBgClass="bg-[#EFF5FB]" iconColorClass="text-[#0F2D52]" />
           <StatCard label="Responded" value={report.total_responded} icon={CheckCircle} iconBgClass="bg-emerald-50" iconColorClass="text-emerald-600" />
           <StatCard label="Pending" value={pending !== null ? String(pending) : '—'} icon={Clock} iconBgClass="bg-amber-50" iconColorClass="text-amber-600" />
           <StatCard label="Response Rate" value={rate} icon={TrendingUp} iconBgClass="bg-blue-50" iconColorClass="text-blue-600" />

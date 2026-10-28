@@ -5,6 +5,7 @@ export type Classroom = {
   id: string;
   name: string;
   studentsCount: number;
+  parentCount: number;
   formsCount: number;
   assignedForms: {
     id: string;
@@ -172,6 +173,7 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
         id: item.id || item.classroom_id || `classroom-${index}`,
         name: item.name || item.class_name || item.classroom_name || `Classroom ${index + 1}`,
         studentsCount: item.student_count || item.studentsCount || item.total_children || 0,
+        parentCount: item.parent_count || 0,
         formsCount: assignedForms.length,
         assignedForms
       };

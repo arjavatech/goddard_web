@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
 import { useToast } from '../../contexts/ToastContext';
-import { listTemplates, createSurvey, getSurvey, updateSurvey, type QuestionType, type SurveyAudience, type SurveyDetail } from '../../services/api/surveys';
+import { listTemplates, createSurvey, getSurvey, updateSurvey, getTargetCount, type QuestionType, type SurveyAudience, type SurveyDetail } from '../../services/api/surveys';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 import { cn } from '../../lib/utils';
 
@@ -297,6 +297,7 @@ export function SurveyCreate() {
   const [showTypeSelector, setShowTypeSelector] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
   const [publishedSurveyId, setPublishedSurveyId] = useState<string | null>(null);
+  const [liveTargetCount, setLiveTargetCount] = useState<number | null>(null);
 
   // Data state
   const [templates, setTemplates] = useState<SurveyDetail[]>([]);
@@ -336,6 +337,19 @@ export function SurveyCreate() {
       navigate(`${schoolPrefix}/admin/surveys`);
     });
   }, [editId]);
+
+  useEffect(() => {
+    const schoolId = userData?.schoolId;
+    if (!schoolId) return;
+    if (audience === 'classroom' && !classroomId) {
+      setLiveTargetCount(null);
+      return;
+    }
+    setLiveTargetCount(null);
+    getTargetCount(schoolId, audience, audience === 'classroom' ? classroomId : undefined)
+      .then(setLiveTargetCount)
+      .catch(() => setLiveTargetCount(null));
+  }, [audience, classroomId, userData?.schoolId]);
 
   const filteredTemplates = templates.filter(t =>
     !templateSearch || t.title.toLowerCase().includes(templateSearch.toLowerCase())
@@ -474,9 +488,6 @@ export function SurveyCreate() {
   const audienceLabel = audience === 'classroom' && selectedClassroom
     ? selectedClassroom.name
     : AUDIENCE_OPTIONS.find(a => a.value === audience)?.label ?? '';
-  const targetCount = audience === 'classroom' && selectedClassroom
-    ? selectedClassroom.studentsCount
-    : audience === 'parents' ? 120 : audience === 'employees' ? 18 : audience === 'everyone' ? 276 : 138;
 
   return (
     <AdminLayout>
@@ -651,7 +662,7 @@ export function SurveyCreate() {
                       </SelectTrigger>
                       <SelectContent>
                         {classrooms.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name} ({c.studentsCount} students)</SelectItem>
+                          <SelectItem key={c.id} value={c.id}>{c.name} ({c.studentsCount} {c.studentsCount === 1 ? 'student' : 'students'} · {c.parentCount} {c.parentCount === 1 ? 'parent' : 'parents'})</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
@@ -815,7 +826,9 @@ export function SurveyCreate() {
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-slate-50">
                     <span className="text-slate-500 font-medium">Recipients</span>
-                    <span className="font-semibold text-slate-900">~{targetCount} people</span>
+                    <span className="font-semibold text-slate-900">
+                      {liveTargetCount !== null ? `~${liveTargetCount} people` : '—'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-slate-50">
                     <span className="text-slate-500 font-medium">Questions</span>
