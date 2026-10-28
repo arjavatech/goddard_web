@@ -212,6 +212,10 @@ function X({ className }: { className?: string }) {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────
+function todayString(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 function defaultExpiryDate(): string {
   const d = new Date();
   d.setMonth(d.getMonth() + 1);
@@ -454,7 +458,8 @@ export function SurveyCreate() {
     }
   };
 
-  const step1Valid = title.trim().length > 0 && expiresAt !== '' && (audience !== 'classroom' || classroomId !== '');
+  const today = todayString();
+  const step1Valid = title.trim().length > 0 && expiresAt !== '' && expiresAt >= today && (audience !== 'classroom' || classroomId !== '');
   const step2Valid = questions.length > 0;
 
   const copyLink = () => {
@@ -659,10 +664,17 @@ export function SurveyCreate() {
                 <Input
                   type="date"
                   value={expiresAt}
+                  min={todayString()}
                   onChange={e => setExpiresAt(e.target.value)}
                   className="rounded-xl border-slate-200 focus:border-[#0F2D52] w-full sm:w-64"
                 />
-                <p className="text-xs text-slate-400">Survey closes automatically on this date.</p>
+                {expiresAt && expiresAt < todayString() ? (
+                  <p className="text-xs text-red-500 flex items-center gap-1">
+                    <AlertCircle className="h-3 w-3" /> Expiry date cannot be in the past.
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-400">Survey closes automatically on this date.</p>
+                )}
               </div>
 
               <div className="space-y-2">
