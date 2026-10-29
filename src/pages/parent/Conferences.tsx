@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   CalendarDays, Clock, Users, CheckCircle2, X, ChevronRight,
-  AlertCircle, Ticket, RefreshCw, Search,
+  AlertCircle, Ticket, RefreshCw, Search, LayoutGrid, List,
 } from 'lucide-react';
 import { ParentLayout } from './ParentLayout';
 import { Button } from '../../components/ui/button';
@@ -366,6 +366,7 @@ export function ParentConferences() {
   const schoolId = userData?.schoolId || '';
 
   const [tab, setTab] = useState<'available' | 'bookings' | 'past'>('available');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   const [conferences, setConferences] = useState<ConferenceListItem[]>([]);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [children, setChildren] = useState<ChildOption[]>([]);
@@ -420,6 +421,17 @@ export function ParentConferences() {
     bookings.filter(b => b.status === 'booked').map(b => b.conference_id)
   );
 
+  const activeBookings = bookings.filter(b =>
+    conferences.find(c => c.id === b.conference_id)?.status === 'active'
+  );
+
+  const allExpiredBookings = bookings.filter(b => {
+    const conf = conferences.find(c => c.id === b.conference_id);
+    return conf && conf.status !== 'active';
+  });
+
+  const expiredBookingConferenceIds = new Set(allExpiredBookings.map(b => b.conference_id));
+
   const filteredAvailable = conferences.filter(c =>
     c.status === 'active' &&
     !bookedConferenceIds.has(c.id) &&
@@ -428,8 +440,14 @@ export function ParentConferences() {
 
   const filteredPast = conferences.filter(c =>
     c.status !== 'active' &&
+    !expiredBookingConferenceIds.has(c.id) &&
     (!search || c.title.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const filteredExpiredBookings = allExpiredBookings.filter(b => {
+    const q = search.toLowerCase();
+    return !q || b.conference_title.toLowerCase().includes(q) || b.child_name.toLowerCase().includes(q);
+  });
 
   const sortedAvailable = sortItems(filteredAvailable, sortBy, sortOrder, (c, key) => {
     if (key === 'date') return c.conference_date;
@@ -454,7 +472,7 @@ export function ParentConferences() {
 
   // ── Filter / sort / paginate — My Bookings ────────────────────────────────
 
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = activeBookings.filter(b => {
     const q = search.toLowerCase();
     return !q || b.conference_title.toLowerCase().includes(q) || b.child_name.toLowerCase().includes(q);
   });
@@ -481,11 +499,12 @@ export function ParentConferences() {
   const currentPage = tab === 'available' ? confPage : tab === 'past' ? pastPage : bkPage;
   const totalPages = tab === 'available' ? confTotalPages : tab === 'past' ? pastTotalPages : bkTotalPages;
   const setPage = tab === 'available' ? setConfPage : tab === 'past' ? setPastPage : setBkPage;
+  const pastIsEmpty = filteredExpiredBookings.length === 0 && sortedPast.length === 0;
 
   return (
     <ParentLayout>
       <div className="min-h-screen bg-[#EFF5FB]">
-        <div className="container mx-auto px-4 py-6 pb-12 space-y-4 max-w-2xl">
+        <div className="container mx-auto px-4 py-6 pb-12 space-y-4 max-w-7xl">
 
           {/* Header */}
           <div className="flex items-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-sm">
@@ -506,6 +525,9 @@ export function ParentConferences() {
                 tab === 'available' ? 'border-[#0F2D52] text-[#0F2D52]' : 'border-transparent text-slate-400 hover:text-slate-700'
               )}>
               <CalendarDays className="h-4 w-4" /> Available Conferences
+              {filteredAvailable.length > 0 && (
+                <span className="h-2 w-2 rounded-full bg-red-500 flex-shrink-0" />
+              )}
             </button>
             <button onClick={() => setTab('bookings')}
               className={cn(
@@ -513,11 +535,6 @@ export function ParentConferences() {
                 tab === 'bookings' ? 'border-[#0F2D52] text-[#0F2D52]' : 'border-transparent text-slate-400 hover:text-slate-700'
               )}>
               <Ticket className="h-4 w-4" /> My Bookings
-              {bookings.length > 0 && (
-                <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-                  {bookings.length}
-                </span>
-              )}
             </button>
             <button onClick={() => setTab('past')}
               className={cn(
@@ -551,6 +568,20 @@ export function ParentConferences() {
               labels={SORT_LABELS}
               onSort={(by, order) => { setSortBy(by); setSortOrder(order); }}
             />
+            <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-0.5">
+              <button
+                onClick={() => setViewMode('list')}
+                className={cn('p-1.5 rounded-lg transition-colors',
+                  viewMode === 'list' ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:text-slate-600')}>
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('grid')}
+                className={cn('p-1.5 rounded-lg transition-colors',
+                  viewMode === 'grid' ? 'bg-slate-100 text-slate-700' : 'text-slate-400 hover:text-slate-600')}>
+                <LayoutGrid className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
 
@@ -578,7 +609,7 @@ export function ParentConferences() {
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
 
               {/* Page size selector */}
-              {sorted.length > 0 && (
+              {(tab === 'past' ? !pastIsEmpty : sorted.length > 0) && (
                 <div className="flex justify-end items-center px-4 py-3 border-b border-slate-200 bg-white">
                   <PageSizeSelector
                     pageSize={itemsPerPage}
@@ -589,7 +620,7 @@ export function ParentConferences() {
               )}
 
               {/* Empty state */}
-              {sorted.length === 0 ? (
+              {(tab === 'past' ? pastIsEmpty : sorted.length === 0) ? (
                 <div className="p-14 text-center">
                   <CalendarDays className="h-10 w-10 mx-auto mb-4 text-slate-200" />
                   <p className="font-semibold text-slate-500">
@@ -598,7 +629,7 @@ export function ParentConferences() {
                       : tab === 'available'
                         ? 'No conferences available to book'
                         : tab === 'past'
-                          ? 'No past conferences'
+                          ? 'No past conferences or bookings'
                           : 'No bookings yet'}
                   </p>
                   <p className="text-sm text-slate-400 mt-1">
@@ -607,7 +638,7 @@ export function ParentConferences() {
                       : tab === 'available'
                         ? 'Check back soon for upcoming conferences.'
                         : tab === 'past'
-                          ? 'Past conferences will appear here.'
+                          ? 'Past conferences and attended bookings will appear here.'
                           : 'Browse available conferences and book a slot.'}
                   </p>
                   {tab === 'bookings' && !search && (
@@ -617,8 +648,47 @@ export function ParentConferences() {
                   )}
                 </div>
               ) : tab === 'available' ? (
-                <div className="p-4 space-y-4">
-                  {pagedConfs.map(conf => (
+                <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
+                  {pagedConfs.map(conf => viewMode === 'grid' ? (
+                    <div key={conf.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
+                      <div className="w-full h-36 overflow-hidden flex-shrink-0">
+                        {conf.image_url
+                          ? <img src={conf.image_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
+                      </div>
+                      <div className="p-4 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-extrabold text-slate-900 leading-snug text-sm">{conf.title}</h3>
+                          <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
+                            conf.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
+                            {conf.status === 'active' ? 'Open' : 'Closed'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-400 line-clamp-2 mb-3">{conf.description}</p>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                            <CalendarDays className="h-3 w-3" /> {formatDate(conf.conference_date)}
+                          </span>
+                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold',
+                            conf.available_slots > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                            <Clock className="h-3 w-3" /> {conf.available_slots} slot{conf.available_slots !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="mt-auto">
+                          <Button
+                            disabled={conf.status !== 'active' || conf.available_slots === 0}
+                            onClick={() => navigate(`/${schoolSlug}/dashboard/conferences/${conf.id}`)}
+                            className={cn('w-full rounded-xl gap-1.5 shadow-sm text-sm',
+                              conf.status === 'active' && conf.available_slots > 0
+                                ? 'bg-[#0F2D52] hover:bg-[#1a3a6b] text-white'
+                                : 'bg-slate-100 text-slate-400 cursor-not-allowed')}>
+                            <Ticket className="h-4 w-4" />
+                            {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Fully Booked' : 'Book a Slot'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <div key={conf.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
                       <div className="p-5 flex items-start gap-4">
                         <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
@@ -670,8 +740,77 @@ export function ParentConferences() {
                   ))}
                 </div>
               ) : tab === 'past' ? (
-                <div className="p-4 space-y-4">
-                  {pagedPast.map(conf => (
+                <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
+                  {/* Expired bookings — attended conferences */}
+                  {filteredExpiredBookings.map(b => viewMode === 'grid' ? (
+                    <div key={`bk-${b.id}`} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 flex flex-col opacity-75">
+                      <div className="w-full h-28 overflow-hidden flex-shrink-0">
+                        {b.image_url
+                          ? <img src={b.image_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full bg-gradient-to-br from-slate-300 to-slate-400" />}
+                      </div>
+                      <div className="p-4 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-extrabold text-slate-700 leading-snug text-sm truncate">{b.conference_title}</h3>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 bg-blue-50 text-blue-700">Attended</span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
+                          <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 text-xs text-slate-400">
+                          <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(b.conference_date)}</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div key={`bk-${b.id}`} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm overflow-hidden opacity-75">
+                      <div className="p-5 flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                          {b.image_url
+                            ? <img src={b.image_url} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full bg-gradient-to-br from-slate-300 to-slate-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-extrabold text-slate-700 leading-snug truncate">{b.conference_title}</h3>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-blue-50 text-blue-700">Attended</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
+                            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-400">
+                            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(b.conference_date)}</span>
+                            <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Expired conferences not booked */}
+                  {pagedPast.map(conf => viewMode === 'grid' ? (
+                    <div key={conf.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 flex flex-col opacity-75">
+                      <div className="w-full h-28 overflow-hidden flex-shrink-0">
+                        {conf.image_url
+                          ? <img src={conf.image_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full bg-gradient-to-br from-slate-300 to-slate-400" />}
+                      </div>
+                      <div className="p-4 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-extrabold text-slate-700 leading-snug text-sm">{conf.title}</h3>
+                          <span className="text-xs font-semibold px-2 py-0.5 rounded-full shrink-0 bg-slate-100 text-slate-500">Closed</span>
+                        </div>
+                        <p className="text-xs text-slate-400 line-clamp-2 mb-2">{conf.description}</p>
+                        <div className="flex flex-wrap gap-1.5 text-xs">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-semibold bg-slate-100 text-slate-500">
+                            <CalendarDays className="h-3 w-3" /> {formatDate(conf.conference_date)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <div key={conf.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm overflow-hidden opacity-75">
                       <div className="p-5 flex items-start gap-4">
                         <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
@@ -682,9 +821,7 @@ export function ParentConferences() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="font-extrabold text-slate-700 leading-snug">{conf.title}</h3>
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-500">
-                              Closed
-                            </span>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-500">Closed</span>
                           </div>
                           <p className="text-xs text-slate-400 mt-1 line-clamp-2">{conf.description}</p>
                           <div className="flex flex-wrap gap-2 mt-3">
@@ -701,8 +838,43 @@ export function ParentConferences() {
                   ))}
                 </div>
               ) : (
-                <div className="p-4 space-y-4">
-                  {pagedBookings.map(b => (
+                <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
+                  {pagedBookings.map(b => viewMode === 'grid' ? (
+                    <div key={b.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
+                      <div className="w-full h-28 overflow-hidden flex-shrink-0">
+                        {b.image_url
+                          ? <img src={b.image_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
+                      </div>
+                      <div className="p-4 flex flex-col flex-1">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <h3 className="font-extrabold text-slate-900 leading-snug text-sm truncate">{b.conference_title}</h3>
+                          <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
+                            b.status === 'booked' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
+                            {b.status}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
+                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mb-3 text-xs text-slate-500">
+                          <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(b.conference_date)}</span>
+                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</span>
+                        </div>
+                        <div className="mt-auto flex gap-2">
+                          <Button size="sm" variant="outline" onClick={() => openEditBooking(b)} className="flex-1 rounded-xl text-xs gap-1">
+                            <RefreshCw className="h-3 w-3" /> Change
+                          </Button>
+                          <Button size="sm" variant="outline" onClick={async () => {
+                            try { await cancelBooking(b.id); load(); } catch { }
+                          }} className="flex-1 rounded-xl text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
+                            <X className="h-3 w-3" /> Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
                     <div key={b.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
                       <div className="p-5 flex items-start gap-4">
                         <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">

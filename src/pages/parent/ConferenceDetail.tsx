@@ -92,7 +92,7 @@ export function ParentConferenceDetail() {
 
   return (
     <ParentLayout>
-      <div className="container mx-auto px-4 pt-6 pb-12 space-y-4 max-w-2xl">
+      <div className="container mx-auto px-4 pt-6 pb-12 space-y-4 max-w-7xl">
 
           {/* Back */}
           <Link
