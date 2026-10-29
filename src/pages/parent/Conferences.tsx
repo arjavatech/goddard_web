@@ -15,6 +15,7 @@ import { usePageSize } from '../../hooks/usePageSize';
 import { PageSizeSelector } from '../../components/ui/page-size-selector';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
+import { useToast } from '../../contexts/ToastContext';
 import { cn } from '../../lib/utils';
 import {
   listMyConferences, listMyBookings, getConferenceSlots,
@@ -74,11 +75,11 @@ export interface SlotGridProps {
 }
 
 export function SlotGrid({ conferenceId, classroomId, classroomName, childId, existingBookingId, schoolId, onBooked }: SlotGridProps) {
+  const { showToast } = useToast();
   const [slots, setSlots] = useState<SlotDetail[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [booking, setBooking] = useState(false);
-  const [error, setError] = useState('');
   const [confirmAction, setConfirmAction] = useState<{
     title: string;
     description: string;
@@ -101,7 +102,6 @@ export function SlotGrid({ conferenceId, classroomId, classroomName, childId, ex
   async function handleConfirm() {
     if (!selected || !childId) return;
     setBooking(true);
-    setError('');
     try {
       if (currentBookingId) {
         await updateBooking(currentBookingId, { slot_id: selected });
@@ -117,7 +117,7 @@ export function SlotGrid({ conferenceId, classroomId, classroomName, childId, ex
       await loadSlots();
       onBooked();
     } catch (e: any) {
-      setError(e?.message || 'Booking failed. Please try again.');
+      showToast('error', e?.message || 'Booking failed. Please try again.', 'Booking Error');
     } finally {
       setBooking(false);
     }
@@ -125,13 +125,12 @@ export function SlotGrid({ conferenceId, classroomId, classroomName, childId, ex
 
   async function handleCancel(bookingId: string) {
     setBooking(true);
-    setError('');
     try {
       await cancelBooking(bookingId);
       setSelected(null);
       await loadSlots();
     } catch (e: any) {
-      setError(e?.message || 'Cancel failed. Please try again.');
+      showToast('error', e?.message || 'Cancel failed. Please try again.', 'Error');
     } finally {
       setBooking(false);
     }
@@ -199,7 +198,6 @@ export function SlotGrid({ conferenceId, classroomId, classroomName, childId, ex
               );
             })}
           </div>
-          {error && <p className="text-sm text-red-600 mt-3">{error}</p>}
           {selected && (() => {
             const slot = slots.find(s => s.id === selected);
             const timeLabel = slot ? `${formatTime(slot.start_time)} – ${formatTime(slot.end_time)}` : '';

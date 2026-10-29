@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { CalendarDays, ArrowLeft, Users, CheckCircle2 } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Users } from 'lucide-react';
 import { ParentLayout } from './ParentLayout';
 import { useUserContext } from '../../contexts/UserContext';
 import { useAuth } from '../../services/auth/useAuth';
+import { useToast } from '../../contexts/ToastContext';
 import { cn } from '../../lib/utils';
 import { listMyConferences, type ConferenceListItem } from '../../services/api/conferences';
 import { fetchSingleParent } from '../../services/api/admin';
@@ -19,18 +20,13 @@ export function ParentConferenceDetail() {
   const { id, schoolSlug } = useParams<{ id: string; schoolSlug: string }>();
   const { userData } = useUserContext();
   const { user } = useAuth();
+  const { showToast } = useToast();
   const schoolId = userData?.schoolId || '';
 
   const [conference, setConference] = useState<ConferenceListItem | null>(null);
   const [children, setChildren] = useState<ChildOption[]>([]);
   const [selectedChildId, setSelectedChildId] = useState('');
   const [loading, setLoading] = useState(true);
-  const [booked, setBooked] = useState(false);
-
-  function showBookedBanner() {
-    setBooked(true);
-    setTimeout(() => setBooked(false), 4000);
-  }
 
   const load = useCallback(async () => {
     if (!schoolId || !id) return;
@@ -134,17 +130,6 @@ export function ParentConferenceDetail() {
             )}
           </div>
 
-          {/* Success banner */}
-          {booked && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-emerald-800">Booking confirmed!</p>
-                <p className="text-xs text-emerald-600 mt-0.5">A confirmation email has been sent to you.</p>
-              </div>
-            </div>
-          )}
-
           {/* Booking section */}
           {conference.status !== 'active' ? (
             <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-8 text-center">
@@ -186,7 +171,7 @@ export function ParentConferenceDetail() {
                     classroomName={t.classroom_name}
                     childId={selectedChildId}
                     schoolId={schoolId}
-                    onBooked={showBookedBanner}
+                    onBooked={() => showToast('success', 'A confirmation email has been sent to you.', 'Booking Confirmed!')}
                   />
                 ))
               }

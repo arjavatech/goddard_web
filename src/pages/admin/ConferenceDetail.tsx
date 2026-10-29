@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   CalendarDays, ArrowLeft, Bell, Users, Clock, CheckCircle2,
-  MailOpen, AlertCircle,
+  MailOpen, AlertCircle, BookOpen, BarChart2,
 } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { useUserContext } from '../../contexts/UserContext';
+import { useToast } from '../../contexts/ToastContext';
 import { cn } from '../../lib/utils';
 import {
   getConferenceReport, sendConferenceReminders, sendConferenceReminderToParent,
@@ -151,12 +152,12 @@ export function AdminConferenceDetail() {
   const { schoolSlug, id } = useParams<{ schoolSlug: string; id: string }>();
   const navigate = useNavigate();
   const { userData, schoolSubdomain } = useUserContext();
+  const { showToast } = useToast();
   const schoolPrefix = `/${schoolSlug || schoolSubdomain || userData?.schoolId || 'goddard'}`;
 
   const [report, setReport] = useState<ConferenceReportResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [reminding, setReminding] = useState(false);
-  const [reminderResult, setReminderResult] = useState<string | null>(null);
   const [remindingParent, setRemindingParent] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -170,12 +171,11 @@ export function AdminConferenceDetail() {
   async function handleRemind() {
     if (!id) return;
     setReminding(true);
-    setReminderResult(null);
     try {
       const res = await sendConferenceReminders(id);
-      setReminderResult(`Reminder sent to ${res.reminders_sent} parent${res.reminders_sent !== 1 ? 's' : ''}`);
+      showToast('success', `Reminder sent to ${res.reminders_sent} parent${res.reminders_sent !== 1 ? 's' : ''}`, 'Reminders Sent');
     } catch {
-      setReminderResult('Failed to send reminders');
+      showToast('error', 'Failed to send reminders', 'Error');
     } finally {
       setReminding(false);
     }
@@ -183,13 +183,15 @@ export function AdminConferenceDetail() {
 
   async function handleRemindParent(conferenceId: string, parentEmail: string) {
     setRemindingParent(parentEmail);
-    setReminderResult(null);
     try {
       const res = await sendConferenceReminderToParent(conferenceId, parentEmail);
-      setReminderResult(`Reminder sent to ${parentEmail}`);
-      if (res.reminders_sent === 0) setReminderResult(`${parentEmail} has already booked a slot`);
+      if (res.reminders_sent === 0) {
+        showToast('warning', `${parentEmail} has already booked a slot`);
+      } else {
+        showToast('success', `Reminder sent to ${parentEmail}`, 'Reminder Sent');
+      }
     } catch {
-      setReminderResult('Failed to send reminder');
+      showToast('error', 'Failed to send reminder', 'Error');
     } finally {
       setRemindingParent(null);
     }
@@ -218,8 +220,9 @@ export function AdminConferenceDetail() {
 
   const { conference, report: classrooms } = report;
   const totalBooked = classrooms.reduce((acc, cr) => acc + cr.slots.reduce((a, s) => a + s.booked_count, 0), 0);
-  const totalCapacity = classrooms.reduce((acc, cr) => acc + cr.slots.reduce((a, s) => a + s.capacity, 0), 0);
   const totalUnbooked = classrooms.reduce((acc, cr) => acc + cr.unbooked_count, 0);
+  const targetedParents = totalBooked + totalUnbooked;
+  const bookingRate = targetedParents > 0 ? Math.round((totalBooked / targetedParents) * 100) : 0;
 
   return (
     <AdminLayout>
@@ -268,21 +271,16 @@ export function AdminConferenceDetail() {
             </div>
           </div>
 
-          {reminderResult && (
-            <div className={cn('mt-3 px-4 py-3 rounded-xl text-sm font-medium',
-              reminderResult.includes('Failed') ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700')}>
-              {reminderResult}
-            </div>
-          )}
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
           {[
-            { label: 'CLASSROOMS', value: classrooms.length, icon: <Users className="h-5 w-5 text-violet-500" />, color: 'bg-violet-50' },
-            { label: 'TOTAL CAPACITY', value: totalCapacity, icon: <Clock className="h-5 w-5 text-blue-500" />, color: 'bg-blue-50' },
+            { label: 'TARGETED PARENTS', value: targetedParents, icon: <Users className="h-5 w-5 text-violet-500" />, color: 'bg-violet-50' },
+            { label: 'CLASSROOMS', value: classrooms.length, icon: <BookOpen className="h-5 w-5 text-blue-500" />, color: 'bg-blue-50' },
             { label: 'BOOKED', value: totalBooked, icon: <CheckCircle2 className="h-5 w-5 text-green-500" />, color: 'bg-green-50' },
-            { label: 'UNBOOKED PARENTS', value: totalUnbooked, icon: <MailOpen className="h-5 w-5 text-orange-500" />, color: 'bg-orange-50' },
+            { label: 'PENDING', value: totalUnbooked, icon: <MailOpen className="h-5 w-5 text-orange-500" />, color: 'bg-orange-50' },
+            { label: 'BOOKING RATE', value: `${bookingRate}%`, icon: <BarChart2 className="h-5 w-5 text-teal-500" />, color: 'bg-teal-50' },
           ].map(s => (
             <div key={s.label} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm">
               <div className={cn('w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0', s.color)}>{s.icon}</div>
