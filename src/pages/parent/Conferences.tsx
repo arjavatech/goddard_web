@@ -192,7 +192,7 @@ export function SlotGrid({ conferenceId, classroomId, classroomName, childId, ex
                         'text-sm font-semibold rounded-xl px-4 py-1.5 transition-all disabled:opacity-50',
                         isSelected ? 'bg-blue-500 text-white' : 'bg-[#0F2D52] text-white hover:bg-[#1a3a6b]'
                       )}>
-                      {isSelected ? 'Selected' : 'Book Now'}
+                      {isSelected ? 'Selected' : currentBookingId ? 'Change Slot' : 'Book Now'}
                     </button>
                   )}
                 </div>

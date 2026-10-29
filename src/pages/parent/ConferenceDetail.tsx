@@ -27,6 +27,11 @@ export function ParentConferenceDetail() {
   const [loading, setLoading] = useState(true);
   const [booked, setBooked] = useState(false);
 
+  function showBookedBanner() {
+    setBooked(true);
+    setTimeout(() => setBooked(false), 4000);
+  }
+
   const load = useCallback(async () => {
     if (!schoolId || !id) return;
     setLoading(true);
@@ -182,7 +187,7 @@ export function ParentConferenceDetail() {
                     classroomName={t.classroom_name}
                     childId={selectedChildId}
                     schoolId={schoolId}
-                    onBooked={() => setBooked(true)}
+                    onBooked={showBookedBanner}
                   />
                 ))
               }
