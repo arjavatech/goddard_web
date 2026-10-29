@@ -50,6 +50,12 @@ import { SubdomainGuard } from './routes/security/SubdomainGuard';
 import { RequestsRouter, SuperAdminOnly } from './routes/security/ProcurementGuards';
 import { FeatureRoute } from './routes/security/FeatureRoute';
 
+// Conference pages
+import { AdminConferences } from './pages/admin/Conferences';
+import { AdminConferenceDetail } from './pages/admin/ConferenceDetail';
+import { ParentConferences } from './pages/parent/Conferences';
+import { ParentConferenceDetail } from './pages/parent/ConferenceDetail';
+
 // Survey pages
 import { SurveyManagement } from './pages/admin/SurveyManagement';
 import { SurveyCreate } from './pages/admin/SurveyCreate';
@@ -142,6 +148,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<FeatureRoute feature="parentManagementEnabled"><ParentFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/documents" element={<FeatureRoute feature="parentManagementEnabled"><MyDocuments audience="student" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/surveys" element={<ParentSurveys />} />
+                  <Route path="/:schoolSlug/dashboard/conferences" element={<ParentConferences />} />
+                  <Route path="/:schoolSlug/dashboard/conferences/:id" element={<ParentConferenceDetail />} />
                   <Route path="/:schoolSlug/employee/dashboard" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDashboard /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
@@ -217,6 +225,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/surveys/create" element={<SurveyCreate />} />
                   <Route path="/:schoolSlug/admin/my-surveys" element={<AdminSurveys />} />
                   <Route path="/:schoolSlug/admin/surveys/:surveyId" element={<SurveyReport />} />
+                  <Route path="/:schoolSlug/admin/conferences" element={<AdminConferences />} />
+                  <Route path="/:schoolSlug/admin/conferences/:id" element={<AdminConferenceDetail />} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled">
                     <SuperAdminExpenses />

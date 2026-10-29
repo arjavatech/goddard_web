@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { ClipboardList, FileText, Home, LogOut, Menu, UserCog, X } from 'lucide-react';
+import { CalendarDays, ClipboardList, FileText, Home, LogOut, Menu, UserCog, X } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
@@ -34,6 +34,7 @@ export function ParentLayout({ children }: ParentLayoutProps) {
     { icon: <Home className="h-[18px] w-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/dashboard`, exact: true, badge: formsPending },
     { icon: <FileText className="h-[18px] w-[18px]" />, label: 'Documents', path: `${schoolPrefix}/dashboard/documents`, badge: docsPending },
     { icon: <ClipboardList className="h-[18px] w-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/dashboard/surveys`, badge: surveysPending },
+    { icon: <CalendarDays className="h-[18px] w-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/dashboard/conferences` },
     { icon: <UserCog className="h-[18px] w-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
   ];
   const isActive = (path: string, exact?: boolean) => {

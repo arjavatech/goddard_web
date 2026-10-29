@@ -45,7 +45,7 @@ export function MyDocuments({ audience }: { audience: Audience }) {
     finally { setLoading(false); }
   };
   useEffect(() => { void load(); }, [schoolId, audience]);
-  const children = useMemo(() => Array.from(new Map(items.map(item => [item.subject_name, item])).values()).map(item => ({ id: item.subject_name, name: item.subject_name, initials: item.subject_name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase(), age: '', dob: '', enrollmentProgress: 0, formsCompleted: 0, totalForms: 0 })), [items]);
+  const children = useMemo(() => Array.from(new Map(items.map(item => [item.subject_name, item])).values()).map(item => ({ id: item.subject_name, name: item.subject_name, initials: item.subject_name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase(), age: '', dob: '', enrollmentProgress: 0, formsCompleted: 0, totalForms: 0, classroomName: item.classroom_name || '' })), [items]);
   useEffect(() => { if (isParent && children.length && !children.some(child => child.id === selectedChildId)) setSelectedChildId(children[0].id); }, [children, isParent, selectedChildId]);
   useEffect(() => { if (isParent && selectedChildId) setSearchParams({ child: selectedChildId }, { replace: true }); }, [isParent, selectedChildId, setSearchParams]);
   const visibleItems = isParent ? items.filter(item => item.subject_name === selectedChildId) : items;

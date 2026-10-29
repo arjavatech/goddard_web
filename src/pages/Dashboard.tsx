@@ -30,6 +30,7 @@ type ChildFormCard = {
 type ChildSpecificFormGroup = {
   childId: string;
   childName: string;
+  classroomName?: string;
   forms: ChildFormCard[];
 };
 type FamilyFormCard = ChildFormCard;
@@ -50,6 +51,7 @@ type DashboardChild = {
   parentType?: string;
   gender?: string;
   classroom: string;
+  classroomName: string;
   enrollmentId: string;
 };
 function getInitials(firstName: string, lastName: string): string {
@@ -187,6 +189,7 @@ function normalizeChildFromParent(child: any, yearFilter?: string): DashboardChi
     parentType: child.parent_type || child.parentType || 'primary_parent',
     gender: child.childGender,
     classroom: child.classroomName || '—',
+    classroomName: child.classroomName || '',
     enrollmentId: child.enrollmentId || ''
   };
 }
@@ -275,6 +278,7 @@ export function Dashboard() {
         const childFormsData = processedChildren.map(child => ({
           childId: child.id,
           childName: child.name,
+          classroomName: child.classroomName || '',
           forms: child.forms
         }));
 

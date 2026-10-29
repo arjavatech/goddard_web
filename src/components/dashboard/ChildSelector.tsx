@@ -11,6 +11,7 @@ interface Child {
   enrollmentProgress: number;
   formsCompleted: number;
   totalForms: number;
+  classroomName?: string;
 }
 
 interface ChildSelectorProps {
@@ -89,8 +90,8 @@ export function ChildSelector({ children, selectedChildId, onSelectChild, showTi
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-xs sm:text-sm truncate">{child.name}</p>
-                      <p className="text-[11px] text-slate-400">
-                        {child.formsCompleted}/{child.totalForms} forms · {child.enrollmentProgress}%
+                      <p className="text-[11px] text-slate-400 truncate">
+                        {child.classroomName ? child.classroomName : `${child.formsCompleted}/${child.totalForms} forms`}
                       </p>
                     </div>
                     {child.id === selectedChildId && (
@@ -110,7 +111,12 @@ export function ChildSelector({ children, selectedChildId, onSelectChild, showTi
           <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white flex items-center justify-center font-bold text-[10px]">
             {selectedChild.initials}
           </div>
-          <span className="text-xs sm:text-sm font-semibold text-[#0F2D52]">{selectedChild.name}</span>
+          <div>
+            <span className="text-xs sm:text-sm font-semibold text-[#0F2D52]">{selectedChild.name}</span>
+            {selectedChild.classroomName && (
+              <p className="text-[11px] text-[#0F2D52]/60">{selectedChild.classroomName}</p>
+            )}
+          </div>
         </div>
       )}
     </div>
