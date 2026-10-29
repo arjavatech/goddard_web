@@ -168,7 +168,90 @@ export function SurveyReport() {
   });
 
   const handleExport = () => {
-    showToast('success', 'CSV export would download here (prototype — no real file generated).');
+    if (!report) return;
+
+    try {
+      // Build CSV header
+      const headers = ['Respondent Name', 'Respondent Email', 'Submitted Date'];
+      
+      // Add question text as column headers
+      report.question_results.forEach(q => {
+        headers.push(q.question_text);
+      });
+
+      // Build CSV rows
+      const rows: string[][] = [];
+      
+      if (report.is_anonymous || report.individual_responses.length === 0) {
+        // For anonymous surveys or no responses, show summary only
+        rows.push(['Survey Summary']);
+        rows.push([]);
+        report.question_results.forEach(q => {
+          rows.push([q.question_text]);
+          rows.push([`Total Answered: ${q.total_answered}`]);
+          
+          if (q.question_type === 'single_choice' || q.question_type === 'multiple_choice') {
+            q.choice_results?.forEach(c => {
+              rows.push([`${c.option}: ${c.count} (${c.percentage.toFixed(2)}%)`]);
+            });
+          } else if (q.question_type === 'rating') {
+            rows.push([`Average Rating: ${q.average_rating?.toFixed(2)} / 5`]);
+            q.rating_distribution?.forEach(r => {
+              rows.push([`${r.star} stars: ${r.count} (${r.percentage.toFixed(2)}%)`]);
+            });
+          } else if (q.question_type === 'text') {
+            q.text_responses?.forEach(t => {
+              rows.push([`• ${t}`]);
+            });
+          }
+          rows.push([]);
+        });
+      } else {
+        // For identified surveys with responses, show individual data
+        report.individual_responses.forEach(response => {
+          const row: string[] = [
+            response.respondent_name || '',
+            response.respondent_email || '',
+            response.submitted_at ? formatDate(response.submitted_at) : ''
+          ];
+
+          // Add answers for each question in order
+          report.question_results.forEach(q => {
+            const answer = response.answers.find(a => a.question_id === q.question_id);
+            if (answer) {
+              const value = answer.values?.length ? answer.values.join('; ') : (answer.value || '');
+              row.push(value);
+            } else {
+              row.push('');
+            }
+          });
+
+          rows.push(row);
+        });
+      }
+
+      // Convert to CSV string
+      const csvContent = [
+        headers.map(h => `"${h.replace(/"/g, '""')}"`).join(','),
+        ...rows.map(r => r.map(cell => `"${cell.replace(/"/g, '""')}"`).join(','))
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${report.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_responses.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      showToast('success', 'Survey responses exported as CSV.');
+    } catch (error) {
+      console.error('CSV export failed:', error);
+      showToast('error', 'Failed to export CSV.');
+    }
   };
 
   const handleClose = () => {

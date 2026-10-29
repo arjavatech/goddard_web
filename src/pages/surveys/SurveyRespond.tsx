@@ -280,7 +280,7 @@ export function SurveyRespond() {
           </div>
           <Button
             className="rounded-xl bg-[#0F2D52] hover:bg-[#1a3a6b] text-white px-8 shadow-sm"
-            onClick={() => navigate(`/${schoolSlug || schoolSubdomain || 'goddard'}/login`)}
+            onClick={() => navigate('/login')}
           >
             Sign In
           </Button>
