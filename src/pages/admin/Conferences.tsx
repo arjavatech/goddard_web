@@ -783,10 +783,22 @@ export function AdminConferences() {
                               className="p-1.5 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors">
                               <Pencil className="h-4 w-4" />
                             </button>
-                            <button title="Delete" onClick={() => setDeleteId(conf.id)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors">
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <div className="relative group">
+                              <button
+                                disabled={conf.booked_slots > 0}
+                                onClick={() => setDeleteId(conf.id)}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none">
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                              {conf.booked_slots > 0 && (
+                                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
+                                  <div className="bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                                    {conf.booked_slots} booking(s) — cancel all before deleting
+                                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -838,7 +850,22 @@ export function AdminConferences() {
                         {copiedId === conf.id ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                       </button>
                       <button onClick={() => { setEditItem(conf); setShowCreate(true); }} className="p-1.5 rounded text-slate-400 hover:text-amber-600"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => setDeleteId(conf.id)} className="p-1.5 rounded text-slate-400 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                      <div className="relative group">
+                        <button
+                          disabled={conf.booked_slots > 0}
+                          onClick={() => setDeleteId(conf.id)}
+                          className="p-1.5 rounded text-slate-400 hover:text-red-600 disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        {conf.booked_slots > 0 && (
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
+                            <div className="bg-slate-800 text-white text-xs rounded-lg px-3 py-2 whitespace-nowrap shadow-lg">
+                              {conf.booked_slots} booking(s) — cancel all before deleting
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800" />
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -3,12 +3,11 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   CalendarDays, Clock, Users, CheckCircle2, X, ChevronRight,
-  AlertCircle, Ticket, RefreshCw, Search, Filter,
+  AlertCircle, Ticket, RefreshCw, Search,
 } from 'lucide-react';
 import { ParentLayout } from './ParentLayout';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { SortDropdown, sortItems } from '../../components/ui/sort-dropdown';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
@@ -366,7 +365,7 @@ export function ParentConferences() {
   const { user } = useAuth();
   const schoolId = userData?.schoolId || '';
 
-  const [tab, setTab] = useState<'available' | 'bookings'>('available');
+  const [tab, setTab] = useState<'available' | 'bookings' | 'past'>('available');
   const [conferences, setConferences] = useState<ConferenceListItem[]>([]);
   const [bookings, setBookings] = useState<BookingListItem[]>([]);
   const [children, setChildren] = useState<ChildOption[]>([]);
@@ -377,10 +376,8 @@ export function ParentConferences() {
     existingChildId?: string;
   } | null>(null);
 
-  // Search / filter / sort
+  // Search / sort
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [showFilters, setShowFilters] = useState(false);
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [itemsPerPage, setItemsPerPage] = usePageSize('parent-conferences', 10);
@@ -419,23 +416,41 @@ export function ParentConferences() {
 
   // ── Filter / sort / paginate — Available Conferences ──────────────────────
 
-  const filteredConfs = conferences.filter(c => {
-    const q = search.toLowerCase();
-    const matchSearch = !q || c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
-    const matchStatus = statusFilter === 'all' || c.status === statusFilter;
-    return matchSearch && matchStatus;
-  });
+  const bookedConferenceIds = new Set(
+    bookings.filter(b => b.status === 'booked').map(b => b.conference_id)
+  );
 
-  const sortedConfs = sortItems(filteredConfs, sortBy, sortOrder, (c, key) => {
+  const filteredAvailable = conferences.filter(c =>
+    c.status === 'active' &&
+    !bookedConferenceIds.has(c.id) &&
+    (!search || c.title.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const filteredPast = conferences.filter(c =>
+    c.status !== 'active' &&
+    (!search || c.title.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const sortedAvailable = sortItems(filteredAvailable, sortBy, sortOrder, (c, key) => {
     if (key === 'date') return c.conference_date;
     if (key === 'slots') return String(c.available_slots).padStart(6, '0');
+    return c.title;
+  });
+
+  const sortedPast = sortItems(filteredPast, sortBy, sortOrder, (c, key) => {
+    if (key === 'date') return c.conference_date;
     return c.title;
   });
 
   const {
     currentPage: confPage, totalPages: confTotalPages,
     paginatedData: pagedConfs, setCurrentPage: setConfPage,
-  } = usePagination({ data: sortedConfs, itemsPerPage });
+  } = usePagination({ data: sortedAvailable, itemsPerPage });
+
+  const {
+    currentPage: pastPage, totalPages: pastTotalPages,
+    paginatedData: pagedPast, setCurrentPage: setPastPage,
+  } = usePagination({ data: sortedPast, itemsPerPage });
 
   // ── Filter / sort / paginate — My Bookings ────────────────────────────────
 
@@ -454,20 +469,18 @@ export function ParentConferences() {
     paginatedData: pagedBookings, setCurrentPage: setBkPage,
   } = usePagination({ data: sortedBookings, itemsPerPage });
 
-  useEffect(() => { setConfPage(1); setBkPage(1); }, [tab, search, statusFilter, sortBy, sortOrder]);
+  useEffect(() => { setConfPage(1); setBkPage(1); setPastPage(1); }, [tab, search, sortBy, sortOrder]);
 
   function openEditBooking(booking: BookingListItem) {
     const conf = conferences.find(c => c.id === booking.conference_id);
     if (conf) setBookingModal({ conf, existingBookingId: booking.id, existingChildId: booking.child_id });
   }
 
-  const hasStatusFilter = statusFilter !== 'all';
-
   // Derived for current tab
-  const sorted = tab === 'available' ? sortedConfs : sortedBookings;
-  const currentPage = tab === 'available' ? confPage : bkPage;
-  const totalPages = tab === 'available' ? confTotalPages : bkTotalPages;
-  const setPage = tab === 'available' ? setConfPage : setBkPage;
+  const sorted = tab === 'available' ? sortedAvailable : tab === 'past' ? sortedPast : sortedBookings;
+  const currentPage = tab === 'available' ? confPage : tab === 'past' ? pastPage : bkPage;
+  const totalPages = tab === 'available' ? confTotalPages : tab === 'past' ? pastTotalPages : bkTotalPages;
+  const setPage = tab === 'available' ? setConfPage : tab === 'past' ? setPastPage : setBkPage;
 
   return (
     <ParentLayout>
@@ -506,6 +519,13 @@ export function ParentConferences() {
                 </span>
               )}
             </button>
+            <button onClick={() => setTab('past')}
+              className={cn(
+                'flex items-center gap-2 px-4 py-2.5 text-sm font-semibold transition-all duration-150 border-b-2 -mb-px',
+                tab === 'past' ? 'border-[#0F2D52] text-[#0F2D52]' : 'border-transparent text-slate-400 hover:text-slate-700'
+              )}>
+              <Clock className="h-4 w-4" /> Past
+            </button>
           </div>
 
           {/* Search + Controls */}
@@ -524,19 +544,6 @@ export function ParentConferences() {
                 </button>
               )}
             </div>
-            {tab === 'available' && (
-              <Button
-                variant="outline" size="sm"
-                onClick={() => setShowFilters(p => !p)}
-                className="h-9 rounded-xl bg-white text-[#0F2D52] border-slate-200 font-bold text-xs px-3 relative shrink-0"
-              >
-                {showFilters ? <X className="h-4 w-4 sm:mr-1.5" /> : <Filter className="h-4 w-4 sm:mr-1.5" />}
-                <span className="hidden sm:inline">{showFilters ? 'Hide Filters' : 'Filters'}</span>
-                {!showFilters && hasStatusFilter && (
-                  <span className="absolute -top-1.5 -right-1.5 h-4 w-4 rounded-full bg-[#0F2D52] text-[9px] text-white font-bold flex items-center justify-center">1</span>
-                )}
-              </Button>
-            )}
             <SortDropdown
               currentSortBy={sortBy}
               currentSortOrder={sortOrder}
@@ -546,32 +553,6 @@ export function ParentConferences() {
             />
           </div>
 
-          {/* Filter Panel */}
-          {showFilters && tab === 'available' && (
-            <div className="p-4 bg-white rounded-xl border border-slate-100 shadow-sm space-y-3">
-              {hasStatusFilter && (
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">1 filter applied</span>
-                  <Button variant="outline" size="sm" onClick={() => setStatusFilter('all')} className="h-8 text-xs rounded-lg">
-                    <X className="h-3.5 w-3.5 mr-1" /> Clear All
-                  </Button>
-                </div>
-              )}
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-500">Status</label>
-                <Select value={statusFilter} onValueChange={v => { setStatusFilter(v); setConfPage(1); }}>
-                  <SelectTrigger className="h-9 rounded-xl text-sm border-slate-200">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    <SelectItem value="active">Open</SelectItem>
-                    <SelectItem value="expired">Closed</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
 
           {/* Results */}
           {loading ? (
@@ -612,18 +593,22 @@ export function ParentConferences() {
                 <div className="p-14 text-center">
                   <CalendarDays className="h-10 w-10 mx-auto mb-4 text-slate-200" />
                   <p className="font-semibold text-slate-500">
-                    {search || hasStatusFilter
+                    {search
                       ? 'No conferences match your search'
                       : tab === 'available'
-                        ? 'No conferences available'
-                        : 'No bookings yet'}
+                        ? 'No conferences available to book'
+                        : tab === 'past'
+                          ? 'No past conferences'
+                          : 'No bookings yet'}
                   </p>
                   <p className="text-sm text-slate-400 mt-1">
-                    {search || hasStatusFilter
-                      ? 'Try clearing your filters.'
+                    {search
+                      ? 'Try clearing your search.'
                       : tab === 'available'
                         ? 'Check back soon for upcoming conferences.'
-                        : 'Browse available conferences and book a slot.'}
+                        : tab === 'past'
+                          ? 'Past conferences will appear here.'
+                          : 'Browse available conferences and book a slot.'}
                   </p>
                   {tab === 'bookings' && !search && (
                     <button onClick={() => setTab('available')} className="mt-3 text-[#0F2D52] text-sm hover:underline">
@@ -680,6 +665,37 @@ export function ParentConferences() {
                           <Ticket className="h-4 w-4" />
                           {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Fully Booked' : 'Book a Slot'}
                         </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : tab === 'past' ? (
+                <div className="p-4 space-y-4">
+                  {pagedPast.map(conf => (
+                    <div key={conf.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm overflow-hidden opacity-75">
+                      <div className="p-5 flex items-start gap-4">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                          {conf.image_url
+                            ? <img src={conf.image_url} alt="" className="w-full h-full object-cover" />
+                            : <div className="w-full h-full bg-gradient-to-br from-slate-300 to-slate-400" />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                            <h3 className="font-extrabold text-slate-700 leading-snug">{conf.title}</h3>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 bg-slate-100 text-slate-500">
+                              Closed
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">{conf.description}</p>
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                              <CalendarDays className="h-3 w-3" /> {formatDate(conf.conference_date)}
+                            </span>
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500">
+                              <Users className="h-3 w-3" /> {conf.classroom_tags.length} classroom{conf.classroom_tags.length !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   ))}
