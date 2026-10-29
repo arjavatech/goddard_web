@@ -648,97 +648,114 @@ export function ParentConferences() {
                   )}
                 </div>
               ) : tab === 'available' ? (
-                <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
-                  {pagedConfs.map(conf => viewMode === 'grid' ? (
-                    <div key={conf.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
-                      <div className="w-full h-36 overflow-hidden flex-shrink-0">
-                        {conf.image_url
-                          ? <img src={conf.image_url} alt="" className="w-full h-full object-cover" />
-                          : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
-                      </div>
-                      <div className="p-4 flex flex-col flex-1">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-extrabold text-slate-900 leading-snug text-sm">{conf.title}</h3>
-                          <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
-                            conf.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
-                            {conf.status === 'active' ? 'Open' : 'Closed'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-400 line-clamp-2 mb-3">{conf.description}</p>
-                        <div className="flex flex-wrap gap-1.5 mb-3">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                            <CalendarDays className="h-3 w-3" /> {formatDate(conf.conference_date)}
-                          </span>
-                          <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold',
-                            conf.available_slots > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
-                            <Clock className="h-3 w-3" /> {conf.available_slots} slot{conf.available_slots !== 1 ? 's' : ''}
-                          </span>
-                        </div>
-                        <div className="mt-auto">
-                          <Button
-                            disabled={conf.status !== 'active' || conf.available_slots === 0}
-                            onClick={() => navigate(`/${schoolSlug}/dashboard/conferences/${conf.id}`)}
-                            className={cn('w-full rounded-xl gap-1.5 shadow-sm text-sm',
-                              conf.status === 'active' && conf.available_slots > 0
-                                ? 'bg-[#0F2D52] hover:bg-[#1a3a6b] text-white'
-                                : 'bg-slate-100 text-slate-400 cursor-not-allowed')}>
-                            <Ticket className="h-4 w-4" />
-                            {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Fully Booked' : 'Book a Slot'}
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={conf.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                      <div className="p-5 flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                viewMode === 'grid' ? (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pagedConfs.map(conf => (
+                      <div key={conf.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
+                        <div className="w-full h-36 overflow-hidden flex-shrink-0">
                           {conf.image_url
                             ? <img src={conf.image_url} alt="" className="w-full h-full object-cover" />
                             : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-extrabold text-slate-900 leading-snug">{conf.title}</h3>
-                            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
+                        <div className="p-4 flex flex-col flex-1">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-extrabold text-slate-900 leading-snug text-sm">{conf.title}</h3>
+                            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
                               conf.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
                               {conf.status === 'active' ? 'Open' : 'Closed'}
                             </span>
                           </div>
-                          <p className="text-xs text-slate-400 mt-1 line-clamp-2">{conf.description}</p>
-                          <div className="flex flex-wrap gap-2 mt-3">
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-3">{conf.description}</p>
+                          <div className="flex flex-wrap gap-1.5 mb-3">
                             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
                               <CalendarDays className="h-3 w-3" /> {formatDate(conf.conference_date)}
                             </span>
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                              <Users className="h-3 w-3" /> {conf.classroom_tags.length} classroom{conf.classroom_tags.length !== 1 ? 's' : ''}
-                            </span>
                             <span className={cn('inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold',
                               conf.available_slots > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
-                              <Clock className="h-3 w-3" /> {conf.available_slots} slot{conf.available_slots !== 1 ? 's' : ''} available
+                              <Clock className="h-3 w-3" /> {conf.available_slots} slot{conf.available_slots !== 1 ? 's' : ''}
                             </span>
-                            {conf.available_slots === 0 && conf.status === 'active' && (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700">
-                                <AlertCircle className="h-3 w-3" /> All slots booked
-                              </span>
-                            )}
+                          </div>
+                          <div className="mt-auto">
+                            <Button
+                              disabled={conf.status !== 'active' || conf.available_slots === 0}
+                              onClick={() => navigate(`/${schoolSlug}/dashboard/conferences/${conf.id}`)}
+                              className={cn('w-full rounded-xl gap-1.5 shadow-sm text-sm',
+                                conf.status === 'active' && conf.available_slots > 0
+                                  ? 'bg-[#0F2D52] hover:bg-[#1a3a6b] text-white'
+                                  : 'bg-slate-100 text-slate-400 cursor-not-allowed')}>
+                              <Ticket className="h-4 w-4" />
+                              {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Fully Booked' : 'Book a Slot'}
+                            </Button>
                           </div>
                         </div>
                       </div>
-                      <div className="px-5 pb-4">
-                        <Button
-                          disabled={conf.status !== 'active' || conf.available_slots === 0}
-                          onClick={() => navigate(`/${schoolSlug}/dashboard/conferences/${conf.id}`)}
-                          className={cn('w-full rounded-xl gap-1.5 shadow-sm',
-                            conf.status === 'active' && conf.available_slots > 0
-                              ? 'bg-[#0F2D52] hover:bg-[#1a3a6b] text-white'
-                              : 'bg-slate-100 text-slate-400 cursor-not-allowed')}>
-                          <Ticket className="h-4 w-4" />
-                          {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Fully Booked' : 'Book a Slot'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          {['CONFERENCE', 'DATE', 'CLASSROOMS', 'SLOTS', 'STATUS', 'ACTION'].map(h => (
+                            <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {pagedConfs.map(conf => (
+                          <tr key={conf.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {conf.image_url
+                                  ? <img src={conf.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                  : <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1e4b83] flex-shrink-0" />}
+                                <div>
+                                  <p className="font-medium text-slate-900 text-sm leading-tight">{conf.title}</p>
+                                  <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{conf.description}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{formatDate(conf.conference_date)}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex flex-wrap gap-1">
+                                {conf.classroom_tags.slice(0, 2).map(t => (
+                                  <span key={t.classroom_id} className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{t.classroom_name}</span>
+                                ))}
+                                {conf.classroom_tags.length > 2 && (
+                                  <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">+{conf.classroom_tags.length - 2}</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full',
+                                conf.available_slots > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700')}>
+                                {conf.available_slots} available
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full',
+                                conf.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
+                                {conf.status === 'active' ? 'Open' : 'Closed'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <Button size="sm"
+                                disabled={conf.status !== 'active' || conf.available_slots === 0}
+                                onClick={() => navigate(`/${schoolSlug}/dashboard/conferences/${conf.id}`)}
+                                className={cn('rounded-xl gap-1 text-xs',
+                                  conf.status === 'active' && conf.available_slots > 0
+                                    ? 'bg-[#0F2D52] hover:bg-[#1a3a6b] text-white'
+                                    : 'bg-slate-100 text-slate-400 cursor-not-allowed')}>
+                                <Ticket className="h-3.5 w-3.5" />
+                                {conf.status !== 'active' ? 'Closed' : conf.available_slots === 0 ? 'Full' : 'Book'}
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               ) : tab === 'past' ? (
                 <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
                   {/* Expired bookings — attended conferences */}
@@ -838,81 +855,92 @@ export function ParentConferences() {
                   ))}
                 </div>
               ) : (
-                <div className={cn('p-4', viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-4')}>
-                  {pagedBookings.map(b => viewMode === 'grid' ? (
-                    <div key={b.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
-                      <div className="w-full h-28 overflow-hidden flex-shrink-0">
-                        {b.image_url
-                          ? <img src={b.image_url} alt="" className="w-full h-full object-cover" />
-                          : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
-                      </div>
-                      <div className="p-4 flex flex-col flex-1">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <h3 className="font-extrabold text-slate-900 leading-snug text-sm truncate">{b.conference_title}</h3>
-                          <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
-                            b.status === 'booked' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
-                            {b.status}
-                          </span>
-                        </div>
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
-                        </div>
-                        <div className="flex flex-wrap gap-2 mb-3 text-xs text-slate-500">
-                          <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(b.conference_date)}</span>
-                          <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</span>
-                        </div>
-                        <div className="mt-auto flex gap-2">
-                          <Button size="sm" variant="outline" onClick={() => openEditBooking(b)} className="flex-1 rounded-xl text-xs gap-1">
-                            <RefreshCw className="h-3 w-3" /> Change
-                          </Button>
-                          <Button size="sm" variant="outline" onClick={async () => {
-                            try { await cancelBooking(b.id); load(); } catch { }
-                          }} className="flex-1 rounded-xl text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
-                            <X className="h-3 w-3" /> Cancel
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div key={b.id} className="bg-slate-50 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden">
-                      <div className="p-5 flex items-start gap-4">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0">
+                viewMode === 'grid' ? (
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {pagedBookings.map(b => (
+                      <div key={b.id} className="border border-slate-100 rounded-2xl overflow-hidden bg-slate-50 hover:shadow-md transition-shadow flex flex-col">
+                        <div className="w-full h-28 overflow-hidden flex-shrink-0">
                           {b.image_url
                             ? <img src={b.image_url} alt="" className="w-full h-full object-cover" />
                             : <div className="w-full h-full bg-gradient-to-br from-[#0F2D52] to-[#1e4b83]" />}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-extrabold text-slate-900 leading-snug truncate">{b.conference_title}</h3>
-                            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0',
+                        <div className="p-4 flex flex-col flex-1">
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <h3 className="font-extrabold text-slate-900 leading-snug text-sm truncate">{b.conference_title}</h3>
+                            <span className={cn('text-xs font-semibold px-2 py-0.5 rounded-full shrink-0',
                               b.status === 'booked' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500')}>
                               {b.status}
                             </span>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 mt-2">
+                          <div className="flex flex-wrap gap-1.5 mb-2">
                             <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
                             <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
                           </div>
-                          <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-500">
+                          <div className="flex flex-wrap gap-2 mb-3 text-xs text-slate-500">
                             <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatDate(b.conference_date)}</span>
                             <span className="flex items-center gap-1"><Clock className="h-3 w-3" />{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</span>
                           </div>
+                          <div className="mt-auto flex gap-2">
+                            <Button size="sm" variant="outline" onClick={() => openEditBooking(b)} className="flex-1 rounded-xl text-xs gap-1">
+                              <RefreshCw className="h-3 w-3" /> Change
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={async () => {
+                              try { await cancelBooking(b.id); load(); } catch { }
+                            }} className="flex-1 rounded-xl text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
+                              <X className="h-3 w-3" /> Cancel
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="px-5 pb-4 flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditBooking(b)} className="flex-1 rounded-xl text-xs gap-1.5">
-                          <RefreshCw className="h-3.5 w-3.5" /> Change Slot
-                        </Button>
-                        <Button size="sm" variant="outline" onClick={async () => {
-                          try { await cancelBooking(b.id); load(); } catch { }
-                        }} className="flex-1 rounded-xl text-xs gap-1.5 text-red-600 border-red-200 hover:bg-red-50">
-                          <X className="h-3.5 w-3.5" /> Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b border-slate-100">
+                          {['CONFERENCE', 'CHILD', 'CLASSROOM', 'DATE', 'TIME SLOT', 'ACTIONS'].map(h => (
+                            <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 tracking-wider">{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-50">
+                        {pagedBookings.map(b => (
+                          <tr key={b.id} className="hover:bg-slate-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-3">
+                                {b.image_url
+                                  ? <img src={b.image_url} alt="" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
+                                  : <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1e4b83] flex-shrink-0" />}
+                                <p className="font-medium text-slate-900 text-sm leading-tight">{b.conference_title}</p>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full font-semibold">{b.child_name}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full font-semibold">{b.classroom_name}</span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{formatDate(b.conference_date)}</td>
+                            <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{formatTime(b.slot_start)} – {formatTime(b.slot_end)}</td>
+                            <td className="px-6 py-4">
+                              <div className="flex items-center gap-2">
+                                <Button size="sm" variant="outline" onClick={() => openEditBooking(b)} className="rounded-xl text-xs gap-1">
+                                  <RefreshCw className="h-3.5 w-3.5" /> Change Slot
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={async () => {
+                                  try { await cancelBooking(b.id); load(); } catch { }
+                                }} className="rounded-xl text-xs gap-1 text-red-600 border-red-200 hover:bg-red-50">
+                                  <X className="h-3.5 w-3.5" /> Cancel
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )
               )}
 
               {/* Pagination footer */}

@@ -820,6 +820,7 @@ export function AdminConferences() {
             </>
           ) : (
             /* Grid view */
+            <>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {paged.map(conf => (
                 <div key={conf.id} className="border border-slate-100 rounded-xl overflow-hidden hover:shadow-md transition-shadow">
@@ -871,6 +872,18 @@ export function AdminConferences() {
                 </div>
               ))}
             </div>
+            {/* Pagination */}
+            <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between text-sm text-slate-500">
+              <span>Showing {(page - 1) * PER_PAGE + 1}–{Math.min(page * PER_PAGE, filtered.length)} of {filtered.length}</span>
+              <div className="flex items-center gap-2">
+                <button disabled={page === 1} onClick={() => setPage(p => p - 1)}
+                  className="px-3 py-1 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">Prev</button>
+                <span>{page}/{totalPages || 1}</span>
+                <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}
+                  className="px-3 py-1 rounded-lg border border-slate-200 disabled:opacity-40 hover:bg-slate-50">Next</button>
+              </div>
+            </div>
+            </>
           )}
         </div>
       </div>
