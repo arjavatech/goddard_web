@@ -727,7 +727,7 @@ export function AdminConferences() {
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {paged.map(conf => (
-                      <tr key={conf.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={conf.id} onClick={() => navigate(`${schoolPrefix}/admin/conferences/${conf.id}`)} className="hover:bg-slate-50/50 transition-colors cursor-pointer">
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             {conf.image_url ? (
@@ -770,7 +770,7 @@ export function AdminConferences() {
                         </td>
                         <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">{formatDate(conf.conference_date)}</td>
                         <td className="px-6 py-4">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
                             <button title="View Report" onClick={() => navigate(`${schoolPrefix}/admin/conferences/${conf.id}`)}
                               className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F2D52] hover:bg-blue-50 transition-colors">
                               <Eye className="h-4 w-4" />
