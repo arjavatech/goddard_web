@@ -96,8 +96,7 @@ export function ParentConferenceDetail() {
 
   return (
     <ParentLayout>
-      <div className="min-h-screen bg-[#EFF5FB]">
-        <div className="container mx-auto px-4 py-6 pb-12 space-y-4 max-w-2xl">
+      <div className="container mx-auto px-4 pt-6 pb-12 space-y-4 max-w-2xl">
 
           {/* Back */}
           <Link
@@ -194,7 +193,6 @@ export function ParentConferenceDetail() {
             </div>
           )}
 
-        </div>
       </div>
     </ParentLayout>
   );
