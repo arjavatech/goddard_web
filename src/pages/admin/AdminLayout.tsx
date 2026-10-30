@@ -102,9 +102,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ] : []),
         ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
         ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
-        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
-        ...(!isSuperAdmin ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending }] : []),
-        { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
+        ...(schoolFeatures.surveyEnabled ? [
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
+          ...(!isSuperAdmin ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending }] : []),
+        ] : []),
+        ...(schoolFeatures.conferenceEnabled ? [
+          { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
+        ] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
         ...(schoolFeatures.expenseManagementEnabled ? [

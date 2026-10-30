@@ -147,14 +147,14 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/dashboard" element={<App />} />
                   <Route path="/:schoolSlug/dashboard/form/:formId" element={<FeatureRoute feature="parentManagementEnabled"><ParentFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/documents" element={<FeatureRoute feature="parentManagementEnabled"><MyDocuments audience="student" /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/dashboard/surveys" element={<ParentSurveys />} />
-                  <Route path="/:schoolSlug/dashboard/conferences" element={<ParentConferences />} />
-                  <Route path="/:schoolSlug/dashboard/conferences/:id" element={<ParentConferenceDetail />} />
+                  <Route path="/:schoolSlug/dashboard/surveys" element={<FeatureRoute feature="surveyEnabled"><ParentSurveys /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/dashboard/conferences" element={<FeatureRoute feature="conferenceEnabled"><ParentConferences /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/dashboard/conferences/:id" element={<FeatureRoute feature="conferenceEnabled"><ParentConferenceDetail /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/dashboard" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDashboard /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="employee" /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/surveys" element={<EmployeeSurveys />} />
+                  <Route path="/:schoolSlug/employee/surveys" element={<FeatureRoute feature="surveyEnabled"><EmployeeSurveys /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
                 </Route>
@@ -221,12 +221,12 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />
                   <Route path="/:schoolSlug/admin/requests" element={<FeatureRoute feature="expenseManagementEnabled"><RequestsRouter /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/admin/surveys" element={<SurveyManagement />} />
-                  <Route path="/:schoolSlug/admin/surveys/create" element={<SurveyCreate />} />
-                  <Route path="/:schoolSlug/admin/my-surveys" element={<AdminSurveys />} />
-                  <Route path="/:schoolSlug/admin/surveys/:surveyId" element={<SurveyReport />} />
-                  <Route path="/:schoolSlug/admin/conferences" element={<AdminConferences />} />
-                  <Route path="/:schoolSlug/admin/conferences/:id" element={<AdminConferenceDetail />} />
+                  <Route path="/:schoolSlug/admin/surveys" element={<FeatureRoute feature="surveyEnabled"><SurveyManagement /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/surveys/create" element={<FeatureRoute feature="surveyEnabled"><SurveyCreate /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/my-surveys" element={<FeatureRoute feature="surveyEnabled"><AdminSurveys /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/surveys/:surveyId" element={<FeatureRoute feature="surveyEnabled"><SurveyReport /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/conferences" element={<FeatureRoute feature="conferenceEnabled"><AdminConferences /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/conferences/:id" element={<FeatureRoute feature="conferenceEnabled"><AdminConferenceDetail /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled">
                     <SuperAdminExpenses />

@@ -69,7 +69,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       label: 'Workspace',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
-        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending },
+        ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending }] : []),
         { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` },
         ...(schoolFeatures.taptimeEnabled
           ? [

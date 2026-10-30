@@ -7,6 +7,8 @@ export type SchoolFeatures = {
   employeeManagementEnabled: boolean;
   expenseManagementEnabled: boolean;
   taptimeEnabled: boolean;
+  conferenceEnabled: boolean;
+  surveyEnabled: boolean;
 };
 
 export type SchoolData = {
@@ -62,6 +64,8 @@ const schoolDataSchema = z.object({
   employee_management_enabled: z.boolean().optional(),
   expense_management_enabled: z.boolean().optional(),
   taptime_enabled: z.boolean().optional(),
+  conference_enabled: z.boolean().optional(),
+  survey_enabled: z.boolean().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -123,6 +127,8 @@ export async function fetchUserContext(): Promise<UserContext> {
           employeeManagementEnabled: data.school_data.employee_management_enabled ?? false,
           expenseManagementEnabled: data.school_data.expense_management_enabled ?? false,
           taptimeEnabled: data.school_data.taptime_enabled ?? false,
+          conferenceEnabled: data.school_data.conference_enabled ?? false,
+          surveyEnabled: data.school_data.survey_enabled ?? false,
         },
       } : null,
     };

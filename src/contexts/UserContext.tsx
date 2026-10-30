@@ -8,6 +8,8 @@ const disabledSchoolFeatures: SchoolFeatures = {
   employeeManagementEnabled: false,
   expenseManagementEnabled: false,
   taptimeEnabled: false,
+  conferenceEnabled: false,
+  surveyEnabled: false,
 };
 
 interface UserContextValue {
