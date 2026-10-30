@@ -18,6 +18,7 @@ const MyNavCountsSchema = z.object({
   forms_pending: z.number(),
   docs_pending: z.number(),
   surveys_pending: z.number(),
+  conferences_available: z.number(),
 });
 
 export type MyNavCounts = z.infer<typeof MyNavCountsSchema>;

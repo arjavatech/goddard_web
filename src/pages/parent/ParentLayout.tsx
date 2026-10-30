@@ -24,7 +24,7 @@ export function ParentLayout({ children }: ParentLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, isReady, schoolFeatures } = useUserContext();
-  const { formsPending, docsPending, surveysPending } = useNavCounts();
+  const { formsPending, docsPending, surveysPending, conferencesAvailable } = useNavCounts();
   const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/dashboard|\/profile)/, '');
   const initials = userData?.firstName && userData?.lastName
@@ -34,7 +34,7 @@ export function ParentLayout({ children }: ParentLayoutProps) {
     { icon: <Home className="h-[18px] w-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/dashboard`, exact: true, badge: formsPending },
     { icon: <FileText className="h-[18px] w-[18px]" />, label: 'Documents', path: `${schoolPrefix}/dashboard/documents`, badge: docsPending },
     ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="h-[18px] w-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/dashboard/surveys`, badge: surveysPending }] : []),
-    ...(schoolFeatures.conferenceEnabled ? [{ icon: <CalendarDays className="h-[18px] w-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/dashboard/conferences` }] : []),
+    ...(schoolFeatures.conferenceEnabled ? [{ icon: <CalendarDays className="h-[18px] w-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/dashboard/conferences`, badge: conferencesAvailable }] : []),
     { icon: <UserCog className="h-[18px] w-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
   ];
   const isActive = (path: string, exact?: boolean) => {

@@ -19,6 +19,7 @@ type NavCountsContextValue = {
   formsPending: number;
   docsPending: number;
   surveysPending: number;
+  conferencesAvailable: number;
   formsNeedingRevision: number;
   refreshCounts: () => void;
   setFormsNeedingRevision: (count: number) => void;
@@ -38,12 +39,12 @@ const ZERO_ADMIN: AdminNavCounts = {
   surveys_pending: 0,
 };
 
-const ZERO_MY: MyNavCounts = { forms_pending: 0, docs_pending: 0, surveys_pending: 0 };
+const ZERO_MY: MyNavCounts = { forms_pending: 0, docs_pending: 0, surveys_pending: 0, conferences_available: 0 };
 
 const STALE_MS = 5 * 60 * 1000; // 5 minutes
 
 export function NavCountsProvider({ children }: { children: React.ReactNode }) {
-  const { userData, isReady } = useUserContext();
+  const { userData, isReady, schoolFeatures } = useUserContext();
   const role = userData?.role?.toLowerCase();
   const isAdmin = role === 'admin' || role === 'superadmin';
 
@@ -94,6 +95,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     formsPending: myCounts.forms_pending,
     docsPending: myCounts.docs_pending,
     surveysPending: isAdmin ? adminCounts.surveys_pending : myCounts.surveys_pending,
+    conferencesAvailable: !isAdmin && schoolFeatures.conferenceEnabled ? myCounts.conferences_available : 0,
     formsNeedingRevision: overrideFormsNeedingRevision,
     refreshCounts: refresh,
     setFormsNeedingRevision: setOverrideFormsNeedingRevision,
