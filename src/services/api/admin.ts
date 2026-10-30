@@ -1059,6 +1059,7 @@ export type AdminUser = {
   phone_number?: string | null;
   taptime_employee_id?: string | null;
   taptime_pin?: string | null;
+  permissions: string[];
 };
 
 export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
@@ -1079,11 +1080,12 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         school_id: z.string(),
         phone_number: z.string().nullable().optional(),
         taptime_employee_id: z.string().nullable().optional(),
-        taptime_pin: z.string().nullable().optional()
+        taptime_pin: z.string().nullable().optional(),
+        permissions: z.array(z.string()).nullable().optional()
       }))
     }));
 
-    return data.data;
+    return data.data.map(u => ({ ...u, permissions: u.permissions ?? [] }));
   } catch (error) {
     console.error('fetchAdminUsers error:', error);
     throw error;
@@ -1103,7 +1105,8 @@ export async function inviteAdmin(
   firstName: string,
   lastName: string,
   schoolId: string,
-  phoneNumber?: string
+  phoneNumber?: string,
+  permissions?: string[]
 ): Promise<void> {
   try {
     await authedFetch({
@@ -1114,7 +1117,8 @@ export async function inviteAdmin(
         school_id: schoolId,
         first_name: firstName,
         last_name: lastName,
-        phone_number: phoneNumber || null
+        phone_number: phoneNumber || null,
+        ...(permissions !== undefined && { permissions })
       }
     }, z.object({}));
   } catch (error: any) {
@@ -1154,7 +1158,8 @@ export async function updateAdmin(
   userId: string,
   firstName: string,
   lastName: string,
-  phoneNumber?: string
+  phoneNumber?: string,
+  permissions?: string[]
 ): Promise<void> {
   await authedFetch({
     method: 'PUT',
@@ -1163,7 +1168,8 @@ export async function updateAdmin(
       user_id: userId,
       first_name: firstName,
       last_name: lastName,
-      phone_number: phoneNumber || null
+      phone_number: phoneNumber || null,
+      ...(permissions !== undefined && { permissions })
     }
   }, z.object({}));
 }

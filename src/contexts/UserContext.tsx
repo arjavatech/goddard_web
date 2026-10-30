@@ -25,6 +25,7 @@ interface UserContextValue {
   refreshUserData: () => Promise<void>;
   isReady: boolean;
   schoolFeatures: SchoolFeatures;
+  adminPermissions: string[];
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -191,7 +192,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolWebsiteUrl = profileIsCurrent ? schoolWebsiteUrl : 'https://goddardschool.com';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures, adminPermissions: visibleUserData?.adminPermissions ?? [] }}>
       {children}
     </UserContext.Provider>
   );

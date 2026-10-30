@@ -33,9 +33,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures, adminPermissions } = useUserContext();
   const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
+  const hasPermission = (perm: string) => isSuperAdmin || adminPermissions.includes(perm);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -96,50 +97,50 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Workspace',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
-        ...(schoolFeatures.parentManagementEnabled ? [
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
           { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
           { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
         ] : []),
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
-        ...(schoolFeatures.surveyEnabled ? [
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
+        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
           { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
           ...(!isSuperAdmin ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending }] : []),
         ] : []),
-        ...(schoolFeatures.conferenceEnabled ? [
+        ...(schoolFeatures.conferenceEnabled && hasPermission('manage_conferences') ? [
           { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
         ] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-        ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
-        ...(schoolFeatures.expenseManagementEnabled ? [
+        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
+        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [
           { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
         ] : []),
 
       ],
     },
-    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Forms',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
           { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due`, badge: studentFormsDue },
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review`, badge: studentFormsReview },
         ] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
           { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due`, badge: employeeFormsDue },
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review`, badge: employeeFormsReview },
         ] : []),
       ],
     }] : []),
-    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Documents',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview }] : []),
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview }] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview }] : []),
       ],
     }] : []),
-    ...(schoolFeatures.taptimeEnabled ? [{
+    ...(schoolFeatures.taptimeEnabled && hasPermission('manage_taptime') ? [{
       label: 'Time Tracking',
       items: [
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Log', path: `${schoolPrefix}/admin/time-tracking` },

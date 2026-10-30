@@ -31,7 +31,7 @@ export function AdminManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = usePageSize('admin', 8);
+  const [itemsPerPage, setItemsPerPage] = usePageSize('admin', 10);
 
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -51,15 +51,30 @@ export function AdminManagement() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
-  const { userData } = useUserContext();
+  const { userData, schoolFeatures } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
   const canManageAdministratorPins = isTapTimeEnabled && userData?.role === 'SuperAdmin';
+
+  const [invitePermissions, setInvitePermissions] = useState<string[]>([]);
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [inviteStep, setInviteStep] = useState(1);
+  const [editStep, setEditStep] = useState(1);
+
+  const PERMISSION_OPTIONS = [
+    { key: 'manage_parents',     label: 'Parent Management',    featureKey: 'parentManagementEnabled',   description: 'Classrooms, students, forms & documents' },
+    { key: 'manage_employees',   label: 'Employee Management',  featureKey: 'employeeManagementEnabled', description: 'Employees, forms & documents' },
+    { key: 'manage_expenses',    label: 'Expense Management',   featureKey: 'expenseManagementEnabled',  description: 'Requests & expense tracking' },
+    { key: 'manage_taptime',     label: 'Time Tracking',        featureKey: 'taptimeEnabled',            description: 'Attendance, salary & weekly reports' },
+    { key: 'manage_conferences', label: 'Conference Management',featureKey: 'conferenceEnabled',         description: 'Conference scheduling' },
+    { key: 'manage_surveys',     label: 'Survey Management',    featureKey: 'surveyEnabled',             description: 'Create & manage surveys' },
+  ] as const;
 
   const [resendingAdminId, setResendingAdminId] = useState<string | null>(null);
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [pinAdmin, setPinAdmin] = useState<AdminUser | null>(null);
   const [tapTimePin, setTapTimePin] = useState('');
   const [isUpdatingTapTimePin, setIsUpdatingTapTimePin] = useState(false);
+  const [isUpdatingAdmin, setIsUpdatingAdmin] = useState(false);
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -150,7 +165,8 @@ export function AdminManagement() {
         adminFirstName.trim(),
         adminLastName.trim(),
         userData.schoolId,
-        adminPhone.trim() || undefined
+        adminPhone.trim() || undefined,
+        invitePermissions
       );
 
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
@@ -240,33 +256,37 @@ export function AdminManagement() {
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
     setAdminPhone(admin.phone_number || '');
+    setEditPermissions(admin.permissions ?? []);
     setEmailError(''); // Clear any existing email errors
     setIsEditDialogOpen(true);
   };
 
   const handleUpdateAdmin = async () => {
     if (!selectedAdmin || !adminFirstName.trim() || !adminLastName.trim()) return;
-    
+    setIsUpdatingAdmin(true);
     try {
       await updateAdmin(
         selectedAdmin.id,
         adminFirstName.trim(),
         adminLastName.trim(),
-        adminPhone.trim() || undefined
+        adminPhone.trim() || undefined,
+        editPermissions
       );
-      
+
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions }
           : admin
       ));
-      
+
       showToast('success', 'Admin updated successfully');
       setIsEditDialogOpen(false);
       setSelectedAdmin(null);
       resetForm();
     } catch (error) {
       showToast('error', 'Failed to update admin');
+    } finally {
+      setIsUpdatingAdmin(false);
     }
   };
 
@@ -301,6 +321,10 @@ export function AdminManagement() {
     setAdminEmail('');
     setAdminPhone('');
     setEmailError('');
+    setInvitePermissions([]);
+    setEditPermissions([]);
+    setInviteStep(1);
+    setEditStep(1);
   };
 
   if (isLoading && admins.length === 0) {
@@ -573,6 +597,21 @@ export function AdminManagement() {
                         <span className="font-semibold text-slate-500">TapTime PIN</span>
                         <span className="font-mono font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>
                       </div>}
+                      {admin.permissions && admin.permissions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-100">
+                          <div className="flex flex-wrap gap-1">
+                            {admin.permissions.map(perm => {
+                              const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                              const label = opt ? opt.label.replace(' Management', '') : perm;
+                              return (
+                                <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
+                                  {label}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </Card>
                 );
@@ -591,11 +630,12 @@ export function AdminManagement() {
               onPageSizeChange={setItemsPerPage}
               onPageChange={setCurrentPage}
               columns={[
-                { header: 'Administrator', className: 'w-2/5' },
-                { header: 'Role', className: 'w-1/5' },
-                ...(isTapTimeEnabled ? [{ header: 'TapTime PIN', className: 'w-1/5' }] : []),
-                { header: 'Status', className: 'w-1/5' },
-                { header: 'Actions', className: 'w-1/5' },
+                { header: 'Administrator', className: 'w-1/3' },
+                { header: 'Role', className: 'w-auto' },
+                ...(isTapTimeEnabled ? [{ header: 'TapTime PIN', className: 'w-auto' }] : []),
+                { header: 'Permissions', className: 'min-w-[180px]' },
+                { header: 'Status', className: 'w-auto' },
+                { header: 'Actions', className: 'w-auto' },
               ]}
               rows={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
@@ -629,6 +669,28 @@ export function AdminManagement() {
                     {isTapTimeEnabled && <td className="py-4 px-4">
                       {admin.taptime_employee_id && <span className="font-mono text-sm font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>}
                     </td>}
+                    <td className="py-4 px-4">
+                      {admin.permissions && admin.permissions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {admin.permissions.slice(0, 3).map(perm => {
+                            const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                            const label = opt ? opt.label.replace(' Management', '') : perm;
+                            return (
+                              <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
+                                {label}
+                              </span>
+                            );
+                          })}
+                          {admin.permissions.length > 3 && (
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                              +{admin.permissions.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
                     <td className="py-4 px-4">
                       <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
                         {admin.is_verified ? 'Approved' : 'Pending'}
@@ -693,76 +755,132 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-lg font-bold text-slate-900">Invite New Admin</DialogTitle>
               <p className="text-xs text-slate-500 font-medium">Send an email invitation to register a new administrator account.</p>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
-                <Input
-                  value={adminFirstName}
-                  onChange={(e) => setAdminFirstName(e.target.value)}
-                  placeholder="Enter first name"
-                  required
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
+
+            {/* Step indicator */}
+            <div className="mb-5">
+              <div className="flex gap-1.5 mb-1.5">
+                <div className="flex-1 h-1 rounded-full bg-[#0F2D52]" />
+                <div className={`flex-1 h-1 rounded-full ${inviteStep === 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name</label>
-                <Input
-                  value={adminLastName}
-                  onChange={(e) => setAdminLastName(e.target.value)}
-                  placeholder="Enter last name"
-                  required
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address</label>
-                <Input
-                  type="email"
-                  value={adminEmail}
-                  onChange={handleEmailChange}
-                  placeholder="Enter admin email"
-                  required
-                  className={`w-full h-10 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all bg-white ${
-                    emailError
-                      ? 'border-red-400 focus:ring-red-100 focus:border-red-500'
-                      : 'border-slate-200 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]'
-                  }`}
-                />
-                {emailError && (
-                  <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>
-                )}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
-                  value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
-              </div>
+              <p className="text-xs text-slate-500">Step {inviteStep} of 2 — {inviteStep === 1 ? 'Basic Info' : 'Permissions'}</p>
             </div>
+
+            {inviteStep === 1 && (
+              <div className="grid grid-cols-2 gap-4 py-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <Input
+                    value={adminFirstName}
+                    onChange={(e) => setAdminFirstName(e.target.value)}
+                    placeholder="Enter first name"
+                    required
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name</label>
+                  <Input
+                    value={adminLastName}
+                    onChange={(e) => setAdminLastName(e.target.value)}
+                    placeholder="Enter last name"
+                    required
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address</label>
+                  <Input
+                    type="email"
+                    value={adminEmail}
+                    onChange={handleEmailChange}
+                    placeholder="Enter admin email"
+                    required
+                    className={`w-full h-10 rounded-xl border text-sm focus:outline-none focus:ring-2 transition-all bg-white ${
+                      emailError
+                        ? 'border-red-400 focus:ring-red-100 focus:border-red-500'
+                        : 'border-slate-200 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]'
+                    }`}
+                  />
+                  {emailError && <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>}
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+                  <Input
+                    type="tel"
+                    value={adminPhone}
+                    onChange={(e) => setAdminPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {inviteStep === 2 && (
+              <div className="py-2">
+                <p className="text-xs text-slate-500 mb-3">Select the modules this admin can access. Only features enabled for your school are shown.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PERMISSION_OPTIONS
+                    .filter(opt => schoolFeatures[opt.featureKey as keyof typeof schoolFeatures])
+                    .map(opt => (
+                      <label key={opt.key} className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={invitePermissions.includes(opt.key)}
+                          onChange={(e) => setInvitePermissions(prev => e.target.checked ? [...prev, opt.key] : prev.filter(p => p !== opt.key))}
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0F2D52] accent-[#0F2D52]"
+                        />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{opt.label}</p>
+                          <p className="text-xs text-slate-500">{opt.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                </div>
+              </div>
+            )}
+
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsAddDialogOpen(false)} 
-                className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleInviteAdmin} 
-                disabled={isInviting || !isFormValid} 
-                className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
-              >
-                {isInviting ? 'Sending...' : 'Send Invite'}
-              </Button>
+              {inviteStep === 1 ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddDialogOpen(false)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setInviteStep(2)}
+                    disabled={!isFormValid}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50"
+                  >
+                    Next: Permissions →
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setInviteStep(1)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    ← Back
+                  </Button>
+                  <Button
+                    onClick={handleInviteAdmin}
+                    disabled={isInviting}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                  >
+                    {isInviting ? 'Sending...' : 'Send Invite'}
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -775,7 +893,7 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
             <DialogHeader className="mb-4">
               <div className="w-10 h-10 rounded-xl bg-[#EFF5FB] text-[#0F2D52] flex items-center justify-center mb-3">
                 <Edit className="w-5 h-5" />
@@ -783,59 +901,118 @@ export function AdminManagement() {
               <DialogTitle className="text-lg font-bold text-slate-900">Edit Admin Details</DialogTitle>
               <p className="text-xs text-slate-500 font-medium">Update the name or contact information for this administrator.</p>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
-                <Input
-                  value={adminFirstName}
-                  onChange={(e) => setAdminFirstName(e.target.value)}
-                  placeholder="Enter first name"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
+
+            {/* Step indicator */}
+            <div className="mb-5">
+              <div className="flex gap-1.5 mb-1.5">
+                <div className="flex-1 h-1 rounded-full bg-[#0F2D52]" />
+                <div className={`flex-1 h-1 rounded-full ${editStep === 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
-                <Input
-                  value={adminLastName}
-                  onChange={(e) => setAdminLastName(e.target.value)}
-                  placeholder="Enter last name"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email (Cannot edit)</label>
-                <Input
-                  type="email"
-                  value={adminEmail}
-                  disabled
-                  className="w-full h-10 rounded-xl border border-slate-100 text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
-                <Input
-                  type="tel"
-                  value={adminPhone}
-                  onChange={(e) => setAdminPhone(e.target.value)}
-                  placeholder="Enter phone number"
-                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
-                />
-              </div>
+              <p className="text-xs text-slate-500">Step {editStep} of 2 — {editStep === 1 ? 'Basic Info' : 'Permissions'}</p>
             </div>
+
+            {editStep === 1 && (
+              <div className="grid grid-cols-2 gap-4 py-2">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <Input
+                    value={adminFirstName}
+                    onChange={(e) => setAdminFirstName(e.target.value)}
+                    placeholder="Enter first name"
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
+                  <Input
+                    value={adminLastName}
+                    onChange={(e) => setAdminLastName(e.target.value)}
+                    placeholder="Enter last name"
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Email (Cannot edit)</label>
+                  <Input
+                    type="email"
+                    value={adminEmail}
+                    disabled
+                    className="w-full h-10 rounded-xl border border-slate-100 text-sm bg-slate-50 text-slate-400 cursor-not-allowed"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
+                  <Input
+                    type="tel"
+                    value={adminPhone}
+                    onChange={(e) => setAdminPhone(e.target.value)}
+                    placeholder="Enter phone number"
+                    className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                  />
+                </div>
+              </div>
+            )}
+
+            {editStep === 2 && (
+              <div className="py-2">
+                <p className="text-xs text-slate-500 mb-3">Select the modules this admin can access. Only features enabled for your school are shown.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PERMISSION_OPTIONS
+                    .filter(opt => schoolFeatures[opt.featureKey as keyof typeof schoolFeatures])
+                    .map(opt => (
+                      <label key={opt.key} className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 cursor-pointer hover:bg-slate-50 transition-colors">
+                        <input
+                          type="checkbox"
+                          checked={editPermissions.includes(opt.key)}
+                          onChange={(e) => setEditPermissions(prev => e.target.checked ? [...prev, opt.key] : prev.filter(p => p !== opt.key))}
+                          className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#0F2D52] accent-[#0F2D52]"
+                        />
+                        <div>
+                          <p className="text-sm font-semibold text-slate-900">{opt.label}</p>
+                          <p className="text-xs text-slate-500">{opt.description}</p>
+                        </div>
+                      </label>
+                    ))}
+                </div>
+              </div>
+            )}
+
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsEditDialogOpen(false)} 
-                className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleUpdateAdmin} 
-                className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold flex items-center justify-center"
-              >
-                Update Admin
-              </Button>
+              {editStep === 1 ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsEditDialogOpen(false)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={() => setEditStep(2)}
+                    disabled={!adminFirstName.trim() || !adminLastName.trim()}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50"
+                  >
+                    Next: Permissions →
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditStep(1)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    ← Back
+                  </Button>
+                  <Button
+                    onClick={handleUpdateAdmin}
+                    disabled={isUpdatingAdmin}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold flex items-center justify-center disabled:opacity-50"
+                  >
+                    {isUpdatingAdmin ? 'Updating...' : 'Update Admin'}
+                  </Button>
+                </>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
