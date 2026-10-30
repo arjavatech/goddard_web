@@ -111,6 +111,7 @@ export interface ConferenceStats {
 // ── Request payloads ──────────────────────────────────────────────────────────
 
 export interface SlotInput {
+  id?: string;        // present for existing slots being updated
   start_time: string;
   end_time: string;
   capacity: number;

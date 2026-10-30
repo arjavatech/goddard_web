@@ -12,8 +12,8 @@ import { useUserContext } from '../../contexts/UserContext';
 import { cn } from '../../lib/utils';
 import {
   listConferences, getConferenceStats, createConference, updateConference,
-  deleteConference, type ConferenceListItem, type ConferenceStats,
-  type CreateConferencePayload, type ClassroomSlotsInput,
+  deleteConference, getConference, type ConferenceListItem, type ConferenceStats,
+  type CreateConferencePayload, type ClassroomSlotsInput, type SlotInput,
 } from '../../services/api/conferences';
 import { fetchClassrooms, type Classroom } from '../../services/api/admin';
 
@@ -119,6 +119,7 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [bookedSlotIds, setBookedSlotIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     document.body.style.overflow = 'hidden';
@@ -128,6 +129,28 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
   useEffect(() => {
     fetchClassrooms(schoolId).then(setClassroomList).catch(() => {});
   }, [schoolId]);
+
+  useEffect(() => {
+    if (!editData) return;
+    getConference(editData.id)
+      .then(detail => {
+        const classrooms: ClassroomSlotsInput[] = detail.classrooms_detail.map(cr => ({
+          classroom_id: cr.classroom_id,
+          slots: cr.slots.map(s => ({
+            id: s.id,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            capacity: s.capacity,
+          })),
+        }));
+        setForm(f => ({ ...f, classrooms }));
+        setBookedSlotIds(new Set(
+          detail.classrooms_detail
+            .flatMap(cr => cr.slots.filter(s => s.booked_count > 0).map(s => s.id))
+        ));
+      })
+      .catch(() => {});
+  }, [editData]);
 
   function ensureClassroomInSlots(classroomId: string) {
     setForm(f => {
@@ -242,6 +265,15 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
     !!form.conference_date &&
     form.booking_close_at.slice(0, 10) > form.conference_date;
 
+  function slotsHaveOverlap(slots: SlotInput[]): boolean {
+    for (let i = 0; i < slots.length; i++) {
+      for (let j = i + 1; j < slots.length; j++) {
+        if (slots[i].start_time < slots[j].end_time && slots[i].end_time > slots[j].start_time) return true;
+      }
+    }
+    return false;
+  }
+
   const canGoNext = () => {
     if (step === 1) {
       const basicOk = !!(form.title.trim() && form.description.trim() && form.conference_date >= todayString());
@@ -253,6 +285,7 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
     if (step === 3) {
       if (!form.classrooms.every(c => c.slots.length > 0)) return false;
       if (!form.classrooms.every(c => c.slots.every(s => s.end_time > s.start_time))) return false;
+      if (form.classrooms.some(c => slotsHaveOverlap(c.slots))) return false;
       return true;
     }
     return true;
@@ -481,6 +514,10 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
                     <div className="p-4 space-y-3">
                       {cr.slots.map((slot, idx) => {
                         const timeInvalid = !!slot.end_time && !!slot.start_time && slot.end_time <= slot.start_time;
+                        const overlaps = !timeInvalid && cr.slots.some((other, oi) =>
+                          oi !== idx && slot.start_time < other.end_time && slot.end_time > other.start_time
+                        );
+                        const isBooked = !!(slot.id && bookedSlotIds.has(slot.id));
                         return (
                           <div key={idx} className="space-y-1">
                             <div className="flex items-center gap-2">
@@ -491,17 +528,25 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
                               <input type="time" value={slot.end_time}
                                 onChange={e => updateSlot(cr.classroom_id, idx, 'end_time', e.target.value)}
                                 className={cn('flex-1 rounded-lg border px-3 py-2 text-sm focus:outline-none focus:ring-2',
-                                  timeInvalid
+                                  (timeInvalid || overlaps)
                                     ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
                                     : 'border-slate-200 focus:border-[#0F2D52] focus:ring-[#0F2D52]/20')} />
                               {cr.slots.length > 1 && (
-                                <button onClick={() => removeSlot(cr.classroom_id, idx)}
-                                  className="text-red-400 hover:text-red-600 text-lg leading-none flex-shrink-0">&times;</button>
+                                isBooked
+                                  ? <span title="Cannot remove — slot has bookings"
+                                      className="text-slate-300 text-lg leading-none flex-shrink-0 cursor-not-allowed select-none">&times;</span>
+                                  : <button onClick={() => removeSlot(cr.classroom_id, idx)}
+                                      className="text-red-400 hover:text-red-600 text-lg leading-none flex-shrink-0">&times;</button>
                               )}
                             </div>
                             {timeInvalid && (
                               <p className="text-xs text-red-500 flex items-center gap-1">
                                 <AlertCircle className="h-3 w-3 flex-shrink-0" /> End time must be after start time
+                              </p>
+                            )}
+                            {overlaps && !timeInvalid && (
+                              <p className="text-xs text-red-500 flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" /> This slot overlaps with another slot
                               </p>
                             )}
                           </div>

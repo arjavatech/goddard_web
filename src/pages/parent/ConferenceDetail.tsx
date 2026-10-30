@@ -47,6 +47,7 @@ export function ParentConferenceDetail() {
       .then(pd => {
         if (pd) {
           const opts = (pd.children || [])
+            .filter((c: any) => c.childStatus === 'active')
             .map((c: any) => ({
               id: c.childId || '',
               name: c.childFullName || '',

@@ -404,11 +404,14 @@ export function ParentConferences() {
     fetchSingleParent(parentId, schoolId)
       .then(pd => {
         if (pd) {
-          const opts = (pd.children || []).map((c: any) => ({
-            id: c.childId || '',
-            name: c.childFullName || '',
-            classroomId: c.classroomId || '',
-          })).filter((c: ChildOption) => c.id);
+          const opts = (pd.children || [])
+            .filter((c: any) => c.childStatus === 'active')
+            .map((c: any) => ({
+              id: c.childId || '',
+              name: c.childFullName || '',
+              classroomId: c.classroomId || '',
+            }))
+            .filter((c: ChildOption) => c.id);
           setChildren(opts);
         }
       })
@@ -419,6 +422,10 @@ export function ParentConferences() {
 
   const bookedConferenceIds = new Set(
     bookings.filter(b => b.status === 'booked').map(b => b.conference_id)
+  );
+
+  const bookedChildConferencePairs = new Set(
+    bookings.filter(b => b.status === 'booked').map(b => `${b.conference_id}:${b.child_id}`)
   );
 
   const activeBookings = bookings.filter(b =>
@@ -434,7 +441,15 @@ export function ParentConferences() {
 
   const filteredAvailable = conferences.filter(c =>
     c.status === 'active' &&
-    !bookedConferenceIds.has(c.id) &&
+    (
+      children.length === 0
+        ? !bookedConferenceIds.has(c.id)
+        : children.some(child =>
+            child.classroomId &&
+            c.classroom_tags.some(t => t.classroom_id === child.classroomId) &&
+            !bookedChildConferencePairs.has(`${c.id}:${child.id}`)
+          )
+    ) &&
     (!search || c.title.toLowerCase().includes(search.toLowerCase()) || c.description.toLowerCase().includes(search.toLowerCase()))
   );
 
