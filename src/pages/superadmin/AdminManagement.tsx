@@ -51,7 +51,7 @@ export function AdminManagement() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
-  const { userData, schoolFeatures, refreshUserData } = useUserContext();
+  const { userData, schoolFeatures } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
   const canManageAdministratorPins = isTapTimeEnabled && userData?.role === 'SuperAdmin';
 
@@ -102,8 +102,6 @@ export function AdminManagement() {
   const totalAdmins = admins.length;
   const activeAdmins = admins.filter(a => a.is_verified).length;
   const pendingAdmins = admins.filter(a => !a.is_verified).length;
-
-  React.useEffect(() => { refreshUserData(); }, []);
 
   React.useEffect(() => {
     const loadAdmins = async () => {
