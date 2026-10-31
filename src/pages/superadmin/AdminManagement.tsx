@@ -51,7 +51,7 @@ export function AdminManagement() {
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
-  const { userData, schoolFeatures } = useUserContext();
+  const { userData, schoolFeatures, refreshUserData } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
   const canManageAdministratorPins = isTapTimeEnabled && userData?.role === 'SuperAdmin';
 
@@ -102,6 +102,8 @@ export function AdminManagement() {
   const totalAdmins = admins.length;
   const activeAdmins = admins.filter(a => a.is_verified).length;
   const pendingAdmins = admins.filter(a => !a.is_verified).length;
+
+  React.useEffect(() => { refreshUserData(); }, []);
 
   React.useEffect(() => {
     const loadAdmins = async () => {
@@ -256,7 +258,12 @@ export function AdminManagement() {
     setAdminLastName(admin.last_name);
     setAdminEmail(admin.email);
     setAdminPhone(admin.phone_number || '');
-    setEditPermissions(admin.permissions ?? []);
+    setEditPermissions(
+      (admin.permissions ?? []).filter(perm => {
+        const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+        return opt ? !!schoolFeatures[opt.featureKey as keyof typeof schoolFeatures] : false;
+      })
+    );
     setEmailError(''); // Clear any existing email errors
     setIsEditDialogOpen(true);
   };
@@ -597,21 +604,27 @@ export function AdminManagement() {
                         <span className="font-semibold text-slate-500">TapTime PIN</span>
                         <span className="font-mono font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>
                       </div>}
-                      {admin.permissions && admin.permissions.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-slate-100">
-                          <div className="flex flex-wrap gap-1">
-                            {admin.permissions.map(perm => {
-                              const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
-                              const label = opt ? opt.label.replace(' Management', '') : perm;
-                              return (
-                                <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
-                                  {label}
-                                </span>
-                              );
-                            })}
+                      {(() => {
+                        const visiblePerms = (admin.permissions ?? []).filter(perm => {
+                          const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                          return opt ? !!schoolFeatures[opt.featureKey as keyof typeof schoolFeatures] : false;
+                        });
+                        return visiblePerms.length > 0 ? (
+                          <div className="mt-3 pt-3 border-t border-slate-100">
+                            <div className="flex flex-wrap gap-1">
+                              {visiblePerms.map(perm => {
+                                const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                                const label = opt ? opt.label.replace(' Management', '') : perm;
+                                return (
+                                  <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
+                                    {label}
+                                  </span>
+                                );
+                              })}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ) : null;
+                      })()}
                     </div>
                   </Card>
                 );
@@ -670,26 +683,32 @@ export function AdminManagement() {
                       {admin.taptime_employee_id && <span className="font-mono text-sm font-bold text-[#0F2D52]">{admin.taptime_pin || '—'}</span>}
                     </td>}
                     <td className="py-4 px-4">
-                      {admin.permissions && admin.permissions.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {admin.permissions.slice(0, 3).map(perm => {
-                            const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
-                            const label = opt ? opt.label.replace(' Management', '') : perm;
-                            return (
-                              <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
-                                {label}
+                      {(() => {
+                        const visiblePerms = (admin.permissions ?? []).filter(perm => {
+                          const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                          return opt ? !!schoolFeatures[opt.featureKey as keyof typeof schoolFeatures] : false;
+                        });
+                        return visiblePerms.length > 0 ? (
+                          <div className="flex flex-wrap gap-1">
+                            {visiblePerms.slice(0, 3).map(perm => {
+                              const opt = PERMISSION_OPTIONS.find(o => o.key === perm);
+                              const label = opt ? opt.label.replace(' Management', '') : perm;
+                              return (
+                                <span key={perm} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-blue-50 text-[#0F2D52] border border-blue-100 whitespace-nowrap">
+                                  {label}
+                                </span>
+                              );
+                            })}
+                            {visiblePerms.length > 3 && (
+                              <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
+                                +{visiblePerms.length - 3}
                               </span>
-                            );
-                          })}
-                          {admin.permissions.length > 3 && (
-                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">
-                              +{admin.permissions.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-4">
                       <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
