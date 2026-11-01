@@ -136,6 +136,11 @@ export function AdminDrive() {
 
   // Upload queue
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
+  const [dismissedErrorIds, setDismissedErrorIds] = useState<Set<string>>(new Set());
+
+  // Drag-drop state
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [draggedOverFolderId, setDraggedOverFolderId] = useState<string | null>(null);
 
   // Multi-select
   const [isMultiSelect, setIsMultiSelect] = useState(false);
@@ -318,6 +323,116 @@ export function AdminDrive() {
     }
   };
 
+  // ── Drag-drop upload ──────────────────────────────────────────────────────────
+
+  const processDroppedFiles = async (files: File[], targetFolderId: string | null) => {
+    for (const file of files) {
+      const uploadId = crypto.randomUUID();
+      let abortFn = () => {};
+      setUploadQueue(q => [...q, { id: uploadId, name: file.name, progress: 0, done: false, abort: () => abortFn() }]);
+      try {
+        const { upload_url, s3_key } = await getDriveUploadUrl({
+          file_name: file.name,
+          content_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+          folder_id: targetFolderId ?? undefined,
+        });
+        const task = uploadToS3(upload_url, file, pct =>
+          setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
+        );
+        abortFn = task.abort;
+        setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, abort: task.abort } : u));
+        await task.promise;
+        await registerDriveFile({
+          folder_id: targetFolderId ?? undefined,
+          name: file.name, s3_key,
+          mime_type: file.type || 'application/octet-stream',
+          file_size: file.size,
+        });
+        setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
+        setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== uploadId)), 2000);
+        fetchItems();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Upload failed';
+        setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, error: msg } : u));
+      }
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragActive(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+    setDraggedOverFolderId(null);
+
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (!files.length) return;
+
+    // Upload to current folder
+    processDroppedFiles(files, currentFolderId);
+  };
+
+  const handleFolderDragEnter = (e: React.DragEvent<HTMLDivElement>, folderId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes('Files')) {
+      setDraggedOverFolderId(folderId);
+    }
+  };
+
+  const handleFolderDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.currentTarget === e.target) {
+      setDraggedOverFolderId(null);
+    }
+  };
+
+  const handleFolderDrop = (e: React.DragEvent<HTMLDivElement>, targetFolder: DriveItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDraggedOverFolderId(null);
+
+    const files = Array.from(e.dataTransfer.files ?? []);
+    if (!files.length) return;
+
+    // Only upload if target is a folder
+    if (targetFolder.item_type === 'folder') {
+      processDroppedFiles(files, targetFolder.id);
+    }
+  };
+
+  // ── Error dismissal ───────────────────────────────────────────────────────────
+
+  const dismissError = (uploadId: string) => {
+    setDismissedErrorIds(prev => {
+      const next = new Set(prev);
+      next.add(uploadId);
+      return next;
+    });
+  };
+
   // ── Folder creation ───────────────────────────────────────────────────────────
 
   const handleCreateFolder = async () => {
@@ -489,15 +604,25 @@ export function AdminDrive() {
     const isFolder = item.item_type === 'folder';
     const { bg, iconEl } = cardStyle(item);
     const isSelected = selectedIds.has(item.id);
+    const isDraggedOver = draggedOverFolderId === item.id && isFolder;
     return (
       <div
         className={cn(
           'group rounded-xl border bg-white overflow-hidden cursor-pointer transition-all select-none',
-          isSelected
+          isDraggedOver
+            ? 'border-green-500 ring-2 ring-green-200 shadow-md bg-green-50'
+            : isSelected
             ? 'border-blue-500 ring-2 ring-blue-200 shadow-md'
             : 'border-slate-200 hover:border-blue-300 hover:shadow-md',
         )}
         onClick={() => handleCardClick(item)}
+        onDragEnter={(e) => isFolder && handleFolderDragEnter(e, item.id)}
+        onDragLeave={handleFolderDragLeave}
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDrop={(e) => handleFolderDrop(e, item)}
       >
         <div className={cn('relative flex items-center justify-center h-28', bg)}>
           {iconEl}
@@ -579,14 +704,24 @@ export function AdminDrive() {
             {rows.map(item => {
               const isFolder = item.item_type === 'folder';
               const isSelected = selectedIds.has(item.id);
+              const isDraggedOver = draggedOverFolderId === item.id && isFolder;
               return (
                 <tr
                   key={item.id}
                   className={cn(
-                    'border-b border-slate-50 cursor-pointer group',
-                    isSelected ? 'bg-blue-50' : 'hover:bg-slate-50',
+                    'border-b border-slate-50 cursor-pointer group transition-colors',
+                    isDraggedOver
+                      ? 'bg-green-50 hover:bg-green-50'
+                      : isSelected ? 'bg-blue-50' : 'hover:bg-slate-50',
                   )}
                   onClick={() => handleCardClick(item)}
+                  onDragEnter={(e) => isFolder && handleFolderDragEnter(e, item.id)}
+                  onDragLeave={handleFolderDragLeave}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onDrop={(e) => handleFolderDrop(e, item)}
                 >
                   {isMultiSelect && (
                     <td className="py-2.5 px-3">
@@ -794,29 +929,54 @@ export function AdminDrive() {
         {/* Upload queue */}
         {uploadQueue.length > 0 && (
           <div className="px-4 sm:px-5 py-2 space-y-1.5 bg-white border-b border-slate-100 flex-shrink-0">
-            {uploadQueue.map(u => (
-              <div key={u.id} className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-xs">
-                <Upload className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                <span className="truncate flex-1 text-slate-700">{u.name}</span>
-                {u.error ? <span className="text-red-500">{u.error}</span>
-                  : u.done ? <span className="text-green-600 font-medium">Done</span>
+            {uploadQueue.map(u => {
+              // Hide dismissed errors
+              if (u.error && dismissedErrorIds.has(u.id)) {
+                return null;
+              }
+              return (
+                <div key={u.id} className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-xs">
+                  <Upload className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                  <span className="truncate flex-1 text-slate-700">{u.name}</span>
+                  {u.error ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-500">{u.error}</span>
+                      <button
+                        onClick={() => dismissError(u.id)}
+                        className="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+                        title="Dismiss error"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : u.done ? <span className="text-green-600 font-medium">Done</span>
                   : <>
                     <div className="w-24 h-1.5 bg-blue-200 rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 transition-all" style={{ width: `${u.progress}%` }} />
                     </div>
                     <span className="text-blue-600 w-8 text-right">{u.progress}%</span>
-                    <button onClick={() => u.abort()} className="text-slate-400 hover:text-red-500">
+                    <button onClick={() => u.abort()} className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   </>
-                }
-              </div>
-            ))}
+                  }
+                </div>
+              );
+            })}
           </div>
         )}
 
         {/* ── Main scrollable content ── */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-5 pb-24">
+        <div
+          className={cn(
+            'flex-1 overflow-y-auto p-4 sm:p-5 pb-24 transition-colors',
+            isDragActive && 'bg-blue-50/50',
+          )}
+          onDragEnter={handleDragEnter}
+          onDragLeave={handleDragLeave}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+        >
 
           {isLoading && items.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-slate-400 text-sm">Loading…</div>
@@ -967,7 +1127,7 @@ export function AdminDrive() {
           </div>
 
           {/* Preview content */}
-          <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
+          <div className="flex-1 flex items-center justify-center overflow-hidden">
             {isPreviewLoading ? (
               <div className="text-white/50 text-sm">Loading preview…</div>
             ) : !previewUrl ? (
@@ -979,7 +1139,7 @@ export function AdminDrive() {
               <img
                 src={previewUrl}
                 alt={previewItem.name}
-                className="max-h-full max-w-full object-contain rounded-lg shadow-2xl"
+                className="w-full h-full object-contain rounded-lg shadow-2xl p-4"
               />
             ) : previewItem.mime_type === 'application/pdf' ? (
               <iframe

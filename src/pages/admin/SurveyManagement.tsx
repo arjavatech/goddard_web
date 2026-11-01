@@ -582,7 +582,7 @@ export function SurveyManagement() {
 
           {/* Card View */}
           {viewMode === 'card' && (
-            <div className="p-4">
+            <div className="space-y-4">
               {loading ? (
                 <div className="py-12 text-center">
                   <div className="flex items-center justify-center mb-3">
@@ -591,7 +591,7 @@ export function SurveyManagement() {
                   <p className="text-slate-500 text-sm font-semibold">Loading surveys...</p>
                 </div>
               ) : pagedSurveys.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {pagedSurveys.map(survey => {
                     const rate = responseRate(survey);
                     const sb = STATUS_BADGE[survey.status];
@@ -601,10 +601,10 @@ export function SurveyManagement() {
                         className="border border-slate-100 bg-white hover:border-slate-200 hover:shadow-md transition-all rounded-2xl overflow-hidden cursor-pointer h-full flex flex-col justify-between"
                         onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
                       >
-                        <div className="p-4 space-y-3">
+                        <div className="p-5 space-y-4">
                           {/* Top: Status badge + Audience */}
                           <div className="flex justify-between items-start gap-2">
-                            <div className="flex flex-col gap-1.5">
+                            <div className="flex flex-col gap-2">
                               <Badge variant={sb.variant} className="text-xs w-fit">{sb.label}</Badge>
                               {survey.is_template && (
                                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 w-fit">
@@ -623,36 +623,36 @@ export function SurveyManagement() {
                               <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <h3 className="font-bold text-slate-900 text-sm leading-snug mb-0.5">{survey.title}</h3>
+                              <h3 className="font-bold text-slate-900 text-sm leading-snug mb-1">{survey.title}</h3>
                               <p className="text-xs text-slate-400">{survey.question_count} questions · by {survey.created_by_name ?? '—'}</p>
                             </div>
                           </div>
 
                           {/* Details grid */}
-                          <div className="grid grid-cols-2 gap-x-3 gap-y-2 pt-2 border-t border-slate-50">
+                          <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Type</p>
-                              <p className="text-xs font-semibold text-slate-700 mt-0.5">
+                              <p className="text-xs font-semibold text-slate-700 mt-1">
                                 {survey.is_anonymous ? 'Anonymous' : 'Identified'}
                               </p>
                             </div>
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Responses</p>
-                              <p className="text-xs font-semibold text-slate-700 mt-0.5">
+                              <p className="text-xs font-semibold text-slate-700 mt-1">
                                 {survey.total_targeted > 0 ? `${survey.total_responded}/${survey.total_targeted}` : survey.total_responded}
                               </p>
                             </div>
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Created</p>
-                              <p className="text-xs font-semibold text-slate-600 mt-0.5">{formatDate(survey.created_at)}</p>
+                              <p className="text-xs font-semibold text-slate-600 mt-1">{formatDate(survey.created_at)}</p>
                             </div>
                             <div>
                               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Expires</p>
-                              <p className="text-xs font-semibold text-slate-600 mt-0.5">{survey.expires_at ? formatDate(survey.expires_at) : 'No expiry'}</p>
+                              <p className="text-xs font-semibold text-slate-600 mt-1">{survey.expires_at ? formatDate(survey.expires_at) : 'No expiry'}</p>
                             </div>
                             {survey.total_targeted > 0 && (
                               <div className="col-span-2">
-                                <div className="flex items-center justify-between text-xs text-slate-600 mb-1">
+                                <div className="flex items-center justify-between text-xs text-slate-600 mb-2">
                                   <span className="font-semibold">Response Rate</span>
                                   <span className="font-bold">{rate}%</span>
                                 </div>
@@ -667,55 +667,73 @@ export function SurveyManagement() {
                           </div>
                         </div>
 
-                        {/* Bottom Actions section */}
-                        <div className="bg-slate-50/50 px-4 py-3 border-t border-slate-50 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`)}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-[#0F2D52] hover:bg-[#EFF5FB] transition-all"
-                              title="View Report"
-                            >
-                              <BarChart2 className="h-4 w-4" />
-                            </button>
-                            {survey.status === 'published' && (
-                              <button
-                                onClick={() => setShareSurvey(survey)}
-                                className="p-1.5 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all"
-                                title="Share Link"
-                              >
-                                <Share2 className="h-4 w-4" />
-                              </button>
-                            )}
-                            {survey.status === 'published' && (
-                              <button
-                                onClick={() => setPendingTemplate(survey)}
-                                className={cn('p-1.5 rounded-lg transition-all', survey.is_template ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50')}
-                                title={survey.is_template ? 'Remove from Templates' : 'Save as Template'}
-                              >
-                                {survey.is_template ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />}
-                              </button>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            {survey.total_responded === 0 && (
-                              <>
-                                <button
-                                  onClick={() => navigate(`${schoolPrefix}/admin/surveys/create?edit=${survey.id}`)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"
-                                  title="Edit"
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={() => setDeletingSurvey(survey)}
-                                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"
-                                  title="Delete"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </>
-                            )}
-                          </div>
+                        {/* Bottom Actions section - Evenly distributed */}
+                        <div className="bg-slate-50/50 border-t border-slate-100" onClick={e => e.stopPropagation()}>
+                          {/* Collect all actions */}
+                          {(() => {
+                            const actions: Array<{ id: string; icon: React.ReactNode; label: string; onClick: () => void; color: string; show: boolean }> = [
+                              {
+                                id: 'view',
+                                icon: <BarChart2 className="h-4 w-4" />,
+                                label: 'View',
+                                onClick: () => navigate(`${schoolPrefix}/admin/surveys/${survey.id}`),
+                                color: 'text-slate-400 hover:text-[#0F2D52] hover:bg-[#EFF5FB]',
+                                show: true
+                              },
+                              {
+                                id: 'share',
+                                icon: <Share2 className="h-4 w-4" />,
+                                label: 'Share',
+                                onClick: () => setShareSurvey(survey),
+                                color: 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50',
+                                show: survey.status === 'published'
+                              },
+                              {
+                                id: 'template',
+                                icon: survey.is_template ? <BookmarkCheck className="h-4 w-4" /> : <Bookmark className="h-4 w-4" />,
+                                label: survey.is_template ? 'Saved' : 'Save',
+                                onClick: () => setPendingTemplate(survey),
+                                color: survey.is_template ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-50' : 'text-slate-400 hover:text-amber-500 hover:bg-amber-50',
+                                show: survey.status === 'published'
+                              },
+                              {
+                                id: 'edit',
+                                icon: <Edit className="h-4 w-4" />,
+                                label: 'Edit',
+                                onClick: () => navigate(`${schoolPrefix}/admin/surveys/create?edit=${survey.id}`),
+                                color: 'text-slate-400 hover:text-blue-600 hover:bg-blue-50',
+                                show: survey.total_responded === 0
+                              },
+                              {
+                                id: 'delete',
+                                icon: <Trash2 className="h-4 w-4" />,
+                                label: 'Delete',
+                                onClick: () => setDeletingSurvey(survey),
+                                color: 'text-slate-400 hover:text-red-600 hover:bg-red-50',
+                                show: survey.total_responded === 0
+                              }
+                            ];
+
+                            const visibleActions = actions.filter(a => a.show);
+                            const actionWidth = visibleActions.length > 0 ? `calc(100% / ${visibleActions.length})` : '0';
+
+                            return (
+                              <div className="flex h-12">
+                                {visibleActions.map((action, idx) => (
+                                  <button
+                                    key={action.id}
+                                    onClick={action.onClick}
+                                    title={action.label}
+                                    style={{ width: actionWidth }}
+                                    className={`flex items-center justify-center gap-2 px-2 py-2.5 transition-all ${action.color} ${idx < visibleActions.length - 1 ? 'border-r border-slate-200/50' : ''} hover:bg-opacity-100`}
+                                  >
+                                    {action.icon}
+                                    <span className="hidden sm:inline text-xs font-semibold whitespace-nowrap">{action.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </Card>
                     );
