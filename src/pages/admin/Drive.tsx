@@ -422,16 +422,36 @@ export function AdminDrive() {
     e.stopPropagation();
   };
 
+  const splitDragItems = (dt: DataTransfer): { files: File[]; folderNames: string[] } => {
+    const files: File[] = [];
+    const folderNames: string[] = [];
+    for (const item of Array.from(dt.items ?? [])) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const entry = (item as any).webkitGetAsEntry?.();
+      if (entry?.isDirectory) {
+        folderNames.push(entry.name);
+      } else if (item.kind === 'file') {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    return { files, folderNames };
+  };
+
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
     setDraggedOverFolderId(null);
 
-    const files = Array.from(e.dataTransfer.files ?? []);
-    if (!files.length) return;
+    const { files, folderNames } = splitDragItems(e.dataTransfer);
 
-    processDroppedFiles(files, currentFolderId);
+    for (const name of folderNames) {
+      const uploadId = crypto.randomUUID();
+      setUploadQueue(q => [...q, { id: uploadId, name, progress: 0, done: false, abort: () => {}, error: 'Folder uploads are not supported. Upload individual files instead.' }]);
+    }
+
+    if (files.length) processDroppedFiles(files, currentFolderId);
   };
 
   const handleFolderDragEnter = (e: React.DragEvent<HTMLDivElement>, folderId: string) => {
@@ -454,12 +474,17 @@ export function AdminDrive() {
     e.preventDefault();
     setDraggedOverFolderId(null);
 
-    const files = Array.from(e.dataTransfer.files ?? []);
-    if (!files.length) return;
-
     if (targetFolder.item_type === 'folder') {
       e.stopPropagation(); // only stop propagation for folder drops (file cards bubble to handleDrop)
-      processDroppedFiles(files, targetFolder.id);
+
+      const { files, folderNames } = splitDragItems(e.dataTransfer);
+
+      for (const name of folderNames) {
+        const uploadId = crypto.randomUUID();
+        setUploadQueue(q => [...q, { id: uploadId, name, progress: 0, done: false, abort: () => {}, error: 'Folder uploads are not supported. Upload individual files instead.' }]);
+      }
+
+      if (files.length) processDroppedFiles(files, targetFolder.id);
     }
   };
 
@@ -635,8 +660,8 @@ export function AdminDrive() {
   const handleMultiDelete = () => setDeleteItems(getSelectedItems());
 
   const handleMultiCopy = () => {
-    const files = getSelectedItems().filter(i => i.item_type !== 'folder');
-    if (files.length) openCopyDialog(files);
+    const items = getSelectedItems();
+    if (items.length) openCopyDialog(items);
   };
 
   // ── Item context menu ─────────────────────────────────────────────────────────
@@ -680,11 +705,9 @@ export function AdminDrive() {
           <DropdownMenuItem onClick={() => { setRenameTarget(item); setRenameName(item.name); }}>
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </DropdownMenuItem>
-          {!isFolder && (
-            <DropdownMenuItem onClick={() => handleCopy(item)}>
-              <Copy className="w-4 h-4 mr-2" /> Make a copy
-            </DropdownMenuItem>
-          )}
+          <DropdownMenuItem onClick={() => handleCopy(item)}>
+            <Copy className="w-4 h-4 mr-2" /> Make a copy
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => openMoveDialog([item])}>
             <FolderInput className="w-4 h-4 mr-2" /> Move to
           </DropdownMenuItem>
