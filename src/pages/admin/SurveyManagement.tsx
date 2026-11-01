@@ -419,13 +419,36 @@ export function SurveyManagement() {
                 </thead>
                 <tbody>
                   {loading ? (
-                    <tr>
-                      <td colSpan={7} className="py-8 text-center">
-                        <div className="flex items-center justify-center">
-                          <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] h-6 w-6"></div>
-                        </div>
-                      </td>
-                    </tr>
+                    <>
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <tr key={i} className="border-b border-slate-50 animate-pulse">
+                          <td className="p-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-xl bg-slate-100 flex-shrink-0" />
+                              <div className="space-y-1.5">
+                                <div className="h-3 bg-slate-100 rounded w-40" />
+                                <div className="h-2.5 bg-slate-100 rounded w-24" />
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-4"><div className="h-5 bg-slate-100 rounded-full w-20" /></td>
+                          <td className="p-4"><div className="h-5 bg-slate-100 rounded-full w-16" /></td>
+                          <td className="p-4"><div className="h-3 bg-slate-100 rounded w-20" /></td>
+                          <td className="p-4"><div className="h-3 bg-slate-100 rounded w-12" /></td>
+                          <td className="p-4">
+                            <div className="space-y-1.5">
+                              <div className="h-2.5 bg-slate-100 rounded w-16" />
+                              <div className="h-1.5 bg-slate-100 rounded-full w-28" />
+                            </div>
+                          </td>
+                          <td className="p-4">
+                            <div className="flex gap-1.5">
+                              {[0, 1, 2, 3].map(j => <div key={j} className="w-7 h-7 bg-slate-100 rounded-lg" />)}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   ) : pagedSurveys.length > 0 ? (
                     pagedSurveys.map(survey => {
                       const rate = responseRate(survey);
@@ -584,11 +607,33 @@ export function SurveyManagement() {
           {viewMode === 'card' && (
             <div className="space-y-4">
               {loading ? (
-                <div className="py-12 text-center">
-                  <div className="flex items-center justify-center mb-3">
-                    <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] h-6 w-6"></div>
-                  </div>
-                  <p className="text-slate-500 text-sm font-semibold">Loading surveys...</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div key={i} className="border border-slate-100 bg-white rounded-2xl overflow-hidden animate-pulse">
+                      <div className="p-5 space-y-4">
+                        <div className="flex justify-between items-start">
+                          <div className="h-5 bg-slate-100 rounded-full w-20" />
+                          <div className="h-5 bg-slate-100 rounded-full w-16" />
+                        </div>
+                        <div className="flex gap-3 items-start">
+                          <div className="h-9 w-9 rounded-xl bg-slate-100 flex-shrink-0" />
+                          <div className="space-y-1.5 flex-1">
+                            <div className="h-3 bg-slate-100 rounded w-3/4" />
+                            <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100">
+                          {[0, 1, 2, 3].map(j => (
+                            <div key={j} className="space-y-1.5">
+                              <div className="h-2 bg-slate-100 rounded w-12" />
+                              <div className="h-3 bg-slate-100 rounded w-20" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="h-12 bg-slate-50 border-t border-slate-100" />
+                    </div>
+                  ))}
                 </div>
               ) : pagedSurveys.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">

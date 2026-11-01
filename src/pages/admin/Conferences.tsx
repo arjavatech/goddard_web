@@ -750,7 +750,78 @@ export function AdminConferences() {
           </div>
 
           {loading ? (
-            <div className="py-16 text-center text-slate-400">Loading...</div>
+            viewMode === 'table' ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-slate-100">
+                      {['CONFERENCE', 'CLASSROOMS', 'RESPONSE', 'STATUS', 'DATE', 'ACTIONS'].map(h => (
+                        <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-slate-400 tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <tr key={i} className="animate-pulse">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 flex-shrink-0" />
+                            <div className="space-y-1.5">
+                              <div className="h-3 bg-slate-100 rounded w-36" />
+                              <div className="h-2.5 bg-slate-100 rounded w-24" />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1.5">
+                            <div className="h-5 bg-slate-100 rounded-full w-16" />
+                            <div className="h-5 bg-slate-100 rounded-full w-14" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="space-y-1.5 min-w-[120px]">
+                            <div className="h-2.5 bg-slate-100 rounded w-12" />
+                            <div className="h-1.5 bg-slate-100 rounded-full w-full" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4"><div className="h-6 bg-slate-100 rounded-full w-16" /></td>
+                        <td className="px-6 py-4"><div className="h-3 bg-slate-100 rounded w-24" /></td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-1.5">
+                            {[0, 1, 2, 3].map(j => <div key={j} className="w-7 h-7 bg-slate-100 rounded-lg" />)}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="border border-slate-100 rounded-xl overflow-hidden animate-pulse">
+                    <div className="h-24 bg-slate-100" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-3 bg-slate-100 rounded w-3/4" />
+                      <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                      <div className="space-y-1.5">
+                        <div className="flex justify-between">
+                          <div className="h-2.5 bg-slate-100 rounded w-10" />
+                          <div className="h-2.5 bg-slate-100 rounded w-8" />
+                        </div>
+                        <div className="h-1.5 bg-slate-100 rounded-full w-full" />
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <div className="h-8 bg-slate-100 rounded flex-1" />
+                        <div className="w-8 h-8 bg-slate-100 rounded" />
+                        <div className="w-8 h-8 bg-slate-100 rounded" />
+                        <div className="w-8 h-8 bg-slate-100 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           ) : paged.length === 0 ? (
             <div className="py-16 text-center">
               <CalendarDays className="h-10 w-10 text-slate-200 mx-auto mb-3" />
