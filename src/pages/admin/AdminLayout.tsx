@@ -3,7 +3,7 @@ import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
   Calendar, Phone, Mail, Globe, BookOpen,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2, ClipboardList, CalendarDays
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2, ClipboardList, CalendarDays, HardDrive
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -109,6 +109,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ] : []),
         ...(schoolFeatures.conferenceEnabled && hasPermission('manage_conferences') ? [
           { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
+        ] : []),
+        ...(schoolFeatures.driveEnabled && hasPermission('manage_drive') ? [
+          { icon: <HardDrive className="w-[18px] h-[18px]" />, label: 'Drive', path: `${schoolPrefix}/admin/drive` },
         ] : []),
         // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
         ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
