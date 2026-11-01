@@ -459,26 +459,39 @@ function CreateWizard({ onClose, onCreated, schoolId, schoolSubdomain, editData 
                       <p className="text-slate-400 text-sm text-center py-6">No classrooms found.</p>
                     ) : classroomList.map(cl => {
                       const selected = selectedClassrooms.has(cl.id);
+                      const noParents = (cl.parentCount ?? 0) === 0;
                       return (
                         <button
                           key={cl.id}
                           type="button"
-                          onClick={() => toggleClassroom(cl.id)}
+                          disabled={noParents}
+                          onClick={() => !noParents && toggleClassroom(cl.id)}
                           className={cn(
-                            'w-full flex items-center gap-3 px-4 py-3 text-left transition-colors border-b border-slate-50 last:border-0',
-                            selected ? 'bg-[#0F2D52]/5' : 'hover:bg-slate-50'
+                            'w-full flex items-center gap-3 px-4 py-3 text-left border-b border-slate-50 last:border-0',
+                            noParents
+                              ? 'opacity-50 cursor-not-allowed bg-slate-50/60'
+                              : selected ? 'bg-[#0F2D52]/5' : 'hover:bg-slate-50 transition-colors'
                           )}
                         >
                           <div className={cn('w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0',
-                            selected ? 'border-[#0F2D52] bg-[#0F2D52]' : 'border-slate-300')}>
-                            {selected && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                            noParents ? 'border-slate-200 bg-slate-100'
+                            : selected ? 'border-[#0F2D52] bg-[#0F2D52]' : 'border-slate-300')}>
+                            {selected && !noParents && <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-900 truncate">{cl.name}</p>
+                            <p className={cn('text-sm font-medium truncate', noParents ? 'text-slate-400' : 'text-slate-900')}>{cl.name}</p>
+                            {noParents && (
+                              <p className="text-[11px] text-amber-600 flex items-center gap-1 mt-0.5">
+                                <AlertCircle className="h-3 w-3 flex-shrink-0" /> No parents linked — cannot add to conference
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">{cl.studentsCount ?? 0} students</span>
-                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{cl.parentCount ?? 0} parents</span>
+                            <span className="text-xs bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">{cl.studentsCount ?? 0} students</span>
+                            {noParents
+                              ? <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full">0 parents</span>
+                              : <span className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{cl.parentCount} parents</span>
+                            }
                           </div>
                         </button>
                       );
