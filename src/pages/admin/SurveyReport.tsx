@@ -135,18 +135,91 @@ export function SurveyReport() {
     getSurveyReport(surveyId).then(setReport).catch(() => setNotFound(true));
   }, [surveyId]);
 
-  if (notFound || !report) {
+  if (!report && !notFound) {
+    return (
+      <AdminLayout>
+        <div className="container mx-auto px-2 sm:px-4 py-0 pb-12 space-y-6">
+          {/* Header skeleton */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-16 sm:mt-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-xs animate-pulse">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="h-8 bg-slate-100 rounded-xl w-24 flex-shrink-0" />
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <div className="h-4 bg-slate-100 rounded w-52" />
+                  <div className="h-5 bg-slate-100 rounded-full w-20" />
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <div className="h-4 bg-slate-100 rounded-full w-20" />
+                  <div className="h-3.5 bg-slate-100 rounded w-28" />
+                  <div className="h-3.5 bg-slate-100 rounded w-28" />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <div className="h-8 bg-slate-100 rounded-xl w-28" />
+              <div className="h-8 bg-slate-100 rounded-xl w-28" />
+            </div>
+          </div>
+
+          {/* Stat cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 animate-pulse">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-slate-100 shrink-0" />
+                  <div className="space-y-2 flex-1">
+                    <div className="h-3 bg-slate-100 rounded w-16" />
+                    <div className="h-5 bg-slate-100 rounded w-10" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Tab bar */}
+          <div className="flex gap-1 border-b border-slate-100 pb-px animate-pulse">
+            <div className="h-8 bg-slate-100 rounded w-20 mx-2" />
+            <div className="h-8 bg-slate-100 rounded w-36 mx-2" />
+          </div>
+
+          {/* Question cards */}
+          <div className="space-y-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 animate-pulse">
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex-shrink-0" />
+                  <div className="h-4 bg-slate-100 rounded w-3/4" />
+                </div>
+                <div className="space-y-2.5">
+                  {Array.from({ length: 4 }).map((_, j) => (
+                    <div key={j} className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <div className="h-3 bg-slate-100 rounded w-32" />
+                        <div className="h-3 bg-slate-100 rounded w-14" />
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full w-full" />
+                    </div>
+                  ))}
+                </div>
+                <div className="h-3 bg-slate-100 rounded w-24 mt-4" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
+
+  if (notFound) {
     return (
       <AdminLayout>
         <div className="flex items-center justify-center h-96 text-slate-400">
           <div className="text-center">
             <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-30" />
-            <p className="font-semibold">{notFound ? 'Survey not found' : 'Loading…'}</p>
-            {notFound && (
-              <button onClick={() => navigate(`${schoolPrefix}/admin/surveys`)} className="mt-3 text-[#1a6fc4] text-sm hover:underline">
-                Back to Surveys
-              </button>
-            )}
+            <p className="font-semibold">Survey not found</p>
+            <button onClick={() => navigate(`${schoolPrefix}/admin/surveys`)} className="mt-3 text-[#1a6fc4] text-sm hover:underline">
+              Back to Surveys
+            </button>
           </div>
         </div>
       </AdminLayout>

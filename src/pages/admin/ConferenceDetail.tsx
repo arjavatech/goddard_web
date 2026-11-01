@@ -200,8 +200,75 @@ export function AdminConferenceDetail() {
   if (loading) {
     return (
       <AdminLayout>
-        <div className="flex items-center justify-center py-24">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#0F2D52]" />
+        <div className="space-y-6 max-w-5xl mx-auto pt-4">
+          {/* Back button */}
+          <div className="h-4 bg-slate-100 rounded w-36 animate-pulse" />
+
+          {/* Header card */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-pulse">
+            <div className="h-2 bg-slate-200" />
+            <div className="p-5 flex items-start justify-between gap-4 flex-wrap">
+              <div className="flex items-start gap-4">
+                <div className="w-16 h-16 rounded-xl bg-slate-100 flex-shrink-0" />
+                <div className="space-y-2">
+                  <div className="h-5 bg-slate-100 rounded w-64" />
+                  <div className="h-3.5 bg-slate-100 rounded w-80" />
+                  <div className="flex gap-4 mt-1">
+                    <div className="h-3.5 bg-slate-100 rounded w-44" />
+                    <div className="h-3.5 bg-slate-100 rounded w-32" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="h-6 bg-slate-100 rounded-full w-16" />
+                <div className="h-9 bg-slate-100 rounded-lg w-36" />
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl border border-slate-100 p-4 flex items-center gap-3 shadow-sm animate-pulse">
+                <div className="w-9 h-9 rounded-lg bg-slate-100 flex-shrink-0" />
+                <div className="space-y-1.5">
+                  <div className="h-2 bg-slate-100 rounded w-16" />
+                  <div className="h-6 bg-slate-100 rounded w-10" />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Classroom reports */}
+          <div className="space-y-4">
+            <div className="h-4 bg-slate-100 rounded w-40 animate-pulse" />
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden animate-pulse">
+                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-slate-100" />
+                    <div className="space-y-1.5">
+                      <div className="h-3.5 bg-slate-100 rounded w-28" />
+                      <div className="h-2.5 bg-slate-100 rounded w-16" />
+                    </div>
+                  </div>
+                  <div className="h-6 bg-slate-100 rounded-full w-20" />
+                </div>
+                <div className="p-5 space-y-3">
+                  <div className="h-2.5 bg-slate-100 rounded w-16" />
+                  <div className="border border-slate-100 rounded-xl overflow-hidden">
+                    {Array.from({ length: 3 }).map((_, j) => (
+                      <div key={j} className="grid grid-cols-[150px_90px_1fr] px-4 py-3 border-b border-slate-50 last:border-0 gap-3">
+                        <div className="h-3 bg-slate-100 rounded w-28" />
+                        <div className="h-5 bg-slate-100 rounded-full w-14" />
+                        <div className="h-3 bg-slate-100 rounded w-32" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </AdminLayout>
     );
@@ -226,7 +293,7 @@ export function AdminConferenceDetail() {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 max-w-5xl">
+      <div className="space-y-6 max-w-5xl mx-auto pt-4">
         {/* Back + Header */}
         <div>
           <button onClick={() => navigate(`${schoolPrefix}/admin/conferences`)}
