@@ -509,9 +509,12 @@ export function AdminDrive() {
   // ── Copy ─────────────────────────────────────────────────────────────────────
 
   const openCopyDialog = (items: DriveItem[]) => {
+    const driveRootLabel = showingAdminFiles
+      ? `${path.find(p => p.userId)?.name ?? 'Admin'}'s Drive`
+      : 'My Drive';
     setDialogMode('copy');
     setMoveItems(items);
-    setMoveDestPath([{ id: null, name: 'My Drive' }]);
+    setMoveDestPath([{ id: null, name: driveRootLabel }]);
     setResetToRoot(false);
     loadMoveFolders(null);
   };
@@ -568,9 +571,12 @@ export function AdminDrive() {
   };
 
   const openMoveDialog = async (items: DriveItem[]) => {
+    const driveRootLabel = showingAdminFiles
+      ? `${path.find(p => p.userId)?.name ?? 'Admin'}'s Drive`
+      : 'My Drive';
     setDialogMode('move');
     setMoveItems(items);
-    setMoveDestPath([{ id: null, name: 'My Drive' }]);
+    setMoveDestPath([{ id: null, name: driveRootLabel }]);
     setResetToRoot(false);
     await loadMoveFolders(null);
   };
@@ -1351,18 +1357,14 @@ export function AdminDrive() {
             <Trash2 className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Delete</span>
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button size="sm" variant="ghost" className="text-xs gap-0.5 flex-shrink-0">
-                More <ChevronDown className="w-3 h-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleMultiCopy}>
-                <Copy className="w-4 h-4 mr-2" /> Copy (files only)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button
+            size="sm" variant="ghost"
+            onClick={handleMultiCopy}
+            className="gap-1.5 text-xs flex-shrink-0"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Copy</span>
+          </Button>
           <div className="w-px h-5 bg-slate-200 mx-1" />
           <button
             onClick={() => setSelectedIds(new Set())}
