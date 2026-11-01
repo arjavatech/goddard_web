@@ -160,6 +160,8 @@ export function AdminDrive() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isDownloadLoading, setIsDownloadLoading] = useState(false);
 
+  const [dragBlockedMsg, setDragBlockedMsg] = useState(false);
+
   // Dialogs
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -392,6 +394,7 @@ export function AdminDrive() {
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
+    if (showingAdminFiles) return;
     if (e.dataTransfer.types.includes('Files')) {
       setIsDragActive(true);
     }
@@ -416,10 +419,14 @@ export function AdminDrive() {
     setIsDragActive(false);
     setDraggedOverFolderId(null);
 
+    if (showingAdminFiles) {
+      setDragBlockedMsg(true);
+      return;
+    }
+
     const files = Array.from(e.dataTransfer.files ?? []);
     if (!files.length) return;
 
-    // Upload to current folder
     processDroppedFiles(files, currentFolderId);
   };
 
@@ -441,14 +448,18 @@ export function AdminDrive() {
 
   const handleFolderDrop = (e: React.DragEvent<HTMLDivElement>, targetFolder: DriveItem) => {
     e.preventDefault();
-    e.stopPropagation();
     setDraggedOverFolderId(null);
+
+    if (showingAdminFiles) {
+      setDragBlockedMsg(true);
+      return;
+    }
 
     const files = Array.from(e.dataTransfer.files ?? []);
     if (!files.length) return;
 
-    // Only upload if target is a folder
     if (targetFolder.item_type === 'folder') {
+      e.stopPropagation(); // only stop propagation for folder drops (file cards bubble to handleDrop)
       processDroppedFiles(files, targetFolder.id);
     }
   };
@@ -1007,6 +1018,16 @@ export function AdminDrive() {
           onDragOver={handleDragOver}
           onDrop={handleDrop}
         >
+
+          {dragBlockedMsg && (
+            <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+              <Info className="w-4 h-4 flex-shrink-0" />
+              <span className="flex-1">Uploading files is not allowed while viewing another admin's files. You have view-only access.</span>
+              <button onClick={() => setDragBlockedMsg(false)} className="p-1 rounded hover:bg-amber-100 transition-colors flex-shrink-0">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {isLoading && items.length === 0 ? (
             <div className="flex items-center justify-center h-40 text-slate-400 text-sm">Loading…</div>
