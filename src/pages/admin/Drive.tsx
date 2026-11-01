@@ -5,6 +5,7 @@ import {
   Search, Trash2, Upload, Users, Video, X, Download, Eye,
 } from 'lucide-react';
 import { useUserContext } from '../../contexts/UserContext';
+import { useToast } from '../../contexts/ToastContext';
 import {
   DriveAdminSummary,
   DriveItem,
@@ -110,10 +111,26 @@ function smallIcon(item: DriveItem) {
 
 const GROUP_INITIAL = 20;
 
+function readAllDirectoryEntries(dir: FileSystemDirectoryEntry): Promise<FileSystemEntry[]> {
+  return new Promise((resolve, reject) => {
+    const reader = dir.createReader();
+    const all: FileSystemEntry[] = [];
+    const readBatch = () => {
+      reader.readEntries(batch => {
+        if (!batch.length) { resolve(all); return; }
+        all.push(...batch);
+        readBatch();
+      }, reject);
+    };
+    readBatch();
+  });
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 
 export function AdminDrive() {
   const { userData } = useUserContext();
+  const { showToast } = useToast();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -401,6 +418,44 @@ export function AdminDrive() {
     }
   };
 
+  const uploadFolderFromEntry = async (
+    entry: FileSystemDirectoryEntry,
+    parentFolderId: string | null,
+  ) => {
+    let newFolder: DriveItem;
+    try {
+      newFolder = await createDriveFolder({
+        name: entry.name,
+        folder_id: parentFolderId ?? undefined,
+        user_id: currentUserId ?? undefined,
+      });
+      fetchItems();
+    } catch {
+      showToast('error', `Failed to create folder "${entry.name}"`);
+      return;
+    }
+
+    const children = await readAllDirectoryEntries(entry);
+    const childFiles: File[] = [];
+    const childDirs: FileSystemDirectoryEntry[] = [];
+
+    for (const child of children) {
+      if (child.isFile) {
+        try {
+          const file = await new Promise<File>((resolve, reject) =>
+            (child as FileSystemFileEntry).file(resolve, reject)
+          );
+          childFiles.push(file);
+        } catch { /* skip unreadable file */ }
+      } else if (child.isDirectory) {
+        childDirs.push(child as FileSystemDirectoryEntry);
+      }
+    }
+
+    if (childFiles.length) processDroppedFiles(childFiles, newFolder.id);
+    for (const dir of childDirs) uploadFolderFromEntry(dir, newFolder.id);
+  };
+
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -422,36 +477,24 @@ export function AdminDrive() {
     e.stopPropagation();
   };
 
-  const splitDragItems = (dt: DataTransfer): { files: File[]; folderNames: string[] } => {
-    const files: File[] = [];
-    const folderNames: string[] = [];
-    for (const item of Array.from(dt.items ?? [])) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const entry = (item as any).webkitGetAsEntry?.();
-      if (entry?.isDirectory) {
-        folderNames.push(entry.name);
-      } else if (item.kind === 'file') {
-        const f = item.getAsFile();
-        if (f) files.push(f);
-      }
-    }
-    return { files, folderNames };
-  };
-
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragActive(false);
     setDraggedOverFolderId(null);
 
-    const { files, folderNames } = splitDragItems(e.dataTransfer);
-
-    for (const name of folderNames) {
-      const uploadId = crypto.randomUUID();
-      setUploadQueue(q => [...q, { id: uploadId, name, progress: 0, done: false, abort: () => {}, error: 'Folder uploads are not supported. Upload individual files instead.' }]);
+    const topLevelFiles: File[] = [];
+    for (const item of Array.from(e.dataTransfer.items ?? [])) {
+      const entry = item.webkitGetAsEntry();
+      if (!entry) continue;
+      if (entry.isDirectory) {
+        uploadFolderFromEntry(entry as FileSystemDirectoryEntry, currentFolderId);
+      } else {
+        const f = item.getAsFile();
+        if (f) topLevelFiles.push(f);
+      }
     }
-
-    if (files.length) processDroppedFiles(files, currentFolderId);
+    if (topLevelFiles.length) processDroppedFiles(topLevelFiles, currentFolderId);
   };
 
   const handleFolderDragEnter = (e: React.DragEvent<HTMLDivElement>, folderId: string) => {
@@ -475,16 +518,20 @@ export function AdminDrive() {
     setDraggedOverFolderId(null);
 
     if (targetFolder.item_type === 'folder') {
-      e.stopPropagation(); // only stop propagation for folder drops (file cards bubble to handleDrop)
+      e.stopPropagation();
 
-      const { files, folderNames } = splitDragItems(e.dataTransfer);
-
-      for (const name of folderNames) {
-        const uploadId = crypto.randomUUID();
-        setUploadQueue(q => [...q, { id: uploadId, name, progress: 0, done: false, abort: () => {}, error: 'Folder uploads are not supported. Upload individual files instead.' }]);
+      const topLevelFiles: File[] = [];
+      for (const item of Array.from(e.dataTransfer.items ?? [])) {
+        const entry = item.webkitGetAsEntry();
+        if (!entry) continue;
+        if (entry.isDirectory) {
+          uploadFolderFromEntry(entry as FileSystemDirectoryEntry, targetFolder.id);
+        } else {
+          const f = item.getAsFile();
+          if (f) topLevelFiles.push(f);
+        }
       }
-
-      if (files.length) processDroppedFiles(files, targetFolder.id);
+      if (topLevelFiles.length) processDroppedFiles(topLevelFiles, targetFolder.id);
     }
   };
 
