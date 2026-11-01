@@ -1,11 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Archive, ArrowLeft, CheckSquare, ChevronDown, ChevronRight, Copy, ExternalLink, File, FileText, Folder,
+  Archive, ArrowLeft, Check, CheckSquare, ChevronDown, ChevronRight, Copy, ExternalLink, File, FileText, Folder,
   FolderInput, FolderOpen, FolderPlus, Grid, Image, Info, List, MoreVertical, Music, Pencil,
   Search, Trash2, Upload, Users, Video, X, Download, Eye,
 } from 'lucide-react';
 import { useUserContext } from '../../contexts/UserContext';
-import { useToast } from '../../contexts/ToastContext';
 import {
   DriveAdminSummary,
   DriveItem,
@@ -47,10 +46,13 @@ interface BreadcrumbEntry {
 interface UploadQueueItem {
   id: string;
   name: string;
+  itemType: 'file' | 'folder';
   progress: number;
   done: boolean;
-  error?: string;
   abort: () => void;
+  error?: string;
+  totalFiles?: number;
+  doneFiles?: number;
 }
 
 type SortBy = 'name' | 'file_size' | 'created_at';
@@ -130,7 +132,6 @@ function readAllDirectoryEntries(dir: FileSystemDirectoryEntry): Promise<FileSys
 
 export function AdminDrive() {
   const { userData } = useUserContext();
-  const { showToast } = useToast();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -162,6 +163,7 @@ export function AdminDrive() {
   // Upload queue
   const [uploadQueue, setUploadQueue] = useState<UploadQueueItem[]>([]);
   const [dismissedErrorIds, setDismissedErrorIds] = useState<Set<string>>(new Set());
+  const [uploadPanelCollapsed, setUploadPanelCollapsed] = useState(false);
 
   // Drag-drop state
   const [isDragActive, setIsDragActive] = useState(false);
@@ -345,7 +347,7 @@ export function AdminDrive() {
       const uploadId = crypto.randomUUID();
       const resolvedContentType = file.type || 'application/octet-stream';
       let abortFn = () => {};
-      setUploadQueue(q => [...q, { id: uploadId, name: file.name, progress: 0, done: false, abort: () => abortFn() }]);
+      setUploadQueue(q => [...q, { id: uploadId, name: file.name, itemType: 'file', progress: 0, done: false, abort: () => abortFn() }]);
       try {
         const { upload_url, s3_key } = await getDriveUploadUrl({
           file_name: file.name,
@@ -385,7 +387,7 @@ export function AdminDrive() {
       const uploadId = crypto.randomUUID();
       const resolvedContentType = file.type || 'application/octet-stream';
       let abortFn = () => {};
-      setUploadQueue(q => [...q, { id: uploadId, name: file.name, progress: 0, done: false, abort: () => abortFn() }]);
+      setUploadQueue(q => [...q, { id: uploadId, name: file.name, itemType: 'file', progress: 0, done: false, abort: () => abortFn() }]);
       try {
         const { upload_url, s3_key } = await getDriveUploadUrl({
           file_name: file.name,
@@ -418,10 +420,73 @@ export function AdminDrive() {
     }
   };
 
+  const uploadFolderContents = async (
+    dir: FileSystemDirectoryEntry,
+    targetFolderId: string,
+    rootQueueId: string,
+  ): Promise<void> => {
+    const children = await readAllDirectoryEntries(dir);
+    const files: File[] = [];
+    const subdirs: Array<[FileSystemDirectoryEntry, string]> = [];
+
+    for (const child of children) {
+      if (child.isFile) {
+        try {
+          const file = await new Promise<File>((res, rej) =>
+            (child as FileSystemFileEntry).file(res, rej));
+          files.push(file);
+        } catch { /* skip */ }
+      } else if (child.isDirectory) {
+        try {
+          const sub = await createDriveFolder({
+            name: child.name,
+            folder_id: targetFolderId,
+            user_id: currentUserId ?? undefined,
+          });
+          subdirs.push([child as FileSystemDirectoryEntry, sub.id]);
+        } catch { /* skip */ }
+      }
+    }
+
+    if (files.length) {
+      setUploadQueue(q => q.map(u => u.id === rootQueueId
+        ? { ...u, totalFiles: (u.totalFiles ?? 0) + files.length } : u));
+    }
+
+    for (const file of files) {
+      try {
+        const ct = file.type || 'application/octet-stream';
+        const { upload_url, s3_key } = await getDriveUploadUrl({
+          file_name: file.name, content_type: ct, file_size: file.size,
+          folder_id: targetFolderId, user_id: currentUserId ?? undefined,
+        });
+        const task = uploadToS3(upload_url, file, () => {}, ct);
+        await task.promise;
+        await registerDriveFile({
+          name: file.name, s3_key, mime_type: ct, file_size: file.size,
+          folder_id: targetFolderId, user_id: currentUserId ?? undefined,
+        });
+        setUploadQueue(q => q.map(u => u.id === rootQueueId
+          ? { ...u, doneFiles: (u.doneFiles ?? 0) + 1 } : u));
+      } catch { /* skip */ }
+    }
+
+    for (const [subEntry, subId] of subdirs) {
+      await uploadFolderContents(subEntry, subId, rootQueueId);
+    }
+  };
+
   const uploadFolderFromEntry = async (
     entry: FileSystemDirectoryEntry,
     parentFolderId: string | null,
   ) => {
+    const queueId = crypto.randomUUID();
+    setUploadQueue(q => [...q, {
+      id: queueId, name: entry.name, itemType: 'folder',
+      progress: 0, done: false, abort: () => {},
+      totalFiles: 0, doneFiles: 0,
+    }]);
+
     let newFolder: DriveItem;
     try {
       newFolder = await createDriveFolder({
@@ -431,29 +496,16 @@ export function AdminDrive() {
       });
       fetchItems();
     } catch {
-      showToast('error', `Failed to create folder "${entry.name}"`);
+      setUploadQueue(q => q.map(u => u.id === queueId
+        ? { ...u, error: `Failed to create folder "${entry.name}"` } : u));
       return;
     }
 
-    const children = await readAllDirectoryEntries(entry);
-    const childFiles: File[] = [];
-    const childDirs: FileSystemDirectoryEntry[] = [];
+    await uploadFolderContents(entry, newFolder.id, queueId);
 
-    for (const child of children) {
-      if (child.isFile) {
-        try {
-          const file = await new Promise<File>((resolve, reject) =>
-            (child as FileSystemFileEntry).file(resolve, reject)
-          );
-          childFiles.push(file);
-        } catch { /* skip unreadable file */ }
-      } else if (child.isDirectory) {
-        childDirs.push(child as FileSystemDirectoryEntry);
-      }
-    }
-
-    if (childFiles.length) processDroppedFiles(childFiles, newFolder.id);
-    for (const dir of childDirs) uploadFolderFromEntry(dir, newFolder.id);
+    setUploadQueue(q => q.map(u => u.id === queueId ? { ...u, done: true } : u));
+    setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== queueId)), 3000);
+    fetchItems();
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -1099,46 +1151,6 @@ export function AdminDrive() {
         {/* Hidden file input */}
         <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} />
 
-        {/* Upload queue */}
-        {uploadQueue.length > 0 && (
-          <div className="px-4 sm:px-5 py-2 space-y-1.5 bg-white border-b border-slate-100 flex-shrink-0">
-            {uploadQueue.map(u => {
-              // Hide dismissed errors
-              if (u.error && dismissedErrorIds.has(u.id)) {
-                return null;
-              }
-              return (
-                <div key={u.id} className="flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2 text-xs">
-                  <Upload className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                  <span className="truncate flex-1 text-slate-700">{u.name}</span>
-                  {u.error ? (
-                    <div className="flex items-center gap-2">
-                      <span className="text-red-500">{u.error}</span>
-                      <button
-                        onClick={() => dismissError(u.id)}
-                        className="flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
-                        title="Dismiss error"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : u.done ? <span className="text-green-600 font-medium">Done</span>
-                  : <>
-                    <div className="w-24 h-1.5 bg-blue-200 rounded-full overflow-hidden">
-                      <div className="h-full bg-blue-500 transition-all" style={{ width: `${u.progress}%` }} />
-                    </div>
-                    <span className="text-blue-600 w-8 text-right">{u.progress}%</span>
-                    <button onClick={() => u.abort()} className="text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </>
-                  }
-                </div>
-              );
-            })}
-          </div>
-        )}
-
         {/* ── Main scrollable content ── */}
         <div
           className={cn(
@@ -1684,6 +1696,84 @@ export function AdminDrive() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Upload panel (Google Drive style, fixed bottom-right) ── */}
+      {uploadQueue.filter(u => !(u.error && dismissedErrorIds.has(u.id))).length > 0 && (
+        <div className="fixed bottom-4 right-4 w-80 bg-white rounded-2xl shadow-2xl border border-slate-200 z-50 overflow-hidden">
+          {/* Header */}
+          {(() => {
+            const active = uploadQueue.filter(u => !u.done && !u.error);
+            const done = uploadQueue.filter(u => u.done);
+            const headerText = active.length > 0
+              ? `Uploading ${active.length} item${active.length > 1 ? 's' : ''}…`
+              : `${done.length} upload${done.length > 1 ? 's' : ''} complete`;
+            const allDone = active.length === 0;
+            return (
+              <div className="flex items-center gap-2 px-4 py-3 bg-slate-50 border-b border-slate-100">
+                <span className="text-sm font-semibold text-slate-700 flex-1 truncate">{headerText}</span>
+                <button
+                  onClick={() => setUploadPanelCollapsed(c => !c)}
+                  className="p-1 rounded-full hover:bg-slate-200 transition-colors text-slate-500"
+                >
+                  <ChevronDown className={cn('w-4 h-4 transition-transform duration-200', uploadPanelCollapsed && 'rotate-180')} />
+                </button>
+                {allDone && (
+                  <button
+                    onClick={() => setUploadQueue([])}
+                    className="p-1 rounded-full hover:bg-slate-200 transition-colors text-slate-500"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Body */}
+          {!uploadPanelCollapsed && (
+            <div className="max-h-60 overflow-y-auto divide-y divide-slate-100">
+              {uploadQueue.map(u => {
+                if (u.error && dismissedErrorIds.has(u.id)) return null;
+                return (
+                  <div key={u.id} className="flex items-center gap-3 px-4 py-2.5">
+                    {u.itemType === 'folder'
+                      ? <Folder className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                      : <File className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-slate-700 truncate">{u.name}</p>
+                      {u.itemType === 'folder' && !u.done && !u.error && (
+                        <p className="text-xs text-slate-400 mt-0.5">
+                          {u.doneFiles ?? 0} of {u.totalFiles ?? 0}
+                        </p>
+                      )}
+                      {u.itemType === 'file' && !u.done && !u.error && (
+                        <div className="mt-1 h-1 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500 transition-all duration-300" style={{ width: `${u.progress}%` }} />
+                        </div>
+                      )}
+                      {u.error && (
+                        <p className="text-xs text-red-500 mt-0.5 truncate">{u.error}</p>
+                      )}
+                    </div>
+                    {u.done ? (
+                      <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                    ) : u.error ? (
+                      <button onClick={() => dismissError(u.id)} className="text-slate-400 hover:text-red-500 flex-shrink-0">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : u.itemType === 'file' ? (
+                      <button onClick={() => u.abort()} className="text-slate-300 hover:text-red-400 flex-shrink-0">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </AdminLayout>
   );
 }
