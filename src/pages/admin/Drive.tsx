@@ -160,8 +160,6 @@ export function AdminDrive() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isDownloadLoading, setIsDownloadLoading] = useState(false);
 
-  const [dragBlockedMsg, setDragBlockedMsg] = useState(false);
-
   // Dialogs
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
@@ -183,6 +181,9 @@ export function AdminDrive() {
   const [isMoveLoading, setIsMoveLoading] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [resetToRoot, setResetToRoot] = useState(false);
+
+  const [isMultiDownloading, setIsMultiDownloading] = useState(false);
+  const [multiDownloadProgress, setMultiDownloadProgress] = useState({ done: 0, total: 0 });
 
   const [dialogMode, setDialogMode] = useState<'move' | 'copy'>('move');
   const [isCopyingDialog, setIsCopyingDialog] = useState(false);
@@ -334,6 +335,7 @@ export function AdminDrive() {
           content_type: resolvedContentType,
           file_size: file.size,
           folder_id: currentFolderId ?? undefined,
+          user_id: currentUserId ?? undefined,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
@@ -347,6 +349,7 @@ export function AdminDrive() {
           name: file.name, s3_key,
           mime_type: resolvedContentType,
           file_size: file.size,
+          user_id: currentUserId ?? undefined,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
         setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== uploadId)), 2000);
@@ -372,6 +375,7 @@ export function AdminDrive() {
           content_type: resolvedContentType,
           file_size: file.size,
           folder_id: targetFolderId ?? undefined,
+          user_id: currentUserId ?? undefined,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
@@ -385,6 +389,7 @@ export function AdminDrive() {
           name: file.name, s3_key,
           mime_type: resolvedContentType,
           file_size: file.size,
+          user_id: currentUserId ?? undefined,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
         setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== uploadId)), 2000);
@@ -399,7 +404,6 @@ export function AdminDrive() {
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    if (showingAdminFiles) return;
     if (e.dataTransfer.types.includes('Files')) {
       setIsDragActive(true);
     }
@@ -423,11 +427,6 @@ export function AdminDrive() {
     e.stopPropagation();
     setIsDragActive(false);
     setDraggedOverFolderId(null);
-
-    if (showingAdminFiles) {
-      setDragBlockedMsg(true);
-      return;
-    }
 
     const files = Array.from(e.dataTransfer.files ?? []);
     if (!files.length) return;
@@ -455,11 +454,6 @@ export function AdminDrive() {
     e.preventDefault();
     setDraggedOverFolderId(null);
 
-    if (showingAdminFiles) {
-      setDragBlockedMsg(true);
-      return;
-    }
-
     const files = Array.from(e.dataTransfer.files ?? []);
     if (!files.length) return;
 
@@ -485,7 +479,7 @@ export function AdminDrive() {
     if (!newFolderName.trim()) return;
     setIsFolderCreating(true);
     try {
-      await createDriveFolder({ name: newFolderName.trim(), folder_id: currentFolderId ?? undefined });
+      await createDriveFolder({ name: newFolderName.trim(), folder_id: currentFolderId ?? undefined, user_id: currentUserId ?? undefined });
       setNewFolderName(''); setShowNewFolder(false); fetchItems();
     } finally { setIsFolderCreating(false); }
   };
@@ -562,7 +556,13 @@ export function AdminDrive() {
   const loadMoveFolders = async (folderId: string | null) => {
     setIsMoveLoading(true);
     try {
-      const all = await listDriveItems({ folder_id: folderId ?? undefined, sort_by: 'name', sort_order: 'asc' });
+      const params: Parameters<typeof listDriveItems>[0] = {
+        folder_id: folderId ?? undefined,
+        sort_by: 'name',
+        sort_order: 'asc',
+      };
+      if (currentUserId) params.user_id = currentUserId;
+      const all = await listDriveItems(params);
       setMoveFolders(all.filter(i => i.item_type === 'folder'));
     } finally { setIsMoveLoading(false); }
   };
@@ -601,12 +601,28 @@ export function AdminDrive() {
   const getSelectedItems = () => filteredItems.filter(i => selectedIds.has(i.id));
 
   const handleMultiDownload = async () => {
-    for (const item of getSelectedItems()) {
-      if (item.item_type === 'folder') continue;
-      try {
-        const { url } = await getDriveDownloadUrl(item.id, true);
-        window.open(url, '_blank', 'noopener,noreferrer');
-      } catch { /* skip */ }
+    const files = getSelectedItems().filter(i => i.item_type !== 'folder');
+    if (!files.length) return;
+    setIsMultiDownloading(true);
+    setMultiDownloadProgress({ done: 0, total: files.length });
+    try {
+      for (const item of files) {
+        try {
+          const { url } = await getDriveDownloadUrl(item.id, true);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = item.name;
+          a.style.display = 'none';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setMultiDownloadProgress(p => ({ ...p, done: p.done + 1 }));
+          await new Promise(r => setTimeout(r, 600));
+        } catch { /* skip failed file */ }
+      }
+    } finally {
+      setIsMultiDownloading(false);
+      setMultiDownloadProgress({ done: 0, total: 0 });
     }
   };
 
@@ -890,7 +906,7 @@ export function AdminDrive() {
           </div>
 
           {/* Action buttons — hidden in multi-select */}
-          {!isMultiSelect && !showingAdminFiles && (
+          {!isMultiSelect && (
             <>
               <Button
                 size="sm" variant="outline"
@@ -926,7 +942,7 @@ export function AdminDrive() {
                 onClick={() => { setIsMultiSelect(false); setSelectedIds(new Set()); }}
                 className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white gap-1"
               >
-                Done {selectedIds.size > 0 && `(${selectedIds.size})`}
+                Exit Select
               </Button>
             </div>
           ) : (
@@ -993,7 +1009,7 @@ export function AdminDrive() {
         </div>
 
         {/* Mobile new/upload buttons */}
-        {!showingAdminFiles && !isMultiSelect && (
+        {!isMultiSelect && (
           <div className="flex sm:hidden items-center gap-2 px-4 py-2 bg-white border-b border-slate-100 flex-shrink-0">
             <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()} className="gap-1.5 text-xs">
               <Upload className="w-3.5 h-3.5" /> Upload
@@ -1059,15 +1075,6 @@ export function AdminDrive() {
           onDrop={handleDrop}
         >
 
-          {dragBlockedMsg && (
-            <div className="mb-4 flex items-center gap-2 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
-              <Info className="w-4 h-4 flex-shrink-0" />
-              <span className="flex-1">Uploading files is not allowed while viewing another admin's files. You have view-only access.</span>
-              <button onClick={() => setDragBlockedMsg(false)} className="p-1 rounded hover:bg-amber-100 transition-colors flex-shrink-0">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
 
           {isLoading && items.length === 0 ? (
             viewMode === 'grid' ? (
@@ -1319,10 +1326,22 @@ export function AdminDrive() {
           <Button
             size="sm" variant="ghost"
             onClick={handleMultiDownload}
+            disabled={isMultiDownloading}
             className="gap-1.5 text-xs flex-shrink-0"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Download</span>
+            {isMultiDownloading ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin flex-shrink-0" />
+                <span className="hidden sm:inline">
+                  {multiDownloadProgress.done}/{multiDownloadProgress.total}
+                </span>
+              </>
+            ) : (
+              <>
+                <Download className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Download</span>
+              </>
+            )}
           </Button>
           <Button
             size="sm" variant="ghost"

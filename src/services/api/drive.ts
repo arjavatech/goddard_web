@@ -64,6 +64,7 @@ export async function getDriveUploadUrl(payload: {
   content_type: string;
   file_size: number;
   folder_id?: string;
+  user_id?: string;
 }): Promise<{ upload_url: string; s3_key: string }> {
   return authedFetch({ method: 'POST', url: '/drive/upload-url', body: payload }, uploadUrlSchema);
 }
@@ -74,6 +75,7 @@ export async function registerDriveFile(payload: {
   s3_key: string;
   mime_type: string;
   file_size: number;
+  user_id?: string;
 }): Promise<DriveItem> {
   return authedFetch({ method: 'POST', url: '/drive/items/file', body: payload }, driveItemSchema);
 }
@@ -81,6 +83,7 @@ export async function registerDriveFile(payload: {
 export async function createDriveFolder(payload: {
   folder_id?: string;
   name: string;
+  user_id?: string;
 }): Promise<DriveItem> {
   return authedFetch({ method: 'POST', url: '/drive/items/folder', body: payload }, driveItemSchema);
 }
