@@ -184,7 +184,11 @@ export function AdminDrive() {
   const [isMoving, setIsMoving] = useState(false);
   const [resetToRoot, setResetToRoot] = useState(false);
 
-  const [isCopying, setIsCopying] = useState<string | null>(null);
+  const [dialogMode, setDialogMode] = useState<'move' | 'copy'>('move');
+  const [isCopyingDialog, setIsCopyingDialog] = useState(false);
+  const [isCreatingFolderInDialog, setIsCreatingFolderInDialog] = useState(false);
+  const [newFolderNameInDialog, setNewFolderNameInDialog] = useState('');
+  const [isDialogFolderCreating, setIsDialogFolderCreating] = useState(false);
 
   // ── Derived state ─────────────────────────────────────────────────────────────
 
@@ -220,6 +224,7 @@ export function AdminDrive() {
   // ── Data fetching ─────────────────────────────────────────────────────────────
 
   const fetchItems = useCallback(async () => {
+    setItems([]);
     setIsLoading(true);
     try {
       const params: Parameters<typeof listDriveItems>[0] = { sort_by: sortBy, sort_order: sortOrder };
@@ -509,10 +514,47 @@ export function AdminDrive() {
 
   // ── Copy ─────────────────────────────────────────────────────────────────────
 
-  const handleCopy = async (item: DriveItem) => {
-    setIsCopying(item.id);
-    try { await copyDriveItem(item.id); fetchItems(); }
-    finally { setIsCopying(null); }
+  const openCopyDialog = (items: DriveItem[]) => {
+    setDialogMode('copy');
+    setMoveItems(items);
+    setMoveDestPath([{ id: null, name: 'My Drive' }]);
+    setResetToRoot(false);
+    loadMoveFolders(null);
+  };
+
+  const handleCopy = (item: DriveItem) => {
+    openCopyDialog([item]);
+  };
+
+  const handleCopyHere = async () => {
+    if (!moveItems.length) return;
+    const destFolderId = resetToRoot ? null : (moveDestPath[moveDestPath.length - 1].id ?? null);
+    setIsCopyingDialog(true);
+    try {
+      for (const item of moveItems) {
+        const newItem = await copyDriveItem(item.id);
+        if (destFolderId !== (currentFolderId ?? null)) {
+          await moveDriveItem(newItem.id, destFolderId);
+        }
+      }
+      fetchItems();
+      setMoveItems([]);
+    } catch { /* noop */ }
+    finally { setIsCopyingDialog(false); }
+  };
+
+  const handleCreateFolderInDialog = async () => {
+    const name = newFolderNameInDialog.trim();
+    if (!name) return;
+    const destFolderId = moveDestPath[moveDestPath.length - 1].id ?? undefined;
+    setIsDialogFolderCreating(true);
+    try {
+      await createDriveFolder({ name, folder_id: destFolderId });
+      setIsCreatingFolderInDialog(false);
+      setNewFolderNameInDialog('');
+      await loadMoveFolders(moveDestPath[moveDestPath.length - 1].id ?? null);
+    } catch { /* noop */ }
+    finally { setIsDialogFolderCreating(false); }
   };
 
   // ── Move ──────────────────────────────────────────────────────────────────────
@@ -526,6 +568,7 @@ export function AdminDrive() {
   };
 
   const openMoveDialog = async (items: DriveItem[]) => {
+    setDialogMode('move');
     setMoveItems(items);
     setMoveDestPath([{ id: null, name: 'My Drive' }]);
     setResetToRoot(false);
@@ -569,11 +612,9 @@ export function AdminDrive() {
 
   const handleMultiDelete = () => setDeleteItems(getSelectedItems());
 
-  const handleMultiCopy = async () => {
-    for (const item of getSelectedItems()) {
-      if (item.item_type === 'folder') continue;
-      await handleCopy(item);
-    }
+  const handleMultiCopy = () => {
+    const files = getSelectedItems().filter(i => i.item_type !== 'folder');
+    if (files.length) openCopyDialog(files);
   };
 
   // ── Item context menu ─────────────────────────────────────────────────────────
@@ -618,9 +659,8 @@ export function AdminDrive() {
             <Pencil className="w-4 h-4 mr-2" /> Rename
           </DropdownMenuItem>
           {!isFolder && (
-            <DropdownMenuItem onClick={() => handleCopy(item)} disabled={isCopying === item.id}>
-              <Copy className="w-4 h-4 mr-2" />
-              {isCopying === item.id ? 'Copying…' : 'Make a copy'}
+            <DropdownMenuItem onClick={() => handleCopy(item)}>
+              <Copy className="w-4 h-4 mr-2" /> Make a copy
             </DropdownMenuItem>
           )}
           <DropdownMenuItem onClick={() => openMoveDialog([item])}>
@@ -1395,15 +1435,21 @@ export function AdminDrive() {
         </DialogContent>
       </Dialog>
 
-      {/* Move to dialog (redesigned per screenshot 4) */}
-      <Dialog open={moveItems.length > 0} onOpenChange={open => !open && setMoveItems([])}>
+      {/* Move / Copy destination picker dialog */}
+      <Dialog open={moveItems.length > 0} onOpenChange={open => {
+        if (!open) {
+          setMoveItems([]);
+          setIsCreatingFolderInDialog(false);
+          setNewFolderNameInDialog('');
+        }
+      }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              Move {moveItems.length} item{moveItems.length !== 1 ? 's' : ''}
+              {dialogMode === 'copy' ? 'Copy' : 'Move'} {moveItems.length} item{moveItems.length !== 1 ? 's' : ''}
             </DialogTitle>
             <p className="text-xs text-slate-500 pt-0.5">
-              Select a destination folder or move to root
+              Select a destination folder {dialogMode === 'copy' ? 'to copy to' : 'or move to root'}
             </p>
           </DialogHeader>
 
@@ -1426,54 +1472,96 @@ export function AdminDrive() {
 
           {/* Folder list */}
           {!resetToRoot && (
-            <div className="border border-slate-100 rounded-lg overflow-hidden max-h-48 overflow-y-auto">
-              {isMoveLoading ? (
-                <div className="py-6 text-center text-xs text-slate-400">Loading…</div>
-              ) : moveFolders.filter(f => !moveItems.some(i => i.id === f.id)).length === 0 ? (
-                <div className="py-5 text-center text-xs text-slate-400">No subfolders here</div>
-              ) : (
-                moveFolders
-                  .filter(f => !moveItems.some(i => i.id === f.id))
-                  .map(folder => (
-                    <div
-                      key={folder.id}
-                      className="flex items-center gap-2.5 px-3 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50"
-                    >
-                      <FolderOpen className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <span className="text-sm text-slate-700 flex-1 truncate">{folder.name}</span>
-                      <button
-                        onClick={() => handleMoveNavigate(folder)}
-                        className="text-xs text-blue-600 hover:underline flex items-center gap-0.5 flex-shrink-0 font-medium"
+            <div className="border border-slate-100 rounded-lg overflow-hidden">
+              <div className="max-h-48 overflow-y-auto">
+                {isMoveLoading ? (
+                  <div className="py-6 text-center text-xs text-slate-400">Loading…</div>
+                ) : moveFolders.filter(f => !moveItems.some(i => i.id === f.id)).length === 0 ? (
+                  <div className="py-5 text-center text-xs text-slate-400">No subfolders here</div>
+                ) : (
+                  moveFolders
+                    .filter(f => !moveItems.some(i => i.id === f.id))
+                    .map(folder => (
+                      <div
+                        key={folder.id}
+                        className="flex items-center gap-2.5 px-3 py-2.5 border-b border-slate-50 last:border-0 hover:bg-slate-50"
                       >
-                        Open <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))
-              )}
+                        <FolderOpen className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                        <span className="text-sm text-slate-700 flex-1 truncate">{folder.name}</span>
+                        <button
+                          onClick={() => handleMoveNavigate(folder)}
+                          className="text-xs text-blue-600 hover:underline flex items-center gap-0.5 flex-shrink-0 font-medium"
+                        >
+                          Open <ChevronRight className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))
+                )}
+              </div>
+              {/* New folder inline */}
+              <div className="border-t border-slate-100 px-3 py-2">
+                {isCreatingFolderInDialog ? (
+                  <div className="flex items-center gap-2">
+                    <FolderPlus className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                    <input
+                      autoFocus
+                      value={newFolderNameInDialog}
+                      onChange={e => setNewFolderNameInDialog(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') handleCreateFolderInDialog();
+                        if (e.key === 'Escape') { setIsCreatingFolderInDialog(false); setNewFolderNameInDialog(''); }
+                      }}
+                      placeholder="New folder name"
+                      className="flex-1 text-sm border border-slate-200 rounded px-2 py-1 outline-none focus:border-blue-400"
+                    />
+                    <Button size="sm" variant="outline" onClick={() => { setIsCreatingFolderInDialog(false); setNewFolderNameInDialog(''); }} className="h-7 text-xs px-2">Cancel</Button>
+                    <Button
+                      size="sm"
+                      onClick={handleCreateFolderInDialog}
+                      disabled={isDialogFolderCreating || !newFolderNameInDialog.trim()}
+                      className="h-7 text-xs px-2 bg-[#0F2D52] text-white"
+                    >
+                      {isDialogFolderCreating ? '…' : 'Create'}
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => { setIsCreatingFolderInDialog(true); setNewFolderNameInDialog(''); }}
+                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" /> New Folder
+                  </button>
+                )}
+              </div>
             </div>
           )}
 
           <DialogFooter className="flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
-            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 order-last sm:order-first">
-              <input
-                type="checkbox"
-                checked={resetToRoot}
-                onChange={e => {
-                  setResetToRoot(e.target.checked);
-                  if (e.target.checked) setMoveDestPath([{ id: null, name: 'My Drive' }]);
-                }}
-                className="rounded border-slate-300 text-[#0F2D52]"
-              />
-              Reset to Root
-            </label>
-            <div className="flex gap-2">
+            {dialogMode === 'move' && (
+              <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600 order-last sm:order-first">
+                <input
+                  type="checkbox"
+                  checked={resetToRoot}
+                  onChange={e => {
+                    setResetToRoot(e.target.checked);
+                    if (e.target.checked) setMoveDestPath([{ id: null, name: 'My Drive' }]);
+                  }}
+                  className="rounded border-slate-300 text-[#0F2D52]"
+                />
+                Reset to Root
+              </label>
+            )}
+            <div className="flex gap-2 ml-auto">
               <Button variant="outline" onClick={() => setMoveItems([])}>Cancel</Button>
               <Button
-                onClick={handleMoveHere}
-                disabled={isMoving}
+                onClick={dialogMode === 'copy' ? handleCopyHere : handleMoveHere}
+                disabled={isMoving || isCopyingDialog}
                 className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 text-white"
               >
-                {isMoving ? 'Moving…' : 'Move Here'}
+                {dialogMode === 'copy'
+                  ? (isCopyingDialog ? `Copying${moveItems.length > 1 ? ` ${moveItems.length} items` : ''}…` : 'Copy Here')
+                  : (isMoving ? 'Moving…' : 'Move Here')
+                }
               </Button>
             </div>
           </DialogFooter>
