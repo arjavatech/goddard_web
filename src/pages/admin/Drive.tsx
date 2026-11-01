@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, CheckSquare, ChevronDown, ChevronRight, Copy, File, FileText, Folder,
-  FolderInput, FolderOpen, FolderPlus, Grid, Image, Info, List, MoreVertical, Pencil,
-  Search, Trash2, Upload, Users, X, Download, Eye,
+  Archive, ArrowLeft, CheckSquare, ChevronDown, ChevronRight, Copy, ExternalLink, File, FileText, Folder,
+  FolderInput, FolderOpen, FolderPlus, Grid, Image, Info, List, MoreVertical, Music, Pencil,
+  Search, Trash2, Upload, Users, Video, X, Download, Eye,
 } from 'lucide-react';
 import { useUserContext } from '../../contexts/UserContext';
 import {
@@ -81,22 +81,30 @@ function cardStyle(item: DriveItem): { bg: string; iconEl: React.ReactNode } {
     return { bg: 'bg-blue-50', iconEl: <FolderOpen className="w-12 h-12 text-blue-400" /> };
   }
   const type = fileIcon(item.mime_type);
-  if (type === 'image')  return { bg: 'bg-emerald-50', iconEl: <Image    className="w-12 h-12 text-emerald-400" /> };
+  if (type === 'image')  return { bg: 'bg-emerald-50', iconEl: <Image    className="w-12 h-12 text-emerald-500" /> };
+  if (type === 'video')  return { bg: 'bg-purple-50',  iconEl: <Video    className="w-12 h-12 text-purple-500"  /> };
+  if (type === 'audio')  return { bg: 'bg-pink-50',    iconEl: <Music    className="w-12 h-12 text-pink-500"    /> };
   if (type === 'pdf')    return { bg: 'bg-red-50',     iconEl: <FileText className="w-12 h-12 text-red-400"     /> };
   if (type === 'doc')    return { bg: 'bg-blue-50',    iconEl: <FileText className="w-12 h-12 text-blue-600"    /> };
   if (type === 'sheet')  return { bg: 'bg-green-50',   iconEl: <FileText className="w-12 h-12 text-green-600"   /> };
   if (type === 'slide')  return { bg: 'bg-orange-50',  iconEl: <FileText className="w-12 h-12 text-orange-500"  /> };
+  if (type === 'text')   return { bg: 'bg-gray-50',    iconEl: <FileText className="w-12 h-12 text-gray-500"    /> };
+  if (type === 'zip')    return { bg: 'bg-amber-50',   iconEl: <Archive  className="w-12 h-12 text-amber-500"   /> };
   return                        { bg: 'bg-slate-50',   iconEl: <File     className="w-12 h-12 text-slate-400"   /> };
 }
 
 function smallIcon(item: DriveItem) {
   if (item.item_type === 'folder') return <FolderOpen className="w-4 h-4 text-blue-400 flex-shrink-0" />;
   const type = fileIcon(item.mime_type);
-  if (type === 'image')  return <Image    className="w-4 h-4 text-emerald-400 flex-shrink-0" />;
+  if (type === 'image')  return <Image    className="w-4 h-4 text-emerald-500 flex-shrink-0" />;
+  if (type === 'video')  return <Video    className="w-4 h-4 text-purple-500  flex-shrink-0" />;
+  if (type === 'audio')  return <Music    className="w-4 h-4 text-pink-500    flex-shrink-0" />;
   if (type === 'pdf')    return <FileText className="w-4 h-4 text-red-400     flex-shrink-0" />;
   if (type === 'doc')    return <FileText className="w-4 h-4 text-blue-600    flex-shrink-0" />;
   if (type === 'sheet')  return <FileText className="w-4 h-4 text-green-600   flex-shrink-0" />;
   if (type === 'slide')  return <FileText className="w-4 h-4 text-orange-500  flex-shrink-0" />;
+  if (type === 'text')   return <FileText className="w-4 h-4 text-gray-500    flex-shrink-0" />;
+  if (type === 'zip')    return <Archive  className="w-4 h-4 text-amber-500   flex-shrink-0" />;
   return <File className="w-4 h-4 text-slate-400 flex-shrink-0" />;
 }
 
@@ -150,6 +158,7 @@ export function AdminDrive() {
   const [previewItem, setPreviewItem] = useState<DriveItem | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isDownloadLoading, setIsDownloadLoading] = useState(false);
 
   // Dialogs
   const [showNewFolder, setShowNewFolder] = useState(false);
@@ -227,6 +236,15 @@ export function AdminDrive() {
   useEffect(() => { fetchItems(); }, [fetchItems]);
   useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
 
+  useEffect(() => {
+    if (previewItem) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [previewItem]);
+
   // ── Navigation ────────────────────────────────────────────────────────────────
 
   const navigateToFolder = (item: DriveItem) =>
@@ -276,11 +294,19 @@ export function AdminDrive() {
   };
 
   const handleDownloadFromPreview = async () => {
-    if (!previewItem) return;
+    if (!previewItem || isDownloadLoading) return;
+    setIsDownloadLoading(true);
     try {
       const { url } = await getDriveDownloadUrl(previewItem.id, true);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = previewItem.name;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     } catch { /* noop */ }
+    finally { setIsDownloadLoading(false); }
   };
 
   // ── Upload ────────────────────────────────────────────────────────────────────
@@ -292,17 +318,19 @@ export function AdminDrive() {
 
     for (const file of files) {
       const uploadId = crypto.randomUUID();
+      const resolvedContentType = file.type || 'application/octet-stream';
       let abortFn = () => {};
       setUploadQueue(q => [...q, { id: uploadId, name: file.name, progress: 0, done: false, abort: () => abortFn() }]);
       try {
         const { upload_url, s3_key } = await getDriveUploadUrl({
           file_name: file.name,
-          content_type: file.type || 'application/octet-stream',
+          content_type: resolvedContentType,
           file_size: file.size,
           folder_id: currentFolderId ?? undefined,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
+          resolvedContentType,
         );
         abortFn = task.abort;
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, abort: task.abort } : u));
@@ -310,7 +338,7 @@ export function AdminDrive() {
         await registerDriveFile({
           folder_id: currentFolderId ?? undefined,
           name: file.name, s3_key,
-          mime_type: file.type || 'application/octet-stream',
+          mime_type: resolvedContentType,
           file_size: file.size,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
@@ -328,17 +356,19 @@ export function AdminDrive() {
   const processDroppedFiles = async (files: File[], targetFolderId: string | null) => {
     for (const file of files) {
       const uploadId = crypto.randomUUID();
+      const resolvedContentType = file.type || 'application/octet-stream';
       let abortFn = () => {};
       setUploadQueue(q => [...q, { id: uploadId, name: file.name, progress: 0, done: false, abort: () => abortFn() }]);
       try {
         const { upload_url, s3_key } = await getDriveUploadUrl({
           file_name: file.name,
-          content_type: file.type || 'application/octet-stream',
+          content_type: resolvedContentType,
           file_size: file.size,
           folder_id: targetFolderId ?? undefined,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
+          resolvedContentType,
         );
         abortFn = task.abort;
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, abort: task.abort } : u));
@@ -346,7 +376,7 @@ export function AdminDrive() {
         await registerDriveFile({
           folder_id: targetFolderId ?? undefined,
           name: file.name, s3_key,
-          mime_type: file.type || 'application/octet-stream',
+          mime_type: resolvedContentType,
           file_size: file.size,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
@@ -1088,91 +1118,96 @@ export function AdminDrive() {
 
       {/* ── File Preview Overlay ── */}
       {previewItem && (
-        <div className="fixed inset-0 z-50 bg-black/85 flex flex-col">
-          {/* Preview header */}
-          <div className="flex items-center gap-3 px-4 py-3 bg-black/40 backdrop-blur-sm text-white flex-shrink-0">
-            <button
-              onClick={closePreview}
-              className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" /> Back
-            </button>
-            <div className="flex-1 min-w-0 mx-4">
-              <p className="font-medium text-sm truncate">{previewItem.name}</p>
-              <p className="text-xs text-white/50">
-                {formatFileSize(previewItem.file_size)}
-                {previewItem.file_size ? ' • ' : ''}
-                {relativeTime(previewItem.created_at)}
-              </p>
-            </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Button
-                size="sm" variant="secondary"
-                onClick={handleDownloadFromPreview}
-                className="h-8 text-xs gap-1.5"
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={closePreview}>
+          <div
+            className="bg-white rounded-2xl shadow-2xl flex flex-col w-full max-w-5xl min-h-[60vh] max-h-[90vh] overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-slate-200 flex-shrink-0">
+              <button
+                onClick={closePreview}
+                className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors flex-shrink-0"
               >
-                <Download className="w-3.5 h-3.5" /> Download
-              </Button>
-              <Button
-                size="sm" variant="secondary"
-                onClick={handleOpenTab}
-                className="h-8 text-xs"
-              >
-                Open tab
-              </Button>
-              <button onClick={closePreview} className="p-2 rounded-lg hover:bg-white/10 transition-colors ml-1">
-                <X className="w-5 h-5" />
+                <ArrowLeft className="w-4 h-4" /> Back
               </button>
-            </div>
-          </div>
-
-          {/* Preview content */}
-          <div className="flex-1 flex items-center justify-center overflow-hidden">
-            {isPreviewLoading ? (
-              <div className="text-white/50 text-sm">Loading preview…</div>
-            ) : !previewUrl ? (
-              <div className="text-center text-white/70 space-y-4">
-                <File className="w-16 h-16 mx-auto text-white/30" />
-                <p className="text-sm">Failed to load file.</p>
+              <div className="flex-1 min-w-0 mx-4">
+                <p className="font-semibold text-slate-800 text-sm truncate">{previewItem.name}</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {formatFileSize(previewItem.file_size)}{previewItem.file_size ? ' • ' : ''}{relativeTime(previewItem.created_at)}
+                </p>
               </div>
-            ) : previewItem.mime_type?.startsWith('image/') ? (
-              <img
-                src={previewUrl}
-                alt={previewItem.name}
-                className="w-full h-full object-contain rounded-lg shadow-2xl p-4"
-              />
-            ) : previewItem.mime_type === 'application/pdf' ? (
-              <iframe
-                src={previewUrl}
-                title={previewItem.name}
-                className="w-full max-w-4xl h-full rounded-lg bg-white"
-              />
-            ) : previewItem.mime_type === 'text/plain' ? (
-              <iframe
-                src={previewUrl}
-                title={previewItem.name}
-                className="w-full max-w-3xl h-full rounded-lg bg-white"
-              />
-            ) : previewItem.mime_type?.startsWith('video/') ? (
-              <video
-                controls
-                src={previewUrl}
-                className="max-h-full max-w-full rounded-lg shadow-2xl"
-              />
-            ) : (
-              <div className="text-center text-white/70 space-y-4">
-                <File className="w-16 h-16 mx-auto text-white/30" />
-                <p className="text-sm font-medium">Preview not available for this file type.</p>
-                <p className="text-xs text-white/40">{previewItem.mime_type ?? 'Unknown format'}</p>
-                <Button
-                  onClick={handleDownloadFromPreview}
-                  size="sm" variant="secondary"
-                  className="gap-1.5 mt-2"
-                >
-                  <Download className="w-4 h-4" /> Download to view
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Button size="sm" variant="outline" onClick={handleDownloadFromPreview} disabled={isDownloadLoading} className="h-8 text-xs gap-1.5">
+                  {isDownloadLoading
+                    ? <><div className="w-3.5 h-3.5 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" /> Downloading…</>
+                    : <><Download className="w-3.5 h-3.5" /> Download</>
+                  }
                 </Button>
+                <Button size="sm" variant="outline" onClick={handleOpenTab} className="h-8 text-xs gap-1.5">
+                  <ExternalLink className="w-3.5 h-3.5" /> Open tab
+                </Button>
+                <button onClick={closePreview} className="p-1.5 rounded-lg hover:bg-slate-100 transition-colors ml-1">
+                  <X className="w-5 h-5 text-slate-500" />
+                </button>
               </div>
-            )}
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 bg-slate-100 flex items-center justify-center overflow-auto p-6 rounded-b-2xl">
+              {isPreviewLoading ? (
+                <div className="flex flex-col items-center gap-3 text-slate-400">
+                  <div className="w-8 h-8 border-2 border-slate-200 border-t-slate-400 rounded-full animate-spin" />
+                  <span className="text-sm">Loading preview…</span>
+                </div>
+              ) : !previewUrl ? (
+                <div className="text-center text-slate-500 space-y-4">
+                  <File className="w-16 h-16 mx-auto text-slate-300" />
+                  <p className="text-sm">Failed to load file.</p>
+                </div>
+              ) : previewItem.mime_type?.startsWith('image/') ? (
+                <img
+                  src={previewUrl}
+                  alt={previewItem.name}
+                  className="max-w-full max-h-full object-contain rounded-xl shadow-lg"
+                />
+              ) : previewItem.mime_type === 'application/pdf' ? (
+                <iframe
+                  src={previewUrl}
+                  title={previewItem.name}
+                  className="w-full max-w-4xl h-[70vh] rounded-xl bg-white shadow"
+                />
+              ) : previewItem.mime_type === 'text/plain' ? (
+                <iframe
+                  src={previewUrl}
+                  title={previewItem.name}
+                  className="w-full max-w-3xl h-[70vh] rounded-xl bg-white shadow"
+                />
+              ) : previewItem.mime_type?.startsWith('video/') ? (
+                <video
+                  controls
+                  src={previewUrl}
+                  className="max-w-full max-h-[70vh] rounded-xl shadow-lg"
+                />
+              ) : (
+                <div className="bg-white rounded-2xl shadow p-10 text-center space-y-4">
+                  <File className="w-16 h-16 mx-auto text-slate-300" />
+                  <p className="text-sm font-medium text-slate-700">Preview not available for this file type.</p>
+                  <p className="text-xs text-slate-400">{previewItem.mime_type ?? 'Unknown format'}</p>
+                  <Button
+                    onClick={handleDownloadFromPreview}
+                    disabled={isDownloadLoading}
+                    size="sm" variant="outline"
+                    className="gap-1.5 mt-2"
+                  >
+                    {isDownloadLoading
+                      ? <><div className="w-4 h-4 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin" /> Downloading…</>
+                      : <><Download className="w-4 h-4" /> Download to view</>
+                    }
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

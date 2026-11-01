@@ -126,12 +126,14 @@ export function uploadToS3(
   url: string,
   file: File,
   onProgress: (pct: number) => void,
+  contentType?: string,
 ): UploadTask {
   let xhr: XMLHttpRequest;
+  const ct = contentType || file.type || 'application/octet-stream';
   const promise = new Promise<void>((resolve, reject) => {
     xhr = new XMLHttpRequest();
     xhr.open('PUT', url);
-    xhr.setRequestHeader('Content-Type', file.type);
+    xhr.setRequestHeader('Content-Type', ct);
     xhr.upload.onprogress = (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     };
@@ -161,10 +163,17 @@ export function formatFileSize(bytes: number | null | undefined): string {
 export function fileIcon(mimeType: string | null | undefined): string {
   if (!mimeType) return 'file';
   if (mimeType.startsWith('image/')) return 'image';
+  if (mimeType.startsWith('video/')) return 'video';
+  if (mimeType.startsWith('audio/')) return 'audio';
   if (mimeType === 'application/pdf') return 'pdf';
   if (mimeType.includes('word') || mimeType.includes('document')) return 'doc';
   if (mimeType.includes('excel') || mimeType.includes('spreadsheet') || mimeType === 'text/csv') return 'sheet';
   if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return 'slide';
-  if (mimeType === 'text/plain') return 'text';
+  if (mimeType === 'text/plain' || mimeType === 'text/markdown') return 'text';
+  if (
+    mimeType === 'application/zip' || mimeType === 'application/x-zip-compressed' ||
+    mimeType === 'application/x-rar-compressed' || mimeType === 'application/x-7z-compressed' ||
+    mimeType === 'application/gzip' || mimeType === 'application/x-tar'
+  ) return 'zip';
   return 'file';
 }
