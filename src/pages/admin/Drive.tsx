@@ -371,7 +371,6 @@ export function AdminDrive() {
           user_id: currentUserId ?? undefined,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
-        setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== uploadId)), 2000);
         fetchItems();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Upload failed';
@@ -411,13 +410,25 @@ export function AdminDrive() {
           user_id: currentUserId ?? undefined,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
-        setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== uploadId)), 2000);
         fetchItems();
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'Upload failed';
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, error: msg } : u));
       }
     }
+  };
+
+  const countFilesInEntry = async (dir: FileSystemDirectoryEntry): Promise<number> => {
+    const children = await readAllDirectoryEntries(dir);
+    let count = 0;
+    for (const child of children) {
+      if (child.isFile) {
+        count += 1;
+      } else if (child.isDirectory) {
+        count += await countFilesInEntry(child as FileSystemDirectoryEntry);
+      }
+    }
+    return count;
   };
 
   const uploadFolderContents = async (
@@ -446,11 +457,6 @@ export function AdminDrive() {
           subdirs.push([child as FileSystemDirectoryEntry, sub.id]);
         } catch { /* skip */ }
       }
-    }
-
-    if (files.length) {
-      setUploadQueue(q => q.map(u => u.id === rootQueueId
-        ? { ...u, totalFiles: (u.totalFiles ?? 0) + files.length } : u));
     }
 
     for (const file of files) {
@@ -501,10 +507,12 @@ export function AdminDrive() {
       return;
     }
 
+    const totalFiles = await countFilesInEntry(entry);
+    setUploadQueue(q => q.map(u => u.id === queueId ? { ...u, totalFiles } : u));
+
     await uploadFolderContents(entry, newFolder.id, queueId);
 
     setUploadQueue(q => q.map(u => u.id === queueId ? { ...u, done: true } : u));
-    setTimeout(() => setUploadQueue(q => q.filter(u => u.id !== queueId)), 3000);
     fetchItems();
   };
 
