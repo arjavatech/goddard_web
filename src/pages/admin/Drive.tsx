@@ -922,7 +922,8 @@ export function AdminDrive() {
   function ListTable({ rows }: { rows: DriveItem[] }) {
     return (
       <div className="bg-white rounded-xl border border-slate-100 overflow-hidden">
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
           <thead>
             <tr className="text-xs text-slate-500 border-b border-slate-100 bg-slate-50/60">
               {isMultiSelect && <th className="w-10 py-2.5 px-3" />}
@@ -992,7 +993,8 @@ export function AdminDrive() {
               );
             })}
           </tbody>
-        </table>
+          </table>
+        </div>
       </div>
     );
   }
@@ -1790,8 +1792,15 @@ export function AdminDrive() {
 
 function relativeTime(dateStr: string): string {
   const date = new Date(dateStr);
-  const diffMs = Date.now() - date.getTime();
-  const diffDays = Math.floor(diffMs / 86400000);
+  const now = new Date();
+  
+  // Get the start of today in local timezone
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const itemDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  
+  // Calculate difference in days using date objects (not milliseconds)
+  const diffDays = Math.floor((todayStart.getTime() - itemDate.getTime()) / 86400000);
+  
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return '1 day ago';
   if (diffDays < 30) return `${diffDays} days ago`;
