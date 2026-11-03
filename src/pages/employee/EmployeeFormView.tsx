@@ -118,6 +118,13 @@ export function EmployeeFormView() {
         url += `${url.includes('?') ? '&' : '?'}employee_form_assignment_id=${encodeURIComponent(assignment.id)}`;
       }
 
+      // Append employee_name prefill param
+      const empName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ')
+        || [assignment.employeeFirstName, assignment.employeeLastName].filter(Boolean).join(' ');
+      if (empName && !url.includes('employee_name')) {
+        url += `${url.includes('?') ? '&' : '?'}employee_name=${encodeURIComponent(empName)}`;
+      }
+
       // Provision Fillout user for signature/initials re-use (same as parent flow)
       const email = (userData?.email || '').trim().toLowerCase();
       const externalUserId = email || assignment.userId;
