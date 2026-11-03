@@ -549,12 +549,23 @@ export async function fetchMyFormAssignments(schoolId: string): Promise<Employee
 }
 
 export async function fetchAdminUsers(schoolId: string): Promise<{ id: string; firstName: string; lastName: string; email: string }[]> {
-  const data = await authedFetch({ method: 'GET', url: `/users/admin?school_id=${schoolId}` }, z.array(z.any()));
-  return (data as any[]).map(u => ({
+  const data = await authedFetch({ method: 'GET', url: `/users/admin?school_id=${schoolId}` }, z.object({ data: z.array(z.any()) }));
+  return (data.data as any[]).map(u => ({
     id: u.id as string,
     firstName: (u.first_name || u.firstName || '') as string,
     lastName: (u.last_name || u.lastName || '') as string,
     email: (u.email || '') as string,
+  }));
+}
+
+export async function fetchSchoolMembers(schoolId: string): Promise<{ id: string; firstName: string; lastName: string; email: string; memberType: 'employee' | 'admin' }[]> {
+  const data = await authedFetch({ method: 'GET', url: `/school-members?school_id=${schoolId}` }, z.array(z.any()));
+  return (data as any[]).map(u => ({
+    id: u.id as string,
+    firstName: (u.first_name || '') as string,
+    lastName: (u.last_name || '') as string,
+    email: (u.email || '') as string,
+    memberType: (u.member_type || 'employee') as 'employee' | 'admin',
   }));
 }
 
