@@ -3,7 +3,7 @@ import { authedFetch, z } from './common';
 export type DocumentRequest = { id:string; school_id:string; audience:'student'|'employee'; document_name:string; instructions?:string; due_date?:string; status:string; submitted:number; pending:number; approved:number; rejected:number; total:number };
 export type DocumentAssignment = { id:string; request_id:string; school_id:string; audience:'student'|'employee'; document_name:string; instructions?:string; due_date?:string; request_status:string; status:string; derived_status:string; subject_name:string; parent_name?:string; parent_email?:string; classroom_name?:string; employee_email?:string; submitted_at?:string; reviewed_at?:string; rejection_reason?:string; latest_submission_id?:string; latest_file_name?:string; latest_content_type?:string; latest_file_size_bytes?:number; version_count:number; form_academic_year?:string|null; approved_form_name?:string|null; child_id?:string; employee_id?:string; parent_id?:string };
 export type AssignmentPage = { items:DocumentAssignment[]; total:number; page:number; limit:number };
-export type DocumentRecipient = { id:string; name:string; email?:string; classroom_name?:string };
+export type DocumentRecipient = { id:string; name:string; email?:string; classroom_name?:string; recipientType?:'student'|'employee'|'admin' };
 export type DocumentReminderResponse = { total_sent:number; total_failed:number; failed_emails:string[]; message:string };
 
 const query = (values:Record<string, string | number | undefined>) => {
@@ -12,30 +12,17 @@ const query = (values:Record<string, string | number | undefined>) => {
   return params.toString();
 };
 
-import { fetchStudentEnrollments } from './admin';
-import { EmployeeService } from './employee';
-
 export const fetchDocumentRequests = (schoolId:string, audience?:string) => authedFetch({ method:'GET', url:`/document-requests?${query({school_id:schoolId,audience})}` }, z.array(z.any())) as Promise<DocumentRequest[]>;
 export const fetchDocumentRecipients = async (schoolId:string, audience:'student'|'employee'): Promise<DocumentRecipient[]> => {
   try {
-    if (audience === 'student') {
-      const data = await fetchStudentEnrollments(schoolId);
-      const enrollments = data?.enrollments || [];
-      return enrollments.map((e: any) => ({
-        id: e.child_id || '',
-        name: `${e.child_first_name || ''} ${e.child_last_name || ''}`.trim() || 'Unknown Student',
-        email: e.primary_email || e.parent_email || undefined,
-        classroom_name: e.class_name || e.classroom_name || undefined
-      })).filter((e: DocumentRecipient) => e.id);
-    } else {
-      const employees = await EmployeeService.fetchEmployees(schoolId);
-      return employees.map((e: any) => ({
-        id: e.id,
-        name: `${e.firstName || e.first_name || ''} ${e.lastName || e.last_name || ''}`.trim() || 'Unknown Employee',
-        email: e.email,
-        classroom_name: undefined
-      })).filter((e: DocumentRecipient) => e.id);
-    }
+    const data = await authedFetch({ method:'GET', url:`/document-request-recipients?school_id=${schoolId}&audience=${audience}` }, z.array(z.any())) as any[];
+    return data.map((r:any) => ({
+      id: r.id,
+      name: r.name,
+      email: r.email ?? undefined,
+      classroom_name: r.classroom_name ?? undefined,
+      recipientType: (r.recipient_type ?? (audience === 'student' ? 'student' : 'employee')) as 'student'|'employee'|'admin',
+    })).filter((r:DocumentRecipient) => r.id);
   } catch (error) {
     console.error('fetchDocumentRecipients error:', error);
     return [];
@@ -61,5 +48,15 @@ export const updateDocumentMetadata = (id:string, body:{school_id:string;form_ac
 export const changeDocumentStatus = (id:string, body:{status:string;reason?:string}) => authedFetch({ method:'POST', url:`/document-assignments/${id}/change-status`, body }, z.any()) as Promise<DocumentAssignment>;
 export const fetchDocumentHistory = (id:string) => authedFetch({ method:'GET', url:`/document-assignments/${id}/history` }, z.array(z.any())) as Promise<Array<{id:string;event_type:string;actor_name?:string;reason?:string;created_at:string}>>;
 export const updateDocumentRequest = (id:string, body:{school_id:string;document_name:string;instructions?:string|null;due_date?:string|null}) => authedFetch({ method:'PATCH', url:`/document-requests/${id}`, body }, z.any()) as Promise<DocumentRequest>;
-export const assignDocumentRecipients = (id:string, body:{school_id:string;target:'all'|'selected';child_ids?:string[];employee_ids?:string[]}) => authedFetch({ method:'POST', url:`/document-requests/${id}/assign`, body }, z.any()) as Promise<{newly_assigned:number}>;
-export const fetchRecipientsForRequest = (schoolId:string, audience:'student'|'employee', requestId:string) => authedFetch({ method:'GET', url:`/document-request-recipients?school_id=${schoolId}&audience=${audience}&request_id=${requestId}` }, z.array(z.any())) as Promise<(DocumentRecipient & {is_assigned:boolean})[]>;
+export const assignDocumentRecipients = (id:string, body:{school_id:string;target:'all'|'selected';child_ids?:string[];employee_ids?:string[];admin_user_ids?:string[]}) => authedFetch({ method:'POST', url:`/document-requests/${id}/assign`, body }, z.any()) as Promise<{newly_assigned:number}>;
+export const fetchRecipientsForRequest = async (schoolId:string, audience:'student'|'employee', requestId:string): Promise<(DocumentRecipient & {is_assigned:boolean})[]> => {
+  const data = await authedFetch({ method:'GET', url:`/document-request-recipients?school_id=${schoolId}&audience=${audience}&request_id=${requestId}` }, z.array(z.any())) as any[];
+  return data.map((r:any) => ({
+    id: r.id,
+    name: r.name,
+    email: r.email ?? undefined,
+    classroom_name: r.classroom_name ?? undefined,
+    recipientType: (r.recipient_type ?? (audience === 'student' ? 'student' : 'employee')) as 'student'|'employee'|'admin',
+    is_assigned: r.is_assigned ?? false,
+  }));
+};

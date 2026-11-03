@@ -539,3 +539,41 @@ export async function fetchEmployeeFormAssignmentsByTemplate(
   if (search) params.set('search', search);
   return authedFetch({ method: 'GET', url: `/employee-form-assignments/list?${params}` }, z.any());
 }
+
+export async function fetchMyFormAssignments(schoolId: string): Promise<EmployeeFormAssignment[]> {
+  const data = await authedFetch(
+    { method: 'GET', url: `/my-form-assignments?school_id=${schoolId}` },
+    z.array(z.any()),
+  );
+  return data.map(mapAssignment);
+}
+
+export async function fetchAdminUsers(schoolId: string): Promise<{ id: string; firstName: string; lastName: string; email: string }[]> {
+  const data = await authedFetch({ method: 'GET', url: `/users/admin?school_id=${schoolId}` }, z.array(z.any()));
+  return (data as any[]).map(u => ({
+    id: u.id as string,
+    firstName: (u.first_name || u.firstName || '') as string,
+    lastName: (u.last_name || u.lastName || '') as string,
+    email: (u.email || '') as string,
+  }));
+}
+
+export async function assignFormToAdmin(
+  adminUserId: string,
+  formTemplateId: string,
+  schoolId: string,
+): Promise<EmployeeFormAssignment> {
+  const data = await authedFetch(
+    {
+      method: 'POST',
+      url: '/admin-form-assignments',
+      body: {
+        admin_user_id: adminUserId,
+        employee_form_template_id: formTemplateId,
+        school_id: schoolId,
+      },
+    },
+    z.any(),
+  );
+  return mapAssignment(data);
+}

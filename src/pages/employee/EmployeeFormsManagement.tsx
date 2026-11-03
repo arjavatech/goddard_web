@@ -12,7 +12,7 @@ import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
-import { EmployeeService, type Employee } from '../../services/api/employee';
+import { EmployeeService, fetchAdminUsers, assignFormToAdmin, type Employee } from '../../services/api/employee';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
@@ -85,8 +85,11 @@ export function EmployeeFormsManagement() {
   const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [selectedRecipientIsAdmin, setSelectedRecipientIsAdmin] = useState(false);
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [adminUsers, setAdminUsers] = useState<{ id: string; firstName: string; lastName: string; email: string }[]>([]);
+  const [includeAdminsInAll, setIncludeAdminsInAll] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
@@ -108,9 +111,10 @@ export function EmployeeFormsManagement() {
     if (!schoolId) return;
     try {
       if (showLoader) setLoading(true);
-      const [templates, emps] = await Promise.all([
+      const [templates, emps, admins] = await Promise.all([
         EmployeeService.fetchEmployeeFormTemplates(schoolId).catch(() => []),
-        EmployeeService.fetchEmployees(schoolId).catch(() => [])
+        EmployeeService.fetchEmployees(schoolId).catch(() => []),
+        fetchAdminUsers(schoolId).catch(() => []),
       ]);
       setForms(templates.map((t) => ({
         id: t.id,
@@ -121,6 +125,7 @@ export function EmployeeFormsManagement() {
         pdfFileName: t.pdfFileName
       })));
       setEmployees(emps.filter(e => e.status === 'active'));
+      setAdminUsers(admins);
     } catch {
       showToast('error', 'Failed to load forms');
     } finally {
@@ -218,7 +223,11 @@ export function EmployeeFormsManagement() {
   const handleAssignToEmployee = async () => {
     if (!selectedFormForAssign || !selectedEmployeeId || !schoolId) return;
     try {
-      await EmployeeService.assignFormToEmployee(selectedEmployeeId, selectedFormForAssign.id, schoolId, `${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin');
+      if (selectedRecipientIsAdmin) {
+        await assignFormToAdmin(selectedEmployeeId, selectedFormForAssign.id, schoolId);
+      } else {
+        await EmployeeService.assignFormToEmployee(selectedEmployeeId, selectedFormForAssign.id, schoolId, `${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin');
+      }
       showToast('success', 'Form assigned successfully');
       setIsAssignDialogOpen(false);
     } catch (error: any) {
@@ -230,8 +239,12 @@ export function EmployeeFormsManagement() {
     if (!selectedFormForAssign || !schoolId) return;
     try {
       const response = await EmployeeService.assignFormToAllEmployees(schoolId, selectedFormForAssign.id, true);
+      if (includeAdminsInAll && adminUsers.length) {
+        await Promise.allSettled(adminUsers.map(a => assignFormToAdmin(a.id, selectedFormForAssign.id, schoolId)));
+      }
       showToast('success', `Form assigned to ${response.newlyAssigned} employee${response.newlyAssigned === 1 ? '' : 's'} successfully!`);
       setIsAssignToAllDialogOpen(false);
+      setIncludeAdminsInAll(false);
     } catch (error: any) {
       showToast('error', error.message || 'Failed to assign form to all employees');
     }
@@ -637,18 +650,18 @@ export function EmployeeFormsManagement() {
         onRemoveExistingPdf={async () => { if (!selectedForm || !schoolId) return; await EmployeeService.removeEmployeeFormTemplatePdf(selectedForm.id, schoolId); setSelectedForm({ ...selectedForm, pdfFileName: undefined }); showToast('success', 'PDF template removed'); }}
       />
 
-      {/* Assign to Employee Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+      {/* Assign Form Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => { if (!open) { setSelectedEmployeeId(''); setSelectedRecipientIsAdmin(false); } setIsAssignDialogOpen(open); }}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6 overflow-visible" onInteractOutside={() => { setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}>
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to Employee</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form</DialogTitle>
           </DialogHeader>
           <div className="py-2 space-y-4 overflow-visible">
             <p className="text-sm text-slate-600">
               Assigning form: <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong>
             </p>
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Select Employee</label>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Select Employee or Admin</label>
               <div className="relative">
                 <button
                   type="button"
@@ -657,8 +670,15 @@ export function EmployeeFormsManagement() {
                 >
                   <span className={selectedEmployeeId ? 'text-slate-900' : 'text-slate-400'}>
                     {selectedEmployeeId
-                      ? (() => { const e = employees.find(e => e.id === selectedEmployeeId); return e ? `${e.firstName} ${e.lastName} (${e.employeeType})` : 'Choose an employee...'; })()
-                      : 'Choose an employee...'}
+                      ? (() => {
+                          if (selectedRecipientIsAdmin) {
+                            const a = adminUsers.find(a => a.id === selectedEmployeeId);
+                            return a ? `${a.firstName} ${a.lastName} (Admin)` : 'Choose...';
+                          }
+                          const e = employees.find(e => e.id === selectedEmployeeId);
+                          return e ? `${e.firstName} ${e.lastName} (${e.employeeType})` : 'Choose...';
+                        })()
+                      : 'Choose an employee or admin...'}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
                 </button>
@@ -669,32 +689,51 @@ export function EmployeeFormsManagement() {
                       <input
                         type="text"
                         autoFocus
-                        placeholder="Search employee..."
+                        placeholder="Search employee or admin..."
                         value={employeeSearchQuery}
                         onChange={(e) => setEmployeeSearchQuery(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white"
                       />
                     </div>
-                    <div className="max-h-56 overflow-y-auto pb-1">
+                    <div className="max-h-64 overflow-y-auto pb-1">
                       {(() => {
-                        const filtered = employees.filter(emp =>
-                          `${emp.firstName} ${emp.lastName} ${emp.employeeType}`.toLowerCase().includes(employeeSearchQuery.toLowerCase())
-                        );
-                        return filtered.length === 0
-                          ? <div className="text-sm text-slate-400 py-4 text-center">No employee found</div>
-                          : filtered.map(emp => (
-                              <button
-                                key={emp.id}
-                                type="button"
-                                onClick={() => { setSelectedEmployeeId(emp.id); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
+                        const q = employeeSearchQuery.toLowerCase();
+                        const filteredEmps = employees.filter(emp => `${emp.firstName} ${emp.lastName} ${emp.employeeType}`.toLowerCase().includes(q));
+                        const filteredAdmins = adminUsers.filter(a => `${a.firstName} ${a.lastName}`.toLowerCase().includes(q));
+                        const hasResults = filteredEmps.length > 0 || filteredAdmins.length > 0;
+                        if (!hasResults) return <div className="text-sm text-slate-400 py-4 text-center">No results found</div>;
+                        return <>
+                          {filteredEmps.length > 0 && <>
+                            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Employees</div>
+                            {filteredEmps.map(emp => (
+                              <button key={emp.id} type="button"
+                                onClick={() => { setSelectedEmployeeId(emp.id); setSelectedRecipientIsAdmin(false); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
                                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
                               >
-                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === emp.id ? 'opacity-100' : 'opacity-0'}`} />
+                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === emp.id && !selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
                                 <div className="flex-1 min-w-0">
                                   <div className="font-medium text-slate-900 truncate">{emp.firstName} {emp.lastName}</div>
                                 </div>
                               </button>
-                            ));
+                            ))}
+                          </>}
+                          {filteredAdmins.length > 0 && <>
+                            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Admins</div>
+                            {filteredAdmins.map(admin => (
+                              <button key={admin.id} type="button"
+                                onClick={() => { setSelectedEmployeeId(admin.id); setSelectedRecipientIsAdmin(true); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
+                              >
+                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === admin.id && selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-slate-900 truncate">{admin.firstName} {admin.lastName}</div>
+                                  <div className="text-xs text-blue-600 truncate">{admin.email}</div>
+                                </div>
+                                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Admin</span>
+                              </button>
+                            ))}
+                          </>}
+                        </>;
                       })()}
                     </div>
                   </div>
@@ -703,7 +742,7 @@ export function EmployeeFormsManagement() {
             </div>
           </div>
           <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
+            <Button variant="outline" onClick={() => { setIsAssignDialogOpen(false); setSelectedEmployeeId(''); setSelectedRecipientIsAdmin(false); }} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
               Cancel
             </Button>
             <Button onClick={handleAssignToEmployee} disabled={!selectedEmployeeId} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
@@ -713,22 +752,33 @@ export function EmployeeFormsManagement() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
+      <Dialog open={isAssignToAllDialogOpen} onOpenChange={(open) => { if (!open) setIncludeAdminsInAll(false); setIsAssignToAllDialogOpen(open); }}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All Employees</DialogTitle>
           </DialogHeader>
-          <div className="py-2">
+          <div className="py-2 space-y-3">
             <p className="text-sm text-slate-600 leading-relaxed">
               Assign <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong> to every active employee in this school? Employees who already have this form will be skipped.
             </p>
+            {adminUsers.length > 0 && (
+              <label className="flex items-center gap-2.5 cursor-pointer rounded-xl border border-slate-200 px-4 py-3 hover:bg-slate-50 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={includeAdminsInAll}
+                  onChange={e => setIncludeAdminsInAll(e.target.checked)}
+                  className="h-4 w-4 rounded border-slate-300 accent-[#0F2D52]"
+                />
+                <span className="text-sm text-slate-700">Also assign to all admins <span className="text-slate-400">({adminUsers.length})</span></span>
+              </label>
+            )}
           </div>
           <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAssignToAllDialogOpen(false)} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
+            <Button variant="outline" onClick={() => { setIsAssignToAllDialogOpen(false); setIncludeAdminsInAll(false); }} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
               Cancel
             </Button>
             <Button onClick={handleAssignToAllEmployees} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
-              Assign to All Employees
+              Assign to All
             </Button>
           </DialogFooter>
         </DialogContent>

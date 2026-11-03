@@ -75,6 +75,7 @@ import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { AttendanceReports } from './pages/employee/AttendanceReports';
+import { AdminMyForms } from './pages/admin/AdminMyForms';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
 
@@ -218,6 +219,10 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-documents/review" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review/:documentId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/:requestId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentRequestAssignments audience="employee" /></PermissionRoute></FeatureRoute>} />
+                  {/* Admin self-service: own forms and documents */}
+                  <Route path="/:schoolSlug/admin/my-forms" element={<FeatureRoute feature="employeeManagementEnabled"><AdminMyForms /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/my-documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="admin" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />

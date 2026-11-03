@@ -1,7 +1,7 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
-  Calendar, Phone, Mail, Globe, BookOpen,
+  Calendar, Phone, Mail, Globe, BookOpen, ChevronDown,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
   Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2, ClipboardList, CalendarDays, HardDrive
 } from 'lucide-react';
@@ -30,6 +30,16 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSuperGuideModal, setShowSuperGuideModal] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('admin-sidebar-collapsed');
+      return saved
+        ? new Set(JSON.parse(saved) as string[])
+        : new Set(['People', 'Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+    } catch {
+      return new Set(['People', 'Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+    }
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -61,6 +71,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [location.pathname]);
 
+  // Auto-expand the group that contains the active route
+  useEffect(() => {
+    const activeGroup = navGroups.find(g =>
+      g.items.some(item => {
+        const norm = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+        return isNavItemActive(norm);
+      })
+    );
+    if (activeGroup) {
+      setCollapsedGroups(prev => {
+        if (!prev.has(activeGroup.label)) return prev;
+        const next = new Set(prev);
+        next.delete(activeGroup.label);
+        return next;
+      });
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
   const isFromStudents = location.state?.fromStudents === true;
@@ -90,37 +118,42 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      try { localStorage.setItem('admin-sidebar-collapsed', JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
 
   const navGroups = [
+    // ── Dashboard (no label = no header, never collapsible) ──────────────────
     {
-      label: 'Workspace',
+      label: '',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
+      ],
+    },
+
+    // ── People ───────────────────────────────────────────────────────────────
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
+      label: 'People',
+      items: [
         ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
           { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
           { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
         ] : []),
-        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
-        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
-        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
-          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
-          ...(!isSuperAdmin ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending }] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
         ] : []),
-        ...(schoolFeatures.conferenceEnabled && hasPermission('manage_conferences') ? [
-          { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
-        ] : []),
-        ...(schoolFeatures.driveEnabled && hasPermission('manage_drive') ? [
-          { icon: <HardDrive className="w-[18px] h-[18px]" />, label: 'Drive', path: `${schoolPrefix}/admin/drive` },
-        ] : []),
-        // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
-        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [
-          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
-        ] : []),
-
       ],
-    },
+    }] : []),
+
+    // ── Forms ────────────────────────────────────────────────────────────────
     ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Forms',
       items: [
@@ -136,13 +169,65 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ] : []),
       ],
     }] : []),
+
+    // ── Documents ────────────────────────────────────────────────────────────
     ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Documents',
       items: [
-        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview }] : []),
-        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview }] : []),
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview },
+        ] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview },
+        ] : []),
       ],
     }] : []),
+
+    // ── Engagement ───────────────────────────────────────────────────────────
+    ...((schoolFeatures.surveyEnabled && hasPermission('manage_surveys')) || (schoolFeatures.conferenceEnabled && hasPermission('manage_conferences')) ? [{
+      label: 'Engagement',
+      items: [
+        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
+        ] : []),
+        ...(schoolFeatures.conferenceEnabled && hasPermission('manage_conferences') ? [
+          { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── My Space (personal items for non-SuperAdmin admins) ──────────────────
+    ...(!isSuperAdmin && (
+      (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ||
+      (schoolFeatures.surveyEnabled && hasPermission('manage_surveys'))
+    ) ? [{
+      label: 'My Space',
+      items: [
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Forms', path: `${schoolPrefix}/admin/my-forms` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Documents', path: `${schoolPrefix}/admin/my-documents` },
+        ] : []),
+        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── Workspace ────────────────────────────────────────────────────────────
+    ...((schoolFeatures.driveEnabled && hasPermission('manage_drive')) || (schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses')) ? [{
+      label: 'Workspace',
+      items: [
+        ...(schoolFeatures.driveEnabled && hasPermission('manage_drive') ? [
+          { icon: <HardDrive className="w-[18px] h-[18px]" />, label: 'Drive', path: `${schoolPrefix}/admin/drive` },
+        ] : []),
+        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [
+          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── Time Tracking ────────────────────────────────────────────────────────
     ...(schoolFeatures.taptimeEnabled && hasPermission('manage_taptime') ? [{
       label: 'Time Tracking',
       items: [
@@ -154,18 +239,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     }] : []),
 
-    ...(isSuperAdmin ? [{
+    // ── Administration ───────────────────────────────────────────────────────
+    {
       label: 'Administration',
       items: [
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        ...(isSuperAdmin ? [{ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` }] : []),
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
-    }] : [{
-      label: 'Administration',
-      items: [
-        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
-      ],
-    }]),
+    },
   ];
 
   const initials = userData?.firstName && userData?.lastName
@@ -206,35 +287,55 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </button>
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4 pb-2">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
-                <div className="space-y-0.5">
-                  {group.items.map((item, i) => {
-                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = isNavItemActive(normalizedItemPath);
-                    return (
-                      <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
-                        ref={isActive ? activeNavRef : undefined}
-                        className={cn(
-                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
-                          isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                        )}
-                      >
-                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
-                        {!!item.badge && item.badge > 0 && (
-                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
-                            {item.badge > 99 ? '99+' : item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
+            {navGroups.map((group, gi) => {
+              const isCollapsible = group.label !== '';
+              const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
+              return (
+                <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                  {isCollapsible && (
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className="w-full flex items-center justify-between px-3 mb-1 group/hdr"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover/hdr:text-slate-600 transition-colors">
+                        {group.label}
+                      </span>
+                      <ChevronDown className={cn(
+                        'h-3 w-3 text-slate-400 transition-transform duration-200 group-hover/hdr:text-slate-600',
+                        isCollapsed && '-rotate-90'
+                      )} />
+                    </button>
+                  )}
+                  <div className={cn(
+                    'space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out',
+                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'
+                  )}>
+                    {group.items.map((item, i) => {
+                      const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                      const isActive = isNavItemActive(normalizedItemPath);
+                      return (
+                        <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                          ref={isActive ? activeNavRef : undefined}
+                          className={cn(
+                            'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                            isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                          )}
+                        >
+                          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                          <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                          <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                          {!!item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
 
           {/* ── Mobile sidebar footer: User + Logout ── */}
@@ -268,35 +369,55 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             />
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
-                <div className="space-y-0.5">
-                  {group.items.map((item, i) => {
-                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = isNavItemActive(normalizedItemPath);
-                    return (
-                      <Link key={i} to={item.path}
-                        ref={isActive ? activeNavRef : undefined}
-                        className={cn(
-                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
-                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
-                        )}
-                      >
-                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
-                        {!!item.badge && item.badge > 0 && (
-                          <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
-                            {item.badge > 99 ? '99+' : item.badge}
-                          </span>
-                        )}
-                      </Link>
-                    );
-                  })}
+            {navGroups.map((group, gi) => {
+              const isCollapsible = group.label !== '';
+              const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
+              return (
+                <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                  {isCollapsible && (
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className="w-full flex items-center justify-between px-3 mb-1 group/hdr"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 group-hover/hdr:text-white/50 transition-colors">
+                        {group.label}
+                      </span>
+                      <ChevronDown className={cn(
+                        'h-3 w-3 text-white/25 transition-transform duration-200 group-hover/hdr:text-white/50',
+                        isCollapsed && '-rotate-90'
+                      )} />
+                    </button>
+                  )}
+                  <div className={cn(
+                    'space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out',
+                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'
+                  )}>
+                    {group.items.map((item, i) => {
+                      const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                      const isActive = isNavItemActive(normalizedItemPath);
+                      return (
+                        <Link key={i} to={item.path}
+                          ref={isActive ? activeNavRef : undefined}
+                          className={cn(
+                            'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                            isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                          )}
+                        >
+                          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                          <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                          <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                          {!!item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
 
           {/* ── Desktop sidebar footer: User + Logout ── */}

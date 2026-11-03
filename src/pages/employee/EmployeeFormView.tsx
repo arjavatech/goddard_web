@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, FileText, User, CheckCircle2, LayoutList, X, Home } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Header } from '../../components/layout/Header';
+import { AdminLayout } from '../admin/AdminLayout';
 import { useUserContext } from '../../contexts/UserContext';
 import type { EmployeeFormAssignment } from '../../services/api/employee';
 
@@ -32,7 +33,8 @@ export function EmployeeFormView() {
     totalForms?: number;
   };
 
-  const back = `/${schoolSlug}/employee/dashboard`;
+  const isAdminContext = window.location.pathname.includes('/admin/');
+  const back = isAdminContext ? `/${schoolSlug}/admin/my-forms` : `/${schoolSlug}/employee/dashboard`;
 
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
@@ -255,6 +257,83 @@ export function EmployeeFormView() {
   const isReadOnly = assignment.normalizedStatus === 'Approved' || assignment.normalizedStatus === 'Submitted';
   const showSubmissionNavigation = isReadOnly || assignment.normalizedStatus === 'In Progress';
 
+  if (isAdminContext) {
+    return (
+      <AdminLayout>
+        <div className="flex flex-col bg-white">
+          {/* Title Bar */}
+          <div className="shrink-0 z-30 flex items-center px-4 py-3 bg-white border-b border-slate-100 shadow-sm sticky top-16">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate(back)}
+              className="h-8 px-2.5 gap-1.5 text-xs font-semibold text-[#0F2D52]"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+              My Forms
+            </Button>
+            <h2 className="flex-1 text-sm sm:text-base font-semibold text-slate-900 truncate text-center px-2">
+              {assignment.formTitle}
+            </h2>
+            <div className="min-w-[5rem]" />
+          </div>
+
+          {/* Info Bar */}
+          <div className="bg-white border-b border-slate-200 px-4 py-3 lg:px-6 shrink-0">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-[#EFF5FB] flex items-center justify-center shrink-0">
+                  <FileText className="w-3.5 h-3.5 text-[#0F2D52]" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Form</p>
+                  <p className="text-sm font-bold text-slate-900 truncate">{assignment.formTitle}</p>
+                </div>
+              </div>
+              {assignment.dueDate && (
+                <>
+                  <div className="h-8 w-px bg-slate-100 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 leading-none mb-0.5">Due</p>
+                    <p className="text-sm font-semibold text-slate-700">{assignment.dueDate}</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Iframe */}
+          <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC]">
+            {(!viewUrl || isFrameLoading) && (
+              <div className="flex flex-col items-center justify-center bg-slate-50/80" style={{ height: `${formHeight}px` }}>
+                <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-4 h-10 w-10" />
+                <p className="text-sm font-semibold text-slate-500 animate-pulse">Loading form...</p>
+              </div>
+            )}
+            {viewUrl && (
+              <iframe
+                ref={embeddedResize.iframeRef}
+                src={viewUrl}
+                title={assignment.formTitle}
+                style={{
+                  width: '100%',
+                  height: embeddedResize.isDynamic
+                    ? `${embeddedResize.height ?? formHeight}px`
+                    : `${formHeight}px`,
+                  border: 'none',
+                  display: 'block',
+                  opacity: isFrameLoading ? 0 : 1,
+                  transition: 'opacity 0.3s ease-in-out',
+                }}
+                onLoad={() => { embeddedResize.handleLoad(); setIsFrameLoading(false); }}
+                allow="camera; microphone; geolocation"
+              />
+            )}
+          </div>
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <div className="h-screen bg-[#F7F9FC] flex flex-col overflow-hidden">
