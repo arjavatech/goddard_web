@@ -198,12 +198,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
     // ── My Space (personal items for non-SuperAdmin admins) ──────────────────
     ...(!isSuperAdmin && (
-      (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ||
+      schoolFeatures.employeeManagementEnabled ||
       (schoolFeatures.surveyEnabled && hasPermission('manage_surveys'))
     ) ? [{
       label: 'My Space',
       items: [
-        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+        ...(schoolFeatures.employeeManagementEnabled ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Forms', path: `${schoolPrefix}/admin/my-forms` },
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Documents', path: `${schoolPrefix}/admin/my-documents` },
         ] : []),
