@@ -139,11 +139,13 @@ export function SetPassword() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
+      sessionStorage.setItem('pending_oauth', 'google');
       await supabase!.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/dashboard` }
       });
     } catch {
+      sessionStorage.removeItem('pending_oauth');
       setError('Google sign-in failed. Please try again.');
       setIsGoogleLoading(false);
     }

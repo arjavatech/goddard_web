@@ -117,7 +117,11 @@ function useAuthState(): UseAuth {
       }
 
       if (event === 'SIGNED_IN' && session?.access_token) {
-        const isGoogle = session.user?.app_metadata?.provider === 'google';
+        const pendingOAuth = sessionStorage.getItem('pending_oauth');
+        sessionStorage.removeItem('pending_oauth');
+        const isGoogle =
+          pendingOAuth === 'google' ||
+          session.user?.app_metadata?.provider === 'google';
         const existing = getStoredCustomToken();
         if (isGoogle && !existing) {
           // Google OAuth just completed — exchange for our custom JWT
@@ -211,11 +215,15 @@ function useAuthState(): UseAuth {
   const signInWithProvider = useCallback(async (provider: Provider) => {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
+    sessionStorage.setItem('pending_oauth', provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: { redirectTo: `${window.location.origin}/dashboard` }
     });
-    if (error) throw error as AuthError;
+    if (error) {
+      sessionStorage.removeItem('pending_oauth');
+      throw error as AuthError;
+    }
   }, []);
 
   const signOut = useCallback(async () => {
