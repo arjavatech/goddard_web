@@ -2,15 +2,13 @@ import { createContext, createElement, useContext, useEffect, useRef, useState, 
 import { type AuthError, type Provider, type User, type Session } from '@supabase/supabase-js';
 import { isAuthBypassed } from '../../config/env';
 import { supabase } from './authClient';
+import { storeCustomToken, getStoredCustomToken, clearCustomToken } from './session';
+import { googleExchange as googleExchangeApi } from '../api/auth';
 import { unregisterDeviceToken } from '../api/notifications';
 import { deleteFcmToken } from '../firebase';
 
 const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
 
-// Best-effort: tell the backend to forget this device's FCM token, then nuke
-// the local Firebase registration. Called before signOut so the auth header is
-// still valid for the DELETE. Errors are swallowed — a stale row is fine since
-// FCM will mark it UNREGISTERED on the next send and the backend prunes it.
 async function cleanupFcmRegistration(): Promise<void> {
   const token = typeof window !== 'undefined' ? localStorage.getItem(FCM_TOKEN_STORAGE_KEY) : null;
   if (token) {
@@ -20,6 +18,28 @@ async function cleanupFcmRegistration(): Promise<void> {
   try { await deleteFcmToken(); } catch { /* noop */ }
   try { localStorage.removeItem('fillout_user_context'); } catch { /* noop */ }
 }
+
+function parseJwtClaims(token: string): { user_id: string; email: string; role: string } | null {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    if (payload.user_id && payload.email) return { user_id: payload.user_id, email: payload.email, role: payload.role ?? '' };
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function makeSyntheticUser(claims: { user_id: string; email: string; role: string }): User {
+  return {
+    id: claims.user_id,
+    email: claims.email,
+    app_metadata: { role: claims.role },
+    user_metadata: {},
+    aud: 'authenticated',
+    created_at: new Date().toISOString()
+  } as unknown as User;
+}
+
 type UseAuth = {
   user: User | null;
   isAuthenticated: boolean;
@@ -40,162 +60,174 @@ type UseAuth = {
 
 const AuthContext = createContext<UseAuth | undefined>(undefined);
 
+const BYPASS_USER: User = {
+  id: 'bypass-user',
+  app_metadata: {},
+  user_metadata: { full_name: 'Developer' },
+  aud: 'bypass',
+  created_at: new Date().toISOString()
+} as unknown as User;
+
 function useAuthState(): UseAuth {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  // A new generation represents a fresh authenticated session. Profile data
-  // is keyed to this value so it cannot be reused after logout or re-login.
-  const [authGeneration, setAuthGeneration] = useState(0);
-  const sessionTokenRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (isAuthBypassed) {
-      const devUser = {
-        id: 'bypass-user',
-        app_metadata: {},
-        user_metadata: {
-          full_name: 'Developer'
-        },
-        aud: 'bypass',
-        created_at: new Date().toISOString()
-      } as unknown as User;
-      setUser(devUser);
-      setAuthGeneration(1);
-      setLoading(false);
-      return;
+  const [user, setUser] = useState<User | null>(() => {
+    if (isAuthBypassed) return BYPASS_USER;
+    const token = getStoredCustomToken();
+    if (token) {
+      const claims = parseJwtClaims(token);
+      if (claims) return makeSyntheticUser(claims);
     }
+    return null;
+  });
+
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (isAuthBypassed) return false;
+    return !getStoredCustomToken();
+  });
+
+  const [authGeneration, setAuthGeneration] = useState<number>(() => {
+    if (isAuthBypassed) return 1;
+    return getStoredCustomToken() ? 1 : 0;
+  });
+
+  const sessionTokenRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthBypassed) return;
     if (!supabase) {
       setLoading(false);
       return;
     }
 
-    // Supabase immediately emits INITIAL_SESSION to this subscription. Using
-    // it as the only initial-session source avoids a duplicate profile load.
-    const {
-      data: {
-        subscription
-      }
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const previousToken = sessionTokenRef.current;
       sessionTokenRef.current = session?.access_token ?? null;
-      setUser(session?.user ?? null);
-      setLoading(false);
+
+      if (event === 'INITIAL_SESSION') {
+        if (getStoredCustomToken()) {
+          // Custom JWT is active — don't let Supabase's null session overwrite it
+          setLoading(false);
+          return;
+        }
+        setUser(session?.user ?? null);
+        setLoading(false);
+        if (session?.access_token && session.access_token !== previousToken) {
+          setAuthGeneration(g => g + 1);
+        }
+        return;
+      }
+
+      if (event === 'SIGNED_IN' && session?.access_token) {
+        const isGoogle = session.user?.app_metadata?.provider === 'google';
+        const existing = getStoredCustomToken();
+        if (isGoogle && !existing) {
+          // Google OAuth just completed — exchange for our custom JWT
+          googleExchangeApi(session.access_token)
+            .then(result => {
+              storeCustomToken(result.token);
+              const claims = parseJwtClaims(result.token);
+              if (claims) setUser(makeSyntheticUser(claims));
+              setLoading(false);
+              setAuthGeneration(g => g + 1);
+            })
+            .catch(() => {
+              setUser(session.user);
+              setLoading(false);
+              setAuthGeneration(g => g + 1);
+            });
+          return;
+        }
+        // Password login — use Supabase user directly
+        setUser(session.user);
+        setLoading(false);
+        setAuthGeneration(g => g + 1);
+        return;
+      }
+
       if (event === 'SIGNED_OUT') {
+        clearCustomToken();
         const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
         if (!isExplicit && previousToken) {
           localStorage.setItem('session_invalidated', 'true');
         }
         sessionStorage.removeItem('explicit_logout');
-        setAuthGeneration(generation => generation + 1);
-      } else if (
-        (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') &&
-        session?.access_token &&
-        session.access_token !== previousToken
-      ) {
-        setAuthGeneration(generation => generation + 1);
+        setUser(null);
+        setLoading(false);
+        setAuthGeneration(g => g + 1);
+        return;
       }
+
+      // TOKEN_REFRESHED and other events
+      setUser(session?.user ?? null);
     });
+
     return () => subscription.unsubscribe();
   }, []);
+
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     if (isAuthBypassed) return null;
     if (!supabase) throw new Error('Supabase not initialized');
-    const {
-      data,
-      error
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error as AuthError;
     return data;
   }, []);
+
   const signUpWithPassword = useCallback(async (email: string, password: string, firstName: string, lastName: string, schoolId: string, role: string) => {
-    if (isAuthBypassed) {
-      return undefined;
-    }
-    if (!supabase) {
-      throw new Error('Supabase not initialized');
-    }
-    const {
-      data,
-      error
-    } = await supabase.auth.signUp({
+    if (isAuthBypassed) return undefined;
+    if (!supabase) throw new Error('Supabase not initialized');
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: `${window.location.origin}/auth/confirm`,
-        data: {
-          first_name: firstName || '',
-          last_name: lastName || '',
-          school_id: schoolId || '',
-          role: role || 'Admin'
-        }
+        data: { first_name: firstName || '', last_name: lastName || '', school_id: schoolId || '', role: role || 'Admin' }
       }
     });
-    if (error) {
-      throw error as AuthError;
-    }
-    if (data?.user && !data.session) {
-      return {
-        user: data.user,
-        session: null,
-        needsConfirmation: true
-      };
-    }
-    return {
-      user: data?.user,
-      session: data?.session,
-      needsConfirmation: false
-    };
+    if (error) throw error as AuthError;
+    if (data?.user && !data.session) return { user: data.user, session: null, needsConfirmation: true };
+    return { user: data?.user, session: data?.session, needsConfirmation: false };
   }, []);
+
   const resetPassword = useCallback(async (email: string) => {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
-    const {
-      error
-    } = await supabase.auth.resetPasswordForEmail(email, {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/update-password`
     });
     if (error) throw error as AuthError;
   }, []);
+
   const updatePassword = useCallback(async (password: string) => {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
-    const {
-      error
-    } = await supabase.auth.updateUser({
-      password
-    });
+    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error as AuthError;
   }, []);
+
   const signInWithProvider = useCallback(async (provider: Provider) => {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
-    const {
-      error
-    } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`
-      }
+      options: { redirectTo: `${window.location.origin}/dashboard` }
     });
     if (error) throw error as AuthError;
   }, []);
+
   const signOut = useCallback(async () => {
     if (isAuthBypassed) return;
-    if (!supabase) throw new Error('Supabase not initialized');
     await cleanupFcmRegistration();
-    // Do not let the next login reuse a school selected by the previous user.
     localStorage.removeItem('schoolId');
     localStorage.removeItem('selectedSchool');
-    // The next authenticated user must start from their role's home route,
-    // rather than restoring the route used by the person who just signed out.
     sessionStorage.setItem('post_logout_login', 'true');
-    const {
-      error
-    } = await supabase.auth.signOut();
-    if (error) throw error as AuthError;
+    sessionStorage.setItem('explicit_logout', 'true');
+    clearCustomToken();
+    setUser(null);
+    setAuthGeneration(g => g + 1);
+    if (supabase) {
+      try { await supabase.auth.signOut(); } catch { /* no Supabase session is fine */ }
+    }
   }, []);
+
   return {
     user,
     isAuthenticated: !!user,
@@ -218,8 +250,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth(): UseAuth {
   const auth = useContext(AuthContext);
-  if (!auth) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!auth) throw new Error('useAuth must be used within an AuthProvider');
   return auth;
 }
