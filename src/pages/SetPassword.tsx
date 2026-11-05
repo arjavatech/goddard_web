@@ -39,14 +39,28 @@ export function SetPassword() {
     const initializeSession = async () => {
       if (!supabase) { setError('Supabase client is not configured'); return; }
 
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-        if (!isMounted) return;
-        if (session) { setSessionReady(true); setTokenValidated(true); setError(''); }
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
+        // session establishment handled in main async flow below
       });
       authSubscription = subscription;
 
+      const checkAlreadyActivated = async (): Promise<boolean> => {
+        const { data: { user } } = await supabase!.auth.getUser();
+        if (!user) return false;
+        const passwordSet = user.user_metadata?.password_set === true;
+        const providers = user.app_metadata?.providers as string[] | undefined;
+        return passwordSet || !!providers?.includes('google');
+      };
+
       const { data: existingSession } = await supabase.auth.getSession();
       if (existingSession?.session) {
+        if (await checkAlreadyActivated()) {
+          if (isMounted) {
+            setError('Your account is already set up. Redirecting to sign in…');
+            setTimeout(() => navigate('/login', { replace: true }), 2500);
+          }
+          return;
+        }
         if (isMounted) { setSessionReady(true); setTokenValidated(true); setError(''); }
         return;
       }
@@ -78,7 +92,17 @@ export function SetPassword() {
         try {
           const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
           if (exchangeError) throw exchangeError;
-          if (data?.session && isMounted) { setSessionReady(true); setTokenValidated(true); return; }
+          if (data?.session) {
+            if (await checkAlreadyActivated()) {
+              if (isMounted) {
+                setError('Your account is already set up. Redirecting to sign in…');
+                setTimeout(() => navigate('/login', { replace: true }), 2500);
+              }
+              return;
+            }
+            if (isMounted) { setSessionReady(true); setTokenValidated(true); }
+            return;
+          }
         } catch {
           if (isMounted) setError('This link has expired or is no longer valid. Please request a new password reset link.');
           return;
@@ -97,6 +121,13 @@ export function SetPassword() {
                 sessionError.message?.includes('already') || sessionError.status === 401 || sessionError.status === 422) {
               const { data: fallbackSession } = await supabase.auth.getSession();
               if (fallbackSession?.session) {
+                if (await checkAlreadyActivated()) {
+                  if (isMounted) {
+                    setError('Your account is already set up. Redirecting to sign in…');
+                    setTimeout(() => navigate('/login', { replace: true }), 2500);
+                  }
+                  return;
+                }
                 if (isMounted) { setSessionReady(true); setTokenValidated(true); return; }
               }
               if (isMounted) setError('This link has expired or has already been used. Please request a new password reset link.');
@@ -106,6 +137,13 @@ export function SetPassword() {
 
           if (!data?.session) {
             if (isMounted) setError('Failed to create session. Please try clicking the link in your email again.');
+            return;
+          }
+          if (await checkAlreadyActivated()) {
+            if (isMounted) {
+              setError('Your account is already set up. Redirecting to sign in…');
+              setTimeout(() => navigate('/login', { replace: true }), 2500);
+            }
             return;
           }
           if (isMounted) { setSessionReady(true); setTokenValidated(true); }
