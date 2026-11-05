@@ -23,5 +23,5 @@ export async function googleExchange(supabaseToken: string): Promise<GoogleExcha
     (err as any).status = res.status;
     throw err;
   }
-  return res.json() as Promise<OtpResult>;
+  return res.json() as Promise<GoogleExchangeResult>;
 }

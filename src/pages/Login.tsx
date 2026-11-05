@@ -29,6 +29,11 @@ export function Login() {
       showToast('warning', 'Your session was ended because this account was signed in on another device.', 'Signed Out for Security');
       localStorage.removeItem('session_invalidated');
     }
+    const googleError = sessionStorage.getItem('google_auth_error');
+    if (googleError) {
+      showToast('error', googleError, 'Google Sign-In Failed');
+      sessionStorage.removeItem('google_auth_error');
+    }
   }, [showToast]);
 
   const navigateAfterAuth = async () => {

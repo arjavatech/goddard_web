@@ -129,10 +129,15 @@ function useAuthState(): UseAuth {
               setLoading(false);
               setAuthGeneration(g => g + 1);
             })
-            .catch(() => {
-              setUser(session.user);
+            .catch((err: Error) => {
+              // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
+              const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
+              sessionStorage.setItem('google_auth_error', message);
+              supabase!.auth.signOut().catch(() => {});
+              clearCustomToken();
+              setUser(null);
               setLoading(false);
-              setAuthGeneration(g => g + 1);
+              window.location.href = '/login';
             });
           return;
         }
