@@ -127,11 +127,13 @@ function useAuthState(): UseAuth {
               setAuthGeneration(g => g + 1);
             })
             .catch(() => {
-              // Stale session or account not activated — sign out fully before navigating
+              // Stale session or account not activated — sign out locally (scope:'local'
+              // clears storage without an API call, so a 403 from a stale session can't
+              // prevent localStorage from being wiped and cause a reload loop)
               clearCustomToken();
               setUser(null);
               setLoading(false);
-              supabase!.auth.signOut().finally(() => {
+              supabase!.auth.signOut({ scope: 'local' }).finally(() => {
                 window.location.href = '/login';
               });
             });
@@ -153,28 +155,32 @@ function useAuthState(): UseAuth {
           pendingOAuth === 'google' ||
           session.user?.app_metadata?.provider === 'google';
         const existing = getStoredCustomToken();
-        if (isGoogle && !existing && !googleExchangeAttempted.current) {
-          googleExchangeAttempted.current = true;
-          // Google OAuth just completed — exchange for our custom JWT
-          googleExchangeApi(session.access_token)
-            .then(result => {
-              storeCustomToken(result.token);
-              const claims = parseJwtClaims(result.token);
-              if (claims) setUser(makeSyntheticUser(claims));
-              setLoading(false);
-              setAuthGeneration(g => g + 1);
-            })
-            .catch((err: Error) => {
-              // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
-              const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
-              sessionStorage.setItem('google_auth_error', message);
-              clearCustomToken();
-              setUser(null);
-              setLoading(false);
-              supabase!.auth.signOut().finally(() => {
-                window.location.href = '/login';
+        if (isGoogle && !existing) {
+          if (!googleExchangeAttempted.current) {
+            googleExchangeAttempted.current = true;
+            // Google OAuth just completed — exchange for our custom JWT
+            googleExchangeApi(session.access_token)
+              .then(result => {
+                storeCustomToken(result.token);
+                const claims = parseJwtClaims(result.token);
+                if (claims) setUser(makeSyntheticUser(claims));
+                setLoading(false);
+                setAuthGeneration(g => g + 1);
+              })
+              .catch((err: Error) => {
+                // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
+                const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
+                sessionStorage.setItem('google_auth_error', message);
+                clearCustomToken();
+                setUser(null);
+                setLoading(false);
+                supabase!.auth.signOut({ scope: 'local' }).finally(() => {
+                  window.location.href = '/login';
+                });
               });
-            });
+          }
+          // Exchange already in flight from INITIAL_SESSION — stay loading, never set Supabase
+          // user directly (would cause a brief auth flash and a redirect to protected routes)
           return;
         }
         // Password login — use Supabase user directly
@@ -185,9 +191,14 @@ function useAuthState(): UseAuth {
       }
 
       if (event === 'SIGNED_OUT') {
-        googleExchangeAttempted.current = false;
-        clearCustomToken();
+        // Only reset the exchange gate on explicit user logout. For auto sign-outs triggered
+        // by a failed exchange, keeping the gate set prevents re-triggering between the
+        // SIGNED_OUT event and the subsequent window.location.href navigation.
         const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
+        if (isExplicit) {
+          googleExchangeAttempted.current = false;
+        }
+        clearCustomToken();
         if (!isExplicit && previousToken) {
           localStorage.setItem('session_invalidated', 'true');
         }
