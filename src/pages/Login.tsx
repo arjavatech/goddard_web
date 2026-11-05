@@ -18,11 +18,17 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { signInWithPassword, signInWithProvider } = useAuth();
+  const { signInWithPassword, signInWithProvider, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
+
+  useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigateAfterAuth().catch(() => navigate('/dashboard', { replace: true }));
+    }
+  }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (localStorage.getItem('session_invalidated') === 'true') {

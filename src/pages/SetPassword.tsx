@@ -142,7 +142,7 @@ export function SetPassword() {
       sessionStorage.setItem('pending_oauth', 'google');
       await supabase!.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: `${window.location.origin}/dashboard` }
+        options: { redirectTo: `${window.location.origin}/login` }
       });
     } catch {
       sessionStorage.removeItem('pending_oauth');

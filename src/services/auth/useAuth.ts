@@ -126,10 +126,13 @@ function useAuthState(): UseAuth {
               setLoading(false);
               setAuthGeneration(g => g + 1);
             })
-            .catch(() => {
+            .catch((err: unknown) => {
               // Stale session or account not activated — sign out locally (scope:'local'
               // clears storage without an API call, so a 403 from a stale session can't
               // prevent localStorage from being wiped and cause a reload loop)
+              const message = (err instanceof Error ? err.message : null)
+                || 'Google sign-in is not allowed. Please accept the invitation link sent to your email first.';
+              sessionStorage.setItem('google_auth_error', message);
               clearCustomToken();
               setUser(null);
               setLoading(false);
@@ -262,7 +265,7 @@ function useAuthState(): UseAuth {
     sessionStorage.setItem('pending_oauth', provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/dashboard` }
+      options: { redirectTo: `${window.location.origin}/login` }
     });
     if (error) {
       sessionStorage.removeItem('pending_oauth');
