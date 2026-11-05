@@ -90,6 +90,7 @@ function useAuthState(): UseAuth {
   });
 
   const sessionTokenRef = useRef<string | null>(null);
+  const googleExchangeAttempted = useRef(false);
 
   useEffect(() => {
     if (isAuthBypassed) return;
@@ -115,7 +116,8 @@ function useAuthState(): UseAuth {
           session?.user?.app_metadata?.provider === 'google' ||
           providers?.includes('google');
 
-        if (isRestoredGoogle && session?.access_token) {
+        if (isRestoredGoogle && session?.access_token && !googleExchangeAttempted.current) {
+          googleExchangeAttempted.current = true;
           googleExchangeApi(session.access_token)
             .then(result => {
               storeCustomToken(result.token);
@@ -151,7 +153,8 @@ function useAuthState(): UseAuth {
           pendingOAuth === 'google' ||
           session.user?.app_metadata?.provider === 'google';
         const existing = getStoredCustomToken();
-        if (isGoogle && !existing) {
+        if (isGoogle && !existing && !googleExchangeAttempted.current) {
+          googleExchangeAttempted.current = true;
           // Google OAuth just completed — exchange for our custom JWT
           googleExchangeApi(session.access_token)
             .then(result => {
@@ -182,6 +185,7 @@ function useAuthState(): UseAuth {
       }
 
       if (event === 'SIGNED_OUT') {
+        googleExchangeAttempted.current = false;
         clearCustomToken();
         const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
         if (!isExplicit && previousToken) {
