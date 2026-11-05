@@ -116,30 +116,34 @@ function useAuthState(): UseAuth {
           session?.user?.app_metadata?.provider === 'google' ||
           providers?.includes('google');
 
-        if (isRestoredGoogle && session?.access_token && !googleExchangeAttempted.current) {
-          googleExchangeAttempted.current = true;
-          googleExchangeApi(session.access_token)
-            .then(result => {
-              storeCustomToken(result.token);
-              const claims = parseJwtClaims(result.token);
-              if (claims) setUser(makeSyntheticUser(claims));
-              setLoading(false);
-              setAuthGeneration(g => g + 1);
-            })
-            .catch((err: unknown) => {
-              // Stale session or account not activated — sign out locally (scope:'local'
-              // clears storage without an API call, so a 403 from a stale session can't
-              // prevent localStorage from being wiped and cause a reload loop)
-              const message = (err instanceof Error ? err.message : null)
-                || 'Google sign-in is not allowed. Please accept the invitation link sent to your email first.';
-              sessionStorage.setItem('google_auth_error', message);
-              clearCustomToken();
-              setUser(null);
-              setLoading(false);
-              supabase!.auth.signOut({ scope: 'local' }).finally(() => {
-                window.location.href = '/login';
+        if (isRestoredGoogle && session?.access_token) {
+          if (!googleExchangeAttempted.current) {
+            googleExchangeAttempted.current = true;
+            googleExchangeApi(session.access_token)
+              .then(result => {
+                storeCustomToken(result.token);
+                const claims = parseJwtClaims(result.token);
+                if (claims) setUser(makeSyntheticUser(claims));
+                setLoading(false);
+                setAuthGeneration(g => g + 1);
+                sessionStorage.setItem('oauth_just_succeeded', '1');
+              })
+              .catch((err: unknown) => {
+                // Stale session or account not activated — sign out locally (scope:'local'
+                // clears storage without an API call, so a 403 from a stale session can't
+                // prevent localStorage from being wiped and cause a reload loop)
+                const message = (err instanceof Error ? err.message : null)
+                  || 'Google sign-in is not allowed. Please accept the invitation link sent to your email first.';
+                sessionStorage.setItem('google_auth_error', message);
+                clearCustomToken();
+                setUser(null);
+                setLoading(false);
+                supabase!.auth.signOut({ scope: 'local' }).finally(() => {
+                  window.location.href = '/login';
+                });
               });
-            });
+          }
+          // Exchange in flight or already attempted — never fall through to setUser(session.user)
           return;
         }
 
@@ -169,6 +173,7 @@ function useAuthState(): UseAuth {
                 if (claims) setUser(makeSyntheticUser(claims));
                 setLoading(false);
                 setAuthGeneration(g => g + 1);
+                sessionStorage.setItem('oauth_just_succeeded', '1');
               })
               .catch((err: Error) => {
                 // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page

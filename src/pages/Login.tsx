@@ -25,7 +25,8 @@ export function Login() {
   const { alertState, hideAlert } = useAlertModal();
 
   useEffect(() => {
-    if (!loading && isAuthenticated) {
+    if (!loading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
+      sessionStorage.removeItem('oauth_just_succeeded');
       navigateAfterAuth().catch(() => navigate('/dashboard', { replace: true }));
     }
   }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
