@@ -108,6 +108,34 @@ function useAuthState(): UseAuth {
           setLoading(false);
           return;
         }
+
+        // Existing Google session with no custom JWT → attempt exchange to get one
+        const providers = session?.user?.app_metadata?.providers as string[] | undefined;
+        const isRestoredGoogle =
+          session?.user?.app_metadata?.provider === 'google' ||
+          providers?.includes('google');
+
+        if (isRestoredGoogle && session?.access_token) {
+          googleExchangeApi(session.access_token)
+            .then(result => {
+              storeCustomToken(result.token);
+              const claims = parseJwtClaims(result.token);
+              if (claims) setUser(makeSyntheticUser(claims));
+              setLoading(false);
+              setAuthGeneration(g => g + 1);
+            })
+            .catch(() => {
+              // Stale session or account not activated — sign out fully before navigating
+              clearCustomToken();
+              setUser(null);
+              setLoading(false);
+              supabase!.auth.signOut().finally(() => {
+                window.location.href = '/login';
+              });
+            });
+          return;
+        }
+
         setUser(session?.user ?? null);
         setLoading(false);
         if (session?.access_token && session.access_token !== previousToken) {
@@ -137,11 +165,12 @@ function useAuthState(): UseAuth {
               // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
               const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
               sessionStorage.setItem('google_auth_error', message);
-              supabase!.auth.signOut().catch(() => {});
               clearCustomToken();
               setUser(null);
               setLoading(false);
-              window.location.href = '/login';
+              supabase!.auth.signOut().finally(() => {
+                window.location.href = '/login';
+              });
             });
           return;
         }
