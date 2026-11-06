@@ -4,6 +4,7 @@ import { Shield, Eye, EyeOff, CheckCircle, XCircle, CheckCircle2, Lock } from 'l
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { supabase } from '../services/auth/authClient';
+import { activateAccount } from '../services/api/auth';
 
 interface PasswordRequirement {
   label: string;
@@ -177,14 +178,21 @@ export function SetPassword() {
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     try {
+      const { data: { session } } = await supabase!.auth.getSession();
+      if (!session?.access_token) {
+        setError('Session expired. Please refresh the page and try again.');
+        setIsGoogleLoading(false);
+        return;
+      }
+      await activateAccount(session.access_token);
       sessionStorage.setItem('pending_oauth', 'google');
       await supabase!.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo: `${window.location.origin}/login` }
       });
-    } catch {
+    } catch (err) {
       sessionStorage.removeItem('pending_oauth');
-      setError('Google sign-in failed. Please try again.');
+      setError((err as Error).message || 'Google sign-in failed. Please try again.');
       setIsGoogleLoading(false);
     }
   };
