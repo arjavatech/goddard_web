@@ -110,6 +110,17 @@ function useAuthState(): UseAuth {
           return;
         }
 
+        // If the user explicitly signed out, suppress the auto-exchange so the
+        // persisted Google OAuth session doesn't log them straight back in.
+        const justSignedOut = localStorage.getItem('goddard.signed_out') === 'true';
+        if (justSignedOut) {
+          localStorage.removeItem('goddard.signed_out');
+          supabase!.auth.signOut().catch(() => {});
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         // Existing Google session with no custom JWT → attempt exchange to get one
         const isRestoredGoogle = session?.user?.app_metadata?.provider === 'google';
 
@@ -320,6 +331,7 @@ function useAuthState(): UseAuth {
     sessionStorage.setItem('post_logout_login', 'true');
     sessionStorage.setItem('explicit_logout', 'true');
     clearCustomToken();
+    localStorage.setItem('goddard.signed_out', 'true');
     setUser(null);
     setAuthGeneration(g => g + 1);
     if (supabase) {
