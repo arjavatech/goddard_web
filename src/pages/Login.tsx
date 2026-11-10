@@ -4,10 +4,12 @@ import { Mail, GraduationCap, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
+import { useUserContext } from '../contexts/UserContext';
 import { prefilloutProvision } from '../services/api/fillout';
 import { fetchUserContext } from '../services/api/user';
 import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
+import { Loading } from '../components/ui/loading';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
 
@@ -17,8 +19,10 @@ export function Login() {
   const [emailError, setEmailError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   const { signInWithPassword, signInWithProvider, signOut, loading, isAuthenticated } = useAuth();
+  const { refreshUserData } = useUserContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -27,7 +31,9 @@ export function Login() {
   useEffect(() => {
     if (!loading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
       sessionStorage.removeItem('oauth_just_succeeded');
+      setIsRedirecting(true);
       navigateAfterAuth().catch(async (err) => {
+        setIsRedirecting(false);
         const raw = (err as Error).message?.toLowerCase() ?? '';
         await signOut();
         if (raw.includes('invitation link')) {
@@ -98,6 +104,9 @@ export function Login() {
 
     sessionStorage.removeItem('post_logout_login');
     navigate(redirectTo || defaultPath, { replace: true });
+    // UserProvider lives outside the Router, so it won't reload on this navigation.
+    // Trigger it explicitly now that pathname is a real route (not /login).
+    refreshUserData();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -138,6 +147,19 @@ export function Login() {
       setIsGoogleLoading(false);
     }
   };
+
+  // Show a full-page spinner (never the login form) while auth is resolving or an OAuth
+  // sign-in is landing — so a Google login lands straight on the dashboard without a
+  // "sign in again" flash and without an empty page while the profile loads.
+  const oauthLanding = isAuthenticated && typeof window !== 'undefined'
+    && !!sessionStorage.getItem('oauth_just_succeeded');
+  if (loading || isRedirecting || oauthLanding) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loading size="md" message="Signing you in…" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">

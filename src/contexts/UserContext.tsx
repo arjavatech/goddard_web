@@ -90,6 +90,18 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
+    // Public auth pages don't have a profile to load. A lingering invite/magic-link
+    // Supabase session would otherwise trigger a repeated /users/me → 403 retry loop.
+    // After a real login, Login.tsx calls refreshUserData() once it has navigated to a
+    // real route (this provider lives outside the Router, so it can't react to the
+    // route change itself).
+    const onAuthPage = typeof window !== 'undefined' &&
+      (window.location.pathname === '/login' || window.location.pathname === '/set-password');
+    if (onAuthPage) {
+      resetUserContext();
+      return Promise.resolve();
+    }
+
     if (!isAuthenticated || !user) {
       resetUserContext();
       return Promise.resolve();
