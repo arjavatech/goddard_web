@@ -54,7 +54,7 @@ function getSchoolSlug(name: string): string {
 function isTerminalSessionError(error: unknown): boolean {
   const status = (error as { status?: number } | undefined)?.status;
   const message = error instanceof Error ? error.message : String(error ?? '');
-  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired|authorization error/i.test(message);
+  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired/i.test(message);
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
