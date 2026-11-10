@@ -494,6 +494,7 @@ export function SetPassword() {
               </div>
             )}
 
+            {(tokenValidated || !error) && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* New Password */}
               <div className="space-y-2">
@@ -508,7 +509,8 @@ export function SetPassword() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter your password"
-                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                    disabled={loading || !tokenValidated}
+                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                     required
                   />
                   <button
@@ -535,7 +537,8 @@ export function SetPassword() {
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
                     placeholder="Confirm your password"
-                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                    disabled={loading || !tokenValidated}
+                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                     required
                   />
                   <button
@@ -585,6 +588,7 @@ export function SetPassword() {
                 </Button>
               </motion.div>
             </form>
+            )}
 
             {sessionReady && tokenValidated && !error && (
               <>
