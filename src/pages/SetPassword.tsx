@@ -1,13 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Eye, EyeOff, CheckCircle, XCircle, CheckCircle2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { supabase } from '../services/auth/authClient';
 import { activateAccount } from '../services/api/auth';
-import { fetchUserContext } from '../services/api/user';
-import { useUserContext } from '../contexts/UserContext';
-import { prefilloutProvision } from '../services/api/fillout';
 import { useAuth } from '../services/auth/useAuth';
 
 interface PasswordRequirement {
@@ -23,20 +20,13 @@ export function SetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [error, setError] = useState('');
   const [alreadyActivated, setAlreadyActivated] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
-  // True when this page load is the Google OAuth callback (pending_oauth was set before redirecting)
-  const [isProcessingOAuth, setIsProcessingOAuth] = useState(
-    () => typeof window !== 'undefined' && sessionStorage.getItem('pending_oauth') === 'google'
-  );
-  const isHandledRef = useRef(false);
   const navigate = useNavigate();
-  const { loading: authLoading, isAuthenticated } = useAuth();
-  const { seedUserData } = useUserContext();
+  const { signInWithProvider } = useAuth();
 
   const [requirements, setRequirements] = useState<PasswordRequirement[]>([
     { label: 'At least 8 characters long', test: (pwd) => pwd.length >= 8, valid: false },
@@ -66,8 +56,7 @@ export function SetPassword() {
         const { data: { user } } = await supabase!.auth.getUser();
         if (!user) return false;
         const passwordSet = user.user_metadata?.password_set === true;
-        const accountActivated = user.app_metadata?.account_activated === true;
-        return passwordSet || accountActivated;
+        return passwordSet;
       };
 
       const hash = window.location.hash.substring(1);
@@ -187,87 +176,6 @@ export function SetPassword() {
     setRequirements(prev => prev.map(req => ({ ...req, valid: req.test(password, confirmPassword) })));
   }, [password, confirmPassword]);
 
-  // After Google OAuth redirects back here and exchange succeeds, navigate to user page
-  useEffect(() => {
-    if (!authLoading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
-      sessionStorage.removeItem('oauth_just_succeeded');
-      isHandledRef.current = true;
-      setIsRedirecting(true);
-      (async () => {
-        try {
-          const userData = await fetchUserContext();
-          seedUserData(userData);
-          prefilloutProvision(userData).catch(() => {});
-          const sub = userData.schoolData?.subdomain || 'goddard';
-          const role = userData.role?.toLowerCase();
-          const path = role === 'admin' || role === 'superadmin'
-            ? `/${sub}/admin`
-            : role === 'employee'
-            ? `/${sub}/employee/dashboard`
-            : `/${sub}/dashboard`;
-          navigate(path, { replace: true });
-        } catch (err) {
-          isHandledRef.current = true;
-          setIsRedirecting(false);
-          setIsProcessingOAuth(false);
-          setError((err as Error).message || 'Sign-in failed. Please try again.');
-        }
-      })();
-    }
-  }, [authLoading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // If initializeSession detected "already activated" but the user IS authenticated
-  // (e.g. refresh after a successful Google exchange), navigate to their page directly.
-  useEffect(() => {
-    if (!alreadyActivated || !isAuthenticated || authLoading) return;
-    setAlreadyActivated(false);
-    setIsRedirecting(true);
-    (async () => {
-      try {
-        const userData = await fetchUserContext();
-        seedUserData(userData);
-        prefilloutProvision(userData).catch(() => {});
-        const sub = userData.schoolData?.subdomain || 'goddard';
-        const role = userData.role?.toLowerCase();
-        const path = role === 'admin' || role === 'superadmin'
-          ? `/${sub}/admin`
-          : role === 'employee'
-          ? `/${sub}/employee/dashboard`
-          : `/${sub}/dashboard`;
-        navigate(path, { replace: true });
-      } catch (err) {
-        setIsRedirecting(false);
-        setError((err as Error).message || 'Sign-in failed. Please try again.');
-      }
-    })();
-  }, [alreadyActivated, isAuthenticated, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Safety valve: if the exchange never fires (SIGNED_IN never comes), clear the overlay
-  useEffect(() => {
-    if (!isProcessingOAuth) return;
-    const timer = setTimeout(() => {
-      if (isHandledRef.current) return;
-      setIsProcessingOAuth(false);
-      const msg = sessionStorage.getItem('google_auth_error');
-      if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
-      else { setError('Sign-in timed out. Please try again.'); }
-    }, 10000);
-    return () => clearTimeout(timer);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Show exchange failure errors dispatched by useAuth when already on this page
-  useEffect(() => {
-    const handleGoogleError = () => {
-      isHandledRef.current = true;
-      setIsProcessingOAuth(false);
-      const msg = sessionStorage.getItem('google_auth_error');
-      if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
-    };
-    handleGoogleError();
-    window.addEventListener('goddard:google-auth-error', handleGoogleError);
-    return () => window.removeEventListener('goddard:google-auth-error', handleGoogleError);
-  }, []);
-
   const allRequirementsMet = requirements.every(req => req.valid);
 
   const handleGoogleSignIn = async () => {
@@ -280,16 +188,8 @@ export function SetPassword() {
         return;
       }
       await activateAccount(session.access_token);
-      sessionStorage.setItem('pending_oauth', 'google');
-      await supabase!.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: `${window.location.origin}/set-password`,
-          queryParams: { prompt: 'select_account' }
-        }
-      });
+      await signInWithProvider('google'); // redirects to /login; Login.tsx handles everything
     } catch (err) {
-      sessionStorage.removeItem('pending_oauth');
       setError((err as Error).message || 'Google sign-in failed. Please try again.');
       setIsGoogleLoading(false);
     }
@@ -658,14 +558,6 @@ export function SetPassword() {
           </p>
         </div>
       </div>
-
-      {(isProcessingOAuth || isRedirecting) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-5 shadow-lg">
-            <span className="h-6 w-6 block rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
