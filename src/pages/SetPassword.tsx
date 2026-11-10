@@ -33,7 +33,7 @@ export function SetPassword() {
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(
     () => typeof window !== 'undefined' && sessionStorage.getItem('pending_oauth') === 'google'
   );
-  const isNavigatingRef = useRef(false);
+  const isHandledRef = useRef(false);
   const navigate = useNavigate();
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { seedUserData } = useUserContext();
@@ -191,7 +191,7 @@ export function SetPassword() {
   useEffect(() => {
     if (!authLoading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
       sessionStorage.removeItem('oauth_just_succeeded');
-      isNavigatingRef.current = true;
+      isHandledRef.current = true;
       setIsRedirecting(true);
       (async () => {
         try {
@@ -207,6 +207,7 @@ export function SetPassword() {
             : `/${sub}/dashboard`;
           navigate(path, { replace: true });
         } catch (err) {
+          isHandledRef.current = true;
           setIsRedirecting(false);
           setIsProcessingOAuth(false);
           setError((err as Error).message || 'Sign-in failed. Please try again.');
@@ -215,11 +216,37 @@ export function SetPassword() {
     }
   }, [authLoading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // If initializeSession detected "already activated" but the user IS authenticated
+  // (e.g. refresh after a successful Google exchange), navigate to their page directly.
+  useEffect(() => {
+    if (!alreadyActivated || !isAuthenticated || authLoading) return;
+    setAlreadyActivated(false);
+    setIsRedirecting(true);
+    (async () => {
+      try {
+        const userData = await fetchUserContext();
+        seedUserData(userData);
+        prefilloutProvision(userData).catch(() => {});
+        const sub = userData.schoolData?.subdomain || 'goddard';
+        const role = userData.role?.toLowerCase();
+        const path = role === 'admin' || role === 'superadmin'
+          ? `/${sub}/admin`
+          : role === 'employee'
+          ? `/${sub}/employee/dashboard`
+          : `/${sub}/dashboard`;
+        navigate(path, { replace: true });
+      } catch (err) {
+        setIsRedirecting(false);
+        setError((err as Error).message || 'Sign-in failed. Please try again.');
+      }
+    })();
+  }, [alreadyActivated, isAuthenticated, authLoading]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Safety valve: if the exchange never fires (SIGNED_IN never comes), clear the overlay
   useEffect(() => {
     if (!isProcessingOAuth) return;
     const timer = setTimeout(() => {
-      if (isNavigatingRef.current) return;
+      if (isHandledRef.current) return;
       setIsProcessingOAuth(false);
       const msg = sessionStorage.getItem('google_auth_error');
       if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
@@ -231,6 +258,7 @@ export function SetPassword() {
   // Show exchange failure errors dispatched by useAuth when already on this page
   useEffect(() => {
     const handleGoogleError = () => {
+      isHandledRef.current = true;
       setIsProcessingOAuth(false);
       const msg = sessionStorage.getItem('google_auth_error');
       if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
