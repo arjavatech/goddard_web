@@ -50,8 +50,8 @@ export function SetPassword() {
         const { data: { user } } = await supabase!.auth.getUser();
         if (!user) return false;
         const passwordSet = user.user_metadata?.password_set === true;
-        const providers = user.app_metadata?.providers as string[] | undefined;
-        return passwordSet || !!providers?.includes('google');
+        const accountActivated = user.app_metadata?.account_activated === true;
+        return passwordSet || accountActivated;
       };
 
       const hash = window.location.hash.substring(1);
