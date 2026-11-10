@@ -77,7 +77,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
             { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/employee/weekly-report` },
           ]
           : []),
-        { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending },
+        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending }] : []),
         { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
       ],
     }
