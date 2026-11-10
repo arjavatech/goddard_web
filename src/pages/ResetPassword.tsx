@@ -139,10 +139,6 @@ export function ResetPassword() {
     e.preventDefault();
     setError('');
     if (!allRequirementsMet) { setError('Please ensure all password requirements are met.'); return; }
-    if (password === 'Keller@2026') {
-      setError('The temporary password Keller@2026 cannot be used as your new password.');
-      return;
-    }
     setLoading(true);
 
     try {
@@ -317,13 +313,6 @@ export function ResetPassword() {
                 {error}
               </div>
             )}
-
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-              <Shield className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
-                <span className="font-bold">Restricted Password:</span> The temporary password <span className="font-mono bg-amber-100/50 px-1 py-0.5 rounded text-[11px] sm:text-xs">Keller@2026</span> cannot be used as your new password.
-              </p>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* New Password */}
