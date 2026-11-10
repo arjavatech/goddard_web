@@ -111,10 +111,7 @@ function useAuthState(): UseAuth {
         }
 
         // Existing Google session with no custom JWT → attempt exchange to get one
-        const providers = session?.user?.app_metadata?.providers as string[] | undefined;
-        const isRestoredGoogle =
-          session?.user?.app_metadata?.provider === 'google' ||
-          providers?.includes('google');
+        const isRestoredGoogle = session?.user?.app_metadata?.provider === 'google';
 
         if (isRestoredGoogle && session?.access_token) {
           if (!googleExchangeAttempted.current) {
@@ -132,8 +129,13 @@ function useAuthState(): UseAuth {
                 // Stale session or account not activated — sign out locally (scope:'local'
                 // clears storage without an API call, so a 403 from a stale session can't
                 // prevent localStorage from being wiped and cause a reload loop)
-                const message = (err instanceof Error ? err.message : null)
-                  || 'Google sign-in is not allowed. Please accept the invitation link sent to your email first.';
+                const rawMessage = (err instanceof Error ? err.message : '') ?? '';
+                const lowerRaw = rawMessage.toLowerCase();
+                const message = lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
+                  ? 'Please complete your account setup using the invitation link sent to your email.'
+                  : lowerRaw.includes('no account found')
+                  ? 'No account found. Please contact your school administrator.'
+                  : rawMessage.replace(/^authorization error:\s*/i, '') || 'Google sign-in failed. Please try again.';
                 sessionStorage.setItem('google_auth_error', message);
                 sessionStorage.setItem('google_auth_failure', 'true');
                 clearCustomToken();
@@ -178,7 +180,13 @@ function useAuthState(): UseAuth {
               })
               .catch((err: Error) => {
                 // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
-                const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
+                const rawMessage = err?.message ?? '';
+                const lowerRaw = rawMessage.toLowerCase();
+                const message = lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
+                  ? 'Please complete your account setup using the invitation link sent to your email.'
+                  : lowerRaw.includes('no account found')
+                  ? 'No account found. Please contact your school administrator.'
+                  : rawMessage.replace(/^authorization error:\s*/i, '') || 'Google sign-in failed. Please try again.';
                 sessionStorage.setItem('google_auth_error', message);
                 sessionStorage.setItem('google_auth_failure', 'true');
                 clearCustomToken();

@@ -48,7 +48,11 @@ export function Login() {
     }
     const googleError = sessionStorage.getItem('google_auth_error');
     if (googleError) {
-      showToast('error', googleError, 'Google Sign-In Failed');
+      const lowerError = googleError.toLowerCase();
+      const title = (lowerError.includes('invitation link') || lowerError.includes('account setup'))
+        ? 'Account Setup Required'
+        : 'Google Sign-In Failed';
+      showToast('error', googleError, title);
       sessionStorage.removeItem('google_auth_error');
     }
   }, [showToast]);
