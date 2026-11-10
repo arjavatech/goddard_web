@@ -33,7 +33,7 @@ export function SetPassword() {
   const [sessionReady, setSessionReady] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
   const navigate = useNavigate();
-  const { loading: authLoading, isAuthenticated, signOut } = useAuth();
+  const { loading: authLoading, isAuthenticated, signOut, authGeneration } = useAuth();
   const { seedUserData } = useUserContext();
 
   const [requirements, setRequirements] = useState<PasswordRequirement[]>([
@@ -212,7 +212,7 @@ export function SetPassword() {
         }
       })();
     }
-  }, [authLoading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [authLoading, isAuthenticated, authGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Show exchange failure errors dispatched by useAuth when already on this page.
   // Mirrors Login.tsx showGoogleAuthError effect.
