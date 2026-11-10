@@ -412,7 +412,14 @@ export function ResetPassword() {
 
             <div className="pt-2 border-t border-slate-100 text-center">
               <p className="text-[11px] sm:text-xs text-slate-400">
-                Need help? Contact your school administrator
+                Link expired?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-[#0F2D52] font-medium hover:underline"
+                >
+                  Request a new one
+                </button>
               </p>
             </div>
           </motion.div>
