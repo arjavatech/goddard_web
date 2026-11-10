@@ -113,7 +113,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Populate the context from a profile the caller already fetched (e.g. Login's
   // navigateAfterAuth) — avoids a redundant second /users/me on the destination page.
   const seedUserData = (data: UserData) => {
-    activeRequestRef.current = null;
+    // Stamp the ref with the current generation key so loadUserData()'s dedup
+    // check matches and returns early — prevents setIsReady(false) race after navigation.
+    if (user?.id != null) {
+      activeRequestRef.current = { key: `${user.id}:${authGeneration}`, promise: Promise.resolve() };
+    } else {
+      activeRequestRef.current = null;
+    }
     applyUserData(data);
     setError(null);
     setLoading(false);
