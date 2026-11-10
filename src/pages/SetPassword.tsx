@@ -118,6 +118,9 @@ export function SetPassword() {
 
       if (accessToken) {
         try {
+          // Mark this as an intentional session swap so the global SIGNED_OUT handler
+          // doesn't show the "Signed Out for Security" toast on the login page.
+          sessionStorage.setItem('invite_session_swap', 'true');
           const { data, error: sessionError } = await supabase.auth.setSession({
             access_token: accessToken,
             refresh_token: refreshToken || ''

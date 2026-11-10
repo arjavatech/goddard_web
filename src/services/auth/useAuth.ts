@@ -203,11 +203,13 @@ function useAuthState(): UseAuth {
         // by a failed exchange, keeping the gate set prevents re-triggering between the
         // SIGNED_OUT event and the subsequent window.location.href navigation.
         const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
+        const isInviteSwap = sessionStorage.getItem('invite_session_swap') === 'true';
+        sessionStorage.removeItem('invite_session_swap');
         if (isExplicit) {
           googleExchangeAttempted.current = false;
         }
         clearCustomToken();
-        if (!isExplicit && previousToken) {
+        if (!isExplicit && !isInviteSwap && previousToken) {
           localStorage.setItem('session_invalidated', 'true');
         }
         sessionStorage.removeItem('explicit_logout');
