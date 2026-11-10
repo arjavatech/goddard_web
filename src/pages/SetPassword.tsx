@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Eye, EyeOff, CheckCircle, XCircle, CheckCircle2, Lock } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -33,6 +33,7 @@ export function SetPassword() {
   const [isProcessingOAuth, setIsProcessingOAuth] = useState(
     () => typeof window !== 'undefined' && sessionStorage.getItem('pending_oauth') === 'google'
   );
+  const isNavigatingRef = useRef(false);
   const navigate = useNavigate();
   const { loading: authLoading, isAuthenticated } = useAuth();
   const { seedUserData } = useUserContext();
@@ -190,6 +191,7 @@ export function SetPassword() {
   useEffect(() => {
     if (!authLoading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
       sessionStorage.removeItem('oauth_just_succeeded');
+      isNavigatingRef.current = true;
       setIsRedirecting(true);
       (async () => {
         try {
@@ -217,6 +219,7 @@ export function SetPassword() {
   useEffect(() => {
     if (!isProcessingOAuth) return;
     const timer = setTimeout(() => {
+      if (isNavigatingRef.current) return;
       setIsProcessingOAuth(false);
       const msg = sessionStorage.getItem('google_auth_error');
       if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
