@@ -387,22 +387,10 @@ export function Login() {
       <AlertModal open={alertState.open} onClose={hideAlert} type={alertState.type} title={alertState.title} message={alertState.message} />
 
       {showAuthOverlay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-8 text-center space-y-4 max-w-xs w-full mx-4"
-          >
-            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 w-auto mx-auto" />
-            <div className="flex justify-center">
-              <span className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-sm font-bold text-slate-900">Signing you in…</h2>
-              <p className="text-xs text-slate-500">Please wait while we set up your portal.</p>
-            </div>
-          </motion.div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-5 shadow-lg">
+            <span className="h-6 w-6 block rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+          </div>
         </div>
       )}
     </div>

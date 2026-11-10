@@ -30,7 +30,7 @@ export function SetPassword() {
   const [sessionReady, setSessionReady] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
   // True when this page load is the Google OAuth callback (pending_oauth was set before redirecting)
-  const [isProcessingOAuth] = useState(
+  const [isProcessingOAuth, setIsProcessingOAuth] = useState(
     () => typeof window !== 'undefined' && sessionStorage.getItem('pending_oauth') === 'google'
   );
   const navigate = useNavigate();
@@ -206,15 +206,29 @@ export function SetPassword() {
           navigate(path, { replace: true });
         } catch (err) {
           setIsRedirecting(false);
+          setIsProcessingOAuth(false);
           setError((err as Error).message || 'Sign-in failed. Please try again.');
         }
       })();
     }
   }, [authLoading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Safety valve: if the exchange never fires (SIGNED_IN never comes), clear the overlay
+  useEffect(() => {
+    if (!isProcessingOAuth) return;
+    const timer = setTimeout(() => {
+      setIsProcessingOAuth(false);
+      const msg = sessionStorage.getItem('google_auth_error');
+      if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
+      else { setError('Sign-in timed out. Please try again.'); }
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Show exchange failure errors dispatched by useAuth when already on this page
   useEffect(() => {
     const handleGoogleError = () => {
+      setIsProcessingOAuth(false);
       const msg = sessionStorage.getItem('google_auth_error');
       if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
     };
@@ -615,16 +629,9 @@ export function SetPassword() {
       </div>
 
       {(isProcessingOAuth || isRedirecting) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-8 text-center space-y-4 max-w-xs w-full mx-4">
-            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 w-auto mx-auto" />
-            <div className="flex justify-center">
-              <span className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
-            </div>
-            <div className="space-y-1">
-              <h2 className="text-sm font-bold text-slate-900">Signing you in…</h2>
-              <p className="text-xs text-slate-500">Please wait while we set up your portal.</p>
-            </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-5 shadow-lg">
+            <span className="h-6 w-6 block rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
           </div>
         </div>
       )}
