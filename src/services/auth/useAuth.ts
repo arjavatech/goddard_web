@@ -270,7 +270,10 @@ function useAuthState(): UseAuth {
     sessionStorage.setItem('pending_oauth', provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/login` }
+      options: {
+        redirectTo: `${window.location.origin}/login`,
+        queryParams: { prompt: 'select_account' }
+      }
     });
     if (error) {
       sessionStorage.removeItem('pending_oauth');
