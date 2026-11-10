@@ -318,36 +318,116 @@ export function SetPassword() {
 
   if (alreadyActivated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-sm sm:max-w-md space-y-5"
-        >
-          <div className="text-center">
-            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 sm:h-12 w-auto mx-auto" />
+      <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
+        {/* ── Left brand panel ── */}
+        <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-[#091629] via-[#0F2D52] to-[#1E4B83] p-12 xl:p-16 overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]" />
+          <div className="pointer-events-none absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[100px]" />
+          <div className="pointer-events-none absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-blue-500/10 blur-[80px]" />
+
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative z-10"
+          >
+            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto object-contain brightness-0 invert opacity-95" />
+          </motion.div>
+
+          <div className="relative z-10 space-y-8 my-auto max-w-md mt-8">
+            <div className="space-y-4">
+              <motion.h1
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.5 }}
+                className="text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight"
+              >
+                Welcome Back to <br />
+                <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">Goddard School</span>
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.5 }}
+                className="text-xs lg:text-sm text-slate-300/90 leading-relaxed"
+              >
+                Your account is already set up and ready to use. Sign in to access your school portal.
+              </motion.p>
+            </div>
+
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4, duration: 0.5 }}
+              className="space-y-3 pt-2"
+            >
+              {[
+                'Access your parent portal anytime',
+                'View forms, documents and notifications',
+                'Stay connected with your school',
+              ].map((item, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl border bg-white/5 border-white/10">
+                  <CheckCircle className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                  <span className="text-xs text-slate-300">{item}</span>
+                </div>
+              ))}
+            </motion.div>
           </div>
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-9 text-center space-y-4">
-            <div className="flex justify-center">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
-                <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
+
+          <div className="relative z-10 border-t border-white/10 pt-6 mt-8 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
+            <p className="text-[11px] text-slate-400/60 font-medium">
+              © {new Date().getFullYear()} The Goddard School. All rights reserved.
+            </p>
+            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3 py-1 rounded-full w-fit">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+              <span className="text-[10px] text-slate-300 font-bold tracking-wider uppercase">Registered Education Partner</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Right content panel ── */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-screen px-4 py-8 sm:px-8 sm:py-12 md:px-16 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
+          <div className="lg:hidden mb-6 text-center">
+            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto mx-auto" />
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="w-full max-w-sm sm:max-w-md space-y-5"
+          >
+            <div className="mb-5 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[9px] sm:text-[10px] font-bold tracking-wider uppercase w-fit">
+                <Shield className="w-3.5 h-3.5" /> Account Status
+              </div>
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Invitation Link No Longer Valid</h2>
+                <p className="text-xs sm:text-sm text-slate-500 leading-normal">This invitation link has already been used or has expired.</p>
               </div>
             </div>
-            <div className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">Invitation Link No Longer Valid</h2>
-              <p className="text-xs sm:text-sm text-slate-500">This invitation link has already been used or has expired. If you've already set up your account, sign in below. Otherwise, please contact your administrator for a new invitation.</p>
+
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 sm:p-8 space-y-4">
+              <div className="flex justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 flex items-center justify-center">
+                  <Shield className="w-7 h-7 text-blue-500" />
+                </div>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-500 text-center">
+                If you've already set up your account, sign in below. Otherwise, please contact your administrator for a new invitation.
+              </p>
+              <button
+                onClick={() => navigate('/login', { replace: true })}
+                className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] transition-all duration-300 shadow-md shadow-[#0F2D52]/10"
+              >
+                Go to Sign In
+              </button>
             </div>
-            <button
-              onClick={() => navigate('/login', { replace: true })}
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] transition-all duration-300 shadow-md shadow-[#0F2D52]/10"
-            >
-              Go to Sign In
-            </button>
-          </div>
-          <p className="text-center text-[10px] sm:text-xs text-slate-400">
-            © {new Date().getFullYear()} The Goddard School. All rights reserved.
-          </p>
-        </motion.div>
+
+            <p className="text-center text-[10px] sm:text-xs text-slate-400">
+              © {new Date().getFullYear()} The Goddard School. All rights reserved.
+            </p>
+          </motion.div>
+        </div>
       </div>
     );
   }
