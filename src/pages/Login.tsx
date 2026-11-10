@@ -158,32 +158,9 @@ export function Login() {
     }
   };
 
-  // While auth is resolving or an OAuth sign-in is landing, show a branded loading card
-  // (never the login form) — so a Google login lands straight on the dashboard without a
-  // "sign in again" flash, and without a bare empty screen while the profile loads.
   const oauthLanding = isAuthenticated && typeof window !== 'undefined'
     && !!sessionStorage.getItem('oauth_just_succeeded');
-  if (loading || isRedirecting || oauthLanding || isOAuthCallback) {
-    return (
-      <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.25 }}
-          className="w-full max-w-xs bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-8 text-center space-y-4"
-        >
-          <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 w-auto mx-auto" />
-          <div className="flex justify-center">
-            <span className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
-          </div>
-          <div className="space-y-1">
-            <h2 className="text-sm font-bold text-slate-900">Signing you in…</h2>
-            <p className="text-xs text-slate-500">Please wait while we set up your portal.</p>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
+  const showAuthOverlay = loading || isRedirecting || oauthLanding || isOAuthCallback;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
@@ -408,6 +385,26 @@ export function Login() {
       </div>
 
       <AlertModal open={alertState.open} onClose={hideAlert} type={alertState.type} title={alertState.title} message={alertState.message} />
+
+      {showAuthOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.12)] p-8 text-center space-y-4 max-w-xs w-full mx-4"
+          >
+            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 w-auto mx-auto" />
+            <div className="flex justify-center">
+              <span className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-sm font-bold text-slate-900">Signing you in…</h2>
+              <p className="text-xs text-slate-500">Please wait while we set up your portal.</p>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

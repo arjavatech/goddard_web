@@ -145,7 +145,8 @@ function useAuthState(): UseAuth {
                 // Global signOut invalidates the server-side session so a reload can't
                 // restore it and re-trigger the exchange (prevents the 404 retry loop).
                 supabase!.auth.signOut().finally(() => {
-                  if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                  if (typeof window !== 'undefined' &&
+                      (window.location.pathname === '/login' || window.location.pathname === '/set-password')) {
                     window.dispatchEvent(new Event('goddard:google-auth-error'));
                   } else {
                     window.location.href = '/login';
@@ -204,7 +205,8 @@ function useAuthState(): UseAuth {
                 setUser(null);
                 setLoading(false);
                 supabase!.auth.signOut().finally(() => {
-                  if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                  if (typeof window !== 'undefined' &&
+                      (window.location.pathname === '/login' || window.location.pathname === '/set-password')) {
                     window.dispatchEvent(new Event('goddard:google-auth-error'));
                   } else {
                     window.location.href = '/login';
