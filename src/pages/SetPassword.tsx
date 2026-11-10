@@ -20,6 +20,7 @@ export function SetPassword() {
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [error, setError] = useState('');
+  const [alreadyActivated, setAlreadyActivated] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
@@ -73,10 +74,7 @@ export function SetPassword() {
         const { data: existingSession } = await supabase.auth.getSession();
         if (existingSession?.session) {
           if (await checkAlreadyActivated()) {
-            if (isMounted) {
-              setError('Your account is already set up. Redirecting to sign in…');
-              setTimeout(() => navigate('/login', { replace: true }), 2500);
-            }
+            if (isMounted) { setAlreadyActivated(true); }
             return;
           }
           if (isMounted) { setSessionReady(true); setTokenValidated(true); setError(''); }
@@ -101,10 +99,7 @@ export function SetPassword() {
           if (exchangeError) throw exchangeError;
           if (data?.session) {
             if (await checkAlreadyActivated()) {
-              if (isMounted) {
-                setError('Your account is already set up. Redirecting to sign in…');
-                setTimeout(() => navigate('/login', { replace: true }), 2500);
-              }
+              if (isMounted) { setAlreadyActivated(true); }
               return;
             }
             if (isMounted) { setSessionReady(true); setTokenValidated(true); }
@@ -132,10 +127,7 @@ export function SetPassword() {
               const { data: fallbackSession } = await supabase.auth.getSession();
               if (fallbackSession?.session) {
                 if (await checkAlreadyActivated()) {
-                  if (isMounted) {
-                    setError('Your account is already set up. Redirecting to sign in…');
-                    setTimeout(() => navigate('/login', { replace: true }), 2500);
-                  }
+                  if (isMounted) { setAlreadyActivated(true); }
                   return;
                 }
                 if (isMounted) { setSessionReady(true); setTokenValidated(true); return; }
@@ -150,10 +142,7 @@ export function SetPassword() {
             return;
           }
           if (await checkAlreadyActivated()) {
-            if (isMounted) {
-              setError('Your account is already set up. Redirecting to sign in…');
-              setTimeout(() => navigate('/login', { replace: true }), 2500);
-            }
+            if (isMounted) { setAlreadyActivated(true); }
             return;
           }
           if (isMounted) { setSessionReady(true); setTokenValidated(true); }
@@ -236,7 +225,6 @@ export function SetPassword() {
       await supabase.auth.updateUser({ data: { password_set: true } });
       sessionStorage.removeItem('first_login_reset_pending');
       setSuccess(true);
-      setTimeout(() => navigate('/', { replace: true }), 2000);
     } catch (err) {
       const errorMessage = (err as Error).message || 'Failed to set password';
       if (errorMessage.includes('expired') || errorMessage.includes('invalid')) {
@@ -248,6 +236,42 @@ export function SetPassword() {
       setLoading(false);
     }
   };
+
+  if (alreadyActivated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="w-full max-w-sm sm:max-w-md space-y-5"
+        >
+          <div className="text-center">
+            <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 sm:h-12 w-auto mx-auto" />
+          </div>
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 sm:p-9 text-center space-y-4">
+            <div className="flex justify-center">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-blue-50 flex items-center justify-center">
+                <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-blue-500" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">Account Already Set Up</h2>
+              <p className="text-xs sm:text-sm text-slate-500">Your account is already set up. Please sign in to continue.</p>
+            </div>
+            <button
+              onClick={() => navigate('/login', { replace: true })}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] transition-all duration-300 shadow-md shadow-[#0F2D52]/10"
+            >
+              Go to Sign In
+            </button>
+          </div>
+          <p className="text-center text-[10px] sm:text-xs text-slate-400">
+            © {new Date().getFullYear()} The Goddard School. All rights reserved.
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -270,7 +294,12 @@ export function SetPassword() {
               <h2 className="text-lg sm:text-xl font-bold text-slate-900">Welcome to Goddard School! 🎉</h2>
               <p className="text-xs sm:text-sm text-slate-500">Your password has been set successfully. You can now access your parent portal.</p>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-400">Redirecting to login...</p>
+            <button
+              onClick={() => navigate('/login', { replace: true })}
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] transition-all duration-300 shadow-md shadow-[#0F2D52]/10"
+            >
+              Sign In
+            </button>
           </div>
           <p className="text-center text-[10px] sm:text-xs text-slate-400">
             © {new Date().getFullYear()} The Goddard School. All rights reserved.
