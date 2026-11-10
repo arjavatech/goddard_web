@@ -105,8 +105,9 @@ export function SetPassword() {
 
       if (errorParam) {
         if (isMounted) {
-          if (errorParam === 'access_denied' || errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
-            setError('This link has expired or is no longer valid. Please request a new password reset link.');
+          if (errorParam === 'access_denied' || errorParam === 'invitation_already_used' ||
+              errorCode === 'otp_expired' || errorDescription?.includes('expired')) {
+            setAlreadyActivated(true);
           } else {
             setError(`Authentication error: ${errorDescription || errorParam}. Please contact support.`);
           }

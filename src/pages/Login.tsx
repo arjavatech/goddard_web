@@ -57,6 +57,14 @@ export function Login() {
   }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (!loading && isAuthenticated && !isOAuthCallback &&
+        !sessionStorage.getItem('oauth_just_succeeded')) {
+      setIsRedirecting(true);
+      navigateAfterAuth().catch(() => setIsRedirecting(false));
+    }
+  }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     const showGoogleAuthError = () => {
       setIsOAuthCallback(false);
       const googleError = sessionStorage.getItem('google_auth_error');
