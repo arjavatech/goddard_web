@@ -90,13 +90,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
-    const isAuthPage = typeof window !== 'undefined' &&
-      (window.location.pathname === '/set-password' || window.location.pathname === '/login');
-    if (isAuthPage) {
-      resetUserContext();
-      return Promise.resolve();
-    }
-
     if (!isAuthenticated || !user) {
       resetUserContext();
       return Promise.resolve();

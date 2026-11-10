@@ -42,19 +42,27 @@ export function Login() {
   }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (localStorage.getItem('session_invalidated') === 'true') {
-      showToast('warning', 'Your session was ended because this account was signed in on another device.', 'Signed Out for Security');
-      localStorage.removeItem('session_invalidated');
-    }
-    const googleError = sessionStorage.getItem('google_auth_error');
-    if (googleError) {
+    const showGoogleAuthError = () => {
+      const googleError = sessionStorage.getItem('google_auth_error');
+      if (!googleError) return;
       const lowerError = googleError.toLowerCase();
       const title = (lowerError.includes('invitation link') || lowerError.includes('account setup'))
         ? 'Account Setup Required'
         : 'Google Sign-In Failed';
       showToast('error', googleError, title);
       sessionStorage.removeItem('google_auth_error');
+    };
+
+    if (localStorage.getItem('session_invalidated') === 'true') {
+      showToast('warning', 'Your session was ended because this account was signed in on another device.', 'Signed Out for Security');
+      localStorage.removeItem('session_invalidated');
     }
+
+    // Show on mount (covers the full-page-reload path) and on the event
+    // dispatched by useAuth when a Google exchange fails while already on /login.
+    showGoogleAuthError();
+    window.addEventListener('goddard:google-auth-error', showGoogleAuthError);
+    return () => window.removeEventListener('goddard:google-auth-error', showGoogleAuthError);
   }, [showToast]);
 
   const navigateAfterAuth = async () => {

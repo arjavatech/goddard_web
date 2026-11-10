@@ -142,7 +142,11 @@ function useAuthState(): UseAuth {
                 setUser(null);
                 setLoading(false);
                 supabase!.auth.signOut({ scope: 'local' }).finally(() => {
-                  window.location.href = '/login';
+                  if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                    window.dispatchEvent(new Event('goddard:google-auth-error'));
+                  } else {
+                    window.location.href = '/login';
+                  }
                 });
               });
           }
@@ -193,7 +197,11 @@ function useAuthState(): UseAuth {
                 setUser(null);
                 setLoading(false);
                 supabase!.auth.signOut({ scope: 'local' }).finally(() => {
-                  window.location.href = '/login';
+                  if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+                    window.dispatchEvent(new Event('goddard:google-auth-error'));
+                  } else {
+                    window.location.href = '/login';
+                  }
                 });
               });
           }
