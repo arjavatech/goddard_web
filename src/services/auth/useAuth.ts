@@ -310,6 +310,9 @@ function useAuthState(): UseAuth {
     if (isAuthBypassed) return;
     if (!supabase) throw new Error('Supabase not initialized');
     sessionStorage.setItem('pending_oauth', provider);
+    // Clear the post-sign-out suppression flag before the OAuth redirect so
+    // INITIAL_SESSION on the callback page doesn't kill the new session.
+    localStorage.removeItem('goddard.signed_out');
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
