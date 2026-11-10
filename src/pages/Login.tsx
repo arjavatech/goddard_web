@@ -18,7 +18,7 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
-  const { signInWithPassword, signInWithProvider, loading, isAuthenticated } = useAuth();
+  const { signInWithPassword, signInWithProvider, signOut, loading, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -89,6 +89,12 @@ export function Login() {
       await navigateAfterAuth();
     } catch (err) {
       const raw = (err as Error).message?.toLowerCase() ?? '';
+      if (raw.includes('invitation link')) {
+        await signOut();
+        showToast('error', 'Please sign up using your invitation link before logging in.', 'Sign-In Blocked');
+        setIsLoading(false);
+        return;
+      }
       const friendly = raw.includes('invalid login') || raw.includes('invalid credentials') || raw.includes('wrong')
         ? 'Incorrect email or password. Please try again.'
         : raw.includes('email not confirmed')
