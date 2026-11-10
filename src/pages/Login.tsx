@@ -27,7 +27,17 @@ export function Login() {
   useEffect(() => {
     if (!loading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
       sessionStorage.removeItem('oauth_just_succeeded');
-      navigateAfterAuth().catch(() => navigate('/dashboard', { replace: true }));
+      navigateAfterAuth().catch(async (err) => {
+        const raw = (err as Error).message?.toLowerCase() ?? '';
+        await signOut();
+        if (raw.includes('invitation link')) {
+          showToast('error', 'Please sign up using your invitation link before logging in.', 'Sign-In Blocked');
+        } else if (raw.includes('no account found')) {
+          showToast('error', 'No account found. Please contact your school administrator.', 'Sign-In Failed');
+        } else {
+          showToast('error', (err as Error).message || 'Sign-in failed. Please try again.', 'Sign-In Failed');
+        }
+      });
     }
   }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
 
