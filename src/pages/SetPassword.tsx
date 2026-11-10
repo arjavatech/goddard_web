@@ -218,11 +218,12 @@ export function SetPassword() {
   // Mirrors Login.tsx showGoogleAuthError effect.
   useEffect(() => {
     const showGoogleError = () => {
+      const msg = sessionStorage.getItem('google_auth_error');
+      if (!msg) return;
       setIsOAuthCallback(false);
       setIsRedirecting(false);
-      const msg = sessionStorage.getItem('google_auth_error');
-      if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
-      else { setError('Google sign-in failed. Please try again.'); }
+      setError(msg);
+      sessionStorage.removeItem('google_auth_error');
     };
     showGoogleError();
     window.addEventListener('goddard:google-auth-error', showGoogleError);
