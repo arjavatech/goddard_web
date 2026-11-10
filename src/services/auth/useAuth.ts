@@ -126,12 +126,13 @@ function useAuthState(): UseAuth {
                 sessionStorage.setItem('oauth_just_succeeded', '1');
               })
               .catch((err: unknown) => {
-                // Stale session or account not activated — sign out locally (scope:'local'
-                // clears storage without an API call, so a 403 from a stale session can't
-                // prevent localStorage from being wiped and cause a reload loop)
                 const rawMessage = (err instanceof Error ? err.message : '') ?? '';
                 const lowerRaw = rawMessage.toLowerCase();
-                const message = lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
+                const status = (err as any)?.status;
+                const message =
+                  (status === 404 || lowerRaw.includes('not found'))
+                  ? 'No account found. Please contact your school administrator.'
+                  : lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
                   ? 'Please complete your account setup using the invitation link sent to your email.'
                   : lowerRaw.includes('no account found')
                   ? 'No account found. Please contact your school administrator.'
@@ -141,7 +142,9 @@ function useAuthState(): UseAuth {
                 clearCustomToken();
                 setUser(null);
                 setLoading(false);
-                supabase!.auth.signOut({ scope: 'local' }).finally(() => {
+                // Global signOut invalidates the server-side session so a reload can't
+                // restore it and re-trigger the exchange (prevents the 404 retry loop).
+                supabase!.auth.signOut().finally(() => {
                   if (typeof window !== 'undefined' && window.location.pathname === '/login') {
                     window.dispatchEvent(new Event('goddard:google-auth-error'));
                   } else {
@@ -172,6 +175,7 @@ function useAuthState(): UseAuth {
         if (isGoogle && !existing) {
           if (!googleExchangeAttempted.current) {
             googleExchangeAttempted.current = true;
+            setLoading(true);
             // Google OAuth just completed — exchange for our custom JWT
             googleExchangeApi(session.access_token)
               .then(result => {
@@ -183,10 +187,13 @@ function useAuthState(): UseAuth {
                 sessionStorage.setItem('oauth_just_succeeded', '1');
               })
               .catch((err: Error) => {
-                // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
                 const rawMessage = err?.message ?? '';
                 const lowerRaw = rawMessage.toLowerCase();
-                const message = lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
+                const status = (err as any)?.status;
+                const message =
+                  (status === 404 || lowerRaw.includes('not found'))
+                  ? 'No account found. Please contact your school administrator.'
+                  : lowerRaw.includes('invitation link') || lowerRaw.includes('account setup')
                   ? 'Please complete your account setup using the invitation link sent to your email.'
                   : lowerRaw.includes('no account found')
                   ? 'No account found. Please contact your school administrator.'
@@ -196,7 +203,7 @@ function useAuthState(): UseAuth {
                 clearCustomToken();
                 setUser(null);
                 setLoading(false);
-                supabase!.auth.signOut({ scope: 'local' }).finally(() => {
+                supabase!.auth.signOut().finally(() => {
                   if (typeof window !== 'undefined' && window.location.pathname === '/login') {
                     window.dispatchEvent(new Event('goddard:google-auth-error'));
                   } else {

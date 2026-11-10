@@ -19,6 +19,15 @@ export function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isRedirecting, setIsRedirecting] = useState(false);
+  // True when this render is the OAuth callback landing (hash/code present, or pending_oauth set).
+  // Captured at mount before Supabase strips the hash, so the branded card shows immediately
+  // with no form flash. Cleared in error handlers so the form returns on failure.
+  const [isOAuthCallback, setIsOAuthCallback] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.location.hash.includes('access_token') ||
+     window.location.search.includes('code=') ||
+     !!sessionStorage.getItem('pending_oauth'))
+  );
 
   const { signInWithPassword, signInWithProvider, signOut, loading, isAuthenticated } = useAuth();
   const { seedUserData } = useUserContext();
@@ -33,6 +42,7 @@ export function Login() {
       setIsRedirecting(true);
       navigateAfterAuth().catch(async (err) => {
         setIsRedirecting(false);
+        setIsOAuthCallback(false);
         const raw = (err as Error).message?.toLowerCase() ?? '';
         await signOut();
         if (raw.includes('invitation link')) {
@@ -48,6 +58,7 @@ export function Login() {
 
   useEffect(() => {
     const showGoogleAuthError = () => {
+      setIsOAuthCallback(false);
       const googleError = sessionStorage.getItem('google_auth_error');
       if (!googleError) return;
       const lowerError = googleError.toLowerCase();
@@ -152,7 +163,7 @@ export function Login() {
   // "sign in again" flash, and without a bare empty screen while the profile loads.
   const oauthLanding = isAuthenticated && typeof window !== 'undefined'
     && !!sessionStorage.getItem('oauth_just_succeeded');
-  if (loading || isRedirecting || oauthLanding) {
+  if (loading || isRedirecting || oauthLanding || isOAuthCallback) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
         <motion.div
