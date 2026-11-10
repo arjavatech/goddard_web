@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { supabase } from '../services/auth/authClient';
 import { activateAccount } from '../services/api/auth';
+import { fetchUserContext } from '../services/api/user';
+import { useUserContext } from '../contexts/UserContext';
+import { prefilloutProvision } from '../services/api/fillout';
 import { useAuth } from '../services/auth/useAuth';
 
 interface PasswordRequirement {
@@ -20,13 +23,18 @@ export function SetPassword() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [isOAuthCallback, setIsOAuthCallback] = useState(
+    () => typeof window !== 'undefined' && sessionStorage.getItem('pending_oauth') === 'google'
+  );
   const [error, setError] = useState('');
   const [alreadyActivated, setAlreadyActivated] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
   const [tokenValidated, setTokenValidated] = useState(false);
   const navigate = useNavigate();
-  const { signInWithProvider } = useAuth();
+  const { loading: authLoading, isAuthenticated, signOut } = useAuth();
+  const { seedUserData } = useUserContext();
 
   const [requirements, setRequirements] = useState<PasswordRequirement[]>([
     { label: 'At least 8 characters long', test: (pwd) => pwd.length >= 8, valid: false },
@@ -176,6 +184,51 @@ export function SetPassword() {
     setRequirements(prev => prev.map(req => ({ ...req, valid: req.test(password, confirmPassword) })));
   }, [password, confirmPassword]);
 
+  // After Google OAuth redirects back here and exchange succeeds, navigate directly to user page.
+  // Mirrors Login.tsx oauth_just_succeeded effect exactly.
+  useEffect(() => {
+    if (!authLoading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
+      sessionStorage.removeItem('oauth_just_succeeded');
+      setIsOAuthCallback(false);
+      setIsRedirecting(true);
+      (async () => {
+        try {
+          const userData = await fetchUserContext();
+          seedUserData(userData);
+          prefilloutProvision(userData).catch(() => {});
+          const sub = userData.schoolData?.subdomain || 'goddard';
+          const role = userData.role?.toLowerCase();
+          const path = role === 'admin' || role === 'superadmin'
+            ? `/${sub}/admin`
+            : role === 'employee'
+            ? `/${sub}/employee/dashboard`
+            : `/${sub}/dashboard`;
+          navigate(path, { replace: true });
+        } catch (err) {
+          setIsRedirecting(false);
+          setIsOAuthCallback(false);
+          await signOut();
+          setError((err as Error).message || 'Sign-in failed. Please try again.');
+        }
+      })();
+    }
+  }, [authLoading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Show exchange failure errors dispatched by useAuth when already on this page.
+  // Mirrors Login.tsx showGoogleAuthError effect.
+  useEffect(() => {
+    const showGoogleError = () => {
+      setIsOAuthCallback(false);
+      setIsRedirecting(false);
+      const msg = sessionStorage.getItem('google_auth_error');
+      if (msg) { setError(msg); sessionStorage.removeItem('google_auth_error'); }
+      else { setError('Google sign-in failed. Please try again.'); }
+    };
+    showGoogleError();
+    window.addEventListener('goddard:google-auth-error', showGoogleError);
+    return () => window.removeEventListener('goddard:google-auth-error', showGoogleError);
+  }, []);
+
   const allRequirementsMet = requirements.every(req => req.valid);
 
   const handleGoogleSignIn = async () => {
@@ -188,8 +241,16 @@ export function SetPassword() {
         return;
       }
       await activateAccount(session.access_token);
-      await signInWithProvider('google'); // redirects to /login; Login.tsx handles everything
+      sessionStorage.setItem('pending_oauth', 'google');
+      await supabase!.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/set-password`,
+          queryParams: { prompt: 'select_account' }
+        }
+      });
     } catch (err) {
+      sessionStorage.removeItem('pending_oauth');
       setError((err as Error).message || 'Google sign-in failed. Please try again.');
       setIsGoogleLoading(false);
     }
@@ -558,6 +619,14 @@ export function SetPassword() {
           </p>
         </div>
       </div>
+
+      {(isOAuthCallback || isRedirecting) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-5 shadow-lg">
+            <span className="h-6 w-6 block rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
