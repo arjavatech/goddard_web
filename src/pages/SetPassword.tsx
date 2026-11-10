@@ -53,19 +53,6 @@ export function SetPassword() {
         return passwordSet || !!providers?.includes('google');
       };
 
-      const { data: existingSession } = await supabase.auth.getSession();
-      if (existingSession?.session) {
-        if (await checkAlreadyActivated()) {
-          if (isMounted) {
-            setError('Your account is already set up. Redirecting to sign in…');
-            setTimeout(() => navigate('/login', { replace: true }), 2500);
-          }
-          return;
-        }
-        if (isMounted) { setSessionReady(true); setTokenValidated(true); setError(''); }
-        return;
-      }
-
       const hash = window.location.hash.substring(1);
       const search = window.location.search.substring(1);
       const hashParams = new URLSearchParams(hash);
@@ -77,6 +64,25 @@ export function SetPassword() {
       const errorParam = hashParams.get('error') || searchParams.get('error');
       const errorCode = hashParams.get('error_code') || searchParams.get('error_code');
       const errorDescription = hashParams.get('error_description') || searchParams.get('error_description');
+
+      // If the URL contains a fresh invite token, process it directly — do NOT check the
+      // existing Supabase session first, because that session may belong to a different
+      // user (e.g. an admin still logged in on the same browser), which would cause a
+      // false "already set up" flash and redirect to login.
+      if (!accessToken && !code && !errorParam) {
+        const { data: existingSession } = await supabase.auth.getSession();
+        if (existingSession?.session) {
+          if (await checkAlreadyActivated()) {
+            if (isMounted) {
+              setError('Your account is already set up. Redirecting to sign in…');
+              setTimeout(() => navigate('/login', { replace: true }), 2500);
+            }
+            return;
+          }
+          if (isMounted) { setSessionReady(true); setTokenValidated(true); setError(''); }
+          return;
+        }
+      }
 
       if (errorParam) {
         if (isMounted) {
