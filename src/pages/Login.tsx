@@ -9,7 +9,6 @@ import { prefilloutProvision } from '../services/api/fillout';
 import { fetchUserContext } from '../services/api/user';
 import { useToast } from '../contexts/ToastContext';
 import { AlertModal } from '../components/ui/alert-modal';
-import { Loading } from '../components/ui/loading';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
 
@@ -22,7 +21,7 @@ export function Login() {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   const { signInWithPassword, signInWithProvider, signOut, loading, isAuthenticated } = useAuth();
-  const { refreshUserData } = useUserContext();
+  const { seedUserData } = useUserContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -73,6 +72,9 @@ export function Login() {
 
   const navigateAfterAuth = async () => {
     const userData = await fetchUserContext();
+    // Seed the context with the profile we just fetched so the destination dashboard
+    // renders immediately — no redundant second /users/me on arrival.
+    seedUserData(userData);
     prefilloutProvision(userData).catch(() => {});
 
     const userSubdomain = userData.schoolData?.subdomain || 'goddard';
@@ -104,9 +106,6 @@ export function Login() {
 
     sessionStorage.removeItem('post_logout_login');
     navigate(redirectTo || defaultPath, { replace: true });
-    // UserProvider lives outside the Router, so it won't reload on this navigation.
-    // Trigger it explicitly now that pathname is a real route (not /login).
-    refreshUserData();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -148,15 +147,29 @@ export function Login() {
     }
   };
 
-  // Show a full-page spinner (never the login form) while auth is resolving or an OAuth
-  // sign-in is landing — so a Google login lands straight on the dashboard without a
-  // "sign in again" flash and without an empty page while the profile loads.
+  // While auth is resolving or an OAuth sign-in is landing, show a branded loading card
+  // (never the login form) — so a Google login lands straight on the dashboard without a
+  // "sign in again" flash, and without a bare empty screen while the profile loads.
   const oauthLanding = isAuthenticated && typeof window !== 'undefined'
     && !!sessionStorage.getItem('oauth_just_succeeded');
   if (loading || isRedirecting || oauthLanding) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loading size="md" message="Signing you in…" />
+      <div className="min-h-screen flex items-center justify-center px-4 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px]">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.25 }}
+          className="w-full max-w-xs bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.06)] p-8 text-center space-y-4"
+        >
+          <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-9 w-auto mx-auto" />
+          <div className="flex justify-center">
+            <span className="h-9 w-9 rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+          </div>
+          <div className="space-y-1">
+            <h2 className="text-sm font-bold text-slate-900">Signing you in…</h2>
+            <p className="text-xs text-slate-500">Please wait while we set up your portal.</p>
+          </div>
+        </motion.div>
       </div>
     );
   }

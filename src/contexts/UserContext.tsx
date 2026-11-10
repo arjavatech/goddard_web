@@ -24,6 +24,7 @@ interface UserContextValue {
   loading: boolean;
   error: string | null;
   refreshUserData: () => Promise<void>;
+  seedUserData: (data: UserData) => void;
   isReady: boolean;
   schoolFeatures: SchoolFeatures;
   adminPermissions: string[];
@@ -89,6 +90,36 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setSchoolFeatures(disabledSchoolFeatures);
   };
 
+  // Apply a fetched profile to context state. Shared by the normal loader and by
+  // seedUserData() so a caller that already has /users/me data doesn't re-fetch.
+  const applyUserData = (data: UserData) => {
+    setUserData(data);
+    setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
+    if (data.schoolData?.name) {
+      setSchoolName(data.schoolData.name);
+    }
+    if (data.schoolData?.subdomain) {
+      setSchoolSubdomain(data.schoolData.subdomain);
+    } else if (data.schoolData?.name) {
+      setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
+    }
+    if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
+    if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
+    if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
+    if (data.schoolData?.settings?.website_url) setSchoolWebsiteUrl(data.schoolData.settings.website_url);
+    setProfileGeneration(authGeneration);
+  };
+
+  // Populate the context from a profile the caller already fetched (e.g. Login's
+  // navigateAfterAuth) — avoids a redundant second /users/me on the destination page.
+  const seedUserData = (data: UserData) => {
+    activeRequestRef.current = null;
+    applyUserData(data);
+    setError(null);
+    setLoading(false);
+    setIsReady(true);
+  };
+
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
     // Public auth pages don't have a profile to load. A lingering invite/magic-link
     // Supabase session would otherwise trigger a repeated /users/me → 403 retry loop.
@@ -131,21 +162,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             const data = await fetchUserContext();
             if (activeRequestRef.current?.key !== requestKey) return;
 
-            setUserData(data);
-            setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
-            if (data.schoolData?.name) {
-              setSchoolName(data.schoolData.name);
-            }
-            if (data.schoolData?.subdomain) {
-              setSchoolSubdomain(data.schoolData.subdomain);
-            } else if (data.schoolData?.name) {
-              setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
-            }
-            if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
-            if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
-            if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
-            if (data.schoolData?.settings?.website_url) setSchoolWebsiteUrl(data.schoolData.settings.website_url);
-            setProfileGeneration(authGeneration);
+            applyUserData(data);
 
             return;
           } catch (err) {
@@ -205,7 +222,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolWebsiteUrl = profileIsCurrent ? schoolWebsiteUrl : 'https://goddardschool.com';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures, adminPermissions: visibleUserData?.adminPermissions ?? [] }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), seedUserData, isReady, schoolFeatures, adminPermissions: visibleUserData?.adminPermissions ?? [] }}>
       {children}
     </UserContext.Provider>
   );
