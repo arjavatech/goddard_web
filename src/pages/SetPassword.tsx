@@ -55,14 +55,6 @@ export function SetPassword() {
       // exchange — skip invite-token processing to avoid false "already activated" flash.
       if (sessionStorage.getItem('pending_oauth') === 'google') return;
 
-      // If the user already has a valid session (completed setup via Google or password),
-      // don't process the invite token — it's already used and would trigger a SIGNED_OUT
-      // cascade that clears the custom JWT and navigates unexpectedly.
-      if (isAuthenticated) {
-        if (isMounted) setAlreadyActivated(true);
-        return;
-      }
-
       const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
         // session establishment handled in main async flow below
       });
@@ -134,6 +126,8 @@ export function SetPassword() {
 
       if (accessToken) {
         try {
+          // Capture before setSession — a failed attempt fires SIGNED_OUT which clears the JWT.
+          const wasAuthenticated = isAuthenticated;
           // Mark this as an intentional session swap so the global SIGNED_OUT handler
           // doesn't show the "Signed Out for Security" toast on the login page.
           sessionStorage.setItem('invite_session_swap', 'true');
@@ -152,6 +146,12 @@ export function SetPassword() {
                   return;
                 }
                 if (isMounted) { setSessionReady(true); setTokenValidated(true); return; }
+              }
+              // Token is expired/used. If the user was already authenticated (set up via Google,
+              // which doesn't set password_set), show "already set up" instead of the generic error.
+              if (wasAuthenticated) {
+                if (isMounted) { setAlreadyActivated(true); }
+                return;
               }
               if (isMounted) setError('This link has expired or has already been used. Please request a new password reset link.');
             } else throw sessionError;
