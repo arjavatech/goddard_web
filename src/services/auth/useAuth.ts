@@ -135,6 +135,7 @@ function useAuthState(): UseAuth {
                 const message = (err instanceof Error ? err.message : null)
                   || 'Google sign-in is not allowed. Please accept the invitation link sent to your email first.';
                 sessionStorage.setItem('google_auth_error', message);
+                sessionStorage.setItem('google_auth_failure', 'true');
                 clearCustomToken();
                 setUser(null);
                 setLoading(false);
@@ -179,6 +180,7 @@ function useAuthState(): UseAuth {
                 // Exchange rejected (e.g. account not yet activated) — sign out and show error on login page
                 const message = err?.message || 'Google sign-in failed. Please complete your account setup using the invitation link.';
                 sessionStorage.setItem('google_auth_error', message);
+                sessionStorage.setItem('google_auth_failure', 'true');
                 clearCustomToken();
                 setUser(null);
                 setLoading(false);
@@ -204,12 +206,14 @@ function useAuthState(): UseAuth {
         // SIGNED_OUT event and the subsequent window.location.href navigation.
         const isExplicit = sessionStorage.getItem('explicit_logout') === 'true';
         const isInviteSwap = sessionStorage.getItem('invite_session_swap') === 'true';
+        const isGoogleAuthFailure = sessionStorage.getItem('google_auth_failure') === 'true';
         sessionStorage.removeItem('invite_session_swap');
+        sessionStorage.removeItem('google_auth_failure');
         if (isExplicit) {
           googleExchangeAttempted.current = false;
         }
         clearCustomToken();
-        if (!isExplicit && !isInviteSwap && previousToken) {
+        if (!isExplicit && !isInviteSwap && !isGoogleAuthFailure && previousToken) {
           localStorage.setItem('session_invalidated', 'true');
         }
         sessionStorage.removeItem('explicit_logout');

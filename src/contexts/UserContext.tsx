@@ -90,6 +90,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
+    if (typeof window !== 'undefined' && window.location.pathname === '/set-password') {
+      resetUserContext();
+      return Promise.resolve();
+    }
+
     if (!isAuthenticated || !user) {
       resetUserContext();
       return Promise.resolve();
