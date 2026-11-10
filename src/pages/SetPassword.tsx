@@ -55,6 +55,14 @@ export function SetPassword() {
       // exchange — skip invite-token processing to avoid false "already activated" flash.
       if (sessionStorage.getItem('pending_oauth') === 'google') return;
 
+      // Already authenticated (custom JWT present) — this invite link has already been used.
+      // Don't call setSession() with the old token; that fires SIGNED_OUT, clears the custom
+      // JWT, and causes route guards to redirect to /login. Show the blocking screen instead.
+      if (!authLoading && isAuthenticated) {
+        if (isMounted) setAlreadyActivated(true);
+        return;
+      }
+
       const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
         // session establishment handled in main async flow below
       });
