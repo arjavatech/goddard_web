@@ -119,15 +119,13 @@ export function SetPassword() {
             return;
           }
         } catch {
-          if (isMounted) setError('This link has expired or is no longer valid. Please request a new password reset link.');
+          if (isMounted) setAlreadyActivated(true);
           return;
         }
       }
 
       if (accessToken) {
         try {
-          // Capture before setSession — a failed attempt fires SIGNED_OUT which clears the JWT.
-          const wasAuthenticated = isAuthenticated;
           // Mark this as an intentional session swap so the global SIGNED_OUT handler
           // doesn't show the "Signed Out for Security" toast on the login page.
           sessionStorage.setItem('invite_session_swap', 'true');
@@ -147,13 +145,7 @@ export function SetPassword() {
                 }
                 if (isMounted) { setSessionReady(true); setTokenValidated(true); return; }
               }
-              // Token is expired/used. If the user was already authenticated (set up via Google,
-              // which doesn't set password_set), show "already set up" instead of the generic error.
-              if (wasAuthenticated) {
-                if (isMounted) { setAlreadyActivated(true); }
-                return;
-              }
-              if (isMounted) setError('This link has expired or has already been used. Please request a new password reset link.');
+              if (isMounted) setAlreadyActivated(true);
             } else throw sessionError;
             return;
           }
@@ -171,7 +163,7 @@ export function SetPassword() {
           const errorMessage = (err as Error).message || 'Unknown error';
           if (isMounted) {
             if (errorMessage.includes('expired') || errorMessage.includes('invalid') || errorMessage.includes('already')) {
-              setError('This link has expired or has already been used. Please request a new password reset link.');
+              setAlreadyActivated(true);
             } else {
               setError(`Failed to authenticate: ${errorMessage}. Please try clicking the link in your email again.`);
             }
@@ -250,6 +242,7 @@ export function SetPassword() {
         return;
       }
       await activateAccount(session.access_token);
+      await supabase!.auth.updateUser({ data: { password_set: true } });
       sessionStorage.setItem('pending_oauth', 'google');
       await supabase!.auth.signInWithOAuth({
         provider: 'google',
@@ -325,8 +318,8 @@ export function SetPassword() {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900">Account Already Set Up</h2>
-              <p className="text-xs sm:text-sm text-slate-500">Your account is already set up. Please sign in to continue.</p>
+              <h2 className="text-lg sm:text-xl font-bold text-slate-900">Invitation Link No Longer Valid</h2>
+              <p className="text-xs sm:text-sm text-slate-500">This invitation link has already been used or has expired. If you've already set up your account, sign in below. Otherwise, please contact your administrator for a new invitation.</p>
             </div>
             <button
               onClick={() => navigate('/login', { replace: true })}
