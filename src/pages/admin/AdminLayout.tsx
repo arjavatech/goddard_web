@@ -214,10 +214,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     }] : []),
 
     // ── Workspace ────────────────────────────────────────────────────────────
-    ...((schoolFeatures.driveEnabled && hasPermission('manage_drive')) || (schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses')) ? [{
+    ...(schoolFeatures.driveEnabled || (schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses')) ? [{
       label: 'Workspace',
       items: [
-        ...(schoolFeatures.driveEnabled && hasPermission('manage_drive') ? [
+        ...(schoolFeatures.driveEnabled ? [
           { icon: <HardDrive className="w-[18px] h-[18px]" />, label: 'Drive', path: `${schoolPrefix}/admin/drive` },
         ] : []),
         ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [
