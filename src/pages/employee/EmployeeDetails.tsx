@@ -78,17 +78,19 @@ export function EmployeeDetails() {
 
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
 
-  // Fetch employee + form assignments
+  // Fetch employee + form assignments + document assignments concurrently
   useEffect(() => {
     let isMounted = true;
     (async () => {
       try {
         if (refreshKey === 0) setIsLoading(true);
+        if (refreshKey === 0) setIsLoadingDocuments(true);
         if (!schoolId || !employeeId) return;
 
-        const [empData, rawAssignments] = await Promise.all([
+        const [empData, rawAssignments, docResult] = await Promise.all([
           EmployeeService.fetchEmployeeDetails(employeeId, schoolId),
           EmployeeService.fetchEmployeeFormAssignments(employeeId),
+          fetchDocumentAssignments({ school_id: schoolId, audience: 'employee', limit: 1000 }),
         ]);
 
         if (!isMounted) return;
@@ -107,28 +109,22 @@ export function EmployeeDetails() {
         }));
 
         setAssignments(enrichedAssignments);
+
+        // Filter documents by employee name
+        const employeeName = `${empData.firstName} ${empData.lastName}`;
+        setEmployeeDocs(docResult.items.filter(d => d.subject_name === employeeName));
       } catch (error) {
         showToast('error', 'Failed to load employee details');
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+          setIsLoadingDocuments(false);
+        }
       }
     })();
 
     return () => { isMounted = false; };
   }, [schoolId, employeeId, schoolSlug, navigate, showToast, refreshKey]);
-
-  // Fetch employee document assignments
-  useEffect(() => {
-    if (!schoolId || !employee) return;
-    const employeeName = `${employee.firstName} ${employee.lastName}`;
-    setIsLoadingDocuments(true);
-    fetchDocumentAssignments({ school_id: schoolId, audience: 'employee', limit: 1000 })
-      .then(result => {
-        setEmployeeDocs(result.items.filter(d => d.subject_name === employeeName));
-      })
-      .catch(() => {})
-      .finally(() => setIsLoadingDocuments(false));
-  }, [schoolId, employee, refreshKey]);
 
   const availableYears = useMemo(() => {
     if (!assignments) return [];
@@ -171,7 +167,7 @@ export function EmployeeDetails() {
   const approvedForms = assignments.filter(f => normalizeFormStatus(f.status) === 'Approved').length;
   const pendingForms = assignments.filter(f => {
     const ns = normalizeFormStatus(f.status);
-    return ns === 'Submitted' || ns === 'Needs Revision';
+    return ns === 'Submitted' || ns === 'In Progress' || ns === 'Needs Revision';
   }).length;
   const draftForms = totalForms - approvedForms - pendingForms;
   const approvedPct = totalForms > 0 ? (approvedForms / totalForms) * 100 : 0;
