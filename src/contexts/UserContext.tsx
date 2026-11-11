@@ -215,8 +215,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // If seedUserData() already provided data for this generation, don't reload
+    if (profileGeneration === authGeneration && userData) {
+      return;
+    }
     loadUserData();
-  }, [isAuthenticated, user?.id, authGeneration]);
+  }, [isAuthenticated, user?.id, authGeneration, profileGeneration, userData]);
 
   const profileIsCurrent = isAuthenticated && profileGeneration === authGeneration;
   const visibleUserData = profileIsCurrent ? userData : null;

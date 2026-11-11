@@ -35,9 +35,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       const saved = localStorage.getItem('admin-sidebar-collapsed');
       return saved
         ? new Set(JSON.parse(saved) as string[])
-        : new Set(['People', 'Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+        : new Set(['Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
     } catch {
-      return new Set(['People', 'Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+      return new Set(['Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
     }
   });
   const location = useLocation();
