@@ -113,17 +113,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   // Populate the context from a profile the caller already fetched (e.g. Login's
   // navigateAfterAuth) — avoids a redundant second /users/me on the destination page.
   const seedUserData = (data: UserData) => {
-    // Stamp the ref with the current generation key so loadUserData()'s dedup
-    // check matches and returns early — prevents setIsReady(false) race after navigation.
+    // Apply the data first, which sets profileGeneration = authGeneration
+    applyUserData(data);
+    setError(null);
+    setLoading(false);
+    setIsReady(true);
+    
+    // Stamp the ref with the current generation key so that future loadUserData() calls
+    // will recognize this request is already satisfied. This must happen AFTER applyUserData()
+    // so the key matches the profileGeneration that was just set.
     if (user?.id != null) {
       activeRequestRef.current = { key: `${user.id}:${authGeneration}`, promise: Promise.resolve() };
     } else {
       activeRequestRef.current = null;
     }
-    applyUserData(data);
-    setError(null);
-    setLoading(false);
-    setIsReady(true);
   };
 
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
@@ -219,6 +222,20 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (profileGeneration === authGeneration && userData) {
       return;
     }
+    
+    // If we have valid userData from seedUserData() and haven't switched users,
+    // update profileGeneration to match current authGeneration to prevent visibleUserData
+    // from becoming null during OAuth's authGeneration increment.
+    if (userData && user?.id && activeRequestRef.current?.key) {
+      const refUserId = activeRequestRef.current.key.split(':')[0];
+      if (refUserId === user.id && profileGeneration !== authGeneration) {
+        // Same user, same session, but generation mismatch (likely OAuth transition).
+        // Update profileGeneration to current authGeneration so visibleUserData stays available.
+        setProfileGeneration(authGeneration);
+        return;
+      }
+    }
+    
     loadUserData();
   }, [isAuthenticated, user?.id, authGeneration, profileGeneration, userData]);
 
