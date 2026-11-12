@@ -12,8 +12,9 @@ import { EmployeeService } from '../../services/api/employee';
 import {
   ShoppingBag, Plus, Search, Filter, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, LayoutGrid, List, ArrowUp, ArrowDown, X, Pencil, Trash2,
-  CalendarClock, DollarSign, MapPin, Tag, Hash, FileText, Receipt, Eye
+  CalendarClock, DollarSign, MapPin, Tag, Hash, FileText, Receipt, Eye,
 } from 'lucide-react';
+import { ReceiptThumbnail, BillImagePreviewModal } from '../../components/admin/BillImagePreviewModal';
 
 export function EmployeeRequests() {
   const { userData } = useUserContext();
@@ -66,6 +67,7 @@ export function EmployeeRequests() {
   const [editingRequest, setEditingRequest] = useState<Request | null>(null);
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
+  const [previewBillUrl, setPreviewBillUrl] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     item: '',
@@ -1025,11 +1027,18 @@ export function EmployeeRequests() {
                           </div>
                         )}
                       </div>
-                      {req.billImageUrl && (
-                        <a href={req.billImageUrl} target="_blank" rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-900 mt-1">
-                          <Receipt className="w-3.5 h-3.5" /> View Receipt <ExternalLink className="w-3 h-3" />
-                        </a>
+                      {(req.billImageUrls ?? []).length > 0 && (
+                        <div className="space-y-1.5 mt-1">
+                          {(req.billImageUrls ?? []).map((url, idx) => (
+                            <ReceiptThumbnail
+                              key={idx}
+                              url={url}
+                              index={idx}
+                              total={(req.billImageUrls ?? []).length}
+                              onClick={() => setPreviewBillUrl(url)}
+                            />
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -1081,6 +1090,7 @@ export function EmployeeRequests() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <BillImagePreviewModal url={previewBillUrl} onClose={() => setPreviewBillUrl(null)} />
     </EmployeeLayout>
   );
 }

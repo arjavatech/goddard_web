@@ -29,7 +29,7 @@ export type Request = {
   paymentMethod?: string;
   purchaseDate?: string;
   paymentNotes?: string;
-  billImageUrl?: string;
+  billImageUrls?: string[];
   paidByUserId?: string;
   paidByName?: string;
 };
@@ -60,9 +60,10 @@ export type ExpenseRecord = {
   paymentMethod: string;
   purchaseDate: string;
   paymentNotes?: string;
-  billImageUrl?: string;
+  billImageUrls?: string[];
   recordedAt: string;
   paidByName?: string;
+  paidByUserId?: string;
 };
 
 export type ExpenseSummary = {
@@ -115,7 +116,9 @@ function mapRequest(r: any): Request {
     paymentMethod: r.payment_method ?? undefined,
     purchaseDate: r.purchase_date ?? undefined,
     paymentNotes: r.payment_notes ?? undefined,
-    billImageUrl: r.bill_image ?? undefined,
+    billImageUrls: Array.isArray(r.bill_images) && r.bill_images.length > 0
+      ? r.bill_images
+      : (r.bill_image ? [r.bill_image] : []),
     paidByUserId: r.paid_by_user_id ?? undefined,
     paidByName: r.paid_by_name ?? undefined,
   };
@@ -141,7 +144,9 @@ function mapExpenseRecord(r: any): ExpenseRecord {
     paymentMethod: r.payment_method ?? '',
     purchaseDate: r.purchase_date ?? r.created_at?.slice(0, 10) ?? '',
     paymentNotes: r.payment_notes ?? undefined,
-    billImageUrl: r.bill_image ?? undefined,
+    billImageUrls: Array.isArray(r.bill_images) && r.bill_images.length > 0
+      ? r.bill_images
+      : (r.bill_image ? [r.bill_image] : []),
     recordedAt: r.created_at ?? new Date().toISOString(),
     paidByName: r.paid_by_name ?? undefined,
   };
@@ -175,6 +180,44 @@ function mapSummary(s: any, expenseRows: any[]): ExpenseSummary {
         paymentMethod: r.payment_method ?? '',
       })),
   };
+}
+
+async function compressImage(file: File): Promise<{ base64: string; contentType: string }> {
+  if (file.type === 'application/pdf') {
+    const base64 = await new Promise<string>((res, rej) => {
+      const r = new FileReader();
+      r.onload = () => res((r.result as string).split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    return { base64, contentType: file.type };
+  }
+
+  const MAX_DIM = 1920;
+  const QUALITY = 0.75;
+
+  const bitmap = await createImageBitmap(file);
+  let { width, height } = bitmap;
+
+  if (width > MAX_DIM || height > MAX_DIM) {
+    const scale = Math.min(MAX_DIM / width, MAX_DIM / height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close();
+
+  const base64 = canvas.toDataURL('image/jpeg', QUALITY).split(',')[1];
+  return { base64, contentType: 'image/jpeg' };
+}
+
+async function toBillPayload(file: File) {
+  const { base64, contentType } = await compressImage(file);
+  return { base64, name: file.name, content_type: contentType };
 }
 
 // ─── Service ─────────────────────────────────────────────────────────────────
@@ -306,34 +349,17 @@ export const RequestService = {
   },
 
   /** POST /requests/:id/pay — mark as Completed and record payment */
-  async processPayment(requestId: string, paymentDetails: PaymentDetails, billImageFile?: File): Promise<Request> {
-    let billImageBase64: string | undefined;
-    let billImageName: string | undefined;
-    let billImageContentType: string | undefined;
-
-    if (billImageFile) {
-      billImageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve((reader.result as string).split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(billImageFile);
-      });
-      billImageName = billImageFile.name;
-      billImageContentType = billImageFile.type;
-    }
-
+  async processPayment(requestId: string, paymentDetails: PaymentDetails, billFiles?: File[]): Promise<Request> {
     const data = await authedFetch(
       {
         method: 'POST',
         url: `/requests/${requestId}/pay`,
         body: {
-          amountSpent:          paymentDetails.amountSpent,
-          paymentMethod:        paymentDetails.paymentMethod,
-          purchaseDate:         paymentDetails.purchaseDate,
-          paymentNotes:         paymentDetails.paymentNotes,
-          billImageBase64,
-          billImageName,
-          billImageContentType,
+          amountSpent:   paymentDetails.amountSpent,
+          paymentMethod: paymentDetails.paymentMethod,
+          purchaseDate:  paymentDetails.purchaseDate,
+          paymentNotes:  paymentDetails.paymentNotes,
+          billImages:    await Promise.all((billFiles ?? []).map(toBillPayload)),
         },
       },
       z.any()
@@ -342,25 +368,7 @@ export const RequestService = {
   },
 
   /** POST /expenses — manual expense entry with full fields */
-  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>, billImageFile?: File): Promise<ExpenseRecord> {
-    let billImageBase64: string | undefined;
-    let billImageName: string | undefined;
-    let billImageContentType: string | undefined;
-
-    if (billImageFile) {
-      billImageBase64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          resolve(result.split(',')[1]); // strip "data:image/...;base64," prefix
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(billImageFile);
-      });
-      billImageName = billImageFile.name;
-      billImageContentType = billImageFile.type;
-    }
-
+  async recordExpense(details: Omit<ExpenseRecord, 'id' | 'recordedAt'>, billFiles?: File[]): Promise<ExpenseRecord> {
     const data = await authedFetch(
       {
         method: 'POST',
@@ -382,9 +390,7 @@ export const RequestService = {
           paymentMethod: details.paymentMethod,
           purchaseDate:  details.purchaseDate,
           paymentNotes:  details.paymentNotes,
-          billImageBase64,
-          billImageName,
-          billImageContentType,
+          billImages:    await Promise.all((billFiles ?? []).map(toBillPayload)),
           paid_by_user_id: details.paidByUserId,
           paid_by_name:    details.paidByName,
         },
@@ -412,8 +418,8 @@ export const RequestService = {
   },
 
   /** Legacy alias for processPayment */
-  async verifyRequest(requestId: string, paymentDetails: PaymentDetails, billImageFile?: File): Promise<Request> {
-    return RequestService.processPayment(requestId, paymentDetails, billImageFile);
+  async verifyRequest(requestId: string, paymentDetails: PaymentDetails, billFiles?: File[]): Promise<Request> {
+    return RequestService.processPayment(requestId, paymentDetails, billFiles);
   },
 
   /** DELETE /requests/:id */

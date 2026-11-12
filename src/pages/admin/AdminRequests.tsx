@@ -21,6 +21,7 @@ import {
   ExternalLink, Link2, ImageIcon, RefreshCw, ArrowRight, User, School, GraduationCap, CreditCard,
   LayoutGrid, TableProperties, ArrowUp, ArrowDown, ChevronLeft, ChevronRight, X, Pencil, Trash2, AlertCircle, Download, Receipt, Package
 } from 'lucide-react';
+import { MultiFileUpload } from '../../components/admin/MultiFileUpload';
 
 export function AdminRequests() {
   const { userData } = useUserContext();
@@ -54,7 +55,7 @@ export function AdminRequests() {
   // Pay modal states
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
-  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [billFiles, setBillFiles] = useState<File[]>([]);
   const [payFormErrors, setPayFormErrors] = useState<Record<string, string>>({});
   const [payFormData, setPayFormData] = useState({
     amountSpent: '',
@@ -265,23 +266,9 @@ export function AdminRequests() {
   const handleOpenPurchaseModal = (req: Request) => {
     setSelectedRequest(req);
     setPayFormData({ amountSpent: '', paymentMethod: 'Credit Card', purchaseDate: new Date().toISOString().split('T')[0], paymentNotes: '' });
-    setBillImageFile(null);
+    setBillFiles([]);
     setPayFormErrors({});
     setIsPurchaseModalOpen(true);
-  };
-
-  const handleBillImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      showToast('error', 'Image must be under 5 MB.', 'File Too Large');
-      return;
-    }
-    setBillImageFile(file);
-  };
-
-  const handleClearBillImage = () => {
-    setBillImageFile(null);
   };
 
   const handlePurchaseSubmit = async () => {
@@ -296,8 +283,9 @@ export function AdminRequests() {
         paymentMethod: payFormData.paymentMethod,
         purchaseDate: payFormData.purchaseDate,
         paymentNotes: payFormData.paymentNotes || undefined
-      }, billImageFile || undefined);
+      }, billFiles.length > 0 ? billFiles : undefined);
       setIsPurchaseModalOpen(false);
+      setBillFiles([]);
       showToast('success', 'Purchase recorded successfully.', 'Success');
       await loadData();
     } catch (error: any) {
@@ -1415,45 +1403,12 @@ export function AdminRequests() {
               />
             </div>
 
-            {/* Bill/Receipt Image Upload */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Bill / Receipt Image
-              </label>
-              {!billImageFile ? (
-                <label className="block relative w-full border-2 border-dashed border-slate-300 rounded-xl p-6 cursor-pointer hover:border-slate-400 transition-colors bg-slate-50/30">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleBillImageChange}
-                    className="hidden"
-                  />
-                  <div className="flex flex-col items-center justify-center text-center gap-2">
-                    <ImageIcon className="w-8 h-8 text-slate-300" />
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700">Upload bill/receipt</p>
-                      <p className="text-[10px] text-slate-500">PNG, JPG, GIF up to 5MB</p>
-                    </div>
-                  </div>
-                </label>
-              ) : (
-                <div className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
-                    <p className="text-[10px] text-slate-500">{(billImageFile.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleClearBillImage}
-                    className="h-8 rounded-lg text-xs text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <X className="w-3 h-3" /> Remove
-                  </Button>
-                </div>
-              )}
-            </div>
+            {/* Bill/Receipt Documents */}
+            <MultiFileUpload
+              files={billFiles}
+              onChange={setBillFiles}
+              label="BILL / RECEIPT DOCUMENTS (OPTIONAL)"
+            />
 
             {/* Payment Notes */}
             <div className="space-y-1.5">
