@@ -20,6 +20,7 @@ import { fetchFormTemplates } from '../../services/api/dashboard';
 import { reviewForm } from '../../services/api/forms';
 import { normalizeFormStatus, COMPLETION_STATUSES } from '../../lib/formStatus';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 type FormStatus = 'Approved' | 'Submitted' | 'In Progress' | 'Needs Revision' | 'Draft';
 interface Form {
@@ -162,6 +163,7 @@ export function ParentDetails() {
   const [docTargetStatus, setDocTargetStatus] = useState<'pending' | 'rejected'>('pending');
   const { showToast } = useToast();
   const { userData } = useUserContext();
+  const { user } = useAuth();
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
 
   const schoolId = localStorage.getItem('schoolId');
@@ -720,7 +722,7 @@ export function ParentDetails() {
   };
 
   const handleRevoke = async () => {
-    if (!revokeFormData || !userData?.parentId) {
+    if (!revokeFormData || !user?.id) {
       showToast('error', 'User information missing');
       return;
     }
@@ -736,7 +738,7 @@ export function ParentDetails() {
         await revokeStudentFormAssignment(
           revokeFormData.form.studentFormAssignmentId,
           revokeNotes,
-          userData.parentId,
+          user.id,
           revokeTargetStatus
         );
 

@@ -12,6 +12,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment, revokeEmployeeFormAssignment, updateApprovedEmployeeFormMetadata } from '../../services/api/employee';
 import { useUserContext } from '../../contexts/UserContext';
+import { useAuth } from '../../services/auth/useAuth';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Calendar } from 'lucide-react';
@@ -24,6 +25,7 @@ export function EmployeeDetails() {
   const { schoolSlug, employeeId } = useParams<{ schoolSlug: string; employeeId: string }>();
   const navigate = useNavigate();
   const { userData } = useUserContext();
+  const { user } = useAuth();
   const { showToast } = useToast();
 
   const schoolId = userData?.schoolId || localStorage.getItem('schoolId') || '';
@@ -259,7 +261,7 @@ export function EmployeeDetails() {
       showToast('error', 'Please provide a reason');
       return;
     }
-    const revokedBy = userData?.parentId || userData?.schoolId || '00000000-0000-0000-0000-000000000000';
+    const revokedBy = user?.id || '00000000-0000-0000-0000-000000000000';
     setIsRevoking(true);
     try {
       await revokeEmployeeFormAssignment(revokeFormData.form.id!, revokeNotes, revokedBy, revokeTargetStatus);
