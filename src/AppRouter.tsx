@@ -225,7 +225,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="admin" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
-                  <Route path="/:schoolSlug/admin/owner-management" element={<StrictSuperAdminOnly><OwnerManagement /></StrictSuperAdminOnly>} />
+                  <Route path="/:schoolSlug/admin/owner-management" element={<SuperAdminOnly><OwnerManagement /></SuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />

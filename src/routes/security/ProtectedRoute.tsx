@@ -53,7 +53,7 @@ export function ProtectedRoute({
       </div>;
   }
 
-  if (location.pathname === '/admin/admin-management' && userData?.role?.toLowerCase() !== 'superadmin') {
+  if (location.pathname === '/admin/admin-management' && userData?.role?.toLowerCase() !== 'superadmin' && userData?.role?.toLowerCase() !== 'owner') {
     return <Navigate to="/admin" replace />;
   }
 

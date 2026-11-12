@@ -53,7 +53,7 @@ export function AdminManagement() {
   const { showToast } = useToast();
   const { userData, schoolFeatures } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
-  const canManageAdministratorPins = isTapTimeEnabled && userData?.role === 'SuperAdmin';
+  const canManageAdministratorPins = isTapTimeEnabled && (userData?.role?.toLowerCase() === 'superadmin' || userData?.role?.toLowerCase() === 'owner');
 
   const [invitePermissions, setInvitePermissions] = useState<string[]>([]);
   const [editPermissions, setEditPermissions] = useState<string[]>([]);

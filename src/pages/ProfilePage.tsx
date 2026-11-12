@@ -18,7 +18,7 @@ function ProfileContent() {
   const { userData, schoolName, schoolPhone, schoolEmail, schoolAddress, refreshUserData } = useUserContext();
 
   const role = userData?.role?.toLowerCase() ?? '';
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
   const isEmployee = role === 'employee';
 
   const displayName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ') || userData?.email || '—';
@@ -383,7 +383,7 @@ function InfoRow({ icon, label, value, className = '' }: { icon: React.ReactNode
 export function ProfilePage() {
   const { userData } = useUserContext();
   const role = userData?.role?.toLowerCase() ?? '';
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
   const isEmployee = role === 'employee';
 
   if (isAdmin) {

@@ -245,7 +245,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     {
       label: 'Administration',
       items: [
-        ...(isSuperAdmin ? [{ icon: <Shield className="w-[18px] h-[18px]" />, label: 'Owners', path: `${schoolPrefix}/admin/owner-management` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <Shield className="w-[18px] h-[18px]" />, label: 'Owners', path: `${schoolPrefix}/admin/owner-management` }] : []),
         ...(hasElevatedAccess ? [{ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` }] : []),
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],

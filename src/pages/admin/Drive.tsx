@@ -133,6 +133,8 @@ function readAllDirectoryEntries(dir: FileSystemDirectoryEntry): Promise<FileSys
 export function AdminDrive() {
   const { userData } = useUserContext();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
+  const isOwner = userData?.role?.toLowerCase() === 'owner';
+  const hasElevatedAccess = isSuperAdmin || isOwner;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Navigation
@@ -229,7 +231,7 @@ export function AdminDrive() {
     return GROUP_ORDER.filter(g => map.has(g)).map(g => ({ label: g, items: map.get(g)! }));
   }, [filteredItems]);
 
-  const totalItemCount = filteredItems.length + (isSuperAdmin && isAtRoot ? admins.length : 0);
+  const totalItemCount = filteredItems.length + (hasElevatedAccess && isAtRoot ? admins.length : 0);
 
   // ── Reset on navigation ───────────────────────────────────────────────────────
 
@@ -256,9 +258,9 @@ export function AdminDrive() {
   }, [currentFolderId, currentUserId, sortBy, sortOrder]);
 
   const fetchAdmins = useCallback(async () => {
-    if (!isSuperAdmin || !isAtRoot) return;
+    if (!hasElevatedAccess || !isAtRoot) return;
     try { setAdmins(await listDriveAdmins()); } catch { setAdmins([]); }
-  }, [isSuperAdmin, isAtRoot]);
+  }, [hasElevatedAccess, isAtRoot]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
   useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
@@ -1205,7 +1207,7 @@ export function AdminDrive() {
           ) : (
             <>
               {/* Admin Cards section (SuperAdmin at root only) */}
-              {isSuperAdmin && isAtRoot && admins.length > 0 && (
+              {hasElevatedAccess && isAtRoot && admins.length > 0 && (
                 <div className="mb-6">
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
@@ -1246,7 +1248,7 @@ export function AdminDrive() {
                 </div>
               )}
 
-              {filteredItems.length === 0 && !search && !(isSuperAdmin && isAtRoot && admins.length > 0) && (
+              {filteredItems.length === 0 && !search && !(hasElevatedAccess && isAtRoot && admins.length > 0) && (
                 <div className="flex flex-col items-center justify-center h-40 gap-3">
                   <Folder className="w-10 h-10 text-slate-300" />
                   <p className="text-sm text-slate-400">
