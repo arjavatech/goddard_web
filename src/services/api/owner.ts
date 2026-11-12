@@ -57,27 +57,17 @@ export async function inviteOwner(
   schoolId: string,
   phoneNumber?: string
 ): Promise<void> {
-  try {
-    await authedFetch({
-      method: 'POST',
-      url: '/owners/invite',
-      body: {
-        email,
-        school_id: schoolId,
-        first_name: firstName,
-        last_name: lastName,
-        phone_number: phoneNumber || null
-      }
-    }, z.object({}).passthrough());
-  } catch (error: any) {
-    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
-      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
-      (bounceError as any).code = 'EMAIL_BOUNCE';
-      (bounceError as any).status = error?.status;
-      throw bounceError;
+  await authedFetch({
+    method: 'POST',
+    url: '/owners/invite',
+    body: {
+      email,
+      school_id: schoolId,
+      first_name: firstName,
+      last_name: lastName,
+      phone_number: phoneNumber || null
     }
-    throw error;
-  }
+  }, z.object({}).passthrough());
 }
 
 export async function updateOwner(
@@ -105,19 +95,9 @@ export async function deleteOwner(userId: string): Promise<void> {
 }
 
 export async function resendOwnerInvite(userId: string): Promise<void> {
-  try {
-    await authedFetch({
-      method: 'POST',
-      url: '/owners/resend-invite',
-      body: { user_id: userId }
-    }, z.any());
-  } catch (error: any) {
-    if (error?.code === 'EXTERNAL_SERVICE_ERROR' || error?.status === 502) {
-      const bounceError = new Error('Email delivery failed. Please try again later or use a different email address.');
-      (bounceError as any).code = 'EMAIL_BOUNCE';
-      (bounceError as any).status = error?.status;
-      throw bounceError;
-    }
-    throw error;
-  }
+  await authedFetch({
+    method: 'POST',
+    url: '/owners/resend-invite',
+    body: { user_id: userId }
+  }, z.any());
 }

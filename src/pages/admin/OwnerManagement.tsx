@@ -211,8 +211,8 @@ export function OwnerManagement() {
           </Card>
         </div>
 
-        {/* Super Admin info card */}
-        {superAdmin && (
+        {/* Super Admin info card — only shown to Owner viewers */}
+        {superAdmin && isOwner && (
           <Card className="border-[#0F2D52]/15 bg-[#0F2D52]/[0.02]">
             <CardContent className="p-4">
               <div className="flex flex-col sm:flex-row sm:items-start gap-4">
