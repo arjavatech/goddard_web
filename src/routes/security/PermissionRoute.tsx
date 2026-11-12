@@ -4,8 +4,8 @@ import { useUserContext } from '../../contexts/UserContext';
 export function PermissionRoute({ permission, children }: { permission: string; children: ReactNode }) {
   const { adminPermissions, userData, isReady } = useUserContext();
   if (!isReady) return null;
-  const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
-  if (isSuperAdmin || adminPermissions.includes(permission)) return <>{children}</>;
+  const hasElevatedAccess = userData?.role?.toLowerCase() === 'superadmin' || userData?.role?.toLowerCase() === 'owner';
+  if (hasElevatedAccess || adminPermissions.includes(permission)) return <>{children}</>;
   return (
     <main className="grid min-h-screen place-items-center bg-slate-50 p-6">
       <section className="max-w-md rounded-2xl border border-slate-200 bg-white p-6 text-center shadow-sm">
