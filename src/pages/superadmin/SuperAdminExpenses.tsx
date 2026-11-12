@@ -21,6 +21,7 @@ import {
   TrendingUp, RefreshCw, Layers, Users, School,
   PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter, ImageIcon
 } from 'lucide-react';
+import { MultiFileUpload } from '../../components/admin/MultiFileUpload';
 import { SuperAdminLayout } from './SuperAdminLayout';
 import { AdminLayout } from '../admin/AdminLayout';
 
@@ -99,7 +100,7 @@ export function SuperAdminExpenses() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [form, setForm] = useState<AddExpenseForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [billFiles, setBillFiles] = useState<File[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [locationOptions, setLocationOptions] = useState<string[]>([]);
   const [classrooms, setClassrooms] = useState<Classroom[]>([]);
@@ -208,11 +209,11 @@ export function SuperAdminExpenses() {
         paymentNotes: form.paymentNotes || undefined,
         paidByName,
         paidByUserId,
-      }, billImageFile ?? undefined);
+      }, billFiles.length > 0 ? billFiles : undefined);
       showToast('success', 'Expense added successfully.', 'Added');
       setShowAddModal(false);
       setForm(EMPTY_FORM);
-      setBillImageFile(null);
+      setBillFiles([]);
       setStep(1);
       await loadData();
     } catch {
@@ -792,58 +793,12 @@ export function SuperAdminExpenses() {
                   <Input value={form.paymentNotes} onChange={e => setForm(f => ({ ...f, paymentNotes: e.target.value }))} placeholder="Receipt info, PO number, etc." className="mt-1 h-9 text-sm" />
                 </div>
 
-                {/* Bill Image Upload — Requests-style dashed zone */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bill Image (optional)</label>
-                  {billImageFile ? (
-                    <div className="flex items-center gap-3 p-3 border border-slate-100 rounded-xl bg-slate-50">
-                      <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-slate-100 bg-white flex-shrink-0">
-                        {billImageFile.type.startsWith('image/') ? (
-                          <img
-                            src={URL.createObjectURL(billImageFile)}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-slate-100">
-                            <ImageIcon className="w-6 h-6 text-slate-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{(billImageFile.size / 1024).toFixed(0)} KB</p>
-                        <button
-                          type="button"
-                          onClick={() => setBillImageFile(null)}
-                          className="mt-1.5 text-[10px] text-red-500 hover:text-red-700 font-semibold"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
-                      <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
-                      <span className="text-xs text-slate-400 font-medium">Click to upload bill</span>
-                      <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, PDF up to 2MB</span>
-                      <input
-                        type="file"
-                        accept="image/*,application/pdf"
-                        onChange={e => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          if (file.size > 2 * 1024 * 1024) {
-                            showToast('error', 'Image must be under 2 MB.', 'File Too Large');
-                            return;
-                          }
-                          setBillImageFile(file);
-                        }}
-                        className="hidden"
-                      />
-                    </label>
-                  )}
-                </div>
+                {/* Bill/Receipt Documents */}
+                <MultiFileUpload
+                  files={billFiles}
+                  onChange={setBillFiles}
+                  label="BILL / RECEIPT DOCUMENTS (OPTIONAL)"
+                />
               </>
             )}
           </div>
@@ -858,7 +813,7 @@ export function SuperAdminExpenses() {
               <DialogFooter className="gap-2">
                 {step === 1 ? (
                   <>
-                    <Button variant="outline" onClick={() => { setShowAddModal(false); setForm(EMPTY_FORM); setBillImageFile(null); setStep(1); }} disabled={saving} className="rounded-xl">
+                    <Button variant="outline" onClick={() => { setShowAddModal(false); setForm(EMPTY_FORM); setBillFiles([]); setStep(1); }} disabled={saving} className="rounded-xl">
                       Cancel
                     </Button>
                     <Button onClick={() => setStep(2)} disabled={!step1Valid} className="rounded-xl bg-[#0F2D52] hover:bg-[#1a3d6e] text-white disabled:opacity-50 disabled:cursor-not-allowed">

@@ -22,6 +22,8 @@ import {
   LayoutGrid, TableProperties, Plus, Filter, School, User, GraduationCap, ArrowRight,
   Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle, FileText
 } from 'lucide-react';
+import { MultiFileUpload } from '../../components/admin/MultiFileUpload';
+import { ReceiptThumbnail, BillImagePreviewModal } from '../../components/admin/BillImagePreviewModal';
 
 export function SuperAdminRequests() {
   const { userData } = useUserContext();
@@ -66,7 +68,7 @@ export function SuperAdminRequests() {
   // Purchase modal state
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null);
-  const [billImageFile, setBillImageFile] = useState<File | null>(null);
+  const [billFiles, setBillFiles] = useState<File[]>([]);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     amountSpent: '',
@@ -95,6 +97,7 @@ export function SuperAdminRequests() {
 
   // Detail modal state
   const [detailRequest, setDetailRequest] = useState<Request | null>(null);
+  const [previewBillUrl, setPreviewBillUrl] = useState<string | null>(null);
 
   // Edit/Delete state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -248,7 +251,7 @@ export function SuperAdminRequests() {
   const handleOpenPurchaseModal = (req: Request) => {
     setSelectedRequest(req);
     setFormData({ amountSpent: '', paymentMethod: 'Credit Card', purchaseDate: new Date().toISOString().split('T')[0], paymentNotes: '' });
-    setBillImageFile(null);
+    setBillFiles([]);
     setFormErrors({});
     setIsPurchaseModalOpen(true);
   };
@@ -257,13 +260,6 @@ export function SuperAdminRequests() {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (formErrors[name]) setFormErrors(prev => { const c = { ...prev }; delete c[name]; return c; });
-  };
-
-  const handleBillImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast('error', 'Image must be under 2 MB.', 'File Too Large'); return; }
-    setBillImageFile(file);
   };
 
   const validatePurchaseForm = () => {
@@ -285,9 +281,10 @@ export function SuperAdminRequests() {
         paymentMethod: formData.paymentMethod,
         purchaseDate: formData.purchaseDate,
         paymentNotes: formData.paymentNotes || undefined
-      }, billImageFile || undefined);
+      }, billFiles.length > 0 ? billFiles : undefined);
       showToast('success', 'Request marked as Completed.', 'Purchase Recorded');
       setIsPurchaseModalOpen(false);
+      setBillFiles([]);
       const reqList = await RequestService.fetchRequests();
       setRequests(reqList);
     } catch {
@@ -1214,23 +1211,21 @@ export function SuperAdminRequests() {
                           </div>
                         )}
                       </div>
-                      {/* Bill image */}
-                      {req.billImageUrl && (
+                      {/* Bill images */}
+                      {(req.billImageUrls ?? []).length > 0 && (
                         <div>
                           <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-wider mb-1.5 flex items-center gap-1"><Receipt className="w-3 h-3" /> Receipt / Bill</p>
-                          {req.billImageUrl.toLowerCase().includes('.pdf') ? (
-                            <a
-                              href={req.billImageUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-emerald-100 bg-white hover:bg-emerald-50 transition-colors text-emerald-700 text-xs font-semibold"
-                            >
-                              <FileText className="w-4 h-4 flex-shrink-0" />
-                              View Receipt (PDF)
-                            </a>
-                          ) : (
-                            <img src={req.billImageUrl} alt="Receipt" className="w-full max-h-40 object-contain rounded-lg border border-emerald-100 bg-white" />
-                          )}
+                          <div className="space-y-1.5">
+                            {(req.billImageUrls ?? []).map((url, idx) => (
+                              <ReceiptThumbnail
+                                key={idx}
+                                url={url}
+                                index={idx}
+                                total={(req.billImageUrls ?? []).length}
+                                onClick={() => setPreviewBillUrl(url)}
+                              />
+                            ))}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1374,32 +1369,12 @@ export function SuperAdminRequests() {
                 className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
               {formErrors.purchaseDate && <p className="text-xs text-red-600 font-semibold">{formErrors.purchaseDate}</p>}
             </div>
-            {/* Bill / Receipt Image */}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                Bill / Receipt Image (Optional)
-              </label>
-              {!billImageFile ? (
-                <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
-                  <ImageIcon className="w-5 h-5 text-slate-300 mb-1" />
-                  <span className="text-xs text-slate-400 font-medium">Click to upload receipt</span>
-                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG up to 2MB</span>
-                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleBillImageChange} className="hidden" />
-                </label>
-              ) : (
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
-                    <img src={URL.createObjectURL(billImageFile)} alt="Receipt" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 truncate">{billImageFile.name}</p>
-                    <p className="text-[10px] text-slate-400">{(billImageFile.size / 1024).toFixed(0)} KB</p>
-                    <button type="button" onClick={() => setBillImageFile(null)}
-                      className="mt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold">Remove</button>
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* Bill / Receipt Documents */}
+            <MultiFileUpload
+              files={billFiles}
+              onChange={setBillFiles}
+              label="BILL / RECEIPT DOCUMENTS (OPTIONAL)"
+            />
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Purchase Notes (Optional)
@@ -1413,7 +1388,7 @@ export function SuperAdminRequests() {
                 className="w-full sm:w-auto rounded-xl h-11 text-xs font-semibold">Cancel</Button>
               <Button type="submit" disabled={submitting}
                 className="w-full sm:w-auto rounded-xl h-11 bg-[#0F2D52] text-white text-xs font-bold hover:bg-[#1a3d6e]">
-                {submitting ? (billImageFile ? 'Uploading & Completing...' : 'Processing...') : 'Complete Request'}
+                {submitting ? (billFiles.length > 0 ? 'Uploading & Completing...' : 'Processing...') : 'Complete Request'}
               </Button>
             </DialogFooter>
           </form>
@@ -1716,6 +1691,7 @@ export function SuperAdminRequests() {
         </DialogContent>
       </Dialog>
 
+      <BillImagePreviewModal url={previewBillUrl} onClose={() => setPreviewBillUrl(null)} />
     </AdminLayout>
   );
 }
