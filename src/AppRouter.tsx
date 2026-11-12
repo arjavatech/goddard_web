@@ -234,7 +234,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/surveys/:surveyId" element={<FeatureRoute feature="surveyEnabled"><PermissionRoute permission="manage_surveys"><SurveyReport /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/conferences" element={<FeatureRoute feature="conferenceEnabled"><PermissionRoute permission="manage_conferences"><AdminConferences /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/conferences/:id" element={<FeatureRoute feature="conferenceEnabled"><PermissionRoute permission="manage_conferences"><AdminConferenceDetail /></PermissionRoute></FeatureRoute>} />
-                  <Route path="/:schoolSlug/admin/drive" element={<FeatureRoute feature="driveEnabled"><PermissionRoute permission="manage_drive"><AdminDrive /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/drive" element={<FeatureRoute feature="driveEnabled"><AdminDrive /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/settings" element={<Settings />} />
                   <Route path="/:schoolSlug/admin/expenses" element={<FeatureRoute feature="expenseManagementEnabled">
                     <PermissionRoute permission="manage_expenses"><SuperAdminExpenses /></PermissionRoute>
