@@ -1041,7 +1041,7 @@ export function EmployeeDueForms() {
             uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}
             formType="employee"
             formTemplateName={selectedFormForUpload.formName}
-            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin'}
+            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner'}
           />
         )}
       </motion.div>

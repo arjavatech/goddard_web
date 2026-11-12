@@ -76,7 +76,7 @@ export function EmployeeDetails() {
   const [docChangeStatusReason, setDocChangeStatusReason] = useState('');
   const [docTargetStatus, setDocTargetStatus] = useState<'pending' | 'rejected'>('pending');
 
-  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
+  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
 
   // Fetch employee + form assignments + document assignments concurrently
   useEffect(() => {

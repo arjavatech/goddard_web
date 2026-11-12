@@ -218,10 +218,10 @@ export function OwnerManagement() {
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Owner Management</h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
-              {isSuperAdmin ? 'Manage school owners with full administrative access' : 'View school owners and administrative contacts'}
+              {(isSuperAdmin || isOwner) ? 'Manage school owners with full administrative access' : 'View school owners and administrative contacts'}
             </p>
           </div>
-          {isSuperAdmin && (
+          {(isSuperAdmin || isOwner) && (
             <Button
               className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2"
               size="sm"
@@ -386,7 +386,7 @@ export function OwnerManagement() {
                             {owner.phone_number && <p className="text-xs text-slate-400 mt-0.5">{owner.phone_number}</p>}
                           </div>
                         </div>
-                        {isSuperAdmin && renderActionMenu(owner)}
+                        {(isSuperAdmin || isOwner) && renderActionMenu(owner)}
                       </div>
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50">
@@ -443,7 +443,7 @@ export function OwnerManagement() {
                       </Badge>
                     </td>
                     <td className="py-4 px-4">
-                      {isSuperAdmin ? renderActionMenu(owner) : <span className="text-xs text-slate-400">—</span>}
+                      {(isSuperAdmin || isOwner) ? renderActionMenu(owner) : <span className="text-xs text-slate-400">—</span>}
                     </td>
                   </tr>
                 );
