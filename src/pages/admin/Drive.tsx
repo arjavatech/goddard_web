@@ -2,11 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Archive, ArrowLeft, Check, CheckSquare, ChevronDown, ChevronRight, Copy, ExternalLink, File, FileText, Folder,
   FolderInput, FolderOpen, FolderPlus, Grid, Image, Info, List, MoreVertical, Music, Pencil,
-  Search, Trash2, Upload, Users, Video, X, Download, Eye,
+  Search, Trash2, Upload, Video, X, Download, Eye,
 } from 'lucide-react';
 import { useUserContext } from '../../contexts/UserContext';
 import {
-  DriveAdminSummary,
   DriveItem,
   copyDriveItem,
   createDriveFolder,
@@ -15,7 +14,6 @@ import {
   formatFileSize,
   getDriveDownloadUrl,
   getDriveUploadUrl,
-  listDriveAdmins,
   listDriveItems,
   moveDriveItem,
   registerDriveFile,
@@ -40,7 +38,7 @@ import { cn } from '../../lib/utils';
 interface BreadcrumbEntry {
   id: string | null;
   name: string;
-  userId?: string;
+  driveType?: 'admin' | 'owner';
 }
 
 interface UploadQueueItem {
@@ -141,13 +139,12 @@ export function AdminDrive() {
   const [path, setPath] = useState<BreadcrumbEntry[]>([{ id: null, name: 'Drive' }]);
   const currentEntry = path[path.length - 1];
   const currentFolderId = currentEntry.id;
-  const currentUserId = path.find(p => p.userId)?.userId;
-  const isAtRoot = path.length === 1;
-  const showingAdminFiles = !!currentUserId;
+  const currentDriveType: 'admin' | 'owner' = hasElevatedAccess
+    ? (path.some(p => p.driveType === 'admin') ? 'admin' : 'owner')
+    : 'admin';
 
   // Content
   const [items, setItems] = useState<DriveItem[]>([]);
-  const [admins, setAdmins] = useState<DriveAdminSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   // View
@@ -231,7 +228,7 @@ export function AdminDrive() {
     return GROUP_ORDER.filter(g => map.has(g)).map(g => ({ label: g, items: map.get(g)! }));
   }, [filteredItems]);
 
-  const totalItemCount = filteredItems.length + (hasElevatedAccess && isAtRoot ? admins.length : 0);
+  const totalItemCount = filteredItems.length;
 
   // ── Reset on navigation ───────────────────────────────────────────────────────
 
@@ -241,7 +238,7 @@ export function AdminDrive() {
     setIsMultiSelect(false);
     setCollapsedGroups(new Set());
     setExpandedGroups(new Set());
-  }, [currentFolderId, currentUserId]);
+  }, [currentFolderId, currentDriveType]);
 
   // ── Data fetching ─────────────────────────────────────────────────────────────
 
@@ -249,21 +246,14 @@ export function AdminDrive() {
     setItems([]);
     setIsLoading(true);
     try {
-      const params: Parameters<typeof listDriveItems>[0] = { sort_by: sortBy, sort_order: sortOrder };
+      const params: Parameters<typeof listDriveItems>[0] = { sort_by: sortBy, sort_order: sortOrder, drive_type: currentDriveType };
       if (currentFolderId) params.folder_id = currentFolderId;
-      if (currentUserId) params.user_id = currentUserId;
       setItems(await listDriveItems(params));
     } catch { /* keep existing */ }
     finally { setIsLoading(false); }
-  }, [currentFolderId, currentUserId, sortBy, sortOrder]);
-
-  const fetchAdmins = useCallback(async () => {
-    if (!hasElevatedAccess || !isAtRoot) return;
-    try { setAdmins(await listDriveAdmins()); } catch { setAdmins([]); }
-  }, [hasElevatedAccess, isAtRoot]);
+  }, [currentFolderId, currentDriveType, sortBy, sortOrder]);
 
   useEffect(() => { fetchItems(); }, [fetchItems]);
-  useEffect(() => { fetchAdmins(); }, [fetchAdmins]);
 
   useEffect(() => {
     if (previewItem) {
@@ -279,14 +269,11 @@ export function AdminDrive() {
   const navigateToFolder = (item: DriveItem) =>
     setPath(prev => [...prev, { id: item.id, name: item.name }]);
 
-  const navigateToAdmin = (admin: DriveAdminSummary) =>
-    setPath([
-      { id: null, name: 'Drive' },
-      { id: null, name: `${admin.first_name} ${admin.last_name}`, userId: admin.user_id },
-    ]);
-
   const navigateToBreadcrumb = (index: number) =>
     setPath(prev => prev.slice(0, index + 1));
+
+  const navigateToAdminDrive = () =>
+    setPath([{ id: null, name: 'Drive' }, { id: null, name: 'Admins', driveType: 'admin' }]);
 
   // ── Card click ────────────────────────────────────────────────────────────────
 
@@ -356,7 +343,7 @@ export function AdminDrive() {
           content_type: resolvedContentType,
           file_size: file.size,
           folder_id: currentFolderId ?? undefined,
-          user_id: currentUserId ?? undefined,
+          drive_type: currentDriveType,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
@@ -370,7 +357,7 @@ export function AdminDrive() {
           name: file.name, s3_key,
           mime_type: resolvedContentType,
           file_size: file.size,
-          user_id: currentUserId ?? undefined,
+          drive_type: currentDriveType,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
         fetchItems();
@@ -395,7 +382,7 @@ export function AdminDrive() {
           content_type: resolvedContentType,
           file_size: file.size,
           folder_id: targetFolderId ?? undefined,
-          user_id: currentUserId ?? undefined,
+          drive_type: currentDriveType,
         });
         const task = uploadToS3(upload_url, file, pct =>
           setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: pct } : u)),
@@ -409,7 +396,7 @@ export function AdminDrive() {
           name: file.name, s3_key,
           mime_type: resolvedContentType,
           file_size: file.size,
-          user_id: currentUserId ?? undefined,
+          drive_type: currentDriveType,
         });
         setUploadQueue(q => q.map(u => u.id === uploadId ? { ...u, progress: 100, done: true } : u));
         fetchItems();
@@ -454,7 +441,7 @@ export function AdminDrive() {
           const sub = await createDriveFolder({
             name: child.name,
             folder_id: targetFolderId,
-            user_id: currentUserId ?? undefined,
+            drive_type: currentDriveType,
           });
           subdirs.push([child as FileSystemDirectoryEntry, sub.id]);
         } catch { /* skip */ }
@@ -466,13 +453,13 @@ export function AdminDrive() {
         const ct = file.type || 'application/octet-stream';
         const { upload_url, s3_key } = await getDriveUploadUrl({
           file_name: file.name, content_type: ct, file_size: file.size,
-          folder_id: targetFolderId, user_id: currentUserId ?? undefined,
+          folder_id: targetFolderId, drive_type: currentDriveType,
         });
         const task = uploadToS3(upload_url, file, () => {}, ct);
         await task.promise;
         await registerDriveFile({
           name: file.name, s3_key, mime_type: ct, file_size: file.size,
-          folder_id: targetFolderId, user_id: currentUserId ?? undefined,
+          folder_id: targetFolderId, drive_type: currentDriveType,
         });
         setUploadQueue(q => q.map(u => u.id === rootQueueId
           ? { ...u, doneFiles: (u.doneFiles ?? 0) + 1 } : u));
@@ -500,7 +487,7 @@ export function AdminDrive() {
       newFolder = await createDriveFolder({
         name: entry.name,
         folder_id: parentFolderId ?? undefined,
-        user_id: currentUserId ?? undefined,
+        drive_type: currentDriveType,
       });
       fetchItems();
     } catch {
@@ -613,7 +600,7 @@ export function AdminDrive() {
     if (!newFolderName.trim()) return;
     setIsFolderCreating(true);
     try {
-      await createDriveFolder({ name: newFolderName.trim(), folder_id: currentFolderId ?? undefined, user_id: currentUserId ?? undefined });
+      await createDriveFolder({ name: newFolderName.trim(), folder_id: currentFolderId ?? undefined, drive_type: currentDriveType });
       setNewFolderName(''); setShowNewFolder(false); fetchItems();
     } finally { setIsFolderCreating(false); }
   };
@@ -643,9 +630,7 @@ export function AdminDrive() {
   // ── Copy ─────────────────────────────────────────────────────────────────────
 
   const openCopyDialog = (items: DriveItem[]) => {
-    const driveRootLabel = showingAdminFiles
-      ? `${path.find(p => p.userId)?.name ?? 'Admin'}'s Drive`
-      : 'My Drive';
+    const driveRootLabel = currentDriveType === 'admin' ? 'Admin Drive' : 'Owner Drive';
     setDialogMode('copy');
     setMoveItems(items);
     setMoveDestPath([{ id: null, name: driveRootLabel }]);
@@ -680,7 +665,7 @@ export function AdminDrive() {
     const destFolderId = moveDestPath[moveDestPath.length - 1].id ?? undefined;
     setIsDialogFolderCreating(true);
     try {
-      await createDriveFolder({ name, folder_id: destFolderId });
+      await createDriveFolder({ name, folder_id: destFolderId, drive_type: currentDriveType });
       setIsCreatingFolderInDialog(false);
       setNewFolderNameInDialog('');
       await loadMoveFolders(moveDestPath[moveDestPath.length - 1].id ?? null);
@@ -697,17 +682,15 @@ export function AdminDrive() {
         folder_id: folderId ?? undefined,
         sort_by: 'name',
         sort_order: 'asc',
+        drive_type: currentDriveType,
       };
-      if (currentUserId) params.user_id = currentUserId;
       const all = await listDriveItems(params);
       setMoveFolders(all.filter(i => i.item_type === 'folder'));
     } finally { setIsMoveLoading(false); }
   };
 
   const openMoveDialog = async (items: DriveItem[]) => {
-    const driveRootLabel = showingAdminFiles
-      ? `${path.find(p => p.userId)?.name ?? 'Admin'}'s Drive`
-      : 'My Drive';
+    const driveRootLabel = currentDriveType === 'admin' ? 'Admin Drive' : 'Owner Drive';
     setDialogMode('move');
     setMoveItems(items);
     setMoveDestPath([{ id: null, name: driveRootLabel }]);
@@ -883,36 +866,11 @@ export function AdminDrive() {
             <p className="text-xs font-medium text-slate-700 truncate leading-tight">{item.name}</p>
             <p className="text-[10px] text-slate-400 mt-0.5">
               {isFolder ? '' : `${formatFileSize(item.file_size)} • `}
-              {relativeTime(item.created_at)}
+              {relativeTime(item.updated_at)}
             </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Admin Card ────────────────────────────────────────────────────────────────
-
-  function AdminCard({ admin }: { admin: DriveAdminSummary }) {
-    return (
-      <div
-        className="group rounded-xl border border-slate-200 bg-white overflow-hidden cursor-pointer hover:border-blue-300 hover:shadow-md transition-all select-none"
-        onClick={() => navigateToAdmin(admin)}
-      >
-        <div className="relative flex flex-col items-center justify-center h-28 bg-indigo-100 gap-2">
-          <div className="w-16 h-16 rounded-full bg-indigo-200 flex items-center justify-center">
-            <Users className="w-8 h-8 text-indigo-600" />
-          </div>
-        </div>
-        <div className="px-3 py-2.5 border-t border-slate-100 flex items-start gap-2">
-          <div className="mt-0.5 flex-shrink-0">
-            <FolderOpen className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-slate-700 truncate leading-tight">
-              {admin.first_name} {admin.last_name}
-            </p>
-            <p className="text-[10px] text-slate-400 mt-0.5">{admin.item_count} items</p>
+            {item.modified_by_name && (
+              <p className="text-[10px] text-slate-400 truncate">by {item.modified_by_name}</p>
+            )}
           </div>
         </div>
       </div>
@@ -932,7 +890,8 @@ export function AdminDrive() {
               <th className="text-left py-2.5 px-4 font-medium">Name</th>
               <th className="text-left py-2.5 px-4 font-medium hidden sm:table-cell">Type</th>
               <th className="text-right py-2.5 px-4 font-medium hidden sm:table-cell">Size</th>
-              <th className="text-left py-2.5 px-4 font-medium hidden md:table-cell">Modified</th>
+              <th className="text-left py-2.5 px-4 font-medium hidden md:table-cell">Modified At</th>
+              <th className="text-left py-2.5 px-4 font-medium hidden lg:table-cell">Modified By</th>
               <th className="w-10" />
             </tr>
           </thead>
@@ -982,7 +941,10 @@ export function AdminDrive() {
                     {isFolder ? '—' : formatFileSize(item.file_size)}
                   </td>
                   <td className="py-2.5 px-4 text-slate-400 hidden md:table-cell text-xs">
-                    {relativeTime(item.created_at)}
+                    {relativeTime(item.updated_at)}
+                  </td>
+                  <td className="py-2.5 px-4 text-slate-400 hidden lg:table-cell text-xs">
+                    {item.modified_by_name ?? '—'}
                   </td>
                   <td className="py-2.5 px-4" onClick={e => e.stopPropagation()}>
                     {!isMultiSelect && (
@@ -1176,6 +1138,55 @@ export function AdminDrive() {
         >
 
 
+          {/* Admins shared drive card — elevated users only, at drive root */}
+          {hasElevatedAccess && path.length === 1 && !currentFolderId && !search && (
+            <div className="mb-5">
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2.5">Shared Drives</p>
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
+                  <div
+                    className="rounded-xl border bg-white overflow-hidden cursor-pointer border-slate-200 hover:border-blue-300 hover:shadow-md transition-all select-none"
+                    onClick={navigateToAdminDrive}
+                  >
+                    <div className="flex items-center justify-center h-28 bg-indigo-50">
+                      <FolderOpen className="w-12 h-12 text-indigo-400" />
+                    </div>
+                    <div className="px-3 py-2.5 border-t border-slate-100 flex items-start gap-2">
+                      <FolderOpen className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-medium text-slate-700">Admins</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">Shared admin drive</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-xl border border-slate-100 overflow-hidden mb-3">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      <tr
+                        className="border-b border-slate-50 cursor-pointer hover:bg-slate-50 transition-colors"
+                        onClick={navigateToAdminDrive}
+                      >
+                        <td className="py-2.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <FolderOpen className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+                            <span className="font-medium text-slate-700">Admins</span>
+                          </div>
+                        </td>
+                        <td className="py-2.5 px-4 text-slate-400 hidden sm:table-cell text-xs">Shared Drive</td>
+                        <td className="py-2.5 px-4 text-right text-slate-400 hidden sm:table-cell text-xs">—</td>
+                        <td className="py-2.5 px-4 text-slate-400 hidden md:table-cell text-xs">—</td>
+                        <td className="py-2.5 px-4 text-slate-400 hidden lg:table-cell text-xs">—</td>
+                        <td className="py-2.5 px-4" />
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {isLoading && items.length === 0 ? (
             viewMode === 'grid' ? (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
@@ -1206,39 +1217,6 @@ export function AdminDrive() {
             )
           ) : (
             <>
-              {/* Admin Cards section (SuperAdmin at root only) */}
-              {hasElevatedAccess && isAtRoot && admins.length > 0 && (
-                <div className="mb-6">
-                  {viewMode === 'grid' ? (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3">
-                      {admins.map(admin => <AdminCard key={admin.user_id} admin={admin} />)}
-                    </div>
-                  ) : (
-                    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden mb-3">
-                      <table className="w-full text-sm">
-                        <tbody>
-                          {admins.map(admin => (
-                            <tr
-                              key={admin.user_id}
-                              className="border-b border-slate-50 hover:bg-slate-50 cursor-pointer"
-                              onClick={() => navigateToAdmin(admin)}
-                            >
-                              <td className="py-2.5 px-4">
-                                <div className="flex items-center gap-2.5">
-                                  <FolderOpen className="w-4 h-4 text-indigo-500 flex-shrink-0" />
-                                  <span className="font-medium text-slate-700">{admin.first_name} {admin.last_name}</span>
-                                </div>
-                              </td>
-                              <td className="py-2.5 px-4 text-slate-400 text-xs">{admin.item_count} items</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              )}
-
               {/* Empty state */}
               {filteredItems.length === 0 && search && (
                 <div className="flex flex-col items-center justify-center h-40 gap-3">
@@ -1248,12 +1226,10 @@ export function AdminDrive() {
                 </div>
               )}
 
-              {filteredItems.length === 0 && !search && !(hasElevatedAccess && isAtRoot && admins.length > 0) && (
+              {filteredItems.length === 0 && !search && (
                 <div className="flex flex-col items-center justify-center h-40 gap-3">
                   <Folder className="w-10 h-10 text-slate-300" />
-                  <p className="text-sm text-slate-400">
-                    {showingAdminFiles ? 'This admin has no files yet.' : 'Empty. Upload a file or create a folder.'}
-                  </p>
+                  <p className="text-sm text-slate-400">Empty. Upload a file or create a folder.</p>
                 </div>
               )}
 
@@ -1559,7 +1535,8 @@ export function AdminDrive() {
                     ['Type', infoTarget.item_type === 'folder' ? 'Folder' : (infoTarget.mime_type ?? 'File')],
                     ['Size', infoTarget.item_type === 'folder' ? '—' : formatFileSize(infoTarget.file_size)],
                     ['Created', new Date(infoTarget.created_at).toLocaleString()],
-                    ['Modified', new Date(infoTarget.updated_at).toLocaleString()],
+                    ['Modified At', new Date(infoTarget.updated_at).toLocaleString()],
+                    ['Modified By', infoTarget.modified_by_name ?? '—'],
                   ] as [string, string][]).map(([label, value]) => (
                     <tr key={label}>
                       <td className="py-2 pr-3 text-slate-500 font-medium w-20">{label}</td>
@@ -1685,7 +1662,7 @@ export function AdminDrive() {
                   checked={resetToRoot}
                   onChange={e => {
                     setResetToRoot(e.target.checked);
-                    if (e.target.checked) setMoveDestPath([{ id: null, name: 'My Drive' }]);
+                    if (e.target.checked) setMoveDestPath([{ id: null, name: currentDriveType === 'admin' ? 'Admin Drive' : 'Owner Drive' }]);
                   }}
                   className="rounded border-slate-300 text-[#0F2D52]"
                 />
