@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown, Settings } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
-import { EmployeeService, type Employee } from '../../services/api/employee';
+import { EmployeeService, fetchSchoolMembers, assignFormToAdmin } from '../../services/api/employee';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
@@ -60,8 +62,10 @@ const getStatusDisplay = (status: FormStatus) => {
 };
 
 export function EmployeeFormsManagement() {
+  const navigate = useNavigate();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [forms, setForms] = useState<Form[]>([]);
-  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [members, setMembers] = useState<{ id: string; firstName: string; lastName: string; email: string; memberType: 'employee' | 'admin' }[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'active' | 'inactive'>('active');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -81,12 +85,17 @@ export function EmployeeFormsManagement() {
   const [isAssignToAllDialogOpen, setIsAssignToAllDialogOpen] = useState(false);
   const [selectedFormForAssign, setSelectedFormForAssign] = useState<Form | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
+  const [selectedRecipientIsAdmin, setSelectedRecipientIsAdmin] = useState(false);
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
+  const [adminUsers, setAdminUsers] = useState<{ id: string; firstName: string; lastName: string; email: string }[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
   const [itemsPerPage, setItemsPerPage] = usePageSize('empForm', 10);
+  const [sortBy, setSortBy] = useState('name');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -101,10 +110,12 @@ export function EmployeeFormsManagement() {
     if (!schoolId) return;
     try {
       if (showLoader) setLoading(true);
-      const [templates, emps] = await Promise.all([
+      const [templates, allMembers] = await Promise.all([
         EmployeeService.fetchEmployeeFormTemplates(schoolId).catch(() => []),
-        EmployeeService.fetchEmployees(schoolId).catch(() => [])
+        fetchSchoolMembers(schoolId).catch(() => []),
       ]);
+      setMembers(allMembers);
+      setAdminUsers(allMembers.filter(m => m.memberType === 'admin'));
       setForms(templates.map((t) => ({
         id: t.id,
         name: t.formName,
@@ -113,7 +124,6 @@ export function EmployeeFormsManagement() {
         dueDate: t.dueDate || '',
         pdfFileName: t.pdfFileName
       })));
-      setEmployees(emps.filter(e => e.status === 'active'));
     } catch {
       showToast('error', 'Failed to load forms');
     } finally {
@@ -123,15 +133,40 @@ export function EmployeeFormsManagement() {
 
   useEffect(() => { fetchForms(); }, [schoolId]);
 
+  const getSortLabel = () => {
+    const labels: Record<string, string> = {
+      name: 'Name',
+      status: 'Status',
+      dueDate: 'Due Date',
+    };
+    return labels[sortBy] || 'Sort';
+  };
+
   const filteredForms = useMemo(() => forms.filter((form) => {
     const matchesSearch = form.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = activeTab === 'active'
       ? (form.status === 'active' || form.status === 'school_default')
       : (form.status === 'inactive');
-    return matchesSearch && matchesTab;
-  }), [forms, searchQuery, activeTab]);
+    const matchesStatus = statusFilter === 'all' || form.status === statusFilter;
+    return matchesSearch && matchesTab && matchesStatus;
+  }), [forms, searchQuery, activeTab, statusFilter]);
 
-  const { currentPage, totalPages, paginatedData: paginatedForms, setCurrentPage } = usePagination({ data: filteredForms, itemsPerPage });
+  const sortedForms = useMemo(() => {
+    return [...filteredForms].sort((a, b) => {
+      let aVal: any, bVal: any;
+      switch (sortBy) {
+        case 'name': aVal = a.name; bVal = b.name; break;
+        case 'status': aVal = a.status; bVal = b.status; break;
+        case 'dueDate': aVal = a.dueDate || ''; bVal = b.dueDate || ''; break;
+        default: aVal = a.name; bVal = b.name;
+      }
+      if (typeof aVal === 'string') aVal = aVal.toLowerCase();
+      if (typeof bVal === 'string') bVal = bVal.toLowerCase();
+      return sortOrder === 'asc' ? (aVal > bVal ? 1 : -1) : (aVal < bVal ? 1 : -1);
+    });
+  }, [filteredForms, sortBy, sortOrder]);
+
+  const { currentPage, totalPages, paginatedData: paginatedForms, setCurrentPage } = usePagination({ data: sortedForms, itemsPerPage });
 
   const handleAddForm = async () => {
     if (!formName || !formLink) {
@@ -186,7 +221,11 @@ export function EmployeeFormsManagement() {
   const handleAssignToEmployee = async () => {
     if (!selectedFormForAssign || !selectedEmployeeId || !schoolId) return;
     try {
-      await EmployeeService.assignFormToEmployee(selectedEmployeeId, selectedFormForAssign.id, schoolId, `${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin');
+      if (selectedRecipientIsAdmin) {
+        await assignFormToAdmin(selectedEmployeeId, selectedFormForAssign.id, schoolId);
+      } else {
+        await EmployeeService.assignFormToEmployee(selectedEmployeeId, selectedFormForAssign.id, schoolId, `${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin');
+      }
       showToast('success', 'Form assigned successfully');
       setIsAssignDialogOpen(false);
     } catch (error: any) {
@@ -197,7 +236,12 @@ export function EmployeeFormsManagement() {
   const handleAssignToAllEmployees = async () => {
     if (!selectedFormForAssign || !schoolId) return;
     try {
-      const response = await EmployeeService.assignFormToAllEmployees(schoolId, selectedFormForAssign.id, true);
+      const [response] = await Promise.all([
+        EmployeeService.assignFormToAllEmployees(schoolId, selectedFormForAssign.id, true),
+        adminUsers.length
+          ? Promise.allSettled(adminUsers.map(a => assignFormToAdmin(a.id, selectedFormForAssign!.id, schoolId)))
+          : Promise.resolve(),
+      ]);
       showToast('success', `Form assigned to ${response.newlyAssigned} employee${response.newlyAssigned === 1 ? '' : 's'} successfully!`);
       setIsAssignToAllDialogOpen(false);
     } catch (error: any) {
@@ -273,7 +317,7 @@ export function EmployeeFormsManagement() {
       className: 'w-[18%]',
       hideInCardBody: true,
       cell: (form) => form.pdfFileName && schoolId ? (
-        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`}>
+        <div className="flex items-center gap-1" aria-label={`Template actions for ${form.name}`} onClick={e => e.stopPropagation()}>
           <Button variant="ghost" size="icon" title="View template" aria-label="View template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to open PDF template'); } }}><Eye className="h-3.5 w-3.5" /></Button>
           <Button variant="ghost" size="icon" title="Print template" aria-label="Print template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Open the PDF and use your browser print action.'); } }}><Printer className="h-3.5 w-3.5" /></Button>
           <Button variant="ghost" size="icon" title="Download template" aria-label="Download template" className="h-7 w-7 rounded-lg text-slate-500 hover:text-[#0F2D52]" onClick={async () => { try { window.open(await EmployeeService.getEmployeeFormTemplatePdfUrl(form.id, schoolId, true), '_blank', 'noopener,noreferrer'); } catch { showToast('error', 'Unable to download PDF template'); } }}><Download className="h-3.5 w-3.5" /></Button>
@@ -286,6 +330,7 @@ export function EmployeeFormsManagement() {
       className: 'w-[10%] text-center whitespace-nowrap',
       hideInCardBody: true,
       cell: (form) => (
+        <div onClick={e => e.stopPropagation()}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
@@ -318,6 +363,7 @@ export function EmployeeFormsManagement() {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        </div>
       )
     }
   ], [schoolId, showToast]);
@@ -432,20 +478,52 @@ export function EmployeeFormsManagement() {
                 </TabsList>
               </Tabs>
 
-              {/* Search */}
-              <div className="relative">
+              {/* Search Bar */}
+              <div className="relative mb-3">
                 <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 transition-colors ${searchQuery ? 'text-[#0F2D52]' : 'text-slate-400'}`} />
-                <Input
-                  placeholder="Search forms..."
-                  className="pl-9 pr-9 h-10 rounded-xl border border-slate-200 bg-white text-sm placeholder:text-slate-400 focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
+                <Input 
+                  placeholder="Search forms..." 
+                  className="pl-9 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all" 
+                  value={searchQuery} 
+                  onChange={e => setSearchQuery(e.target.value)} 
                 />
-                {searchQuery && (
-                  <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-slate-400 hover:text-slate-600 rounded-md" onClick={() => setSearchQuery('')}>
-                    <X className="h-3 w-3" />
-                  </Button>
-                )}
+              </div>
+
+              {/* Status Filter and Sort By - Two Column Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Status Filter</label>
+                  <Select value={statusFilter} onValueChange={(val) => { setStatusFilter(val); setCurrentPage(1); }}>
+                    <SelectTrigger className="w-full h-10 rounded-xl border-slate-200 text-xs font-semibold bg-white focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52]">
+                      <SelectValue placeholder="Filter by status" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <SelectItem value="all" className="cursor-pointer text-xs">All Statuses</SelectItem>
+                      <SelectItem value="active" className="cursor-pointer text-xs">Active</SelectItem>
+                      <SelectItem value="inactive" className="cursor-pointer text-xs">Inactive</SelectItem>
+                      <SelectItem value="school_default" className="cursor-pointer text-xs">Default</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Sort By</label>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full h-10 justify-between rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 text-xs font-semibold transition-all">
+                        <span className="flex items-center gap-1.5">
+                          {sortOrder === 'asc' ? <ArrowUp className="h-3.5 w-3.5 text-slate-400" /> : <ArrowDown className="h-3.5 w-3.5 text-slate-400" />}
+                          <span>{getSortLabel()}</span>
+                        </span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('name'); setSortOrder('asc'); }}>Name A-Z</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('name'); setSortOrder('desc'); }}>Name Z-A</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('status'); setSortOrder('asc'); }}>Status</DropdownMenuItem>
+                      <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => { setSortBy('dueDate'); setSortOrder('asc'); }}>Due Date</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
             </div>
 
@@ -463,6 +541,7 @@ export function EmployeeFormsManagement() {
               itemsPerPage={itemsPerPage}
               onPageChange={setCurrentPage}
               onPageSizeChange={setItemsPerPage}
+              onRowClick={(form) => navigate(`/${schoolSlug}/admin/employee-forms/${form.id}`)}
               gridClassName="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
               renderCard={(form) => (
                 <div key={form.id} className="relative rounded-2xl border border-slate-100 bg-white shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
@@ -570,18 +649,18 @@ export function EmployeeFormsManagement() {
         onRemoveExistingPdf={async () => { if (!selectedForm || !schoolId) return; await EmployeeService.removeEmployeeFormTemplatePdf(selectedForm.id, schoolId); setSelectedForm({ ...selectedForm, pdfFileName: undefined }); showToast('success', 'PDF template removed'); }}
       />
 
-      {/* Assign to Employee Dialog */}
-      <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+      {/* Assign Form Dialog */}
+      <Dialog open={isAssignDialogOpen} onOpenChange={(open) => { if (!open) { setSelectedEmployeeId(''); setSelectedRecipientIsAdmin(false); } setIsAssignDialogOpen(open); }}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6 overflow-visible" onInteractOutside={() => { setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}>
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to Employee</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form</DialogTitle>
           </DialogHeader>
           <div className="py-2 space-y-4 overflow-visible">
             <p className="text-sm text-slate-600">
               Assigning form: <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong>
             </p>
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Select Employee</label>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Select Employee or Admin</label>
               <div className="relative">
                 <button
                   type="button"
@@ -590,8 +669,12 @@ export function EmployeeFormsManagement() {
                 >
                   <span className={selectedEmployeeId ? 'text-slate-900' : 'text-slate-400'}>
                     {selectedEmployeeId
-                      ? (() => { const e = employees.find(e => e.id === selectedEmployeeId); return e ? `${e.firstName} ${e.lastName} (${e.employeeType})` : 'Choose an employee...'; })()
-                      : 'Choose an employee...'}
+                      ? (() => {
+                          const m = members.find(m => m.id === selectedEmployeeId && m.memberType === (selectedRecipientIsAdmin ? 'admin' : 'employee'));
+                          if (!m) return 'Choose...';
+                          return `${m.firstName} ${m.lastName}${m.memberType === 'admin' ? ' (Admin)' : ''}`;
+                        })()
+                      : 'Choose an employee or admin...'}
                   </span>
                   <ChevronsUpDown className="h-4 w-4 text-slate-400 flex-shrink-0" />
                 </button>
@@ -602,32 +685,51 @@ export function EmployeeFormsManagement() {
                       <input
                         type="text"
                         autoFocus
-                        placeholder="Search employee..."
+                        placeholder="Search employee or admin..."
                         value={employeeSearchQuery}
                         onChange={(e) => setEmployeeSearchQuery(e.target.value)}
                         className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] bg-white"
                       />
                     </div>
-                    <div className="max-h-56 overflow-y-auto pb-1">
+                    <div className="max-h-64 overflow-y-auto pb-1">
                       {(() => {
-                        const filtered = employees.filter(emp =>
-                          `${emp.firstName} ${emp.lastName} ${emp.employeeType}`.toLowerCase().includes(employeeSearchQuery.toLowerCase())
-                        );
-                        return filtered.length === 0
-                          ? <div className="text-sm text-slate-400 py-4 text-center">No employee found</div>
-                          : filtered.map(emp => (
-                              <button
-                                key={emp.id}
-                                type="button"
-                                onClick={() => { setSelectedEmployeeId(emp.id); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
+                        const q = employeeSearchQuery.toLowerCase();
+                        const filteredEmps = members.filter(m => m.memberType === 'employee' && `${m.firstName} ${m.lastName}`.toLowerCase().includes(q));
+                        const filteredAdmins = members.filter(m => m.memberType === 'admin' && `${m.firstName} ${m.lastName}`.toLowerCase().includes(q));
+                        const hasResults = filteredEmps.length > 0 || filteredAdmins.length > 0;
+                        if (!hasResults) return <div className="text-sm text-slate-400 py-4 text-center">No results found</div>;
+                        return <>
+                          {filteredEmps.length > 0 && <>
+                            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Employees</div>
+                            {filteredEmps.map(m => (
+                              <button key={m.id} type="button"
+                                onClick={() => { setSelectedEmployeeId(m.id); setSelectedRecipientIsAdmin(false); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
                                 className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
                               >
-                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === emp.id ? 'opacity-100' : 'opacity-0'}`} />
+                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === m.id && !selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-slate-900 truncate">{emp.firstName} {emp.lastName}</div>
+                                  <div className="font-medium text-slate-900 truncate">{m.firstName} {m.lastName}</div>
                                 </div>
                               </button>
-                            ));
+                            ))}
+                          </>}
+                          {filteredAdmins.length > 0 && <>
+                            <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Admins</div>
+                            {filteredAdmins.map(admin => (
+                              <button key={admin.id} type="button"
+                                onClick={() => { setSelectedEmployeeId(admin.id); setSelectedRecipientIsAdmin(true); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
+                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
+                              >
+                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === admin.id && selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium text-slate-900 truncate">{admin.firstName} {admin.lastName}</div>
+                                  <div className="text-xs text-blue-600 truncate">{admin.email}</div>
+                                </div>
+                                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Admin</span>
+                              </button>
+                            ))}
+                          </>}
+                        </>;
                       })()}
                     </div>
                   </div>
@@ -636,7 +738,7 @@ export function EmployeeFormsManagement() {
             </div>
           </div>
           <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setIsAssignDialogOpen(false)} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
+            <Button variant="outline" onClick={() => { setIsAssignDialogOpen(false); setSelectedEmployeeId(''); setSelectedRecipientIsAdmin(false); }} className="w-full sm:w-auto h-10 rounded-xl bg-white text-[#0F2D52] border border-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-all">
               Cancel
             </Button>
             <Button onClick={handleAssignToEmployee} disabled={!selectedEmployeeId} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
@@ -649,11 +751,11 @@ export function EmployeeFormsManagement() {
       <Dialog open={isAssignToAllDialogOpen} onOpenChange={setIsAssignToAllDialogOpen}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All Employees</DialogTitle>
+            <DialogTitle className="text-lg font-bold text-slate-900">Assign Form to All</DialogTitle>
           </DialogHeader>
           <div className="py-2">
             <p className="text-sm text-slate-600 leading-relaxed">
-              Assign <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong> to every active employee in this school? Employees who already have this form will be skipped.
+              Assign <strong className="text-[#0F2D52]">{selectedFormForAssign?.name}</strong> to all active employees{adminUsers.length > 0 ? ` and ${adminUsers.length} admin${adminUsers.length === 1 ? '' : 's'}` : ''} in this school? Anyone who already has this form will be skipped.
             </p>
           </div>
           <DialogFooter className="mt-6 flex-col sm:flex-row gap-2">
@@ -661,7 +763,7 @@ export function EmployeeFormsManagement() {
               Cancel
             </Button>
             <Button onClick={handleAssignToAllEmployees} className="w-full sm:w-auto h-10 rounded-xl bg-[#0F2D52] hover:bg-[#163e6b] text-white font-semibold transition-all">
-              Assign to All Employees
+              Assign to All
             </Button>
           </DialogFooter>
         </DialogContent>

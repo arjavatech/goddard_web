@@ -27,6 +27,7 @@ export function ParentFormView() {
   const {
     viewUrl, title, status, childName, returnPath,
     siblingForms, completedCount, totalForms,
+    approvedFormName,
   } = (location.state ?? {}) as {
     viewUrl?: string;
     title?: string;
@@ -36,6 +37,7 @@ export function ParentFormView() {
     siblingForms?: SiblingForm[];
     completedCount?: number;
     totalForms?: number;
+    approvedFormName?: string | null;
   };
 
   const back = returnPath || `/${schoolSlug}/dashboard`;
@@ -258,7 +260,7 @@ export function ParentFormView() {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `${title || 'form'}.pdf`;
+      link.download = `${approvedFormName || title || 'form'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

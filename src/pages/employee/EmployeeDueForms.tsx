@@ -7,7 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Badge } from '../../components/ui/badge';
 import { Checkbox } from '../../components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
-import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List } from 'lucide-react';
+import { Search, Mail, Calendar, AlertTriangle, Clock, Filter, ArrowUp, ArrowDown, X, ChevronDown, Download, LayoutGrid, List, Upload } from 'lucide-react';
 import { useToast } from '../../contexts/ToastContext';
 import { apiBaseUrl } from '../../config/env';
 import { Pagination, MobilePagination } from '../../components/ui/pagination';
@@ -16,9 +16,11 @@ import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { downloadCSV, printAsPDF } from '../../lib/export';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { EmployeeService, type Employee, type EmployeeFormAssignment } from '../../services/api/employee';
 import { normalizeFormStatus } from '../../lib/formStatus';
 import { Link } from 'react-router-dom';
+import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 
 type DueFormStatus = 'pending' | 'completed' | 'overdue' | 'submitted' | 'in_progress';
 
@@ -72,9 +74,12 @@ export function EmployeeDueForms() {
   }, []);
   const [remindingFormIds, setRemindingFormIds] = useState<Set<string>>(new Set());
   const [bulkRemindLoading, setBulkRemindLoading] = useState(false);
+  const [isManualUploadOpen, setIsManualUploadOpen] = useState(false);
+  const [selectedFormForUpload, setSelectedFormForUpload] = useState<LocalDueForm | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
-
+  const { refreshCounts } = useNavCounts();
   const schoolId = userData?.schoolId;
 
   const handleMultiSelectChange = (value: string, currentValues: string[], setter: (values: string[]) => void) => {
@@ -175,7 +180,7 @@ export function EmployeeDueForms() {
     let isMounted = true;
     (async () => {
       try {
-        setLoading(true);
+        if (refreshKey === 0) setLoading(true);
         if (!schoolId) return;
 
         const [employees, assignments] = await Promise.all([
@@ -191,7 +196,6 @@ export function EmployeeDueForms() {
 
         assignments.forEach(assignment => {
           const employee = employeeMap.get(assignment.employeeId);
-          if (!employee) return;
           const formName = assignment.formName || 'Employee Form';
           const dueDate = assignment.dueDate || null;
 
@@ -208,14 +212,18 @@ export function EmployeeDueForms() {
             status = (due && due < today) ? 'overdue' : 'pending';
           }
 
+          if (status === 'in_progress') return;
+
           mappedForms.push({
             id: assignment.id,
             formId: assignment.formId,
             formName,
             employeeId: assignment.employeeId,
-            employeeName: `${employee.firstName} ${employee.lastName}`,
-            employeeType: employee.employeeType || 'Employee',
-            employeeEmail: employee.email,
+            employeeName: employee
+              ? `${employee.firstName} ${employee.lastName}`
+              : `${assignment.employeeFirstName ?? ''} ${assignment.employeeLastName ?? ''}`.trim(),
+            employeeType: employee?.employeeType || 'Employee',
+            employeeEmail: employee?.email || '',
             dueDate,
             status,
             assignedDate: assignment.assignedOn ?? ''
@@ -229,6 +237,7 @@ export function EmployeeDueForms() {
       } finally {
         if (isMounted) {
           setLoading(false);
+          refreshCounts();
         }
       }
     })();
@@ -236,7 +245,7 @@ export function EmployeeDueForms() {
     return () => {
       isMounted = false;
     };
-  }, [schoolId]);
+  }, [schoolId, refreshKey]);
 
   const allRoles = useMemo(() => {
     const set = new Set<string>();
@@ -457,7 +466,6 @@ export function EmployeeDueForms() {
   const stats = {
     total: dueForms.length,
     pending: dueForms.filter(f => f.status === 'pending').length,
-    in_progress: dueForms.filter(f => f.status === 'in_progress').length,
     overdue: dueForms.filter(f => f.status === 'overdue').length
   };
 
@@ -527,21 +535,6 @@ export function EmployeeDueForms() {
             </CardContent>
           </Card>
 
-          <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-center justify-between">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1 truncate">
-                    In Progress
-                  </p>
-                  <p className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">{stats.in_progress}</p>
-                </div>
-                <div className="p-2.5 bg-blue-50 rounded-xl flex-shrink-0 ml-2">
-                  <Clock className="h-4 w-4 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           <Card className="h-full rounded-2xl border border-slate-100 hover:shadow-md transition-all duration-300 shadow-xs bg-white">
             <CardContent className="p-4 sm:p-5">
@@ -651,7 +644,7 @@ export function EmployeeDueForms() {
                     <MultiSelectDropdown
                       value={statusFilter}
                       onValueChange={setStatusFilter}
-                      options={['pending', 'submitted', 'in_progress', 'overdue']}
+                      options={['pending', 'submitted', 'overdue']}
                       placeholder="Select statuses"
                       label="Status"
                     />
@@ -786,12 +779,6 @@ export function EmployeeDueForms() {
                     Remind Pending ({filteredForms.filter(f => f.status === 'pending').length})
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'in_progress').map(f => f.id), true)}
-                    disabled={filteredForms.filter(f => f.status === 'in_progress').length === 0 || bulkRemindLoading}
-                  >
-                    Remind In Progress ({filteredForms.filter(f => f.status === 'in_progress').length})
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
                     onClick={() => handleSendReminder(filteredForms.filter(f => f.status === 'overdue').map(f => f.id), true)}
                     disabled={filteredForms.filter(f => f.status === 'overdue').length === 0 || bulkRemindLoading}
                   >
@@ -870,6 +857,20 @@ export function EmployeeDueForms() {
                                   Review Form
                                 </Button>
                               </Link>
+                            )}
+                            {form.status !== 'completed' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setSelectedFormForUpload(form);
+                                  setIsManualUploadOpen(true);
+                                }}
+                                className="w-full h-9 text-xs font-bold rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200"
+                              >
+                                <Upload className="h-4 w-4 mr-1.5" />
+                                Upload PDF
+                              </Button>
                             )}
                             <Button
                               size="sm"
@@ -963,6 +964,20 @@ export function EmployeeDueForms() {
                                       </Button>
                                     </Link>
                                   )}
+                                  {form.status !== 'completed' && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        setSelectedFormForUpload(form);
+                                        setIsManualUploadOpen(true);
+                                      }}
+                                      className="h-8 px-3 text-xs rounded-xl bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-all duration-200 font-bold"
+                                    >
+                                      <Upload className="h-3.5 w-3.5 mr-1" />
+                                      <span>Upload PDF</span>
+                                    </Button>
+                                  )}
                                   <Button
                                     size="sm"
                                     variant="outline"
@@ -1007,6 +1022,28 @@ export function EmployeeDueForms() {
             )}
           </CardContent>
         </div>
+        {selectedFormForUpload && (
+          <ManualUploadModal
+            isOpen={isManualUploadOpen}
+            onClose={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+            }}
+            onSuccess={() => {
+              setIsManualUploadOpen(false);
+              setSelectedFormForUpload(null);
+              showToast('success', 'PDF uploaded successfully');
+              setRefreshKey(k => k + 1);
+            }}
+            assignmentId={selectedFormForUpload.id}
+            schoolId={schoolId || ''}
+            studentName={selectedFormForUpload.employeeName}
+            uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}
+            formType="employee"
+            formTemplateName={selectedFormForUpload.formName}
+            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner'}
+          />
+        )}
       </motion.div>
     </AdminLayout>
   );

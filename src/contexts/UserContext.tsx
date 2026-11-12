@@ -8,6 +8,9 @@ const disabledSchoolFeatures: SchoolFeatures = {
   employeeManagementEnabled: false,
   expenseManagementEnabled: false,
   taptimeEnabled: false,
+  conferenceEnabled: false,
+  surveyEnabled: false,
+  driveEnabled: false,
 };
 
 interface UserContextValue {
@@ -17,11 +20,14 @@ interface UserContextValue {
   schoolPhone: string;
   schoolEmail: string;
   schoolAddress: string;
+  schoolWebsiteUrl: string;
   loading: boolean;
   error: string | null;
   refreshUserData: () => Promise<void>;
+  seedUserData: (data: UserData) => void;
   isReady: boolean;
   schoolFeatures: SchoolFeatures;
+  adminPermissions: string[];
 }
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
@@ -49,7 +55,7 @@ function getSchoolSlug(name: string): string {
 function isTerminalSessionError(error: unknown): boolean {
   const status = (error as { status?: number } | undefined)?.status;
   const message = error instanceof Error ? error.message : String(error ?? '');
-  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired|authorization error/i.test(message);
+  return (status === 401 || status === 403) && /session_not_found|invalid jwt|jwt.*expired/i.test(message);
 }
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
@@ -59,6 +65,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [schoolPhone, setSchoolPhone] = useState('');
   const [schoolEmail, setSchoolEmail] = useState('');
   const [schoolAddress, setSchoolAddress] = useState('');
+  const [schoolWebsiteUrl, setSchoolWebsiteUrl] = useState('https://goddardschool.com');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
@@ -75,6 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setSchoolPhone('');
     setSchoolEmail('');
     setSchoolAddress('');
+    setSchoolWebsiteUrl('https://goddardschool.com');
     setError(null);
     setLoading(false);
     setIsReady(true);
@@ -82,7 +90,58 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setSchoolFeatures(disabledSchoolFeatures);
   };
 
+  // Apply a fetched profile to context state. Shared by the normal loader and by
+  // seedUserData() so a caller that already has /users/me data doesn't re-fetch.
+  const applyUserData = (data: UserData) => {
+    setUserData(data);
+    setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
+    if (data.schoolData?.name) {
+      setSchoolName(data.schoolData.name);
+    }
+    if (data.schoolData?.subdomain) {
+      setSchoolSubdomain(data.schoolData.subdomain);
+    } else if (data.schoolData?.name) {
+      setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
+    }
+    if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
+    if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
+    if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
+    if (data.schoolData?.settings?.website_url) setSchoolWebsiteUrl(data.schoolData.settings.website_url);
+    setProfileGeneration(authGeneration);
+  };
+
+  // Populate the context from a profile the caller already fetched (e.g. Login's
+  // navigateAfterAuth) — avoids a redundant second /users/me on the destination page.
+  const seedUserData = (data: UserData) => {
+    // Apply the data first, which sets profileGeneration = authGeneration
+    applyUserData(data);
+    setError(null);
+    setLoading(false);
+    setIsReady(true);
+    
+    // Stamp the ref with the current generation key so that future loadUserData() calls
+    // will recognize this request is already satisfied. This must happen AFTER applyUserData()
+    // so the key matches the profileGeneration that was just set.
+    if (user?.id != null) {
+      activeRequestRef.current = { key: `${user.id}:${authGeneration}`, promise: Promise.resolve() };
+    } else {
+      activeRequestRef.current = null;
+    }
+  };
+
   const loadUserData = (force = false, retries = 3, delay = 500): Promise<void> => {
+    // Public auth pages don't have a profile to load. A lingering invite/magic-link
+    // Supabase session would otherwise trigger a repeated /users/me → 403 retry loop.
+    // After a real login, Login.tsx calls refreshUserData() once it has navigated to a
+    // real route (this provider lives outside the Router, so it can't react to the
+    // route change itself).
+    const onAuthPage = typeof window !== 'undefined' &&
+      (window.location.pathname === '/login' || window.location.pathname === '/set-password');
+    if (onAuthPage) {
+      resetUserContext();
+      return Promise.resolve();
+    }
+
     if (!isAuthenticated || !user) {
       resetUserContext();
       return Promise.resolve();
@@ -112,20 +171,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             const data = await fetchUserContext();
             if (activeRequestRef.current?.key !== requestKey) return;
 
-            setUserData(data);
-            setSchoolFeatures(data.schoolData?.features ?? disabledSchoolFeatures);
-            if (data.schoolData?.name) {
-              setSchoolName(data.schoolData.name);
-            }
-            if (data.schoolData?.subdomain) {
-              setSchoolSubdomain(data.schoolData.subdomain);
-            } else if (data.schoolData?.name) {
-              setSchoolSubdomain(getSchoolSlug(data.schoolData.name));
-            }
-            if (data.schoolData?.settings?.contact_no) setSchoolPhone(data.schoolData.settings.contact_no);
-            if (data.schoolData?.settings?.mail) setSchoolEmail(data.schoolData.settings.mail);
-            if (data.schoolData?.settings?.address) setSchoolAddress(data.schoolData.settings.address);
-            setProfileGeneration(authGeneration);
+            applyUserData(data);
 
             return;
           } catch (err) {
@@ -172,8 +218,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    // If seedUserData() already provided data for this generation, don't reload
+    if (profileGeneration === authGeneration && userData) {
+      return;
+    }
+    
+    // If we have valid userData from seedUserData() and haven't switched users,
+    // update profileGeneration to match current authGeneration to prevent visibleUserData
+    // from becoming null during OAuth's authGeneration increment.
+    if (userData && user?.id && activeRequestRef.current?.key) {
+      const refUserId = activeRequestRef.current.key.split(':')[0];
+      if (refUserId === user.id && profileGeneration !== authGeneration) {
+        // Same user, same session, but generation mismatch (likely OAuth transition).
+        // Update profileGeneration to current authGeneration so visibleUserData stays available.
+        setProfileGeneration(authGeneration);
+        return;
+      }
+    }
+    
     loadUserData();
-  }, [isAuthenticated, user?.id, authGeneration]);
+  }, [isAuthenticated, user?.id, authGeneration, profileGeneration, userData]);
 
   const profileIsCurrent = isAuthenticated && profileGeneration === authGeneration;
   const visibleUserData = profileIsCurrent ? userData : null;
@@ -182,9 +246,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const visibleSchoolPhone = profileIsCurrent ? schoolPhone : '';
   const visibleSchoolEmail = profileIsCurrent ? schoolEmail : '';
   const visibleSchoolAddress = profileIsCurrent ? schoolAddress : '';
+  const visibleSchoolWebsiteUrl = profileIsCurrent ? schoolWebsiteUrl : 'https://goddardschool.com';
 
   return (
-    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, loading, error, refreshUserData: () => loadUserData(true), isReady, schoolFeatures }}>
+    <UserContext.Provider value={{ userData: visibleUserData, schoolName: visibleSchoolName, schoolSubdomain: visibleSchoolSubdomain, schoolPhone: visibleSchoolPhone, schoolEmail: visibleSchoolEmail, schoolAddress: visibleSchoolAddress, schoolWebsiteUrl: visibleSchoolWebsiteUrl, loading, error, refreshUserData: () => loadUserData(true), seedUserData, isReady, schoolFeatures, adminPermissions: visibleUserData?.adminPermissions ?? [] }}>
       {children}
     </UserContext.Provider>
   );

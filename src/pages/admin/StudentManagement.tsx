@@ -402,18 +402,25 @@ export function StudentManagement() {
         setStudents(mappedStudents);
       }
       
-      // Set available classrooms from unique class names in enrollments
-      const uniqueClassNames = new Set<string>();
-      enrollments.forEach((enrollment: EnrollmentData) => {
-        if (enrollment.class_name && enrollment.class_name.trim() !== '') {
-          uniqueClassNames.add(enrollment.class_name);
-        }
-      });
-      const classroomsList = Array.from(uniqueClassNames).map(name => ({
-        id: name,
-        name: name
-      }));
-      setAvailableClassrooms(classroomsList);
+      // Load ALL available classrooms from the API, not just from enrollment data
+      try {
+        const classrooms = await fetchClassrooms(schoolId);
+        setAvailableClassrooms(classrooms);
+      } catch (error) {
+        console.error('Failed to load classrooms:', error);
+        // Fallback: use classrooms from enrollment data if API fails
+        const uniqueClassNames = new Set<string>();
+        enrollments.forEach((enrollment: EnrollmentData) => {
+          if (enrollment.class_name && enrollment.class_name.trim() !== '') {
+            uniqueClassNames.add(enrollment.class_name);
+          }
+        });
+        const classroomsList = Array.from(uniqueClassNames).map(name => ({
+          id: name,
+          name: name
+        }));
+        setAvailableClassrooms(classroomsList);
+      }
     } catch (error) {
       console.error('Failed to load student data:', error);
     } finally {

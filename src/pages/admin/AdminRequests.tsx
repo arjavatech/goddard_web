@@ -391,7 +391,7 @@ export function AdminRequests() {
     const matchesTab =
       activeTab === 'all' ? true :
       activeTab === 'employee' ? req.requesterRole === 'employee' :
-      activeTab === 'admin' ? (req.requesterRole === 'admin' || req.requesterRole === 'superadmin') :
+      activeTab === 'admin' ? (req.requesterRole === 'admin' || req.requesterRole === 'superadmin' || req.requesterRole === 'owner') :
       req.requesterId === user?.id;
     const matchesSearch = req.item.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           req.requesterName.toLowerCase().includes(searchTerm.toLowerCase());
@@ -590,7 +590,7 @@ export function AdminRequests() {
             {([
               { key: 'all' as const,      label: 'All',              count: requests.length },
               { key: 'employee' as const, label: 'Employee request',  count: requests.filter(r => r.requesterRole === 'employee').length },
-              { key: 'admin' as const,    label: 'Admin request',     count: requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin').length },
+              { key: 'admin' as const,    label: 'Admin request',     count: requests.filter(r => r.requesterRole === 'admin' || r.requesterRole === 'superadmin' || r.requesterRole === 'owner').length },
               { key: 'mine' as const,     label: 'My Requests',       count: requests.filter(r => r.requesterId === user?.id).length },
             ]).map(tab => (
               <button

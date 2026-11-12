@@ -1,13 +1,14 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
   Home, School, FileText, Users, LogOut, GraduationCap, Menu, X,
-  Calendar, Phone, Mail, Globe, BookOpen,
+  Calendar, Phone, Mail, Globe, BookOpen, ChevronDown,
   LayoutDashboard, Download, CheckCircle, Clock, AlertTriangle,
-  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2
+  Eye, ShieldCheck, Settings, UserCog, Shield, ShoppingBag, PieChart, SlidersHorizontal, Link2, BarChart2, ClipboardList, CalendarDays, HardDrive
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
 import { useUserContext } from '../../contexts/UserContext';
+import { useNavCounts } from '../../contexts/NavCountsContext';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { AsyncButton } from '../../components/ui/async-button';
@@ -29,11 +30,25 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const [showGuideModal, setShowGuideModal] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
   const [showSuperGuideModal, setShowSuperGuideModal] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('admin-sidebar-collapsed');
+      return saved
+        ? new Set(JSON.parse(saved) as string[])
+        : new Set(['Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+    } catch {
+      return new Set(['Forms', 'Documents', 'Engagement', 'My Space', 'Workspace', 'Time Tracking', 'Administration']);
+    }
+  });
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
-  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, isReady, schoolFeatures } = useUserContext();
+  const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures, adminPermissions } = useUserContext();
+  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
+  const isOwner = userData?.role?.toLowerCase() === 'owner';
+  const hasElevatedAccess = isSuperAdmin || isOwner;
+  const hasPermission = (perm: string) => hasElevatedAccess || adminPermissions.includes(perm);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -57,6 +72,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   useEffect(() => {
     activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [location.pathname]);
+
+  // Auto-expand the group that contains the active route
+  useEffect(() => {
+    const activeGroup = navGroups.find(g =>
+      g.items.some(item => {
+        const norm = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+        return isNavItemActive(norm);
+      })
+    );
+    if (activeGroup) {
+      setCollapsedGroups(prev => {
+        if (!prev.has(activeGroup.label)) return prev;
+        const next = new Set(prev);
+        next.delete(activeGroup.label);
+        return next;
+      });
+    }
+  }, [location.pathname]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/admin)/, '');
   const isParentDetailsPage = currentPath.includes('/admin/parents/') && currentPath !== '/admin/parents';
@@ -87,72 +120,136 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
+  const toggleGroup = (label: string) => {
+    setCollapsedGroups(prev => {
+      const next = new Set(prev);
+      next.has(label) ? next.delete(label) : next.add(label);
+      try { localStorage.setItem('admin-sidebar-collapsed', JSON.stringify([...next])); } catch { /* ignore */ }
+      return next;
+    });
+  };
+
   const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
 
   const navGroups = [
+    // ── Dashboard (no label = no header, never collapsible) ──────────────────
     {
-      label: 'Workspace',
+      label: '',
       items: [
         { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/admin` },
-        ...(schoolFeatures.parentManagementEnabled ? [
-          { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
-          { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
-        ] : []),
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` }] : []),
-        // { icon: <Users className="w-[18px] h-[18px]" />, label: 'CSV Upload', path: `${schoolPrefix}/admin/csv-upload` },
-        ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` }] : []),
-        ...(schoolFeatures.expenseManagementEnabled ? [
-          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
-        ] : []),
-
       ],
     },
-    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+
+    // ── People ───────────────────────────────────────────────────────────────
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
+      label: 'People',
+      items: [
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
+          { icon: <School className="w-[18px] h-[18px]" />, label: 'Classrooms', path: `${schoolPrefix}/admin/classrooms` },
+          { icon: <GraduationCap className="w-[18px] h-[18px]" />, label: 'Students', path: `${schoolPrefix}/admin/students` },
+          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Parents', path: `${schoolPrefix}/admin/parents` },
+        ] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+          { icon: <Users className="w-[18px] h-[18px]" />, label: 'Employees', path: `${schoolPrefix}/admin/employees` },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── Forms ────────────────────────────────────────────────────────────────
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Forms',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Forms', path: `${schoolPrefix}/admin/forms` },
-          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due` },
-          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Student Forms Due', path: `${schoolPrefix}/admin/forms/due`, badge: studentFormsDue },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Student Forms', path: `${schoolPrefix}/admin/forms/review`, badge: studentFormsReview },
         ] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Forms', path: `${schoolPrefix}/admin/employee-forms` },
-          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due` },
-          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review` },
+          { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due`, badge: employeeFormsDue },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review`, badge: employeeFormsReview },
         ] : []),
       ],
     }] : []),
-    ...(schoolFeatures.parentManagementEnabled || schoolFeatures.employeeManagementEnabled ? [{
+
+    // ── Documents ────────────────────────────────────────────────────────────
+    ...((schoolFeatures.parentManagementEnabled && hasPermission('manage_parents')) || (schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees')) ? [{
       label: 'Documents',
       items: [
-        ...(schoolFeatures.parentManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents` }] : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents` }] : []),
+        ...(schoolFeatures.parentManagementEnabled && hasPermission('manage_parents') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Student Documents', path: `${schoolPrefix}/admin/documents`, badge: studentDocsDue + studentDocsReview },
+        ] : []),
+        ...(schoolFeatures.employeeManagementEnabled && hasPermission('manage_employees') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Employee Documents', path: `${schoolPrefix}/admin/employee-documents`, badge: employeeDocsDue + employeeDocsReview },
+        ] : []),
       ],
     }] : []),
-    ...(schoolFeatures.taptimeEnabled ? [{
+
+    // ── Engagement ───────────────────────────────────────────────────────────
+    ...((schoolFeatures.surveyEnabled && hasPermission('manage_surveys')) || (schoolFeatures.conferenceEnabled && hasPermission('manage_conferences')) ? [{
+      label: 'Engagement',
+      items: [
+        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/admin/surveys` },
+        ] : []),
+        ...(schoolFeatures.conferenceEnabled && hasPermission('manage_conferences') ? [
+          { icon: <CalendarDays className="w-[18px] h-[18px]" />, label: 'Conferences', path: `${schoolPrefix}/admin/conferences` },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── My Space (personal items for non-elevated admins) ──────────────────
+    ...(!hasElevatedAccess && (
+      schoolFeatures.employeeManagementEnabled ||
+      (schoolFeatures.surveyEnabled && hasPermission('manage_surveys'))
+    ) ? [{
+      label: 'My Space',
+      items: [
+        ...(schoolFeatures.employeeManagementEnabled ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Forms', path: `${schoolPrefix}/admin/my-forms` },
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Documents', path: `${schoolPrefix}/admin/my-documents` },
+        ] : []),
+        ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── Workspace ────────────────────────────────────────────────────────────
+    ...(schoolFeatures.driveEnabled || (schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses')) ? [{
+      label: 'Workspace',
+      items: [
+        ...(schoolFeatures.driveEnabled ? [
+          { icon: <HardDrive className="w-[18px] h-[18px]" />, label: 'Drive', path: `${schoolPrefix}/admin/drive` },
+        ] : []),
+        ...(schoolFeatures.expenseManagementEnabled && hasPermission('manage_expenses') ? [
+          { icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/admin/requests` },
+          { icon: <PieChart className="w-[18px] h-[18px]" />, label: 'Expense Tracking', path: `${schoolPrefix}/admin/expenses` },
+        ] : []),
+      ],
+    }] : []),
+
+    // ── Time Tracking ────────────────────────────────────────────────────────
+    ...(schoolFeatures.taptimeEnabled && hasPermission('manage_taptime') ? [{
       label: 'Time Tracking',
       items: [
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Log', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Salary Report', path: `${schoolPrefix}/admin/salary-report` },
         { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/admin/weekly-report` },
-        ...(isSuperAdmin ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
-        ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
     }] : []),
 
-    ...(isSuperAdmin ? [{
+    // ── Administration ───────────────────────────────────────────────────────
+    {
       label: 'Administration',
       items: [
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` },
+        ...(hasElevatedAccess ? [{ icon: <Shield className="w-[18px] h-[18px]" />, label: 'Owners', path: `${schoolPrefix}/admin/owner-management` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` }] : []),
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
-    }] : [{
-      label: 'Administration',
-      items: [
-        { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
-      ],
-    }]),
+    },
   ];
 
   const initials = userData?.firstName && userData?.lastName
@@ -193,30 +290,55 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </button>
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4 pb-2">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className={gi > 0 ? 'mt-5' : ''}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
-                <div className="space-y-0.5">
-                  {group.items.map((item, i) => {
-                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = isNavItemActive(normalizedItemPath);
-                    return (
-                      <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
-                        ref={isActive ? activeNavRef : undefined}
-                        className={cn(
-                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
-                          isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                        )}
-                      >
-                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
-                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
-                      </Link>
-                    );
-                  })}
+            {navGroups.map((group, gi) => {
+              const isCollapsible = group.label !== '';
+              const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
+              return (
+                <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                  {isCollapsible && (
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className="w-full flex items-center justify-between px-3 mb-1 group/hdr"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover/hdr:text-slate-600 transition-colors">
+                        {group.label}
+                      </span>
+                      <ChevronDown className={cn(
+                        'h-3 w-3 text-slate-400 transition-transform duration-200 group-hover/hdr:text-slate-600',
+                        isCollapsed && '-rotate-90'
+                      )} />
+                    </button>
+                  )}
+                  <div className={cn(
+                    'space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out',
+                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'
+                  )}>
+                    {group.items.map((item, i) => {
+                      const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                      const isActive = isNavItemActive(normalizedItemPath);
+                      return (
+                        <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                          ref={isActive ? activeNavRef : undefined}
+                          className={cn(
+                            'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                            isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                          )}
+                        >
+                          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                          <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-[#1a6fc4]' : 'text-slate-400 group-hover:text-slate-700')}>{item.icon}</span>
+                          <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-slate-900' : 'font-medium text-slate-600 group-hover:text-slate-900')}>{item.label}</span>
+                          {!!item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
 
           {/* ── Mobile sidebar footer: User + Logout ── */}
@@ -250,30 +372,55 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             />
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
-                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500/70 px-3 mb-1.5">{group.label}</p>
-                <div className="space-y-0.5">
-                  {group.items.map((item, i) => {
-                    const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
-                    const isActive = isNavItemActive(normalizedItemPath);
-                    return (
-                      <Link key={i} to={item.path}
-                        ref={isActive ? activeNavRef : undefined}
-                        className={cn(
-                          'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
-                          isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
-                        )}
-                      >
-                        {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
-                        <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
-                        <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
-                      </Link>
-                    );
-                  })}
+            {navGroups.map((group, gi) => {
+              const isCollapsible = group.label !== '';
+              const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
+              return (
+                <div key={gi} className={gi > 0 ? 'mt-4' : ''}>
+                  {isCollapsible && (
+                    <button
+                      onClick={() => toggleGroup(group.label)}
+                      className="w-full flex items-center justify-between px-3 mb-1 group/hdr"
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-white/30 group-hover/hdr:text-white/50 transition-colors">
+                        {group.label}
+                      </span>
+                      <ChevronDown className={cn(
+                        'h-3 w-3 text-white/25 transition-transform duration-200 group-hover/hdr:text-white/50',
+                        isCollapsed && '-rotate-90'
+                      )} />
+                    </button>
+                  )}
+                  <div className={cn(
+                    'space-y-0.5 overflow-hidden transition-all duration-200 ease-in-out',
+                    isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[600px] opacity-100'
+                  )}>
+                    {group.items.map((item, i) => {
+                      const normalizedItemPath = item.path.replace(/^\/[^/]+(?=\/admin)/, '');
+                      const isActive = isNavItemActive(normalizedItemPath);
+                      return (
+                        <Link key={i} to={item.path}
+                          ref={isActive ? activeNavRef : undefined}
+                          className={cn(
+                            'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                            isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                          )}
+                        >
+                          {isActive && <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#1a6fc4] rounded-r-full" />}
+                          <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                          <span className={cn('min-w-0 text-sm leading-5 whitespace-normal break-words', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                          {!!item.badge && item.badge > 0 && (
+                            <span className="ml-auto flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white leading-none">
+                              {item.badge > 99 ? '99+' : item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </nav>
 
           {/* ── Desktop sidebar footer: User + Logout ── */}
@@ -360,7 +507,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         <div>
                           <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{userData?.firstName} {userData?.lastName}</p>
                           <div className="whitespace-nowrap text-xs text-slate-400">{userData?.email}</div>
-                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
+                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : isOwner ? 'Owner' : 'Admin'}</span>
                         </div>
                       </div>
                     </div>
@@ -371,12 +518,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <DropdownMenuItem onClick={() => navigate('/admin')} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                         <LayoutDashboard className="w-4 h-4 text-slate-400" /> Dashboard
                       </DropdownMenuItem>
-                      {!isSuperAdmin && (
+                      {!hasElevatedAccess && (
                         <DropdownMenuItem onClick={() => setShowHelpModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                           <BookOpen className="w-4 h-4 text-slate-400" /> Help Center
                         </DropdownMenuItem>
                       )}
-                      {isSuperAdmin && (
+                      {hasElevatedAccess && (
                         <DropdownMenuItem onClick={() => setShowSuperGuideModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                           <ShieldCheck className="w-4 h-4 text-slate-400" /> SuperAdmin Guide
                         </DropdownMenuItem>
@@ -409,13 +556,13 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       </div>
 
       {/* ── Footer (outside main flex) ── */}
-      <footer className="w-full bg-[#1a3a5c]">
+      <footer className="w-full bg-[#0F2D52]">
         {/* Main body */}
-        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-10 pb-8 lg:ml-60 lg:max-w-none">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
+        <div className=" mx-auto px-6 sm:px-8 lg:px-12 pt-5 pb-4 lg:ml-60 lg:max-w-none">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-5">
 
             {/* ── Brand column ── */}
-            <div className="lg:col-span-2 space-y-4">
+            <div className="lg:col-span-2 space-y-2">
               <img
                 src="/gs_logo_lynnwood.png"
                 alt="The Goddard School"
@@ -424,7 +571,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <p className="text-sm text-slate-300/70 leading-relaxed max-w-sm">
                 Empowering families through seamless enrollment management — built for The Goddard School's commitment to quality early childhood education.
               </p>
-              <div className="flex flex-col gap-2 pt-1">
+              <div className="flex flex-col gap-1.5">
                 {schoolPhone && (
                   <a href={`tel:${schoolPhone}`}
                     className="inline-flex items-center gap-2.5 text-xs text-slate-300/70 hover:text-white transition-colors group w-fit">
@@ -455,9 +602,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Quick Navigation ── */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Quick Links</h4>
-              <ul className="space-y-2.5">
+              <ul className="space-y-1.5">
                 {[
                   { icon: <Home className="h-3.5 w-3.5" />, label: 'Dashboard', path: '/admin' },
                   { icon: <School className="h-3.5 w-3.5" />, label: 'Classrooms', path: '/admin/classrooms' },
@@ -478,10 +625,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </div>
 
             {/* ── Resources ── */}
-            <div className="space-y-4">
+            <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
-              <ul className="space-y-2.5">
-                {!isSuperAdmin && (
+              <ul className="space-y-1.5">
+                {!hasElevatedAccess && (
                   <>
                     <li>
                       <button onClick={() => setShowHelpModal(true)}
@@ -499,7 +646,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     </li>
                   </>
                 )}
-                {isSuperAdmin && (
+                {hasElevatedAccess && (
                   <li>
                     <button onClick={() => setShowSuperGuideModal(true)}
                       className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
@@ -509,10 +656,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                   </li>
                 )}
                 <li>
-                  <a href="https://goddardschool.com" target="_blank" rel="noopener noreferrer"
+                  <a href={schoolWebsiteUrl} target="_blank" rel="noopener noreferrer"
                     className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group">
                     <Globe className="h-3.5 w-3.5 text-slate-400 group-hover:text-blue-300 transition-colors flex-shrink-0" />
-                    <span className="font-medium">Goddard School</span>
+                    <span className="font-medium">{schoolName || 'The Goddard School'}</span>
                   </a>
                 </li>
               </ul>
@@ -520,15 +667,15 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           </div>
 
           {/* ── Bottom bar ── */}
-          <div className="border-t border-white/10 mt-3">
-            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-4 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
+          <div className="border-t border-white/10 mt-2">
+            <div className=" mx-auto px-6 sm:px-8 lg:px-12 py-2.5 flex flex-col sm:flex-row items-center justify-between gap-3 lg:ml-60 lg:max-w-none">
               <p className="text-xs text-slate-400 text-center sm:text-left">
                 © {new Date().getFullYear()} {schoolName || 'The Goddard School'}. All rights reserved.
               </p>
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-                  {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                  {isSuperAdmin ? 'SuperAdmin Portal' : isOwner ? 'Owner Portal' : 'Admin Portal'}
                 </span>
               </div>
             </div>
@@ -553,7 +700,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <DialogTitle className="flex items-center gap-2"><BookOpen className="h-5 w-5 text-blue-600" /> Help Center</DialogTitle>
             <DialogDescription>Find answers to common admin questions</DialogDescription>
           </DialogHeader>
-          <HelpCenterContent role="admin" />
+          <HelpCenterContent role="admin" onClose={() => setShowHelpModal(false)} />
         </DialogContent>
       </Dialog>
 

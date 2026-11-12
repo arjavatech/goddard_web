@@ -55,6 +55,7 @@ export type EmployeeFormAssignment = {
   recentPdfLink?: string;
   submissionSource?: string;
   manualPdfUploadedAt?: string;
+  approvedFormName?: string;
   // Joined from employee_form_templates:
   formName?: string;
   filloutFormId?: string;
@@ -131,6 +132,7 @@ function mapAssignment(raw: any): EmployeeFormAssignment {
     recentPdfLink: raw.recent_pdf_link ?? undefined,
     submissionSource: raw.submission_source ?? undefined,
     manualPdfUploadedAt: raw.manual_pdf_uploaded_at ?? undefined,
+    approvedFormName: raw.approved_form_name ?? undefined,
     formName: raw.form_name ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     dueDate: raw.due_date ?? undefined,
@@ -423,18 +425,19 @@ export const EmployeeService = {
     schoolId: string,
     status: string,
     notes?: string,
+    approvedFormName?: string,
   ): Promise<EmployeeFormAssignment> {
+    const body: Record<string, unknown> = {
+      assignment_id: assignmentId,
+      school_id: schoolId,
+      status,
+      notes,
+    };
+    if (status === 'approved' && approvedFormName) {
+      body.approved_form_name = approvedFormName;
+    }
     const data = await authedFetch(
-      {
-        method: 'PUT',
-        url: '/employee-form-assignments/review',
-        body: {
-          assignment_id: assignmentId,
-          school_id: schoolId,
-          status,
-          notes,
-        },
-      },
+      { method: 'PUT', url: '/employee-form-assignments/review', body },
       z.any(),
     );
     return mapAssignment(data);
@@ -492,3 +495,96 @@ export const EmployeeService = {
     throw new Error('Form submission is handled by Fillout directly via webhook.');
   },
 };
+
+export const revokeEmployeeFormAssignment = (
+  assignmentId: string,
+  notes: string,
+  revokedBy: string,
+  targetStatus: 'in_progress' | 'rejected' = 'in_progress',
+) => authedFetch({
+  method: 'POST',
+  url: '/employee-form-assignments/revoke',
+  body: { assignment_id: assignmentId, notes, revoked_by: revokedBy, target_status: targetStatus },
+}, z.any()) as Promise<EmployeeFormAssignment>;
+
+export const updateApprovedEmployeeFormMetadata = (
+  assignmentId: string,
+  schoolId: string,
+  approvedFormName?: string,
+) => authedFetch({
+  method: 'PATCH',
+  url: `/employee-form-assignments/${assignmentId}/approved-metadata`,
+  body: { school_id: schoolId, ...(approvedFormName !== undefined && { approved_form_name: approvedFormName }) },
+}, z.any()) as Promise<EmployeeFormAssignment>;
+
+export type EmployeeFormAssignmentDetailItem = {
+  id: string;
+  employee_id: string;
+  employee_form_template_id: string;
+  form_name: string;
+  status: string | null;
+  employee_name: string;
+  employee_email: string | null;
+  assigned_at: string | null;
+};
+
+export async function fetchEmployeeFormAssignmentsByTemplate(
+  schoolId: string,
+  formTemplateId: string,
+  status?: string,
+  search?: string,
+): Promise<EmployeeFormAssignmentDetailItem[]> {
+  const params = new URLSearchParams({ school_id: schoolId, form_template_id: formTemplateId });
+  if (status) params.set('status', status);
+  if (search) params.set('search', search);
+  return authedFetch({ method: 'GET', url: `/employee-form-assignments/list?${params}` }, z.any());
+}
+
+export async function fetchMyFormAssignments(schoolId: string): Promise<EmployeeFormAssignment[]> {
+  const data = await authedFetch(
+    { method: 'GET', url: `/my-form-assignments?school_id=${schoolId}` },
+    z.array(z.any()),
+  );
+  return data.map(mapAssignment);
+}
+
+export async function fetchAdminUsers(schoolId: string): Promise<{ id: string; firstName: string; lastName: string; email: string }[]> {
+  const data = await authedFetch({ method: 'GET', url: `/users/admin?school_id=${schoolId}` }, z.object({ data: z.array(z.any()) }));
+  return (data.data as any[]).map(u => ({
+    id: u.id as string,
+    firstName: (u.first_name || u.firstName || '') as string,
+    lastName: (u.last_name || u.lastName || '') as string,
+    email: (u.email || '') as string,
+  }));
+}
+
+export async function fetchSchoolMembers(schoolId: string): Promise<{ id: string; firstName: string; lastName: string; email: string; memberType: 'employee' | 'admin' }[]> {
+  const data = await authedFetch({ method: 'GET', url: `/school-members?school_id=${schoolId}` }, z.array(z.any()));
+  return (data as any[]).map(u => ({
+    id: u.id as string,
+    firstName: (u.first_name || '') as string,
+    lastName: (u.last_name || '') as string,
+    email: (u.email || '') as string,
+    memberType: (u.member_type || 'employee') as 'employee' | 'admin',
+  }));
+}
+
+export async function assignFormToAdmin(
+  adminUserId: string,
+  formTemplateId: string,
+  schoolId: string,
+): Promise<EmployeeFormAssignment> {
+  const data = await authedFetch(
+    {
+      method: 'POST',
+      url: '/admin-form-assignments',
+      body: {
+        admin_user_id: adminUserId,
+        employee_form_template_id: formTemplateId,
+        school_id: schoolId,
+      },
+    },
+    z.any(),
+  );
+  return mapAssignment(data);
+}

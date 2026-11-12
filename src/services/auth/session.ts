@@ -5,6 +5,19 @@ import { unregisterDeviceToken } from '../api/notifications';
 import { deleteFcmToken } from '../firebase';
 
 const FCM_TOKEN_STORAGE_KEY = 'goddard.fcm-token';
+export const GODDARD_TOKEN_KEY = 'goddard.custom-token';
+
+export function storeCustomToken(token: string): void {
+  localStorage.setItem(GODDARD_TOKEN_KEY, token);
+}
+
+export function getStoredCustomToken(): string | null {
+  return typeof window !== 'undefined' ? localStorage.getItem(GODDARD_TOKEN_KEY) : null;
+}
+
+export function clearCustomToken(): void {
+  localStorage.removeItem(GODDARD_TOKEN_KEY);
+}
 
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
@@ -14,6 +27,11 @@ const REFRESH_THRESHOLD_MS = 5 * 60 * 1000;
 
 export async function getAuthToken(): Promise<string | null> {
   if (isAuthBypassed) return 'bypass-token';
+
+  // Our custom JWT takes priority over Supabase session
+  const customToken = getStoredCustomToken();
+  if (customToken) return customToken;
+
   if (!supabase) return null;
 
   // Get the current session
@@ -94,6 +112,8 @@ export async function clearSession(): Promise<void> {
   }
   try { await deleteFcmToken(); } catch { /* noop */ }
 
+  clearCustomToken();
+
   if (!supabase) return;
   try {
     await supabase.auth.signOut();
@@ -102,7 +122,7 @@ export async function clearSession(): Promise<void> {
   }
   isRefreshing = false;
   refreshPromise = null;
-  
+
   // Clear localStorage and redirect to school selection for auto-logout
   localStorage.removeItem('schoolId');
   localStorage.removeItem('selectedSchool');

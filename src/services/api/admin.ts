@@ -5,6 +5,7 @@ export type Classroom = {
   id: string;
   name: string;
   studentsCount: number;
+  parentCount: number;
   formsCount: number;
   assignedForms: {
     id: string;
@@ -172,6 +173,7 @@ export async function fetchClassrooms(schoolId: string): Promise<Classroom[]> {
         id: item.id || item.classroom_id || `classroom-${index}`,
         name: item.name || item.class_name || item.classroom_name || `Classroom ${index + 1}`,
         studentsCount: item.student_count || item.studentsCount || item.total_children || 0,
+        parentCount: item.parent_count || 0,
         formsCount: assignedForms.length,
         assignedForms
       };
@@ -267,7 +269,9 @@ export async function fetchParentDetails(schoolId: string): Promise<{ activePare
           approved_on: form.approved_on || null,
           assigned_at: form.assigned_at || null,
           due_date: form.due_date || null,
-          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null,
+          form_academic_year: form.form_academic_year || null,
+          approved_form_name: form.approved_form_name || null
         }))
       }))
     });
@@ -375,7 +379,9 @@ export async function fetchSingleParent(parentId: string, schoolId: string): Pro
           due_date: form.due_date || null,
           updated_at: form.updated_at || null,
           created_at: form.created_at || null,
-          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null
+          manual_pdf_uploaded_at: form.manual_pdf_uploaded_at || null,
+          form_academic_year: form.form_academic_year || null,
+          approved_form_name: form.approved_form_name || null
         }))
       }))
     };
@@ -795,14 +801,20 @@ export async function reviewStudentFormAssignment(
   assignmentId: string,
   status: 'approved' | 'rejected',
   notes: string,
-  approvedBy: string
+  approvedBy: string,
+  formAcademicYear?: string,
+  approvedFormName?: string,
 ): Promise<void> {
-  const requestBody = {
+  const requestBody: Record<string, unknown> = {
     assignment_id: assignmentId,
     status,
     notes,
-    approved_by: approvedBy
+    approved_by: approvedBy,
   };
+  if (status === 'approved') {
+    if (formAcademicYear) requestBody.form_academic_year = formAcademicYear;
+    if (approvedFormName) requestBody.approved_form_name = approvedFormName;
+  }
 
   const responseSchema = z.object({
     success: z.boolean().optional(),
@@ -820,6 +832,21 @@ export async function reviewStudentFormAssignment(
     throw new Error('Failed to review form assignment');
   }
 }
+
+export const updateApprovedFormMetadata = (
+  assignmentId: string,
+  schoolId: string,
+  formAcademicYear?: string,
+  approvedFormName?: string,
+) => authedFetch({
+  method: 'PATCH',
+  url: `/student-form-assignments/${assignmentId}/approved-metadata`,
+  body: {
+    school_id: schoolId,
+    ...(formAcademicYear !== undefined && { form_academic_year: formAcademicYear }),
+    ...(approvedFormName !== undefined && { approved_form_name: approvedFormName }),
+  },
+}, z.any());
 
 export async function revokeStudentFormAssignment(
   assignmentId: string,
@@ -1032,6 +1059,7 @@ export type AdminUser = {
   phone_number?: string | null;
   taptime_employee_id?: string | null;
   taptime_pin?: string | null;
+  permissions: string[];
 };
 
 export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
@@ -1052,11 +1080,12 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         school_id: z.string(),
         phone_number: z.string().nullable().optional(),
         taptime_employee_id: z.string().nullable().optional(),
-        taptime_pin: z.string().nullable().optional()
+        taptime_pin: z.string().nullable().optional(),
+        permissions: z.array(z.string()).nullable().optional()
       }))
     }));
 
-    return data.data;
+    return data.data.map(u => ({ ...u, permissions: u.permissions ?? [] }));
   } catch (error) {
     console.error('fetchAdminUsers error:', error);
     throw error;
@@ -1076,7 +1105,8 @@ export async function inviteAdmin(
   firstName: string,
   lastName: string,
   schoolId: string,
-  phoneNumber?: string
+  phoneNumber?: string,
+  permissions?: string[]
 ): Promise<void> {
   try {
     await authedFetch({
@@ -1087,7 +1117,8 @@ export async function inviteAdmin(
         school_id: schoolId,
         first_name: firstName,
         last_name: lastName,
-        phone_number: phoneNumber || null
+        phone_number: phoneNumber || null,
+        ...(permissions !== undefined && { permissions })
       }
     }, z.object({}));
   } catch (error: any) {
@@ -1127,7 +1158,8 @@ export async function updateAdmin(
   userId: string,
   firstName: string,
   lastName: string,
-  phoneNumber?: string
+  phoneNumber?: string,
+  permissions?: string[]
 ): Promise<void> {
   await authedFetch({
     method: 'PUT',
@@ -1136,7 +1168,8 @@ export async function updateAdmin(
       user_id: userId,
       first_name: firstName,
       last_name: lastName,
-      phone_number: phoneNumber || null
+      phone_number: phoneNumber || null,
+      ...(permissions !== undefined && { permissions })
     }
   }, z.object({}));
 }
@@ -1557,4 +1590,30 @@ export async function deleteStudentManualPdf(assignmentId: string, schoolId: str
     method: 'DELETE',
     url: `/student-form-assignments/${encodeURIComponent(assignmentId)}/manual-pdf?school_id=${encodeURIComponent(schoolId)}`
   }, z.any());
+}
+
+export type FormAssignmentDetailItem = {
+  id: string;
+  child_id: string;
+  form_template_id: string;
+  form_name: string;
+  status: string | null;
+  student_name: string;
+  parent_id: string | null;
+  parent_name: string;
+  parent_email: string;
+  classroom_name: string | null;
+  assigned_at: string | null;
+};
+
+export async function fetchFormAssignmentsByTemplate(
+  schoolId: string,
+  formTemplateId: string,
+  status?: string,
+  search?: string,
+): Promise<FormAssignmentDetailItem[]> {
+  const params = new URLSearchParams({ school_id: schoolId, form_template_id: formTemplateId });
+  if (status) params.set('status', status);
+  if (search) params.set('search', search);
+  return authedFetch({ method: 'GET', url: `/student-form-assignments/list?${params}` }, z.any());
 }

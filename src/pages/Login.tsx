@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, GraduationCap, ShieldCheck, Sparkles } from 'lucide-react';
+import { Mail, GraduationCap, ShieldCheck, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '../components/ui/button';
 import { useAuth } from '../services/auth/useAuth';
+import { useUserContext } from '../contexts/UserContext';
 import { prefilloutProvision } from '../services/api/fillout';
 import { fetchUserContext } from '../services/api/user';
 import { useToast } from '../contexts/ToastContext';
@@ -11,25 +12,120 @@ import { AlertModal } from '../components/ui/alert-modal';
 import { useAlertModal } from '../hooks/useAlertModal';
 import { validateEmail } from '../lib/emailValidation';
 
-
 export function Login() {
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
-  const [formData, setFormData] = useState({ email: '', password: '', rememberMe: false });
+  const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { signInWithPassword, signInWithProvider } = useAuth();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  // True when this render is the OAuth callback landing (hash/code present, or pending_oauth set).
+  // Captured at mount before Supabase strips the hash, so the branded card shows immediately
+  // with no form flash. Cleared in error handlers so the form returns on failure.
+  const [isOAuthCallback, setIsOAuthCallback] = useState(() =>
+    typeof window !== 'undefined' &&
+    (window.location.hash.includes('access_token') ||
+     window.location.search.includes('code=') ||
+     !!sessionStorage.getItem('pending_oauth'))
+  );
+
+  const { signInWithPassword, signInWithProvider, signOut, loading, isAuthenticated } = useAuth();
+  const { seedUserData } = useUserContext();
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
   const { alertState, hideAlert } = useAlertModal();
 
   useEffect(() => {
+    if (!loading && isAuthenticated && sessionStorage.getItem('oauth_just_succeeded')) {
+      sessionStorage.removeItem('oauth_just_succeeded');
+      setIsRedirecting(true);
+      navigateAfterAuth().catch(async (err) => {
+        setIsRedirecting(false);
+        setIsOAuthCallback(false);
+        const raw = (err as Error).message?.toLowerCase() ?? '';
+        await signOut();
+        if (raw.includes('invitation link')) {
+          showToast('error', 'Please sign up using your invitation link before logging in.', 'Sign-In Blocked');
+        } else if (raw.includes('no account found')) {
+          showToast('error', 'No account found. Please contact your school administrator.', 'Sign-In Failed');
+        } else {
+          showToast('error', (err as Error).message || 'Sign-in failed. Please try again.', 'Sign-In Failed');
+        }
+      });
+    }
+  }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!loading && isAuthenticated && !isOAuthCallback &&
+        !sessionStorage.getItem('oauth_just_succeeded')) {
+      setIsRedirecting(true);
+      navigateAfterAuth().catch(() => setIsRedirecting(false));
+    }
+  }, [loading, isAuthenticated]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const showGoogleAuthError = () => {
+      setIsOAuthCallback(false);
+      const googleError = sessionStorage.getItem('google_auth_error');
+      if (!googleError) return;
+      const lowerError = googleError.toLowerCase();
+      const title = (lowerError.includes('invitation link') || lowerError.includes('account setup'))
+        ? 'Account Setup Required'
+        : 'Google Sign-In Failed';
+      showToast('error', googleError, title);
+      sessionStorage.removeItem('google_auth_error');
+    };
+
     if (localStorage.getItem('session_invalidated') === 'true') {
       showToast('warning', 'Your session was ended because this account was signed in on another device.', 'Signed Out for Security');
       localStorage.removeItem('session_invalidated');
     }
+
+    // Show on mount (covers the full-page-reload path) and on the event
+    // dispatched by useAuth when a Google exchange fails while already on /login.
+    showGoogleAuthError();
+    window.addEventListener('goddard:google-auth-error', showGoogleAuthError);
+    return () => window.removeEventListener('goddard:google-auth-error', showGoogleAuthError);
   }, [showToast]);
+
+  const navigateAfterAuth = async () => {
+    const userData = await fetchUserContext();
+    // Seed the context with the profile we just fetched so the destination dashboard
+    // renders immediately — no redundant second /users/me on arrival.
+    seedUserData(userData);
+    prefilloutProvision(userData).catch(() => {});
+
+    const userSubdomain = userData.schoolData?.subdomain || 'goddard';
+    const role = userData.role?.toLowerCase();
+    const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
+    const isEmployee = role === 'employee';
+
+    const defaultPath = isAdmin
+      ? `/${userSubdomain}/admin`
+      : isEmployee
+      ? `/${userSubdomain}/employee/dashboard`
+      : `/${userSubdomain}/dashboard`;
+
+    const forceRoleHome = sessionStorage.getItem('post_logout_login') === 'true';
+    let redirectTo = forceRoleHome ? null : location.state?.from?.pathname;
+
+    if (redirectTo) {
+      const fromSubdomain = redirectTo.split('/').filter(Boolean)[0];
+      if (fromSubdomain !== userSubdomain) redirectTo = null;
+    }
+    if (redirectTo) {
+      const isAdminPath = redirectTo.includes('/admin');
+      const isEmployeePath = redirectTo.includes('/employee');
+      const isParentPath = !isAdminPath && !isEmployeePath;
+      if ((isAdmin && !isAdminPath) || (isEmployee && !isEmployeePath) || (!isAdmin && !isEmployee && !isParentPath)) {
+        redirectTo = null;
+      }
+    }
+
+    sessionStorage.removeItem('post_logout_login');
+    navigate(redirectTo || defaultPath, { replace: true });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,91 +134,51 @@ export function Login() {
 
     setIsLoading(true);
     try {
-      const authData = await signInWithPassword(formData.email, formData.password);
-      
-      if (formData.password === 'Keller@2026') {
-        sessionStorage.setItem('first_login_reset_pending', 'true');
-        navigate('/reset-password', { replace: true });
-        return;
-      }
-
-      // Keep the established dev-branch behavior: load the fresh profile
-      // directly after Supabase confirms the password login, then redirect.
-      const userData = await fetchUserContext();
-      prefilloutProvision(userData).catch(() => {/* non-blocking */});
-
-      const userSubdomain = userData.schoolData?.subdomain || 'goddard';
-      const role = userData.role?.toLowerCase();
-      const isAdmin = role === 'admin' || role === 'superadmin';
-      const isEmployee = role === 'employee';
-
-      const defaultPath = isAdmin
-        ? `/${userSubdomain}/admin`
-        : isEmployee
-        ? `/${userSubdomain}/employee/dashboard`
-        : `/${userSubdomain}/dashboard`;
-
-      const forceRoleHome = sessionStorage.getItem('post_logout_login') === 'true';
-      let redirectTo = forceRoleHome ? null : location.state?.from?.pathname;
-
-      // Discard any "from" path that belongs to a different school's subdomain
-      if (redirectTo) {
-        const fromSubdomain = redirectTo.split('/').filter(Boolean)[0];
-        if (fromSubdomain !== userSubdomain) {
-          redirectTo = null;
-        }
-      }
-
-      // If the saved "from" path doesn't match the user's role, discard it
-      if (redirectTo) {
-        const isAdminPath = redirectTo.includes('/admin');
-        const isEmployeePath = redirectTo.includes('/employee');
-        const isParentPath = !isAdminPath && !isEmployeePath;
-        if ((isAdmin && !isAdminPath) || (isEmployee && !isEmployeePath) || (!isAdmin && !isEmployee && !isParentPath)) {
-          redirectTo = null;
-        }
-      }
-
-      sessionStorage.removeItem('post_logout_login');
-      navigate(redirectTo || defaultPath, { replace: true });
+      await signInWithPassword(formData.email, formData.password);
+      await navigateAfterAuth();
     } catch (err) {
       const raw = (err as Error).message?.toLowerCase() ?? '';
-      const friendly =
-        raw.includes('invalid login') || raw.includes('invalid credentials') || raw.includes('wrong password')
-          ? 'The email or password you entered is incorrect. Please try again.'
-          : raw.includes('email not confirmed')
-          ? 'Please verify your email address before signing in.'
-          : raw.includes('too many requests') || raw.includes('rate limit')
-          ? 'Too many sign-in attempts. Please wait a moment and try again.'
-          : raw.includes('user not found') || raw.includes('no user')
-          ? 'No account found with this email address.'
-          : 'Something went wrong. Please try again or contact support.';
-      showToast('error', friendly, 'Sign-in Failed');
+      if (raw.includes('invitation link')) {
+        await signOut();
+        showToast('error', 'Please sign up using your invitation link before logging in.', 'Sign-In Blocked');
+        setIsLoading(false);
+        return;
+      }
+      const friendly = raw.includes('invalid login') || raw.includes('invalid credentials') || raw.includes('wrong')
+        ? 'Incorrect email or password. Please try again.'
+        : raw.includes('email not confirmed')
+        ? 'Please confirm your email address before signing in.'
+        : raw.includes('too many') || raw.includes('rate limit')
+        ? 'Too many sign-in attempts. Please wait a moment and try again.'
+        : 'Sign-in failed. Please try again.';
+      showToast('error', friendly, 'Sign-In Failed');
       setIsLoading(false);
     }
-    // Note: setIsLoading(false) is intentionally omitted from finally — the
-    // spinner stays visible until the redirect completes, giving a seamless UX.
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    if (name === 'email' && emailError) setEmailError('');
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      await signInWithProvider('google');
+    } catch (err) {
+      showToast('error', (err as Error).message || 'Google sign-in failed.', 'Google Sign-In Failed');
+      setIsGoogleLoading(false);
+    }
   };
+
+  const oauthLanding = isAuthenticated && typeof window !== 'undefined'
+    && !!sessionStorage.getItem('oauth_just_succeeded');
+  const showAuthOverlay = loading || isRedirecting || oauthLanding || isOAuthCallback;
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-[#F8FAFC]">
-      {/* ── Left brand panel (matches select school and signup layouts) ── */}
+      {/* ── Left brand panel ── */}
       <div className="relative hidden lg:flex lg:w-[45%] flex-col justify-between bg-gradient-to-br from-[#091629] via-[#0F2D52] to-[#1E4B83] p-12 xl:p-16 overflow-hidden">
-        {/* Subtle grid pattern background */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:32px_32px]" />
-        
-        {/* Decorative dynamic glows */}
         <div className="pointer-events-none absolute -top-40 -right-40 w-[500px] h-[500px] rounded-full bg-cyan-500/10 blur-[100px]" />
         <div className="pointer-events-none absolute -bottom-20 -left-20 w-[400px] h-[400px] rounded-full bg-blue-500/10 blur-[80px]" />
 
-        {/* Logo Header */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -135,10 +191,9 @@ export function Login() {
           />
         </motion.div>
 
-        {/* Centre copy (Balanced typographic visual layout) */}
         <div className="relative z-10 space-y-8 my-auto max-w-md mt-8">
           <div className="space-y-4">
-            <motion.h1 
+            <motion.h1
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.5 }}
@@ -147,8 +202,7 @@ export function Login() {
               Welcome Back to <br />
               <span className="bg-gradient-to-r from-cyan-300 to-blue-300 bg-clip-text text-transparent">The Goddard Portal</span>
             </motion.h1>
-            
-            <motion.p 
+            <motion.p
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
@@ -158,7 +212,6 @@ export function Login() {
             </motion.p>
           </div>
 
-          {/* Premium UI/UX Feature Cards */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
@@ -180,14 +233,13 @@ export function Login() {
                 <Sparkles className="w-5 h-5 text-cyan-400" />
               </div>
               <div>
-                <h3 className="text-xs lg:text-sm font-semibold text-white">Student & Classroom Insights</h3>
+                <h3 className="text-xs lg:text-sm font-semibold text-white">Student &amp; Classroom Insights</h3>
                 <p className="text-[11px] lg:text-xs text-slate-300/80 mt-0.5 leading-relaxed">Monitor student progress, manage classrooms, and access important school information from one place.</p>
               </div>
             </div>
           </motion.div>
         </div>
 
-        {/* Bottom tagline */}
         <div className="relative z-10 border-t border-white/10 pt-6 mt-8 flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4">
           <p className="text-[11px] text-slate-400/60 font-medium">
             © {new Date().getFullYear()} The Goddard School. All rights reserved.
@@ -203,179 +255,135 @@ export function Login() {
 
       {/* ── Right form panel ── */}
       <div className="flex-1 flex flex-col items-center justify-center min-h-screen px-4 py-8 sm:px-8 sm:py-12 md:px-16 bg-slate-50 bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] auth-panel-right">
-        {/* Mobile logo */}
         <div className="lg:hidden mb-6 text-center">
           <img src="./images/gs_logo_lynnwood.png" alt="The Goddard School" className="h-10 w-auto mx-auto" />
         </div>
 
         <div className="w-full max-w-sm sm:max-w-md">
-          <div className="mb-5 space-y-2">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[9px] sm:text-[10px] font-bold tracking-wider uppercase w-fit"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-[#0F2D52]" /> Goddard School Portal
-            </motion.div>
-            <div className="space-y-1">
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
-              <p className="text-xs sm:text-sm text-slate-500 leading-normal">Enter your credentials to access your account.</p>
-            </div>
-          </div>
-
-          {/* Form card */}
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 sm:p-8 space-y-4"
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3 }}
           >
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  Email Address
-                </label>
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 pointer-events-none group-focus-within:text-[#0F2D52] transition-colors duration-200" />
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    className={`w-full pl-11 pr-4 py-2.5 h-11 rounded-xl border text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 ${
-                      emailError 
-                        ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' 
-                        : 'border-slate-200'
-                    }`}
-                    placeholder="you@example.com"
-                  />
-                </div>
-                {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
+            <div className="mb-5 space-y-2">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#0F2D52]/5 border border-[#0F2D52]/10 text-[#0F2D52] text-[9px] sm:text-[10px] font-bold tracking-wider uppercase w-fit">
+                <GraduationCap className="w-3.5 h-3.5 text-[#0F2D52]" /> Goddard School Portal
               </div>
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">Sign in</h2>
+                <p className="text-xs sm:text-sm text-slate-500 leading-normal">Sign in to your account to continue.</p>
+              </div>
+            </div>
 
-              {/* Password */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <label htmlFor="password" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    Password
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="bg-white rounded-2xl border border-slate-100 shadow-[0_8px_30px_rgb(0,0,0,0.03)] p-5 sm:p-8 space-y-4"
+            >
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <label htmlFor="email" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Email Address
                   </label>
-                  <Link to="/forgot-password" className="text-[11px] sm:text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors">
-                    Forgot password?
-                  </Link>
+                  <div className="relative group">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 pointer-events-none group-focus-within:text-[#0F2D52] transition-colors duration-200" />
+                    <input
+                      id="email"
+                      name="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={e => { if (emailError) setEmailError(''); setFormData(f => ({ ...f, email: e.target.value })); }}
+                      className={`w-full pl-11 pr-4 py-2.5 h-11 rounded-xl border text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 ${
+                        emailError ? 'border-red-400 focus:border-red-400 focus:ring-red-400/20' : 'border-slate-200'
+                      }`}
+                      placeholder="you@example.com"
+                    />
+                  </div>
+                  {emailError && <p className="text-xs text-red-600 mt-1">{emailError}</p>}
                 </div>
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-4.5 h-4.5 pointer-events-none group-focus-within:text-[#0F2D52] transition-colors duration-200" />
-                  <input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
-                    placeholder="••••••••"
-                  />
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label htmlFor="password" className="block text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      Password
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      className="text-[10px] sm:text-xs text-[#1a6fc4] hover:text-[#0F2D52] font-semibold transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                  </div>
+                  <div className="relative group">
+                    <input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={formData.password}
+                      onChange={e => setFormData(f => ({ ...f, password: e.target.value }))}
+                      className="w-full pl-4 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                      placeholder="••••••••"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-1"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <motion.div whileHover={!isLoading ? { scale: 1.015 } : {}} whileTap={!isLoading ? { scale: 0.985 } : {}}>
+                  <Button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] active:scale-[0.98] border-none shadow-md shadow-[#0F2D52]/10 transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                        Signing In…
+                      </span>
+                    ) : 'Sign In'}
+                  </Button>
+                </motion.div>
+
+                <div className="relative my-1">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-slate-100" />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-white px-3 text-[10px] sm:text-xs text-slate-400 font-medium">or continue with</span>
+                  </div>
+                </div>
+
+                <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    tabIndex={-1}
+                    disabled={isGoogleLoading || isLoading}
+                    onClick={handleGoogleSignIn}
+                    className="w-full h-11 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-700 flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none shadow-sm"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {isGoogleLoading ? (
+                      <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" />
+                    ) : (
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                      </svg>
+                    )}
+                    Sign in with Google
                   </button>
-                </div>
-              </div>
-
-              {/* Custom Remember Me Checkbox */}
-              <div className="pt-1">
-                <label className="flex items-center gap-3 cursor-pointer select-none group">
-                  <div className="relative flex-shrink-0">
-                    <input
-                      type="checkbox"
-                      name="rememberMe"
-                      checked={formData.rememberMe}
-                      onChange={handleInputChange}
-                      className="sr-only"
-                    />
-                    <div className={`w-5 h-5 rounded-lg border flex items-center justify-center transition-all duration-200 ${
-                      formData.rememberMe 
-                        ? 'bg-[#0F2D52] border-[#0F2D52] shadow-sm shadow-[#0F2D52]/20' 
-                        : 'border-slate-200 bg-white group-hover:border-slate-300'
-                    }`}>
-                      {formData.rememberMe && (
-                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-                  <span className="text-[11px] sm:text-xs text-slate-600 font-semibold leading-none">Remember me</span>
-                </label>
-              </div>
-
-              {/* Submit */}
-              <motion.div
-                whileHover={!isLoading ? { scale: 1.015 } : {}}
-                whileTap={!isLoading ? { scale: 0.985 } : {}}
-                className="pt-2"
-              >
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full h-11 rounded-xl bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs sm:text-sm font-bold hover:from-[#091629] hover:to-[#0F2D52] active:scale-[0.98] border-none shadow-md shadow-[#0F2D52]/10 transition-all duration-300 disabled:opacity-40 disabled:pointer-events-none"
-                >
-                  {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                      Signing in…
-                    </span>
-                  ) : (
-                    'Sign In'
-                  )}
-                </Button>
-              </motion.div>
-
-              {/* Divider */}
-              {/* <div className="relative my-1">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-100" />
-                </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-white px-3 text-[10px] sm:text-xs text-slate-400 font-medium">or continue with</span>
-                </div>
-              </div> */}
-
-              {/* Google Sign In */}
-              {/* <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.985 }}>
-                <button
-                  type="button"
-                  disabled={isGoogleLoading || isLoading}
-                  onClick={async () => {
-                    setIsGoogleLoading(true);
-                    try { await signInWithProvider('google'); }
-                    catch (err) { showToast('error', (err as Error).message, 'Google Sign-In Failed'); }
-                    finally { setIsGoogleLoading(false); }
-                  }}
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-semibold text-slate-700 flex items-center justify-center gap-3 hover:bg-slate-50 hover:border-slate-300 transition-all duration-200 disabled:opacity-40 disabled:pointer-events-none shadow-sm"
-                >
-                  {isGoogleLoading ? (
-                    <span className="h-4 w-4 rounded-full border-2 border-slate-300 border-t-slate-600 animate-spin" />
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24">
-                      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                    </svg>
-                  )}
-                  Sign in with Google
-                </button>
-              </motion.div> */}
-            </form>
+                </motion.div>
+              </form>
+            </motion.div>
           </motion.div>
 
           <p className="text-center text-[10px] sm:text-xs text-slate-400 mt-6">
@@ -386,7 +394,13 @@ export function Login() {
 
       <AlertModal open={alertState.open} onClose={hideAlert} type={alertState.type} title={alertState.title} message={alertState.message} />
 
-
+      {showAuthOverlay && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl p-5 shadow-lg">
+            <span className="h-6 w-6 block rounded-full border-2 border-slate-200 border-t-[#0F2D52] animate-spin" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

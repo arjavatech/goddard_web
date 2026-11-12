@@ -7,6 +7,9 @@ export type SchoolFeatures = {
   employeeManagementEnabled: boolean;
   expenseManagementEnabled: boolean;
   taptimeEnabled: boolean;
+  conferenceEnabled: boolean;
+  surveyEnabled: boolean;
+  driveEnabled: boolean;
 };
 
 export type SchoolData = {
@@ -39,6 +42,7 @@ export type UserContext = {
   taptimeEmployeeId?: string | null;
   taptimePin?: string | null;
   schoolData?: SchoolData | null;
+  adminPermissions?: string[];
 };
 
 const schoolSettingsSchema = z.object({
@@ -62,6 +66,9 @@ const schoolDataSchema = z.object({
   employee_management_enabled: z.boolean().optional(),
   expense_management_enabled: z.boolean().optional(),
   taptime_enabled: z.boolean().optional(),
+  conference_enabled: z.boolean().optional(),
+  survey_enabled: z.boolean().optional(),
+  drive_enabled: z.boolean().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -85,6 +92,7 @@ const userContextSchema = z.object({
   taptime_pin: z.string().nullable().optional(),
   taptimePin: z.string().nullable().optional(),
   school_data: schoolDataSchema.nullable().optional(),
+  admin_permissions: z.array(z.string()).nullable().optional(),
 }).passthrough();
 
 let inFlightUserContextRequest: Promise<UserContext> | null = null;
@@ -123,8 +131,12 @@ export async function fetchUserContext(): Promise<UserContext> {
           employeeManagementEnabled: data.school_data.employee_management_enabled ?? false,
           expenseManagementEnabled: data.school_data.expense_management_enabled ?? false,
           taptimeEnabled: data.school_data.taptime_enabled ?? false,
+          conferenceEnabled: data.school_data.conference_enabled ?? false,
+          surveyEnabled: data.school_data.survey_enabled ?? false,
+          driveEnabled: data.school_data.drive_enabled ?? false,
         },
       } : null,
+      adminPermissions: data.admin_permissions ?? [],
     };
 
     if (!result.parentId && data.email) {

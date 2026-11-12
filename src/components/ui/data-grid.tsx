@@ -27,6 +27,7 @@ interface DataGridProps<T> {
   renderCard: (item: T, dynamicColumns: ColumnDef<T>[]) => React.ReactNode;
   gridClassName?: string;
   tableLayout?: 'auto' | 'fixed';
+  onRowClick?: (item: T) => void;
 }
 
 export function DataGrid<T>({
@@ -44,7 +45,8 @@ export function DataGrid<T>({
   onPageSizeChange,
   renderCard,
   gridClassName,
-  tableLayout
+  tableLayout,
+  onRowClick,
 }: DataGridProps<T>) {
   
   if (viewMode === 'card') {
@@ -71,7 +73,11 @@ export function DataGrid<T>({
       columns={columns.map(c => ({ header: c.header, className: c.className }))}
       tableLayout={tableLayout}
       rows={data.map((item, index) => (
-        <tr key={index} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
+        <tr
+          key={index}
+          className={`border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150${onRowClick ? ' cursor-pointer' : ''}`}
+          onClick={onRowClick ? () => onRowClick(item) : undefined}
+        >
           {columns.map(c => (
             <td key={c.id} className={`py-4 px-4 ${c.className || ''}`}>
               {c.cell(item)}

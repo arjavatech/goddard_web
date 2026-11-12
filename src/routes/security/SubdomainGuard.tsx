@@ -142,7 +142,7 @@ export function SubdomainGuard() {
 
   // Check if trying to access admin routes without admin role
   const isAdminRoute = location.pathname.includes('/admin');
-  if (isAdminRoute && role !== 'admin' && role !== 'superadmin') {
+  if (isAdminRoute && role !== 'admin' && role !== 'superadmin' && role !== 'owner') {
     return <Navigate to={`/${schoolSubdomain}/dashboard`} replace />;
   }
 
@@ -151,7 +151,7 @@ export function SubdomainGuard() {
   const pathSegments = location.pathname.split('/');
   const isEmployeeRoute = pathSegments.includes('employee');
   if (isEmployeeRoute && !isAdminRoute && role !== 'employee') {
-    const fallback = (role === 'admin' || role === 'superadmin')
+    const fallback = (role === 'admin' || role === 'superadmin' || role === 'owner')
       ? `/${schoolSubdomain}/admin`
       : `/${schoolSubdomain}/dashboard`;
     return <Navigate to={fallback} replace />;

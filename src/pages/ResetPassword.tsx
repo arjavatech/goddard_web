@@ -139,10 +139,6 @@ export function ResetPassword() {
     e.preventDefault();
     setError('');
     if (!allRequirementsMet) { setError('Please ensure all password requirements are met.'); return; }
-    if (password === 'Keller@2026') {
-      setError('The temporary password Keller@2026 cannot be used as your new password.');
-      return;
-    }
     setLoading(true);
 
     try {
@@ -318,13 +314,7 @@ export function ResetPassword() {
               </div>
             )}
 
-            <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-              <Shield className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs sm:text-sm text-amber-800 leading-relaxed">
-                <span className="font-bold">Restricted Password:</span> The temporary password <span className="font-mono bg-amber-100/50 px-1 py-0.5 rounded text-[11px] sm:text-xs">Keller@2026</span> cannot be used as your new password.
-              </p>
-            </div>
-
+            {(tokenValidated || !error) && (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* New Password */}
               <div className="space-y-2">
@@ -339,7 +329,8 @@ export function ResetPassword() {
                     value={password}
                     onChange={(e) => { setPassword(e.target.value); setError(''); }}
                     placeholder="Enter your password"
-                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                    disabled={loading || !tokenValidated}
+                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                     required
                   />
                   <button
@@ -366,7 +357,8 @@ export function ResetPassword() {
                     value={confirmPassword}
                     onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
                     placeholder="Confirm your password"
-                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200"
+                    disabled={loading || !tokenValidated}
+                    className="w-full pl-11 pr-11 py-2.5 h-11 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-900 placeholder:text-slate-400 bg-white focus:outline-none focus:border-[#0F2D52] focus:ring-4 focus:ring-[#0F2D52]/5 transition-all duration-200 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
                     required
                   />
                   <button
@@ -416,10 +408,18 @@ export function ResetPassword() {
                 </Button>
               </motion.div>
             </form>
+            )}
 
             <div className="pt-2 border-t border-slate-100 text-center">
               <p className="text-[11px] sm:text-xs text-slate-400">
-                Need help? Contact your school administrator
+                Link expired?{' '}
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-[#0F2D52] font-medium hover:underline"
+                >
+                  Request a new one
+                </button>
               </p>
             </div>
           </motion.div>
