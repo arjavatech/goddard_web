@@ -214,7 +214,7 @@ export function SetPassword() {
           prefilloutProvision(userData).catch(() => {});
           const sub = userData.schoolData?.subdomain || 'goddard';
           const role = userData.role?.toLowerCase();
-          const path = role === 'admin' || role === 'superadmin'
+          const path = role === 'admin' || role === 'superadmin' || role === 'owner'
             ? `/${sub}/admin`
             : role === 'employee'
             ? `/${sub}/employee/dashboard`

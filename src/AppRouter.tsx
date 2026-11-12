@@ -48,7 +48,8 @@ import { ClientManagement } from './pages/superadmin/ClientManagement';
 import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSVUploadPage';
 import ProtectedRoute from './routes/security/ProtectedRoute';
 import { SubdomainGuard } from './routes/security/SubdomainGuard';
-import { RequestsRouter, SuperAdminOnly } from './routes/security/ProcurementGuards';
+import { RequestsRouter, SuperAdminOnly, StrictSuperAdminOnly } from './routes/security/ProcurementGuards';
+import { OwnerManagement } from './pages/admin/OwnerManagement';
 import { FeatureRoute } from './routes/security/FeatureRoute';
 import { PermissionRoute } from './routes/security/PermissionRoute';
 
@@ -124,7 +125,7 @@ function RoleHomeRedirect() {
   }
 
   const role = userData.role.toLowerCase();
-  const home = role === 'admin' || role === 'superadmin'
+  const home = role === 'admin' || role === 'superadmin' || role === 'owner'
     ? `/${schoolSubdomain || 'goddard'}/admin`
     : role === 'employee'
       ? `/${schoolSubdomain || 'goddard'}/employee/dashboard`
@@ -224,6 +225,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="admin" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
+                  <Route path="/:schoolSlug/admin/owner-management" element={<StrictSuperAdminOnly><OwnerManagement /></StrictSuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
                   <Route path="/:schoolSlug/admin/csv-upload" element={<AdminCSVUploadPage />} />

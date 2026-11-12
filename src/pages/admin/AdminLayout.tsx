@@ -46,7 +46,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures, adminPermissions } = useUserContext();
   const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
-  const hasPermission = (perm: string) => isSuperAdmin || adminPermissions.includes(perm);
+  const isOwner = userData?.role?.toLowerCase() === 'owner';
+  const hasElevatedAccess = isSuperAdmin || isOwner;
+  const hasPermission = (perm: string) => hasElevatedAccess || adminPermissions.includes(perm);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -196,8 +198,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       ],
     }] : []),
 
-    // ── My Space (personal items for non-SuperAdmin admins) ──────────────────
-    ...(!isSuperAdmin && (
+    // ── My Space (personal items for non-elevated admins) ──────────────────
+    ...(!hasElevatedAccess && (
       schoolFeatures.employeeManagementEnabled ||
       (schoolFeatures.surveyEnabled && hasPermission('manage_surveys'))
     ) ? [{
@@ -234,8 +236,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Log', path: `${schoolPrefix}/admin/time-tracking` },
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Salary Report', path: `${schoolPrefix}/admin/salary-report` },
         { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/admin/weekly-report` },
-        ...(isSuperAdmin ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
-        ...(isSuperAdmin ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Report Settings', path: `${schoolPrefix}/admin/report-settings` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <Link2 className="w-[18px] h-[18px]" />, label: 'Integration', path: `${schoolPrefix}/admin/taptime-integration` }] : []),
       ],
     }] : []),
 
@@ -243,7 +245,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     {
       label: 'Administration',
       items: [
-        ...(isSuperAdmin ? [{ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` }] : []),
+        ...(isSuperAdmin ? [{ icon: <Shield className="w-[18px] h-[18px]" />, label: 'Owners', path: `${schoolPrefix}/admin/owner-management` }] : []),
+        ...(hasElevatedAccess ? [{ icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Admins', path: `${schoolPrefix}/admin/admin-management` }] : []),
         { icon: <SlidersHorizontal className="w-[18px] h-[18px]" />, label: 'Settings', path: `${schoolPrefix}/admin/settings` },
       ],
     },
@@ -504,7 +507,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                         <div>
                           <p className="text-sm font-semibold text-slate-900 whitespace-nowrap">{userData?.firstName} {userData?.lastName}</p>
                           <div className="whitespace-nowrap text-xs text-slate-400">{userData?.email}</div>
-                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : 'Admin'}</span>
+                          <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider text-[#1a6fc4]">{isSuperAdmin ? 'Super Admin' : isOwner ? 'Owner' : 'Admin'}</span>
                         </div>
                       </div>
                     </div>
@@ -515,12 +518,12 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                       <DropdownMenuItem onClick={() => navigate('/admin')} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                         <LayoutDashboard className="w-4 h-4 text-slate-400" /> Dashboard
                       </DropdownMenuItem>
-                      {!isSuperAdmin && (
+                      {!hasElevatedAccess && (
                         <DropdownMenuItem onClick={() => setShowHelpModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                           <BookOpen className="w-4 h-4 text-slate-400" /> Help Center
                         </DropdownMenuItem>
                       )}
-                      {isSuperAdmin && (
+                      {hasElevatedAccess && (
                         <DropdownMenuItem onClick={() => setShowSuperGuideModal(true)} className="rounded-lg text-sm text-slate-700 hover:bg-slate-50 py-2 cursor-pointer gap-2">
                           <ShieldCheck className="w-4 h-4 text-slate-400" /> SuperAdmin Guide
                         </DropdownMenuItem>
@@ -625,7 +628,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400/80">Resources</h4>
               <ul className="space-y-1.5">
-                {!isSuperAdmin && (
+                {!hasElevatedAccess && (
                   <>
                     <li>
                       <button onClick={() => setShowHelpModal(true)}
@@ -643,7 +646,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
                     </li>
                   </>
                 )}
-                {isSuperAdmin && (
+                {hasElevatedAccess && (
                   <li>
                     <button onClick={() => setShowSuperGuideModal(true)}
                       className="flex items-center gap-2.5 text-sm text-slate-300/70 hover:text-white transition-colors group w-full text-left">
@@ -672,7 +675,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
               <div className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
-                  {isSuperAdmin ? 'SuperAdmin Portal' : 'Admin Portal'}
+                  {isSuperAdmin ? 'SuperAdmin Portal' : isOwner ? 'Owner Portal' : 'Admin Portal'}
                 </span>
               </div>
             </div>
