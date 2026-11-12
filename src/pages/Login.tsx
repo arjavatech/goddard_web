@@ -98,7 +98,7 @@ export function Login() {
 
     const userSubdomain = userData.schoolData?.subdomain || 'goddard';
     const role = userData.role?.toLowerCase();
-    const isAdmin = role === 'admin' || role === 'superadmin';
+    const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
     const isEmployee = role === 'employee';
 
     const defaultPath = isAdmin
