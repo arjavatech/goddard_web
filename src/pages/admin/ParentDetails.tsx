@@ -162,7 +162,7 @@ export function ParentDetails() {
   const [docTargetStatus, setDocTargetStatus] = useState<'pending' | 'rejected'>('pending');
   const { showToast } = useToast();
   const { userData } = useUserContext();
-  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
+  const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
 
   const schoolId = localStorage.getItem('schoolId');
   useEffect(() => {
@@ -1543,7 +1543,7 @@ export function ParentDetails() {
           formType="student"
           isReplacing={selectedFormForUpload.form.status === 'Approved'}
           formTemplateName={selectedFormForUpload.form.title}
-          isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin'}
+          isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner'}
         />
       )}
 

@@ -48,7 +48,7 @@ function timeWorked(date: string, checkIn: string, checkOut: string) {
 export function TimeTracking() {
   const { userData } = useUserContext();
   const schoolId = userData?.schoolId || '';
-  const canManageReports = ['admin', 'superadmin'].includes(userData?.role?.toLowerCase() || '');
+  const canManageReports = ['admin', 'superadmin', 'owner'].includes(userData?.role?.toLowerCase() || '');
   const [searchParams, setSearchParams] = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => {
     const tabParam = searchParams.get('tab');

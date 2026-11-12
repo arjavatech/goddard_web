@@ -46,7 +46,7 @@ const STALE_MS = 5 * 60 * 1000; // 5 minutes
 export function NavCountsProvider({ children }: { children: React.ReactNode }) {
   const { userData, isReady, schoolFeatures } = useUserContext();
   const role = userData?.role?.toLowerCase();
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
 
   const [adminCounts, setAdminCounts] = useState<AdminNavCounts>(ZERO_ADMIN);
   const [myCounts, setMyCounts] = useState<MyNavCounts>(ZERO_MY);

@@ -1066,7 +1066,7 @@ export function DueForms() {
             uploadedBy={`${userData?.firstName} ${userData?.lastName}`.trim() || 'Admin'}
             formType="student"
             formTemplateName={selectedFormForUpload.formName}
-            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin'}
+            isEditable={userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner'}
           />
         )}
       </motion.div>

@@ -16,7 +16,7 @@ const periodLabel = (period: any) => `${formatDate(period.start_date)} – ${for
 
 export function WeeklyReport() {
   const { userData } = useUserContext();
-  const canManage = ['admin', 'superadmin'].includes(userData?.role?.toLowerCase() || '');
+  const canManage = ['admin', 'superadmin', 'owner'].includes(userData?.role?.toLowerCase() || '');
   const [tab, setTab] = useState<'current' | 'history'>('current');
   const [current, setCurrent] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);

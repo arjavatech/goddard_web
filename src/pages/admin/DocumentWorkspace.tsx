@@ -43,7 +43,7 @@ export function DocumentWorkspace({ audience, mode }:Props) {
   const [docUploading, setDocUploading] = useState<DocumentAssignment | null>(null);
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
   const [remindingIds, setRemindingIds] = useState<Set<string>>(new Set());
-  const isEditable = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
+  const isEditable = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
   const [form,setForm]=useState({document_name:'',instructions:'',due_date:'',target:'all'});
   const [recipients,setRecipients]=useState<DocumentRecipient[]>([]); const [selectedIds,setSelectedIds]=useState<string[]>([]);
   const [editTarget,setEditTarget]=useState<DocumentRequest|null>(null); const [editForm,setEditForm]=useState({document_name:'',instructions:'',due_date:''}); const [isSavingEdit,setIsSavingEdit]=useState(false);

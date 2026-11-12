@@ -47,14 +47,14 @@ export function FormView() {
   const { user } = useAuth();
   const { userData } = useUserContext();
   const { showToast } = useToast();
-  const isViewOnly = userData?.role !== 'Admin' && userData?.role !== 'SuperAdmin';
+  const isViewOnly = userData?.role !== 'Admin' && userData?.role !== 'SuperAdmin' && userData?.role !== 'Owner';
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [isRevoking, setIsRevoking] = useState(false);
   const [isRevokeDialogOpen, setIsRevokeDialogOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-  const isEditable = userData?.role === 'Admin' || userData?.role === 'SuperAdmin';
+  const isEditable = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
 
   // State for approval actions and notes
   const [notes, setNotes] = useState('');
