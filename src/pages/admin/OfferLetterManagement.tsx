@@ -69,6 +69,8 @@ export function OfferLetterManagement() {
   const [editingFieldParam, setEditingFieldParam] = useState<string | null>(null);
   const [deleteFieldConfirm, setDeleteFieldConfirm] = useState<OfferLetterField | null>(null);
   const [isDeletingField, setIsDeletingField] = useState(false);
+  const [clearFormIdConfirm, setClearFormIdConfirm] = useState(false);
+  const [isClearingFormId, setIsClearingFormId] = useState(false);
 
   useEffect(() => {
     setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
@@ -129,6 +131,22 @@ export function OfferLetterManagement() {
       setOfferLetterFields(prev => [...prev, field]);
     }
     setNewField({ type: 'text', required: false });
+  };
+
+  const handleClearFormId = async () => {
+    if (!schoolId) return;
+    setIsClearingFormId(true);
+    try {
+      await OfferLetterService.updateOfferLetterConfig(schoolId, '');
+      setOfferFormId('');
+      setConfirmedFormId('');
+      setClearFormIdConfirm(false);
+      showToast('success', 'Form ID removed');
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to remove form ID');
+    } finally {
+      setIsClearingFormId(false);
+    }
   };
 
   const handleEditField = (field: OfferLetterField) => {
@@ -273,9 +291,20 @@ export function OfferLetterManagement() {
             </div>
           )}
           <div className="flex gap-2 mb-5">
-            <Input value={offerFormId} onChange={e => setOfferFormId(e.target.value)}
-              placeholder="e.g. offer-letter-v2"
-              className="h-9 rounded-xl font-mono text-sm flex-1" />
+            <div className="relative flex-1">
+              <Input value={offerFormId} onChange={e => setOfferFormId(e.target.value)}
+                placeholder="e.g. offer-letter-v2"
+                className="h-9 rounded-xl font-mono text-sm w-full pr-8" />
+              {confirmedFormId && (
+                <button
+                  onClick={() => setClearFormIdConfirm(true)}
+                  title="Remove saved form ID"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-400 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
             <Button onClick={handleSaveFormId} disabled={isSavingFormId || !offerFormId.trim()}
               className="h-9 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4 shrink-0">
               {isSavingFormId ? 'Saving…' : 'Save'}
@@ -518,6 +547,25 @@ export function OfferLetterManagement() {
           />
         </div>
       </div>
+
+      {/* Clear form ID confirmation */}
+      <Dialog open={clearFormIdConfirm} onOpenChange={v => { if (!v) setClearFormIdConfirm(false); }}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base font-bold text-slate-900">Remove Fillout Form ID</DialogTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              This will clear the saved form ID <span className="font-mono font-semibold text-slate-700">{confirmedFormId}</span>. Offer letters cannot be sent until a new form ID is set.
+            </p>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setClearFormIdConfirm(false)} disabled={isClearingFormId} className="rounded-xl">Cancel</Button>
+            <Button onClick={handleClearFormId} disabled={isClearingFormId}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white">
+              {isClearingFormId ? 'Removing…' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete custom field confirmation */}
       <Dialog open={!!deleteFieldConfirm} onOpenChange={v => { if (!v) setDeleteFieldConfirm(null); }}>
