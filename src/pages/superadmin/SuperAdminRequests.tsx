@@ -20,7 +20,7 @@ import {
   ShoppingBag, Search, Clock, Play, CheckCircle2,
   ExternalLink, Link2, ImageIcon, RefreshCw, CreditCard, DollarSign,
   LayoutGrid, TableProperties, Plus, Filter, School, User, GraduationCap, ArrowRight,
-  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle, FileText
+  Download, X, Receipt, Package, CalendarDays, BadgeCheck, StickyNote, Pencil, Trash2, AlertCircle, FileText, MoreHorizontal
 } from 'lucide-react';
 import { MultiFileUpload } from '../../components/admin/MultiFileUpload';
 import { ReceiptThumbnail, BillImagePreviewModal } from '../../components/admin/BillImagePreviewModal';
@@ -115,9 +115,18 @@ export function SuperAdminRequests() {
     teacherName: '',
     location: '',
     productLink: '',
-    notes: ''
+    notes: '',
+    expectedCompletionDate: '',
+    amountSpent: '',
+    paymentMethod: 'Credit Card',
+    purchaseDate: '',
+    paymentNotes: '',
   });
   const [requestToDelete, setRequestToDelete] = useState<Request | null>(null);
+  const [editStep, setEditStep] = useState<'details' | 'payment'>('details');
+  const [editBillFiles, setEditBillFiles] = useState<File[]>([]);
+  const [deletedBillUrls, setDeletedBillUrls] = useState<string[]>([]);
+  const [deleteProductImage, setDeleteProductImage] = useState(false);
 
   const handleOpenEdit = (req: Request) => {
     setEditingRequest(req);
@@ -133,9 +142,18 @@ export function SuperAdminRequests() {
       location: req.location || '',
       productLink: req.productLink || '',
       notes: req.notes || '',
+      expectedCompletionDate: req.expectedCompletionDate || '',
+      amountSpent: req.amountSpent?.toString() || '',
+      paymentMethod: req.paymentMethod || 'Credit Card',
+      purchaseDate: req.purchaseDate || '',
+      paymentNotes: req.paymentNotes || '',
     });
     setEditImageFile(null);
+    setEditBillFiles([]);
+    setDeletedBillUrls([]);
+    setDeleteProductImage(false);
     setEditFormErrors({});
+    setEditStep('details');
     setIsEditModalOpen(true);
   };
 
@@ -163,8 +181,7 @@ export function SuperAdminRequests() {
     return Object.keys(errors).length === 0;
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const runEditSave = async () => {
     if (!editingRequest || !validateEditForm()) return;
     setSubmitting(true);
     try {
@@ -180,10 +197,26 @@ export function SuperAdminRequests() {
         teacherName: editFormData.scope === 'teacher' ? editFormData.teacherName : undefined,
         productLink: editFormData.productLink || undefined,
         notes: editFormData.notes || undefined,
+        ...(deleteProductImage && !editImageFile ? { deleteProductImage: true } : {}),
+        ...(editingRequest.status === 'Completed' ? {
+          billImageUrls: (editingRequest.billImageUrls ?? []).filter(u => !deletedBillUrls.includes(u)),
+        } : {}),
       }, editImageFile || undefined);
+      if (editingRequest.status === 'In Progress' && editFormData.expectedCompletionDate) {
+        await RequestService.updateExpectedCompletionDate(editingRequest.id, editFormData.expectedCompletionDate);
+      }
+      if (editingRequest.status === 'Completed' && editFormData.amountSpent) {
+        await RequestService.verifyRequest(editingRequest.id, {
+          amountSpent: parseFloat(editFormData.amountSpent),
+          paymentMethod: editFormData.paymentMethod,
+          purchaseDate: editFormData.purchaseDate || new Date().toISOString().split('T')[0],
+          paymentNotes: editFormData.paymentNotes || undefined,
+        }, editBillFiles.length > 0 ? editBillFiles : undefined);
+      }
       showToast('success', 'Request updated successfully.', 'Request Updated');
       setIsEditModalOpen(false);
       setEditingRequest(null);
+      setEditStep('details');
       setRequests(await RequestService.fetchRequests());
     } catch {
       showToast('error', 'Could not update request. Please try again.', 'Error');
@@ -882,9 +915,26 @@ export function SuperAdminRequests() {
                                 <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-slate-100 rounded text-slate-500">{req.requesterRole}</span>
                               </p>
                             </div>
-                            <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
-                              {getStatusIcon(req.status)}{getStatusLabel(req.status)}
-                            </span>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(req.status)}`}>
+                                {getStatusIcon(req.status)}{getStatusLabel(req.status)}
+                              </span>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-slate-400 hover:text-slate-600 flex-shrink-0">
+                                    <MoreHorizontal className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); handleOpenEdit(req); }}>
+                                    <Pencil className="w-3.5 h-3.5 mr-2 text-slate-400" /> Edit Request
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={e => { e.stopPropagation(); setRequestToDelete(req); }} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                                    <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Request
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                           <div className="flex flex-col min-[420px]:flex-row gap-3 sm:gap-4">
                             {req.productImage ? (
@@ -924,10 +974,6 @@ export function SuperAdminRequests() {
                             )}
                           </div>
                           <div className="w-full sm:w-auto flex sm:justify-end items-center gap-1.5" onClick={e => e.stopPropagation()}>
-                              <>
-                                <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
-                                <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
-                              </>
                             <ActionCell req={req} />
                           </div>
                         </div>
@@ -948,7 +994,8 @@ export function SuperAdminRequests() {
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[80px]">Status</th>
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-left min-w-[70px]">Date</th>
                         <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-center min-w-[90px]">Amount</th>
-                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[160px]">Actions</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[120px]">Status Action</th>
+                        <th className="px-3 sm:px-4 py-3 sm:py-4 text-[8px] sm:text-[9px] md:text-[10px] font-semibold uppercase tracking-wider text-slate-400 text-right min-w-[80px]">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
@@ -990,15 +1037,13 @@ export function SuperAdminRequests() {
                           <td className="px-3 sm:px-4 py-3 text-xs min-w-[90px] text-center">
                             {req.status === 'Completed' ? <span className="font-bold text-emerald-700">${req.amountSpent?.toFixed(2)}</span> : <span className="text-slate-300">—</span>}
                           </td>
-                          <td className="px-3 sm:px-4 py-3 text-right min-w-[160px]" onClick={e => e.stopPropagation()}>
-                            <div className="flex items-center justify-end gap-1.5">
-                              {req.status !== 'Completed' && (
-                                <>
-                                  <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
-                                  <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
-                                </>
-                              )}
-                              <ActionCell req={req} />
+                          <td className="px-3 sm:px-4 py-3 text-right min-w-[120px]" onClick={e => e.stopPropagation()}>
+                            <ActionCell req={req} />
+                          </td>
+                          <td className="px-3 sm:px-4 py-3 text-right min-w-[80px]" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="outline" size="sm" aria-label="Edit request" onClick={() => handleOpenEdit(req)} className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]"><Pencil className="w-3 h-3" /></Button>
+                              <Button variant="outline" size="sm" aria-label="Delete request" onClick={() => setRequestToDelete(req)} className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400"><Trash2 className="w-3 h-3" /></Button>
                             </div>
                           </td>
                         </tr>
@@ -1233,13 +1278,7 @@ export function SuperAdminRequests() {
                 </div>
 
                 {/* Footer actions */}
-                <div className="px-6 pb-5 pt-2 border-t border-slate-50 flex justify-between gap-3" onClick={e => e.stopPropagation()}>
-                  <div className="flex items-center gap-2">
-                      <>
-                        <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); handleOpenEdit(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold border-slate-200"><Pencil className="w-3.5 h-3.5 mr-1.5" />Edit</Button>
-                        <Button variant="outline" size="sm" onClick={() => { setDetailRequest(null); setRequestToDelete(req); }} className="h-9 px-3 rounded-xl text-xs font-semibold text-red-600 border-red-200 hover:bg-red-50"><Trash2 className="w-3.5 h-3.5 mr-1.5" />Delete</Button>
-                      </>
-                  </div>
+                <div className="px-6 pb-5 pt-2 border-t border-slate-50 flex justify-end gap-3" onClick={e => e.stopPropagation()}>
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => setDetailRequest(null)}
                       className="rounded-xl h-10 text-xs font-semibold border-slate-200">Close</Button>
@@ -1508,7 +1547,7 @@ export function SuperAdminRequests() {
                 <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
                   <ImageIcon className="w-6 h-6 text-slate-300 mb-1" />
                   <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
-                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP up to 2MB</span>
+                  <span className="text-[10px] text-slate-300 mt-0.5">JPEG, PNG, WebP</span>
                   <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={handleCreateImageChange} className="hidden" />
                 </label>
               ) : (
@@ -1545,125 +1584,226 @@ export function SuperAdminRequests() {
         </DialogContent>
       </Dialog>
       {/* Edit Request Modal */}
-      <Dialog open={isEditModalOpen} onOpenChange={open => { setIsEditModalOpen(open); if (!open) setEditingRequest(null); }}>
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 no-scrollbar flex flex-col">
-          <div className="px-6 pt-6 pb-0">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-bold text-slate-900">Edit Request</DialogTitle>
-              <DialogDescription className="text-xs text-slate-500">
-                Editing: <span className="font-semibold text-slate-700">{editingRequest?.item}</span>
-                {editingRequest && (
-                  <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(editingRequest.status)}`}>
-                    {getStatusIcon(editingRequest.status)}{getStatusLabel(editingRequest.status)}
-                  </span>
-                )}
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <form onSubmit={handleEditSubmit} id="edit-request-form" className="flex-1 overflow-y-auto no-scrollbar">
-            <div className="space-y-4 pt-2 px-6 pb-6">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Requested Item <span className="text-red-500">*</span></label>
-              <input type="text" name="item" value={editFormData.item} onChange={handleEditInputChange}
-                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
-              {editFormErrors.item && <p className="text-xs text-red-600 font-semibold">{editFormErrors.item}</p>}
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity <span className="text-red-500">*</span></label>
-                <input type="text" name="quantity" value={editFormData.quantity} onChange={handleEditInputChange}
-                  onBlur={e => { if (e.target.value === '') setEditFormData(prev => ({ ...prev, quantity: 1 })); }}
-                  className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
-                <select name="category" value={editFormData.category} onChange={handleEditInputChange}
-                  className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap">
-                  {categories.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                {editFormErrors.category && <p className="text-xs text-red-600 font-semibold">{editFormErrors.category}</p>}
-              </div>
-            </div>
-            {editFormData.scope === 'classroom' && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Classroom <span className="text-red-500">*</span></label>
-                <select name="classroomId" value={editFormData.classroomId} onChange={handleEditInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
-                  {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                {editFormErrors.classroomId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.classroomId}</p>}
-              </div>
-            )}
-            {editFormData.scope === 'teacher' && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Teacher <span className="text-red-500">*</span></label>
-                <select name="teacherId" value={editFormData.teacherId} onChange={handleEditInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
-                  {teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeType})</option>)}
-                </select>
-                {editFormErrors.teacherId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.teacherId}</p>}
-              </div>
-            )}
-            {editFormData.scope === 'school' && locationOptions.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</label>
-                <select name="location" value={editFormData.location} onChange={handleEditInputChange}
-                  className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
-                  <option value="">Select location</option>
-                  {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-                </select>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Link (Optional)</label>
-              <input type="url" name="productLink" placeholder="https://example.com/product" value={editFormData.productLink} onChange={handleEditInputChange}
-                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Image (Optional)</label>
-              {!editImageFile && editingRequest?.productImage ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
-                    <img src={editingRequest.productImage} alt={editingRequest.item} className="w-full h-full object-cover" />
-                  </div>
-                  <label className="cursor-pointer text-[10px] font-semibold text-[#1a6fc4] hover:text-[#0F2D52]">
-                    Replace image
-                    <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f && f.size <= 2*1024*1024) setEditImageFile(f); else if (f) showToast('error', 'Image must be under 2 MB.', 'File Too Large'); }} className="hidden" />
-                  </label>
-                </div>
-              ) : editImageFile ? (
-                <div className="flex items-center gap-3">
-                  <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
-                    <img src={URL.createObjectURL(editImageFile)} alt="Preview" className="w-full h-full object-cover" />
-                  </div>
-                  <div className="flex-1 flex flex-col min-w-0">
-                    <p className="text-xs font-semibold text-slate-700 break-words overflow-wrap-anywhere whitespace-normal" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{editImageFile.name}</p>
-                    <button type="button" onClick={() => setEditImageFile(null)} className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit">Remove</button>
-                  </div>
-                </div>
-              ) : (
-                <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
-                  <ImageIcon className="w-5 h-5 text-slate-300 mb-1" />
-                  <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
-                  <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f && f.size <= 2*1024*1024) setEditImageFile(f); else if (f) showToast('error', 'Image must be under 2 MB.', 'File Too Large'); }} className="hidden" />
-                </label>
+      <Dialog open={isEditModalOpen} onOpenChange={open => { setIsEditModalOpen(open); if (!open) { setEditingRequest(null); setEditStep('details'); setDeletedBillUrls([]); setDeleteProductImage(false); } }}>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl max-h-[90vh] bg-white p-0 flex flex-col overflow-hidden">
+          <div className="px-6 pt-6 pb-0 flex-shrink-0">
+            <DialogTitle className="text-lg font-bold text-slate-900">Edit Request</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-0.5">
+              Editing: <span className="font-semibold text-slate-700">{editingRequest?.item}</span>
+              {editingRequest && (
+                <span className={`ml-2 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${getStatusBadgeClass(editingRequest.status)}`}>
+                  {getStatusIcon(editingRequest.status)}{getStatusLabel(editingRequest.status)}
+                </span>
               )}
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Notes (Optional)</label>
-              <textarea name="notes" placeholder="Any additional context..." value={editFormData.notes}
-                onChange={e => setEditFormData(prev => ({ ...prev, notes: e.target.value }))} rows={2}
-                className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
-            </div>
-            </div>
+            </DialogDescription>
+            {editingRequest && (editingRequest.status === 'In Progress' || editingRequest.status === 'Completed') && (
+              <div className="flex items-center gap-2 mt-4">
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold border-2 flex-shrink-0 ${editStep === 'details' ? 'bg-[#0F2D52] border-[#0F2D52] text-white' : 'bg-white border-[#0F2D52] text-[#0F2D52]'}`}>1</div>
+                <span className={`text-[11px] font-bold ${editStep === 'details' ? 'text-[#0F2D52]' : 'text-slate-400'}`}>Request Details</span>
+                <div className={`flex-1 h-px mx-1 ${editStep === 'payment' ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold border-2 flex-shrink-0 ${editStep === 'payment' ? 'bg-[#0F2D52] border-[#0F2D52] text-white' : 'bg-white border-slate-200 text-slate-400'}`}>2</div>
+                <span className={`text-[11px] font-bold ${editStep === 'payment' ? 'text-[#0F2D52]' : 'text-slate-400'}`}>
+                  {editingRequest.status === 'In Progress' ? 'Processing Info' : 'Bill & Payment'}
+                </span>
+              </div>
+            )}
+          </div>
+          <form onSubmit={e => { e.preventDefault(); runEditSave(); }} id="edit-request-form" className="flex-1 overflow-y-auto">
+            {/* Request Details tab */}
+            {(editStep === 'details' || !editingRequest || editingRequest.status === 'Pending') && (
+              <div className="space-y-4 pt-2 px-6 pb-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Requested Item <span className="text-red-500">*</span></label>
+                  <input type="text" name="item" value={editFormData.item} onChange={handleEditInputChange}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                  {editFormErrors.item && <p className="text-xs text-red-600 font-semibold">{editFormErrors.item}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quantity <span className="text-red-500">*</span></label>
+                    <input type="text" name="quantity" value={editFormData.quantity} onChange={handleEditInputChange}
+                      onBlur={e => { if (e.target.value === '') setEditFormData(prev => ({ ...prev, quantity: 1 })); }}
+                      className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Category <span className="text-red-500">*</span></label>
+                    <select name="category" value={editFormData.category} onChange={handleEditInputChange}
+                      className="w-full px-2 py-2.5 text-[11px] sm:text-xs bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52] overflow-hidden text-ellipsis whitespace-nowrap">
+                      {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    {editFormErrors.category && <p className="text-xs text-red-600 font-semibold">{editFormErrors.category}</p>}
+                  </div>
+                </div>
+                {editFormData.scope === 'classroom' && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Classroom <span className="text-red-500">*</span></label>
+                    <select name="classroomId" value={editFormData.classroomId} onChange={handleEditInputChange}
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                      {classrooms.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    {editFormErrors.classroomId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.classroomId}</p>}
+                  </div>
+                )}
+                {editFormData.scope === 'teacher' && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Teacher <span className="text-red-500">*</span></label>
+                    <select name="teacherId" value={editFormData.teacherId} onChange={handleEditInputChange}
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                      {teachers.map(t => <option key={t.id} value={t.id}>{t.firstName} {t.lastName} ({t.employeeType})</option>)}
+                    </select>
+                    {editFormErrors.teacherId && <p className="text-xs text-red-600 font-semibold">{editFormErrors.teacherId}</p>}
+                  </div>
+                )}
+                {editFormData.scope === 'school' && locationOptions.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Location</label>
+                    <select name="location" value={editFormData.location} onChange={handleEditInputChange}
+                      className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                      <option value="">Select location</option>
+                      {locationOptions.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Link (Optional)</label>
+                  <input type="url" name="productLink" placeholder="https://example.com/product" value={editFormData.productLink} onChange={handleEditInputChange}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Product Image (Optional)</label>
+                  {!editImageFile && editingRequest?.productImage && !deleteProductImage ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                        <img src={editingRequest.productImage} alt={editingRequest.item} className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <label className="cursor-pointer text-[10px] font-semibold text-[#1a6fc4] hover:text-[#0F2D52]">
+                          Replace image
+                          <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f) setEditImageFile(f); }} className="hidden" />
+                        </label>
+                        <button type="button" onClick={() => setDeleteProductImage(true)}
+                          className="text-[10px] text-red-500 hover:text-red-700 font-semibold text-left">
+                          Remove image
+                        </button>
+                      </div>
+                    </div>
+                  ) : editImageFile ? (
+                    <div className="flex items-center gap-3">
+                      <div className="w-16 h-16 rounded-xl overflow-hidden border border-slate-100 bg-slate-50 flex-shrink-0">
+                        <img src={URL.createObjectURL(editImageFile)} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                      <div className="flex-1 flex flex-col min-w-0">
+                        <p className="text-xs font-semibold text-slate-700 break-words overflow-wrap-anywhere whitespace-normal" style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{editImageFile.name}</p>
+                        <button type="button" onClick={() => setEditImageFile(null)} className="mt-auto pt-1 text-[10px] text-red-500 hover:text-red-700 font-semibold w-fit">Remove</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center w-full h-20 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:border-[#0F2D52] hover:bg-slate-50 transition-colors">
+                      <ImageIcon className="w-5 h-5 text-slate-300 mb-1" />
+                      <span className="text-xs text-slate-400 font-medium">Click to upload image</span>
+                      <input type="file" accept="image/jpeg,image/png,image/gif,image/webp" onChange={e => { const f = e.target.files?.[0]; if (f) setEditImageFile(f); }} className="hidden" />
+                    </label>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Notes (Optional)</label>
+                  <textarea name="notes" placeholder="Any additional context..." value={editFormData.notes}
+                    onChange={e => setEditFormData(prev => ({ ...prev, notes: e.target.value }))} rows={2}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
+                </div>
+              </div>
+            )}
+            {/* Processing Info tab (In Progress) */}
+            {editStep === 'payment' && editingRequest?.status === 'In Progress' && (
+              <div className="space-y-4 pt-4 px-6 pb-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Expected Completion Date</label>
+                  <input type="date" name="expectedCompletionDate" value={editFormData.expectedCompletionDate}
+                    onChange={handleEditInputChange} min={getTodayDateString()}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                </div>
+              </div>
+            )}
+            {/* Bill & Payment tab (Completed) */}
+            {editStep === 'payment' && editingRequest?.status === 'Completed' && (
+              <div className="space-y-4 pt-4 px-6 pb-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Amount Spent ($)</label>
+                  <input type="number" name="amountSpent" placeholder="0.00" step="0.01" min="0" value={editFormData.amountSpent}
+                    onChange={handleEditInputChange}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payment Method</label>
+                  <select name="paymentMethod" value={editFormData.paymentMethod} onChange={handleEditInputChange}
+                    className="w-full px-3 py-2.5 text-xs sm:text-sm bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-none focus:border-[#0F2D52]">
+                    {paymentMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Purchase Date</label>
+                  <input type="date" name="purchaseDate" value={editFormData.purchaseDate}
+                    onChange={handleEditInputChange}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52]" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Payment Notes (Optional)</label>
+                  <textarea name="paymentNotes" placeholder="Any notes about this payment..." value={editFormData.paymentNotes}
+                    onChange={e => setEditFormData(prev => ({ ...prev, paymentNotes: e.target.value }))} rows={2}
+                    className="w-full px-4 py-2.5 text-xs sm:text-sm text-slate-900 border border-slate-200 rounded-xl focus:outline-none focus:border-[#0F2D52] resize-none" />
+                </div>
+                {(editingRequest.billImageUrls ?? []).filter(u => !deletedBillUrls.includes(u)).length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1"><Receipt className="w-3 h-3" /> Existing Bill Images</label>
+                    <div className="space-y-1.5">
+                      {(editingRequest.billImageUrls ?? []).filter(u => !deletedBillUrls.includes(u)).map(url => {
+                        const isPdf = url.toLowerCase().includes('.pdf');
+                        const name = url.split('/').pop()?.split('?')[0] ?? 'File';
+                        return (
+                          <div key={url} className="flex items-center gap-2 p-2 rounded-xl border border-slate-100 bg-slate-50">
+                            {isPdf
+                              ? <FileText className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                              : <img src={url} alt={name} className="w-8 h-8 rounded object-cover flex-shrink-0 border border-slate-100" />}
+                            <button type="button" onClick={() => setPreviewBillUrl(url)}
+                              className="flex-1 text-left text-xs text-slate-700 font-medium truncate hover:text-[#0F2D52] min-w-0">
+                              {name}
+                            </button>
+                            <button type="button" onClick={() => setDeletedBillUrls(prev => [...prev, url])}
+                              className="text-red-400 hover:text-red-600 p-1 rounded flex-shrink-0" aria-label="Remove image">
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block flex items-center gap-1"><Receipt className="w-3 h-3" /> Add New Bill Images</label>
+                  <MultiFileUpload files={editBillFiles} onChange={setEditBillFiles} maxFiles={5} maxSizeMB={5} accept="image/*,.pdf" />
+                </div>
+              </div>
+            )}
           </form>
-          <DialogFooter className="px-6 py-4 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end">
-            <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingRequest(null); }}
-              className="rounded-xl h-10 text-xs font-semibold px-6">Cancel</Button>
-            <Button type="submit" form="edit-request-form" disabled={submitting}
-              className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
-              {submitting ? 'Saving...' : 'Save Changes'}
-            </Button>
+          <DialogFooter className="px-6 py-4 border-t border-slate-50 flex-col sm:flex-row gap-3 bg-white rounded-b-2xl justify-end flex-shrink-0">
+            {editStep === 'payment' ? (
+              <Button type="button" variant="outline" onClick={() => setEditStep('details')}
+                className="rounded-xl h-10 text-xs font-semibold px-6">← Back</Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingRequest(null); setEditStep('details'); setDeletedBillUrls([]); setDeleteProductImage(false); }}
+                className="rounded-xl h-10 text-xs font-semibold px-6">Cancel</Button>
+            )}
+            {editingRequest && editStep === 'details' && (editingRequest.status === 'In Progress' || editingRequest.status === 'Completed') ? (
+              <Button type="button" onClick={() => setEditStep('payment')}
+                className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+                Next →
+              </Button>
+            ) : (
+              <Button type="button" onClick={runEditSave} disabled={submitting}
+                className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+                {submitting ? 'Saving...' : 'Save Changes'}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

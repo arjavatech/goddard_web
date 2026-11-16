@@ -320,7 +320,10 @@ export const RequestService = {
 
   async updateRequest(requestId: string, request: Partial<Pick<Request,
     'item' | 'quantity' | 'category' | 'location' | 'scope' | 'classroomId' | 'classroomName' |
-    'teacherId' | 'teacherName' | 'productLink' | 'productImage' | 'notes'>>, imageFile?: File): Promise<Request> {
+    'teacherId' | 'teacherName' | 'productLink' | 'productImage' | 'notes'>> & {
+    deleteProductImage?: boolean;
+    billImageUrls?: string[];
+  }, imageFile?: File): Promise<Request> {
     let imageBase64: string | undefined;
     if (imageFile) {
       imageBase64 = await new Promise<string>((resolve, reject) => {
@@ -341,6 +344,8 @@ export const RequestService = {
           imageBase64,
           imageName: imageFile?.name,
           imageContentType: imageFile?.type,
+          deleteProductImage: request.deleteProductImage,
+          billImageUrls: request.billImageUrls,
         },
       },
       z.any(),
