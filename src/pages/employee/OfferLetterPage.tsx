@@ -7,29 +7,22 @@ import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
-import { FileText, ExternalLink, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 function StatusSection({ offer }: { offer: OfferLetter }) {
   switch (offer.status) {
     case 'offer_sent':
       return (
-        <div className="text-center space-y-4 py-4">
+        <div className="text-center space-y-3 py-4">
           <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
             <Clock className="w-8 h-8 text-blue-500" />
           </div>
           <div>
             <p className="text-base font-bold text-slate-900">Your Offer Letter is Ready</p>
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-              Click the button below to open the offer form, review the details, and submit your response.
+              Review the details below and submit your response.
             </p>
           </div>
-          {offer.prefillUrl && (
-            <a href={offer.prefillUrl} target="_blank" rel="noopener noreferrer">
-              <Button className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white gap-2 mt-2">
-                <ExternalLink className="w-4 h-4" /> Open Offer Letter
-              </Button>
-            </a>
-          )}
         </div>
       );
 
@@ -157,6 +150,18 @@ export function OfferLetterPage() {
 
         {!loading && !error && offer && (
           <div className="space-y-4">
+            {/* Inline form iframe for offer_sent */}
+            {offer.status === 'offer_sent' && offer.prefillUrl && (
+              <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm" style={{ height: '80vh' }}>
+                <iframe
+                  src={offer.prefillUrl}
+                  title="Offer Letter"
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                  allow="camera; microphone; geolocation"
+                />
+              </div>
+            )}
+
             {/* Status card */}
             <Card className="rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
