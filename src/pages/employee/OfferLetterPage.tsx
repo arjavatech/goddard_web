@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { EmployeeLayout } from './EmployeeLayout';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -110,6 +111,8 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
 
 export function OfferLetterPage() {
   const { userData } = useUserContext();
+  const navigate = useNavigate();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const [offer, setOffer] = useState<OfferLetter | null>(null);
   const [pastOffers, setPastOffers] = useState<OfferLetter[]>([]);
   const [showPastOffers, setShowPastOffers] = useState(false);
@@ -201,7 +204,9 @@ export function OfferLetterPage() {
               </div>
               <StatusSection
                 offer={offer}
-                onOpenForm={() => window.open(offer.prefillUrl, '_blank')}
+                onOpenForm={() => navigate(`/${schoolSlug}/employee/offer-letter/view`, {
+                  state: { prefillUrl: offer.prefillUrl },
+                })}
                 onDownload={handleDownload}
               />
             </Card>
