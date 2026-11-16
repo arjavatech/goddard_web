@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { AsyncButton } from '../ui/async-button';
 import { Badge } from '../ui/badge';
 import { useToast } from '../../contexts/ToastContext';
-import { OfferLetterService, type OfferLetter, type OfferLetterStatus } from '../../services/api/offerLetter';
+import { OfferLetterService, type OfferLetter, type OfferLetterField, type OfferLetterStatus } from '../../services/api/offerLetter';
 import { FileText, Download, CheckCircle2, XCircle, Send, ExternalLink } from 'lucide-react';
 import { cn } from '../../lib/utils';
 
@@ -13,6 +13,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   offer: OfferLetter;
   schoolId: string;
+  offerLetterFields?: OfferLetterField[];
   onUpdated?: (offer: OfferLetter) => void;
 }
 
@@ -50,7 +51,7 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
   );
 }
 
-export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, onUpdated }: Props) {
+export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, offerLetterFields, onUpdated }: Props) {
   const { showToast } = useToast();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -133,19 +134,14 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
             <InfoRow label="Phone" value={offer.phone} />
           </div>
 
-          {/* Offer details */}
-          <div className="grid grid-cols-2 gap-2">
-            <InfoRow label="Role" value={offer.role} />
-            <InfoRow label="Joining Date" value={offer.joiningDate} />
-            {offer.salary != null && (
-              <InfoRow label="Salary" value={`${offer.salaryCurrency ?? 'USD'} ${offer.salary.toLocaleString()}`} />
-            )}
-          </div>
-
-          {offer.additionalNotes && (
-            <div className="bg-slate-50 rounded-xl px-3 py-2.5">
-              <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-0.5">Additional Notes</p>
-              <p className="text-sm text-slate-700 whitespace-pre-wrap">{offer.additionalNotes}</p>
+          {/* Custom fields */}
+          {offer.customFields && Object.keys(offer.customFields).length > 0 && (
+            <div className="grid grid-cols-2 gap-2">
+              {Object.entries(offer.customFields).map(([key, value]) => {
+                const field = offerLetterFields?.find(f => f.filloutParam === key);
+                const label = field?.label ?? key;
+                return <InfoRow key={key} label={label} value={String(value)} />;
+              })}
             </div>
           )}
 

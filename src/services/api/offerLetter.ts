@@ -25,11 +25,6 @@ export type OfferLetter = {
   lastName: string;
   email: string;
   phone?: string;
-  role: string;
-  salary?: number;
-  salaryCurrency?: string;
-  joiningDate?: string;
-  additionalNotes?: string;
   customFields?: Record<string, string>;
   filloutFormId?: string;
   prefillUrl?: string;
@@ -44,6 +39,7 @@ export type OfferLetter = {
   adminRejectionReason?: string;
   createdAt?: string;
   updatedAt?: string;
+  isCurrent?: boolean;
 };
 
 export type CreateOfferLetterRequest = {
@@ -52,11 +48,6 @@ export type CreateOfferLetterRequest = {
   lastName: string;
   email: string;
   phone?: string;
-  role: string;
-  salary?: number;
-  salaryCurrency?: string;
-  joiningDate?: string;
-  additionalNotes?: string;
   customFields?: Record<string, string>;
 };
 
@@ -76,11 +67,6 @@ function mapOfferLetter(raw: any): OfferLetter {
     lastName: raw.last_name ?? '',
     email: raw.email ?? '',
     phone: raw.phone ?? undefined,
-    role: raw.role ?? '',
-    salary: raw.salary ?? undefined,
-    salaryCurrency: raw.salary_currency ?? undefined,
-    joiningDate: raw.joining_date ?? undefined,
-    additionalNotes: raw.additional_notes ?? undefined,
     customFields: raw.custom_fields ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     prefillUrl: raw.prefill_url ?? undefined,
@@ -95,6 +81,7 @@ function mapOfferLetter(raw: any): OfferLetter {
     adminRejectionReason: raw.admin_rejection_reason ?? undefined,
     createdAt: raw.created_at ?? undefined,
     updatedAt: raw.updated_at ?? undefined,
+    isCurrent: raw.is_current ?? true,
   };
 }
 
@@ -110,11 +97,6 @@ export const OfferLetterService = {
           last_name: req.lastName,
           email: req.email,
           phone: req.phone,
-          role: req.role,
-          salary: req.salary,
-          salary_currency: req.salaryCurrency,
-          joining_date: req.joiningDate,
-          additional_notes: req.additionalNotes,
           custom_fields: req.customFields && Object.keys(req.customFields).length > 0 ? req.customFields : undefined,
         },
       },
@@ -132,11 +114,6 @@ export const OfferLetterService = {
           first_name: req.firstName,
           last_name: req.lastName,
           phone: req.phone,
-          role: req.role,
-          salary: req.salary,
-          salary_currency: req.salaryCurrency,
-          joining_date: req.joiningDate,
-          additional_notes: req.additionalNotes,
           custom_fields: req.customFields && Object.keys(req.customFields).length > 0 ? req.customFields : undefined,
         },
       },
@@ -184,6 +161,14 @@ export const OfferLetterService = {
   async listOfferLetters(schoolId: string): Promise<OfferLetter[]> {
     const data = await authedFetch(
       { method: 'GET', url: `/offer-letters?school_id=${schoolId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapOfferLetter);
+  },
+
+  async getOfferLetterHistory(employeeId: string, schoolId: string): Promise<OfferLetter[]> {
+    const data = await authedFetch(
+      { method: 'GET', url: `/employees/${employeeId}/offer-letter/history?school_id=${schoolId}` },
       z.array(z.any()),
     );
     return data.map(mapOfferLetter);

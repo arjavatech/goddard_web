@@ -161,10 +161,8 @@ export function OfferLetterReview() {
             onPageSizeChange={setItemsPerPage}
             onPageChange={setCurrentPage}
             columns={[
-              { header: 'Employee', className: 'w-1/4' },
-              { header: 'Email', className: 'w-1/4' },
-              { header: 'Role', className: 'w-1/5' },
-              { header: 'Salary', className: 'w-24' },
+              { header: 'Employee', className: 'w-1/3' },
+              { header: 'Email', className: 'w-1/3' },
               { header: 'Accepted At', className: 'w-32' },
               { header: 'Actions', className: 'w-auto' },
             ]}
@@ -172,9 +170,6 @@ export function OfferLetterReview() {
               const initials = `${offer.firstName?.[0] || ''}${offer.lastName?.[0] || ''}`.toUpperCase();
               const acceptedDate = offer.employeeRespondedAt
                 ? new Date(offer.employeeRespondedAt).toLocaleDateString()
-                : '—';
-              const salaryDisplay = offer.salary
-                ? `${offer.salaryCurrency ?? 'USD'} ${offer.salary.toLocaleString()}`
                 : '—';
               return (
                 <tr key={offer.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors">
@@ -186,12 +181,6 @@ export function OfferLetterReview() {
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-xs text-slate-600 font-semibold break-all">{offer.email}</p>
-                  </td>
-                  <td className="py-4 px-4">
-                    <p className="text-xs text-slate-600 font-semibold">{offer.role}</p>
-                  </td>
-                  <td className="py-4 px-4">
-                    <p className="text-xs text-slate-500">{salaryDisplay}</p>
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-xs text-slate-500">{acceptedDate}</p>

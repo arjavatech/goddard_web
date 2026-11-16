@@ -14,7 +14,7 @@ import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { usePageSize } from '../../hooks/usePageSize';
 import {
   FileText, Settings, AlertCircle, MoreHorizontal, Send, Edit, Pencil,
-  RefreshCw, CheckCircle, X, Search, Filter, Mail, Trash2,
+  RefreshCw, CheckCircle, X, Search, Filter, Mail, Trash2, History,
 } from 'lucide-react';
 
 function statusLabel(s: string) {
@@ -77,6 +77,25 @@ export function OfferLetterManagement() {
     setConfirmedFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
     setOfferLetterFields(((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? []);
   }, [userData?.schoolData?.offerLetterFilloutFormId, userData?.schoolData?.settings]);
+
+  // ── History dialog ────────────────────────────────────────────────────────
+  const [historyEmployee, setHistoryEmployee] = useState<OfferLetter | null>(null);
+  const [offerHistory, setOfferHistory] = useState<OfferLetter[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+
+  const handleViewHistory = async (offer: OfferLetter) => {
+    setHistoryEmployee(offer);
+    setOfferHistory([]);
+    setIsLoadingHistory(true);
+    try {
+      const history = await OfferLetterService.getOfferLetterHistory(offer.employeeId, schoolId);
+      setOfferHistory(history);
+    } catch {
+      showToast('error', 'Failed to load offer history');
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  };
 
   // ── Send / Approve / Reject dialogs ──────────────────────────────────────
   const [sendingOffer, setSendingOffer] = useState<OfferLetter | null>(null);
@@ -479,9 +498,8 @@ export function OfferLetterManagement() {
             onPageSizeChange={setItemsPerPage}
             onPageChange={setCurrentPage}
             columns={[
-              { header: 'Employee', className: 'w-1/4' },
-              { header: 'Email', className: 'w-1/4' },
-              { header: 'Role', className: 'w-1/5' },
+              { header: 'Employee', className: 'w-1/3' },
+              { header: 'Email', className: 'w-1/3' },
               { header: 'Status', className: 'w-auto' },
               { header: 'Date', className: 'w-32' },
               { header: 'Actions', className: 'w-auto' },
@@ -499,9 +517,6 @@ export function OfferLetterManagement() {
                   </td>
                   <td className="py-4 px-4">
                     <p className="text-xs text-slate-600 font-semibold break-all">{offer.email}</p>
-                  </td>
-                  <td className="py-4 px-4">
-                    <p className="text-xs text-slate-600 font-semibold">{offer.role}</p>
                   </td>
                   <td className="py-4 px-4">
                     <StatusBadge status={offer.status} />
@@ -537,6 +552,10 @@ export function OfferLetterManagement() {
                             <RefreshCw className="w-4 h-4 mr-2 text-slate-400" /> Resend
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700"
+                          onClick={() => handleViewHistory(offer)}>
+                          <History className="w-4 h-4 mr-2 text-slate-400" /> View History
+                        </DropdownMenuItem>
                         {offer.status === 'offer_accepted' && (
                           <>
                             <DropdownMenuItem className="cursor-pointer font-medium text-xs text-emerald-700 focus:text-emerald-700 focus:bg-emerald-50"
@@ -675,6 +694,58 @@ export function OfferLetterManagement() {
               className={`rounded-xl text-white ${reviewOffer?.action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
               {isReviewing ? 'Processing…' : reviewOffer?.action === 'approve' ? 'Approve' : 'Reject'}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Offer Letter History Dialog */}
+      <Dialog open={!!historyEmployee} onOpenChange={v => { if (!v) { setHistoryEmployee(null); setOfferHistory([]); } }}>
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base font-bold text-slate-900">
+              Offer Letter History — {historyEmployee?.firstName} {historyEmployee?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          {isLoadingHistory ? (
+            <div className="text-center py-8 text-sm text-slate-400">Loading history…</div>
+          ) : offerHistory.length === 0 ? (
+            <div className="text-center py-8 text-sm text-slate-400">No history found.</div>
+          ) : (
+            <div className="rounded-xl border border-slate-100 overflow-hidden">
+              <table className="w-full text-xs">
+                <thead className="bg-slate-50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Status</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Sent</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Created</th>
+                    <th className="px-3 py-2 text-left font-semibold text-slate-500">Type</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {offerHistory.map(h => (
+                    <tr key={h.id} className={h.isCurrent ? 'bg-emerald-50/40' : 'hover:bg-slate-50'}>
+                      <td className="px-3 py-2.5">
+                        <StatusBadge status={h.status} />
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500">
+                        {h.sentAt ? new Date(h.sentAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-3 py-2.5 text-slate-500">
+                        {h.createdAt ? new Date(h.createdAt).toLocaleDateString() : '—'}
+                      </td>
+                      <td className="px-3 py-2.5">
+                        {h.isCurrent
+                          ? <span className="text-emerald-700 font-semibold">Current</span>
+                          : <span className="text-slate-400">Historical</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => { setHistoryEmployee(null); setOfferHistory([]); }} className="rounded-xl">Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

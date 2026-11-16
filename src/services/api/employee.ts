@@ -189,7 +189,8 @@ export const EmployeeService = {
     employeeType?: string;
     joinedOn?: string;
     schoolId: string;
-  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string; offerLetterRequired?: boolean }> {
+    customFields?: Record<string, string>;
+  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string; offerLetterRequired?: boolean; offerLetterSent?: boolean }> {
     const data = await authedFetch(
       {
         method: 'POST',
@@ -204,6 +205,8 @@ export const EmployeeService = {
           address: employeeData.address,
           employee_type: employeeData.employeeType,
           joined_on: employeeData.joinedOn,
+          custom_fields: employeeData.customFields && Object.keys(employeeData.customFields).length > 0
+            ? employeeData.customFields : undefined,
         },
       },
       z.any(),
@@ -215,6 +218,7 @@ export const EmployeeService = {
       emailSent: data.email_sent,
       message: data.message,
       offerLetterRequired: data.offer_letter_required ?? false,
+      offerLetterSent: data.offer_letter_sent ?? undefined,
     };
   },
 

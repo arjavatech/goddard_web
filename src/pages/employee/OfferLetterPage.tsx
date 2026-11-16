@@ -6,7 +6,7 @@ import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
-import { FileText, ExternalLink, Download, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { FileText, ExternalLink, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 function StatusSection({ offer }: { offer: OfferLetter }) {
   switch (offer.status) {
@@ -103,6 +103,8 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
 export function OfferLetterPage() {
   const { userData } = useUserContext();
   const [offer, setOffer] = useState<OfferLetter | null>(null);
+  const [pastOffers, setPastOffers] = useState<OfferLetter[]>([]);
+  const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -119,8 +121,13 @@ export function OfferLetterPage() {
       return;
     }
 
-    OfferLetterService.getOfferLetter(employeeId, schoolId)
-      .then(setOffer)
+    OfferLetterService.getOfferLetterHistory(employeeId, schoolId)
+      .then(history => {
+        const current = history.find(o => o.isCurrent) ?? history[0] ?? null;
+        const past = history.filter(o => !o.isCurrent);
+        setOffer(current);
+        setPastOffers(past);
+      })
       .catch(err => setError(err.message || 'Failed to load offer letter'))
       .finally(() => setLoading(false));
   }, [schoolId]);
@@ -178,22 +185,68 @@ export function OfferLetterPage() {
             </Card>
 
             {/* Offer details */}
-            <Card className="rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Offer Details</p>
-              <div className="grid grid-cols-2 gap-2">
-                <InfoRow label="Role" value={offer.role} />
-                <InfoRow label="Joining Date" value={offer.joiningDate} />
-                {offer.salary != null && (
-                  <InfoRow label="Salary" value={`${offer.salaryCurrency ?? 'USD'} ${offer.salary.toLocaleString()}`} />
-                )}
-              </div>
-              {offer.additionalNotes && (
-                <div className="bg-slate-50 rounded-xl px-3 py-2.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-0.5">Notes</p>
-                  <p className="text-sm text-slate-700 whitespace-pre-wrap">{offer.additionalNotes}</p>
+            {offer.customFields && Object.keys(offer.customFields).length > 0 && (
+              <Card className="rounded-2xl border border-slate-100 shadow-sm p-5 space-y-3">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">Offer Details</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {Object.entries(offer.customFields).map(([key, value]) => {
+                    const fields = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
+                    const field = fields.find((f: any) => f.filloutParam === key);
+                    const label = field?.label ?? key;
+                    return <InfoRow key={key} label={label} value={String(value)} />;
+                  })}
                 </div>
-              )}
-            </Card>
+              </Card>
+            )}
+
+            {/* Past Offers */}
+            {pastOffers.length > 0 && (
+              <Card className="rounded-2xl border border-slate-100 shadow-sm p-5">
+                <button
+                  onClick={() => setShowPastOffers(v => !v)}
+                  className="flex items-center justify-between w-full"
+                >
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Past Offers ({pastOffers.length})
+                  </p>
+                  {showPastOffers
+                    ? <ChevronUp className="w-4 h-4 text-slate-400" />
+                    : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                </button>
+                {showPastOffers && (
+                  <div className="mt-3 space-y-2">
+                    {pastOffers.map(past => (
+                      <div key={past.id} className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-xl">
+                        <div>
+                          <p className="text-xs font-semibold text-slate-700">
+                            {past.sentAt
+                              ? `Sent ${new Date(past.sentAt).toLocaleDateString()}`
+                              : past.createdAt
+                                ? `Created ${new Date(past.createdAt).toLocaleDateString()}`
+                                : 'No date'}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            past.status === 'approved' || past.status === 'active' ? 'success'
+                              : past.status === 'offer_accepted' ? 'warning'
+                              : past.status === 'offer_rejected' || past.status === 'rejected' ? 'destructive'
+                              : 'secondary'
+                          }
+                          className="text-[10px] font-bold rounded-full px-2 py-0.5"
+                        >
+                          {past.status === 'approved' || past.status === 'active' ? 'Approved'
+                            : past.status === 'offer_accepted' ? 'Accepted'
+                            : past.status === 'offer_rejected' || past.status === 'rejected' ? 'Rejected'
+                            : past.status === 'offer_sent' ? 'Sent'
+                            : 'Draft'}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Card>
+            )}
           </div>
         )}
       </div>

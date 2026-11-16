@@ -910,13 +910,13 @@ export function EmployeeDetails() {
                     ) : (
                       <div className="space-y-2">
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                          <div><span className="text-slate-400">Role: </span><span className="text-slate-700 font-medium">{offerLetter.role}</span></div>
-                          {offerLetter.salary && (
-                            <div><span className="text-slate-400">Salary: </span><span className="text-slate-700 font-medium">{offerLetter.salaryCurrency ?? 'USD'} {offerLetter.salary.toLocaleString()}</span></div>
-                          )}
-                          {offerLetter.joiningDate && (
-                            <div><span className="text-slate-400">Joining: </span><span className="text-slate-700 font-medium">{offerLetter.joiningDate}</span></div>
-                          )}
+                          {offerLetter.customFields && Object.entries(offerLetter.customFields).map(([key, value]) => {
+                            const field = offerLetterFields?.find((f: any) => f.filloutParam === key);
+                            const label = field?.label ?? key;
+                            return (
+                              <div key={key}><span className="text-slate-400">{label}: </span><span className="text-slate-700 font-medium">{String(value)}</span></div>
+                            );
+                          })}
                           {offerLetter.sentAt && (
                             <div><span className="text-slate-400">Sent: </span><span className="text-slate-700 font-medium">{new Date(offerLetter.sentAt).toLocaleDateString()}</span></div>
                           )}

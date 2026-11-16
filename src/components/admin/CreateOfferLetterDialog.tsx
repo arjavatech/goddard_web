@@ -40,11 +40,6 @@ export function CreateOfferLetterDialog({
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [role, setRole] = useState('');
-  const [salary, setSalary] = useState('');
-  const [salaryCurrency, setSalaryCurrency] = useState('USD');
-  const [joiningDate, setJoiningDate] = useState('');
-  const [additionalNotes, setAdditionalNotes] = useState('');
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -59,22 +54,12 @@ export function CreateOfferLetterDialog({
       setLastName(existingOffer.lastName);
       setEmail(existingOffer.email);
       setPhone(existingOffer.phone ?? '');
-      setRole(existingOffer.role);
-      setSalary(existingOffer.salary?.toString() ?? '');
-      setSalaryCurrency(existingOffer.salaryCurrency ?? 'USD');
-      setJoiningDate(existingOffer.joiningDate ?? '');
-      setAdditionalNotes(existingOffer.additionalNotes ?? '');
       setCustomFields(existingOffer.customFields ?? {});
     } else {
       setFirstName(prefill?.firstName ?? '');
       setLastName(prefill?.lastName ?? '');
       setEmail(prefill?.email ?? '');
       setPhone('');
-      setRole('');
-      setSalary('');
-      setSalaryCurrency('USD');
-      setJoiningDate('');
-      setAdditionalNotes('');
       setCustomFields({});
     }
   }, [open, existingOffer, prefill]);
@@ -83,7 +68,7 @@ export function CreateOfferLetterDialog({
     .filter(f => f.required)
     .every(f => !!customFields[f.filloutParam]?.trim());
 
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && role.trim() && requiredCustomFieldsFilled;
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && requiredCustomFieldsFilled;
 
   async function saveOrUpdate() {
     const nonEmptyCustomFields = Object.fromEntries(
@@ -95,11 +80,6 @@ export function CreateOfferLetterDialog({
       lastName: lastName.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
-      role: role.trim(),
-      salary: salary ? parseFloat(salary) : undefined,
-      salaryCurrency: salaryCurrency || undefined,
-      joiningDate: joiningDate || undefined,
-      additionalNotes: additionalNotes.trim() || undefined,
       customFields: Object.keys(nonEmptyCustomFields).length > 0 ? nonEmptyCustomFields : undefined,
     };
 
@@ -196,48 +176,6 @@ export function CreateOfferLetterDialog({
             <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" className="h-10 rounded-xl" />
           </div>
 
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Role / Position <span className="text-red-500">*</span></label>
-            <Input value={role} onChange={e => setRole(e.target.value)} placeholder="e.g. Lead Teacher" className="h-10 rounded-xl" />
-          </div>
-
-          {/* Salary row */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-2">
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Salary</label>
-              <Input type="number" value={salary} onChange={e => setSalary(e.target.value)} placeholder="50000" className="h-10 rounded-xl" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Currency</label>
-              <select
-                value={salaryCurrency}
-                onChange={e => setSalaryCurrency(e.target.value)}
-                className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20"
-              >
-                <option value="USD">USD</option>
-                <option value="CAD">CAD</option>
-                <option value="EUR">EUR</option>
-                <option value="GBP">GBP</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Joining Date</label>
-            <Input type="date" value={joiningDate} onChange={e => setJoiningDate(e.target.value)} className="h-10 rounded-xl" />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Additional Notes</label>
-            <textarea
-              value={additionalNotes}
-              onChange={e => setAdditionalNotes(e.target.value)}
-              placeholder="Any additional details for the employee..."
-              rows={3}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20 resize-none"
-            />
-          </div>
-
           {offerLetterFields && offerLetterFields.length > 0 && (
             <>
               <div className="border-t border-slate-100 pt-4">
@@ -268,15 +206,20 @@ export function CreateOfferLetterDialog({
             Cancel
           </Button>
           <Button variant="outline" onClick={handleSaveDraft} disabled={!isFormValid || isSavingDraft || isSending} className="rounded-xl">
-            {isSavingDraft ? 'Saving…' : 'Save Draft'}
+            {isSavingDraft ? 'Saving…' : (isEditing ? 'Save Changes' : 'Save Draft')}
           </Button>
           <AsyncButton
             onClick={handleSendOffer}
             disabled={!isFormValid || !schoolFormId || isSending || isSavingDraft}
             className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white gap-2"
           >
-            <Send className="w-4 h-4" /> Send Offer Letter
+            <Send className="w-4 h-4" /> {isEditing ? 'Save & Resend Email' : 'Send Offer Letter'}
           </AsyncButton>
+          {isEditing && (
+            <p className="w-full text-center text-xs text-slate-500 mt-1">
+              "Save Changes" updates fields only. "Save &amp; Resend Email" also sends a new email to the employee.
+            </p>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

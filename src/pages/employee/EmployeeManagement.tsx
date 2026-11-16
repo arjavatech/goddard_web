@@ -20,7 +20,7 @@ import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Cloc
 import { useNavigate } from 'react-router-dom';
 import { CreateOfferLetterDialog } from '../../components/admin/CreateOfferLetterDialog';
 import { OfferLetterDetailDialog } from '../../components/admin/OfferLetterDetailDialog';
-import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
+import { OfferLetterService, type OfferLetter, type OfferLetterField } from '../../services/api/offerLetter';
 
 export function EmployeeManagement() {
   const navigate = useNavigate();
@@ -46,6 +46,9 @@ export function EmployeeManagement() {
   const [offerDetailEmployee, setOfferDetailEmployee] = useState<Employee | null>(null);
   const [offerDetail, setOfferDetail] = useState<OfferLetter | null>(null);
   const [isOfferDetailOpen, setIsOfferDetailOpen] = useState(false);
+  const [inviteStep, setInviteStep] = useState(1);
+  const [editOfferLetter, setEditOfferLetter] = useState<OfferLetter | null>(null);
+  const [editOfferCustomFields, setEditOfferCustomFields] = useState<Record<string, string>>({});
 
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
@@ -56,6 +59,7 @@ export function EmployeeManagement() {
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
+  const [offerCustomFields, setOfferCustomFields] = useState<Record<string, string>>({});
 
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -169,6 +173,7 @@ export function EmployeeManagement() {
   const { userData, schoolSubdomain } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
   const isOfferLetterEnabled = userData?.schoolData?.features.offerLetterEnabled === true;
+  const offerLetterFields: OfferLetterField[] = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
 
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -230,13 +235,39 @@ export function EmployeeManagement() {
     }
   };
 
-  const isFormValid = empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn;
+  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn);
+
+  const normalize = (s: string) => s.toLowerCase().replace(/[_\-\s]/g, '');
+  const getAutoFill = (filloutParam: string): string | null => {
+    const p = normalize(filloutParam);
+    if (['name', 'fullname', 'employeename'].includes(p)) return `${empFirstName} ${empLastName}`.trim();
+    if (['firstname'].includes(p)) return empFirstName.trim();
+    if (['lastname'].includes(p)) return empLastName.trim();
+    if (['email'].includes(p)) return empEmail.trim();
+    if (['phone', 'phonenumber'].includes(p)) return empPhone.trim();
+    if (['joiningdate', 'joindate', 'startdate', 'date'].includes(p)) return empJoinedOn;
+    return null;
+  };
+
+  const step2Valid = offerLetterFields
+    .filter(f => f.required && getAutoFill(f.filloutParam) === null)
+    .every(f => !!offerCustomFields[f.filloutParam]?.trim());
 
   const handleInviteEmployee = async () => {
     if (!isFormValid || !userData?.schoolId) return;
 
     setIsInviting(true);
     try {
+      const manualFields = Object.fromEntries(
+        Object.entries(offerCustomFields).filter(([, v]) => v.trim() !== '')
+      );
+      const autoFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null) as [string, string][]
+      );
+      const mergedCustomFields = { ...autoFields, ...manualFields };
+
       const result = await EmployeeService.inviteEmployee({
         firstName: empFirstName.trim(),
         lastName: empLastName.trim(),
@@ -247,6 +278,7 @@ export function EmployeeManagement() {
         employeeType: empType,
         joinedOn: empJoinedOn,
         schoolId: userData.schoolId,
+        customFields: Object.keys(mergedCustomFields).length > 0 ? mergedCustomFields : undefined,
       });
 
       setIsAddDialogOpen(false);
@@ -254,14 +286,15 @@ export function EmployeeManagement() {
       setEmployees(refreshedData);
 
       if (result.offerLetterRequired) {
-        const newEmp = refreshedData.find(e => e.id === result.employeeId) || null;
-        setOfferLetterEmployee(newEmp);
-        setIsCreateOfferOpen(true);
-        showToast('success', 'Employee added. Create and send their offer letter.');
+        if (result.offerLetterSent) {
+          showToast('success', 'Employee added and offer letter sent.');
+        } else {
+          showToast('success', 'Employee added. Set a Form URL to send the offer letter.');
+        }
       } else {
         showToast('success', 'Employee invited successfully');
-        resetForm();
       }
+      resetForm();
     } catch (err: any) {
       if (err.message.includes('already exists')) {
         setEmailError('Email already exists');
@@ -285,7 +318,17 @@ export function EmployeeManagement() {
     setEmpJoinedOn(emp.joinedOn);
     setEmailError('');
     setPhoneError('');
+    setEditOfferLetter(null);
+    setEditOfferCustomFields({});
     setIsEditDialogOpen(true);
+    if (emp.offerStatus && userData?.schoolId) {
+      OfferLetterService.getOfferLetter(emp.id, userData.schoolId)
+        .then(offer => {
+          setEditOfferLetter(offer);
+          setEditOfferCustomFields(offer.customFields ?? {});
+        })
+        .catch(() => {});
+    }
   };
 
   const handleUpdateEmployee = async () => {
@@ -299,6 +342,12 @@ export function EmployeeManagement() {
         employeeType: empType,
         joinedOn: empJoinedOn,
       });
+
+      if (editOfferLetter && Object.keys(editOfferCustomFields).length > 0) {
+        await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
+          customFields: editOfferCustomFields,
+        });
+      }
 
       setEmployees(employees.map(e => {
         if (e.id === selectedEmployee.id) {
@@ -433,6 +482,10 @@ export function EmployeeManagement() {
     setEmpJoinedOn('');
     setEmailError('');
     setPhoneError('');
+    setOfferCustomFields({});
+    setInviteStep(1);
+    setEditOfferLetter(null);
+    setEditOfferCustomFields({});
   };
 
   if (isLoading && employees.length === 0) {
@@ -768,76 +821,106 @@ export function EmployeeManagement() {
 
         {/* Invite Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsAddDialogOpen(false);
-            resetForm();
-          }
+          if (!open) { setIsAddDialogOpen(false); resetForm(); }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-lg font-bold text-slate-900">Invite New Employee</DialogTitle>
+          <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+            <DialogHeader className="mb-3">
+              <DialogTitle className="text-lg font-bold text-slate-900">
+                {isOfferLetterEnabled ? (inviteStep === 1 ? 'Employee Details' : 'Offer Letter') : 'Invite New Employee'}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
-                  <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
+
+            {isOfferLetterEnabled && (
+              <div className="mb-4">
+                <div className="flex gap-1.5 mb-1.5">
+                  <div className={`h-1 flex-1 rounded-full transition-colors ${inviteStep >= 1 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-colors ${inviteStep >= 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Step {inviteStep} of 2 — {inviteStep === 1 ? 'Employee Details' : 'Offer Letter'}
+                </p>
+              </div>
+            )}
+
+            {inviteStep === 1 && (
+              <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                    <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                    <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
-                  <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
+                  <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
+                  {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
-                <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
-                {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
-                <PhoneInput
-                  value={empPhone}
-                  country={empPhoneCountry}
-                  onCountryChange={(val) => {
-                    setEmpPhoneCountry(val);
-                  }}
-                  onChange={(val) => {
-                    setEmpPhone(val);
-                    if (phoneError) setPhoneError('');
-                  }}
-                  onBlur={() => {
-                    if (empPhone && !validatePhoneNumber(empPhone)) {
-                      setPhoneError('Please enter a valid phone number');
-                    }
-                  }}
-                  error={!!phoneError}
-                />
-                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
-                <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {/* <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Type</label>
-                  <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
-                    <option value="Full Time">Full Time</option>
-                    <option value="Part Time">Part Time</option>
-                    <option value="Contractor">Contractor</option>
-                  </select>
-                </div> */}
+                <div>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                  <PhoneInput
+                    value={empPhone}
+                    country={empPhoneCountry}
+                    onCountryChange={(val) => setEmpPhoneCountry(val)}
+                    onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
+                    onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                    error={!!phoneError}
+                  />
+                  {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
+                  <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
+                </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>
-            </div>
+            )}
+
+            {inviteStep === 2 && (
+              <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {offerLetterFields.filter(f => getAutoFill(f.filloutParam) === null).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">All details carried over from Step 1.</p>
+                ) : (
+                  offerLetterFields
+                    .filter(f => getAutoFill(f.filloutParam) === null)
+                    .map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={offerCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          placeholder={field.type === 'number' ? '0.00' : field.label}
+                          className="w-full h-10 rounded-xl"
+                        />
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+
             <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleInviteEmployee} disabled={isInviting || !isFormValid} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
-                {isInviting ? 'Sending...' : 'Send Invite'}
-              </Button>
+              <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }}>Cancel</Button>
+              {isOfferLetterEnabled && inviteStep === 2 && (
+                <Button variant="outline" onClick={() => setInviteStep(1)}>← Back</Button>
+              )}
+              {isOfferLetterEnabled && inviteStep === 1 ? (
+                <Button onClick={() => setInviteStep(2)} disabled={!isFormValid} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
+                  Next →
+                </Button>
+              ) : (
+                <Button onClick={handleInviteEmployee} disabled={isInviting || !isFormValid || (isOfferLetterEnabled && !step2Valid)} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
+                  {isInviting ? 'Adding…' : isOfferLetterEnabled ? 'Add Employee' : 'Send Invite'}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -908,6 +991,28 @@ export function EmployeeManagement() {
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>
+
+              {editOfferLetter && offerLetterFields.length > 0 && (
+                <div className="border-t border-slate-100 pt-4">
+                  <p className="text-xs font-bold uppercase text-slate-500 mb-3">Offer Letter Details</p>
+                  <div className="space-y-3">
+                    {offerLetterFields.map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={editOfferCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          placeholder={field.type === 'number' ? '0.00' : field.label}
+                          className="h-10 rounded-xl"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <DialogFooter className="mt-6">
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
@@ -1102,6 +1207,7 @@ export function EmployeeManagement() {
               onOpenChange={setIsOfferDetailOpen}
               offer={offerDetail}
               schoolId={userData?.schoolId ?? ''}
+              offerLetterFields={(userData?.schoolData?.settings as any)?.offer_letter_fields}
               onUpdated={async (updated) => {
                 setOfferDetail(updated);
                 if (userData?.schoolId) {
