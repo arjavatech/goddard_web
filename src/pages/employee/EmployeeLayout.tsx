@@ -74,6 +74,17 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
 
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/employee|\/profile)/, '');
 
+  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+
+  const isOfferPending = employeeOfferStatus != null && OFFER_PENDING_STATUSES.includes(employeeOfferStatus) && isEmployeeActive !== true;
+
+  useEffect(() => {
+    if (employeeOfferStatus === undefined) return;
+    if (!isOfferPending) return;
+    if (currentPath === '/employee/offer-letter') return;
+    navigate(`${schoolPrefix}/employee/offer-letter`, { replace: true });
+  }, [employeeOfferStatus, isOfferPending, currentPath, schoolPrefix, navigate]);
+
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/employee/dashboard') return currentPath === '/employee/dashboard';
     if (normalizedItemPath === '/employee/requests') return currentPath === '/employee/requests';
@@ -81,10 +92,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
-  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
-
   // Already-active employees are never portal-restricted, even if they have a draft retroactive offer letter
-  const isOfferPending = employeeOfferStatus != null && OFFER_PENDING_STATUSES.includes(employeeOfferStatus) && isEmployeeActive !== true;
   const hasOfferStatus = employeeOfferStatus != null;
 
   const offerOnlyItems: Array<{ icon: React.ReactNode; label: string; path: string; badge?: number }> = [
