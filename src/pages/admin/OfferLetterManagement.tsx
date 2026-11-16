@@ -13,8 +13,8 @@ import { DataTable } from '../../components/ui/data-table';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { usePageSize } from '../../hooks/usePageSize';
 import {
-  FileText, Settings, AlertCircle, MoreHorizontal, Send, Edit,
-  RefreshCw, CheckCircle, X, Search, Filter, Mail,
+  FileText, Settings, AlertCircle, MoreHorizontal, Send, Edit, Pencil,
+  RefreshCw, CheckCircle, X, Search, Filter, Mail, Trash2,
 } from 'lucide-react';
 
 function statusLabel(s: string) {
@@ -60,14 +60,19 @@ export function OfferLetterManagement() {
 
   // ── Config ────────────────────────────────────────────────────────────────
   const [offerFormId, setOfferFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
+  const [confirmedFormId, setConfirmedFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
   const [isSavingFormId, setIsSavingFormId] = useState(false);
   const initialFields: OfferLetterField[] = ((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? [];
   const [offerLetterFields, setOfferLetterFields] = useState<OfferLetterField[]>(initialFields);
   const [isSavingFields, setIsSavingFields] = useState(false);
   const [newField, setNewField] = useState<Partial<OfferLetterField>>({ type: 'text', required: false });
+  const [editingFieldParam, setEditingFieldParam] = useState<string | null>(null);
+  const [deleteFieldConfirm, setDeleteFieldConfirm] = useState<OfferLetterField | null>(null);
+  const [isDeletingField, setIsDeletingField] = useState(false);
 
   useEffect(() => {
     setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
+    setConfirmedFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
     setOfferLetterFields(((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? []);
   }, [userData?.schoolData?.offerLetterFilloutFormId, userData?.schoolData?.settings]);
 
@@ -99,6 +104,7 @@ export function OfferLetterManagement() {
     setIsSavingFormId(true);
     try {
       await OfferLetterService.updateOfferLetterConfig(schoolId, offerFormId.trim());
+      setConfirmedFormId(offerFormId.trim());
       showToast('success', 'Offer letter form ID saved');
     } catch (err: any) {
       showToast('error', err.message || 'Failed to save form ID');
@@ -116,8 +122,34 @@ export function OfferLetterManagement() {
       filloutParam: newField.filloutParam!.trim(),
       required: newField.required ?? false,
     };
-    setOfferLetterFields(prev => [...prev, field]);
+    if (editingFieldParam) {
+      setOfferLetterFields(prev => prev.map(f => f.filloutParam === editingFieldParam ? field : f));
+      setEditingFieldParam(null);
+    } else {
+      setOfferLetterFields(prev => [...prev, field]);
+    }
     setNewField({ type: 'text', required: false });
+  };
+
+  const handleEditField = (field: OfferLetterField) => {
+    setNewField({ label: field.label, type: field.type, filloutParam: field.filloutParam, required: field.required });
+    setEditingFieldParam(field.filloutParam);
+  };
+
+  const handleConfirmDeleteField = async () => {
+    if (!deleteFieldConfirm || !schoolId) return;
+    setIsDeletingField(true);
+    try {
+      const updated = offerLetterFields.filter(f => f.filloutParam !== deleteFieldConfirm.filloutParam);
+      await OfferLetterService.updateOfferLetterConfig(schoolId, undefined, updated);
+      setOfferLetterFields(updated);
+      showToast('success', 'Field removed');
+      setDeleteFieldConfirm(null);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to remove field');
+    } finally {
+      setIsDeletingField(false);
+    }
   };
 
   const handleSaveFields = async () => {
@@ -234,7 +266,7 @@ export function OfferLetterManagement() {
 
           {/* Form ID */}
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Fillout Form ID</p>
-          {!userData?.schoolData?.offerLetterFilloutFormId && (
+          {!confirmedFormId && (
             <div className="mb-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
               <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
               <p className="text-xs text-amber-700">No form configured — offer letters cannot be sent until this is set.</p>
@@ -279,16 +311,22 @@ export function OfferLetterManagement() {
                   </thead>
                   <tbody>
                     {offerLetterFields.map(field => (
-                      <tr key={field.filloutParam} className="border-t border-slate-50">
+                      <tr key={field.filloutParam} className={`border-t border-slate-50 ${editingFieldParam === field.filloutParam ? 'bg-blue-50/50' : ''}`}>
                         <td className="px-3 py-2 text-slate-800">{field.label}</td>
                         <td className="px-3 py-2 text-slate-500 capitalize">{field.type}</td>
                         <td className="px-3 py-2 font-mono text-slate-600">{field.filloutParam}</td>
                         <td className="px-3 py-2 text-center">{field.required ? '✓' : '—'}</td>
                         <td className="px-2 py-2">
-                          <button onClick={() => setOfferLetterFields(prev => prev.filter(f => f.filloutParam !== field.filloutParam))}
-                            className="text-slate-300 hover:text-red-400 transition-colors" title="Remove">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => handleEditField(field)}
+                              className="text-slate-300 hover:text-blue-500 transition-colors" title="Edit">
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button onClick={() => setDeleteFieldConfirm(field)}
+                              className="text-slate-300 hover:text-red-400 transition-colors" title="Delete">
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -326,11 +364,17 @@ export function OfferLetterManagement() {
                     className="accent-[#0F2D52]" />
                 </label>
               </div>
-              <div className="col-span-2">
+              <div className="col-span-2 flex flex-col gap-1">
                 <Button onClick={handleAddField} disabled={!newField.label?.trim() || !newField.filloutParam?.trim()}
-                  className="w-full h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs">
-                  + Add
+                  className={`w-full h-8 rounded-lg text-xs ${editingFieldParam ? 'bg-[#0F2D52] hover:bg-[#1c477c] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}>
+                  {editingFieldParam ? 'Update' : '+ Add'}
                 </Button>
+                {editingFieldParam && (
+                  <button onClick={() => { setEditingFieldParam(null); setNewField({ type: 'text', required: false }); }}
+                    className="text-xs text-slate-400 hover:text-slate-600 text-center">
+                    Cancel
+                  </button>
+                )}
               </div>
             </div>
             {offerLetterFields.length > 0 && (
@@ -474,6 +518,25 @@ export function OfferLetterManagement() {
           />
         </div>
       </div>
+
+      {/* Delete custom field confirmation */}
+      <Dialog open={!!deleteFieldConfirm} onOpenChange={v => { if (!v) setDeleteFieldConfirm(null); }}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base font-bold text-slate-900">Remove Custom Field</DialogTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Remove <strong>{deleteFieldConfirm?.label}</strong> (<span className="font-mono">{deleteFieldConfirm?.filloutParam}</span>)? This will also save the updated field list immediately.
+            </p>
+          </DialogHeader>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setDeleteFieldConfirm(null)} disabled={isDeletingField} className="rounded-xl">Cancel</Button>
+            <Button onClick={handleConfirmDeleteField} disabled={isDeletingField}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white">
+              {isDeletingField ? 'Removing…' : 'Remove'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Send confirmation dialog */}
       <Dialog open={!!sendingOffer} onOpenChange={v => { if (!v) setSendingOffer(null); }}>
