@@ -50,6 +50,11 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const hasElevatedAccess = isSuperAdmin || isOwner;
   const hasPermission = (perm: string) => hasElevatedAccess || adminPermissions.includes(perm);
 
+  const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'offer_accepted'];
+  const isAdminOfferPending = schoolFeatures?.offerLetterEnabled === true
+    && !!userData?.offerStatus
+    && OFFER_PENDING_STATUSES.includes(userData.offerStatus);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -134,6 +139,18 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   };
 
   const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+
+  // Offer letter gate: redirect admin to offer letter page when their offer is pending
+  useEffect(() => {
+    if (!isReady) return;
+    if (!isAdminOfferPending) return;
+    if (currentPath === '/admin/offer-letter' || currentPath.startsWith('/admin/offer-letter/')) return;
+    navigate(`${schoolPrefix}/admin/offer-letter`, { replace: true });
+  }, [isReady, isAdminOfferPending, currentPath, schoolPrefix, navigate]);
+
+  const offerOnlyNavItems = [
+    { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letter', path: `${schoolPrefix}/admin/offer-letter` },
+  ];
 
   const navGroups = [
     // ── Dashboard (no label = no header, never collapsible) ──────────────────
@@ -303,7 +320,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             </button>
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4 pb-2">
-            {navGroups.map((group, gi) => {
+            {isAdminOfferPending ? (
+              <div className="space-y-0.5">
+                {offerOnlyNavItems.map((item, i) => {
+                  const isActive = currentPath === '/admin/offer-letter' || currentPath.startsWith('/admin/offer-letter/');
+                  return (
+                    <Link key={i} to={item.path} onClick={() => setIsSidebarOpen(false)}
+                      className={cn(
+                        'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group',
+                        isActive ? 'bg-[#EFF5FB] text-[#0F2D52] shadow-xs' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                      )}
+                    >
+                      {item.icon}
+                      <span className="text-sm font-semibold">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : navGroups.map((group, gi) => {
               const isCollapsible = group.label !== '';
               const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
               return (
@@ -385,7 +419,24 @@ export function AdminLayout({ children }: AdminLayoutProps) {
             />
           </div>
           <nav className="flex-1 px-3 overflow-y-auto scrollbar-thin pt-4">
-            {navGroups.map((group, gi) => {
+            {isAdminOfferPending ? (
+              <div className="space-y-0.5">
+                {offerOnlyNavItems.map((item, i) => {
+                  const isActive = currentPath === '/admin/offer-letter' || currentPath.startsWith('/admin/offer-letter/');
+                  return (
+                    <Link key={i} to={item.path}
+                      className={cn(
+                        'relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-250 ease-in-out group',
+                        isActive ? 'bg-white/10 text-white shadow-sm' : 'text-slate-400 hover:text-white hover:bg-white/8'
+                      )}
+                    >
+                      <span className={cn('flex-shrink-0 transition-colors', isActive ? 'text-blue-400' : 'text-slate-500 group-hover:text-slate-200')}>{item.icon}</span>
+                      <span className={cn('min-w-0 text-sm leading-5', isActive ? 'font-semibold text-white' : 'font-medium group-hover:text-white')}>{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : navGroups.map((group, gi) => {
               const isCollapsible = group.label !== '';
               const isCollapsed = isCollapsible && collapsedGroups.has(group.label);
               return (

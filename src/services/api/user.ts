@@ -45,6 +45,8 @@ export type UserContext = {
   taptimePin?: string | null;
   schoolData?: SchoolData | null;
   adminPermissions?: string[];
+  offerStatus?: string | null;
+  employeeId?: string | null;
 };
 
 const schoolSettingsSchema = z.object({
@@ -97,6 +99,8 @@ const userContextSchema = z.object({
   taptimePin: z.string().nullable().optional(),
   school_data: schoolDataSchema.nullable().optional(),
   admin_permissions: z.array(z.string()).nullable().optional(),
+  offer_status: z.string().nullable().optional(),
+  employee_id: z.string().nullable().optional(),
 }).passthrough();
 
 let inFlightUserContextRequest: Promise<UserContext> | null = null;
@@ -143,6 +147,8 @@ export async function fetchUserContext(): Promise<UserContext> {
         offerLetterFilloutFormId: data.school_data.offer_letter_fillout_form_id ?? undefined,
       } : null,
       adminPermissions: data.admin_permissions ?? [],
+      offerStatus: data.offer_status ?? null,
+      employeeId: data.employee_id ?? null,
     };
 
     if (!result.parentId && data.email) {
