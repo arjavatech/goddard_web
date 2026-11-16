@@ -5,6 +5,7 @@ import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
+import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
 import { FileText, ExternalLink, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -114,14 +115,10 @@ export function OfferLetterPage() {
     if (!schoolId) return;
     setLoading(true);
 
-    const employeeId = (userData as any)?.employeeId;
-    if (!employeeId) {
-      setError('Employee information not found.');
-      setLoading(false);
-      return;
-    }
-
-    OfferLetterService.getOfferLetterHistory(employeeId, schoolId)
+    EmployeeService.fetchCurrentEmployee(schoolId)
+      .then(employee =>
+        OfferLetterService.getOfferLetterHistory(employee.id, schoolId)
+      )
       .then(history => {
         const current = history.find(o => o.isCurrent) ?? history[0] ?? null;
         const past = history.filter(o => !o.isCurrent);
