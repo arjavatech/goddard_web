@@ -47,7 +47,7 @@ export function EmployeeManagement() {
   const [offerDetail, setOfferDetail] = useState<OfferLetter | null>(null);
   const [isOfferDetailOpen, setIsOfferDetailOpen] = useState(false);
   const [inviteStep, setInviteStep] = useState(1);
-  const [editOfferLetter, setEditOfferLetter] = useState<OfferLetter | null>(null);
+  const [editStep, setEditStep] = useState(1);
   const [editOfferCustomFields, setEditOfferCustomFields] = useState<Record<string, string>>({});
 
   // Form fields
@@ -318,17 +318,15 @@ export function EmployeeManagement() {
     setEmpJoinedOn(emp.joinedOn);
     setEmailError('');
     setPhoneError('');
-    setEditOfferLetter(null);
-    setEditOfferCustomFields({});
+    setEditOfferCustomFields(
+      emp.offerLetterCustomFields
+        ? Object.fromEntries(
+            Object.entries(emp.offerLetterCustomFields).map(([k, v]) => [k, String(v ?? '')])
+          )
+        : {}
+    );
+    setEditStep(1);
     setIsEditDialogOpen(true);
-    if (emp.offerStatus && userData?.schoolId) {
-      OfferLetterService.getOfferLetter(emp.id, userData.schoolId)
-        .then(offer => {
-          setEditOfferLetter(offer);
-          setEditOfferCustomFields(offer.customFields ?? {});
-        })
-        .catch(() => {});
-    }
   };
 
   const handleUpdateEmployee = async () => {
@@ -343,7 +341,7 @@ export function EmployeeManagement() {
         joinedOn: empJoinedOn,
       });
 
-      if (editOfferLetter && Object.keys(editOfferCustomFields).length > 0) {
+      if (selectedEmployee.offerStatus && Object.keys(editOfferCustomFields).length > 0) {
         await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
           customFields: editOfferCustomFields,
         });
@@ -484,7 +482,7 @@ export function EmployeeManagement() {
     setPhoneError('');
     setOfferCustomFields({});
     setInviteStep(1);
-    setEditOfferLetter(null);
+    setEditStep(1);
     setEditOfferCustomFields({});
   };
 
@@ -930,75 +928,86 @@ export function EmployeeManagement() {
           if (!open) {
             setIsEditDialogOpen(false);
             setSelectedEmployee(null);
+            setEditStep(1);
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-lg font-bold text-slate-900">Edit Employee</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">First Name</label>
-                  <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Last Name</label>
-                  <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Email (Cannot edit)</label>
-                <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
-                <PhoneInput
-                  value={empPhone}
-                  country={empPhoneCountry}
-                  onCountryChange={(val) => {
-                    setEmpPhoneCountry(val);
-                  }}
-                  onChange={(val) => {
-                    setEmpPhone(val);
-                    if (phoneError) setPhoneError('');
-                  }}
-                  onBlur={() => {
-                    if (empPhone && !validatePhoneNumber(empPhone)) {
-                      setPhoneError('Please enter a valid phone number');
-                    }
-                  }}
-                  error={!!phoneError}
-                />
-                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>
-                <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} className="w-full h-10 rounded-xl" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Type</label>
-                  <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
-                    <option value="Full Time">Full Time</option>
-                    <option value="Part Time">Part Time</option>
-                    <option value="Contractor">Contractor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Joined On</label>
-                  <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-              </div>
+          {(() => {
+            const showEditSteps = isOfferLetterEnabled && !!selectedEmployee?.offerStatus && offerLetterFields.length > 0;
+            return (
+              <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+                <DialogHeader className="mb-3">
+                  <DialogTitle className="text-lg font-bold text-slate-900">
+                    {showEditSteps ? (editStep === 1 ? 'Employee Details' : 'Offer Letter') : 'Edit Employee'}
+                  </DialogTitle>
+                </DialogHeader>
 
-              {editOfferLetter && offerLetterFields.length > 0 && (
-                <div className="border-t border-slate-100 pt-4">
-                  <p className="text-xs font-bold uppercase text-slate-500 mb-3">Offer Letter Details</p>
-                  <div className="space-y-3">
+                {showEditSteps && (
+                  <div className="mb-4">
+                    <div className="flex gap-1.5 mb-1.5">
+                      <div className={`h-1 flex-1 rounded-full transition-colors ${editStep >= 1 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                      <div className={`h-1 flex-1 rounded-full transition-colors ${editStep >= 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Step {editStep} of 2 — {editStep === 1 ? 'Employee Details' : 'Offer Letter'}
+                    </p>
+                  </div>
+                )}
+
+                {(!showEditSteps || editStep === 1) && (
+                  <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                        <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                        <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Email (Cannot edit)</label>
+                      <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                      <PhoneInput
+                        value={empPhone}
+                        country={empPhoneCountry}
+                        onCountryChange={(val) => setEmpPhoneCountry(val)}
+                        onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
+                        onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                        error={!!phoneError}
+                      />
+                      {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
+                      <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} className="w-full h-10 rounded-xl" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Type</label>
+                        <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
+                          <option value="Full Time">Full Time</option>
+                          <option value="Part Time">Part Time</option>
+                          <option value="Contractor">Contractor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                        <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {showEditSteps && editStep === 2 && (
+                  <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
                     {offerLetterFields.map(field => (
                       <div key={field.id}>
-                        <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
                           {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
                         </label>
                         <Input
@@ -1011,16 +1020,30 @@ export function EmployeeManagement() {
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
-            </div>
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
-                {isUpdating ? 'Updating...' : 'Update'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+                )}
+
+                <DialogFooter className="mt-6">
+                  <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); resetForm(); }}>Cancel</Button>
+                  {showEditSteps && editStep === 2 && (
+                    <Button variant="outline" onClick={() => setEditStep(1)}>← Back</Button>
+                  )}
+                  {showEditSteps && editStep === 1 ? (
+                    <Button
+                      onClick={() => setEditStep(2)}
+                      disabled={!isFormValid}
+                      className="bg-[#0F2D52] hover:bg-[#1c477c] text-white"
+                    >
+                      Next →
+                    </Button>
+                  ) : (
+                    <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
+                      {isUpdating ? 'Updating...' : 'Save Changes'}
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            );
+          })()}
         </Dialog>
 
         {isTapTimeEnabled && <Dialog open={!!pinEmployee} onOpenChange={(open) => {

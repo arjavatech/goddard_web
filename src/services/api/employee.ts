@@ -20,6 +20,7 @@ export type Employee = {
   taptimeEmployeeId?: string;
   taptimePin?: string;
   offerStatus?: string | null;
+  offerLetterCustomFields?: Record<string, any>;
 };
 
 export type EmployeeFormTemplate = {
@@ -95,6 +96,7 @@ function mapEmployee(raw: any): Employee {
     taptimeEmployeeId: raw.taptime_employee_id ?? undefined,
     taptimePin: raw.taptime_pin ?? undefined,
     offerStatus: raw.offer_status ?? null,
+    offerLetterCustomFields: raw.offer_letter_custom_fields ?? undefined,
   };
 }
 
