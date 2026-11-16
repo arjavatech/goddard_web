@@ -1060,6 +1060,9 @@ export type AdminUser = {
   taptime_employee_id?: string | null;
   taptime_pin?: string | null;
   permissions: string[];
+  employee_id?: string | null;
+  offer_status?: string | null;
+  offer_letter_custom_fields?: Record<string, any> | null;
 };
 
 export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
@@ -1081,7 +1084,10 @@ export async function fetchAdminUsers(schoolId: string): Promise<AdminUser[]> {
         phone_number: z.string().nullable().optional(),
         taptime_employee_id: z.string().nullable().optional(),
         taptime_pin: z.string().nullable().optional(),
-        permissions: z.array(z.string()).nullable().optional()
+        permissions: z.array(z.string()).nullable().optional(),
+        employee_id: z.string().nullable().optional(),
+        offer_status: z.string().nullable().optional(),
+        offer_letter_custom_fields: z.record(z.any()).nullable().optional(),
       }))
     }));
 

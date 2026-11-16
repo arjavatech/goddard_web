@@ -11,12 +11,13 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageLoader } from '../../components/ui/page-loader';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, updateAdminTapTimePin, type AdminUser } from '../../services/api/admin';
-import { type OfferLetterField } from '../../services/api/offerLetter';
+import { type OfferLetterField, OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
+import { OfferLetterDetailDialog } from '../../components/admin/OfferLetterDetailDialog';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, KeyRound } from 'lucide-react';
+import { Shield, Search, Plus, Edit, Trash2, Eye, MoreHorizontal, RefreshCw, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, KeyRound, FileText } from 'lucide-react';
 
 interface NetworkError {
   code?: string;
@@ -61,6 +62,9 @@ export function AdminManagement() {
   const [inviteStep, setInviteStep] = useState(1);
   const [editStep, setEditStep] = useState(1);
   const [inviteOfferCustomFields, setInviteOfferCustomFields] = useState<Record<string, string>>({});
+  const [editOfferCustomFields, setEditOfferCustomFields] = useState<Record<string, string>>({});
+  const [isOfferDetailOpen, setIsOfferDetailOpen] = useState(false);
+  const [offerDetail, setOfferDetail] = useState<OfferLetter | null>(null);
 
   const isOfferLetterEnabled = userData?.schoolData?.features.offerLetterEnabled === true;
   const offerLetterFields: OfferLetterField[] = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
@@ -159,6 +163,23 @@ export function AdminManagement() {
   const step3Valid = offerLetterFields
     .filter(f => f.required && getAdminAutoFill(f.filloutParam) === null)
     .every(f => !!inviteOfferCustomFields[f.filloutParam]?.trim());
+
+  const editStep3Valid = offerLetterFields
+    .filter(f => f.required && getAdminAutoFill(f.filloutParam) === null)
+    .every(f => !!editOfferCustomFields[f.filloutParam]?.trim());
+
+  const totalEditSteps = isOfferLetterEnabled && !!selectedAdmin?.offer_status && offerLetterFields.length > 0 ? 3 : 2;
+
+  const handleViewOfferLetter = async (admin: AdminUser) => {
+    if (!admin.employee_id || !userData?.schoolId) return;
+    try {
+      const offer = await OfferLetterService.getOfferLetter(admin.employee_id, userData.schoolId);
+      setOfferDetail(offer);
+      setIsOfferDetailOpen(true);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to load offer letter');
+    }
+  };
 
   const handleInviteAdmin = async () => {
     if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError) {
@@ -295,7 +316,12 @@ export function AdminManagement() {
         return opt ? !!schoolFeatures[opt.featureKey as keyof typeof schoolFeatures] : false;
       })
     );
-    setEmailError(''); // Clear any existing email errors
+    setEditOfferCustomFields(
+      admin.offer_letter_custom_fields
+        ? Object.fromEntries(Object.entries(admin.offer_letter_custom_fields).map(([k, v]) => [k, String(v ?? '')]))
+        : {}
+    );
+    setEmailError('');
     setIsEditDialogOpen(true);
   };
 
@@ -310,6 +336,12 @@ export function AdminManagement() {
         adminPhone.trim() || undefined,
         editPermissions
       );
+
+      if (selectedAdmin.employee_id && isOfferLetterEnabled && Object.keys(editOfferCustomFields).length > 0) {
+        await OfferLetterService.updateOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '', {
+          customFields: editOfferCustomFields,
+        });
+      }
 
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
@@ -364,6 +396,7 @@ export function AdminManagement() {
     setInviteStep(1);
     setEditStep(1);
     setInviteOfferCustomFields({});
+    setEditOfferCustomFields({});
   };
 
   if (isLoading && admins.length === 0) {
@@ -743,9 +776,29 @@ export function AdminManagement() {
                       })()}
                     </td>
                     <td className="py-4 px-4">
-                      <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                        {admin.is_verified ? 'Approved' : 'Pending'}
-                      </Badge>
+                      {isOfferLetterEnabled && admin.offer_status ? (
+                        <Badge
+                          variant={
+                            admin.offer_status === 'active' ? 'success' :
+                            admin.offer_status === 'offer_accepted' ? 'warning' :
+                            admin.offer_status === 'offer_sent' ? 'info' :
+                            (admin.offer_status === 'offer_rejected' || admin.offer_status === 'rejected') ? 'destructive' :
+                            'secondary'
+                          }
+                          className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
+                        >
+                          {admin.offer_status === 'draft' ? 'Draft' :
+                           admin.offer_status === 'offer_sent' ? 'Offer Sent' :
+                           admin.offer_status === 'offer_accepted' ? 'Awaiting Approval' :
+                           admin.offer_status === 'offer_rejected' ? 'Rejected by Employee' :
+                           admin.offer_status === 'active' ? 'Active' :
+                           admin.offer_status === 'rejected' ? 'Rejected' : admin.offer_status}
+                        </Badge>
+                      ) : (
+                        <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
+                          {admin.is_verified ? 'Active' : 'Pending'}
+                        </Badge>
+                      )}
                     </td>
                     <td className="py-4 px-4">
                       <DropdownMenu>
@@ -784,6 +837,11 @@ export function AdminManagement() {
                                   <RefreshCw className="w-4 h-4 mr-2 text-slate-400" /> Resend Invite
                                 </>
                               )}
+                            </DropdownMenuItem>
+                          )}
+                          {isOfferLetterEnabled && !!admin.offer_status && (
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewOfferLetter(admin)}>
+                              <FileText className="w-4 h-4 mr-2 text-slate-400" /> View Offer Letter
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-650 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
@@ -1011,10 +1069,13 @@ export function AdminManagement() {
             {/* Step indicator */}
             <div className="mb-5">
               <div className="flex gap-1.5 mb-1.5">
-                <div className="flex-1 h-1 rounded-full bg-[#0F2D52]" />
-                <div className={`flex-1 h-1 rounded-full ${editStep === 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                {Array.from({ length: totalEditSteps }, (_, i) => (
+                  <div key={i} className={`flex-1 h-1 rounded-full ${editStep > i ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                ))}
               </div>
-              <p className="text-xs text-slate-500">Step {editStep} of 2 — {editStep === 1 ? 'Basic Info' : 'Permissions'}</p>
+              <p className="text-xs text-slate-500">
+                Step {editStep} of {totalEditSteps} — {editStep === 1 ? 'Basic Info' : editStep === 2 ? 'Permissions' : 'Offer Letter'}
+              </p>
             </div>
 
             {editStep === 1 && (
@@ -1083,8 +1144,32 @@ export function AdminManagement() {
               </div>
             )}
 
+            {editStep === 3 && (
+              <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {offerLetterFields.filter(f => getAdminAutoFill(f.filloutParam) === null).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">All details carried over from Basic Info.</p>
+                ) : (
+                  offerLetterFields
+                    .filter(f => getAdminAutoFill(f.filloutParam) === null)
+                    .map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={editOfferCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                        />
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              {editStep === 1 ? (
+              {editStep === 1 && (
                 <>
                   <Button
                     variant="outline"
@@ -1101,7 +1186,8 @@ export function AdminManagement() {
                     Next: Permissions →
                   </Button>
                 </>
-              ) : (
+              )}
+              {editStep === 2 && (
                 <>
                   <Button
                     variant="outline"
@@ -1110,9 +1196,36 @@ export function AdminManagement() {
                   >
                     ← Back
                   </Button>
+                  {totalEditSteps === 3 ? (
+                    <Button
+                      onClick={() => setEditStep(3)}
+                      className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold"
+                    >
+                      Next: Offer Letter →
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleUpdateAdmin}
+                      disabled={isUpdatingAdmin}
+                      className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold flex items-center justify-center disabled:opacity-50"
+                    >
+                      {isUpdatingAdmin ? 'Updating...' : 'Update Admin'}
+                    </Button>
+                  )}
+                </>
+              )}
+              {editStep === 3 && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setEditStep(2)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    ← Back
+                  </Button>
                   <Button
                     onClick={handleUpdateAdmin}
-                    disabled={isUpdatingAdmin}
+                    disabled={isUpdatingAdmin || !editStep3Valid}
                     className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold flex items-center justify-center disabled:opacity-50"
                   >
                     {isUpdatingAdmin ? 'Updating...' : 'Update Admin'}
@@ -1246,6 +1359,22 @@ export function AdminManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {offerDetail && (
+          <OfferLetterDetailDialog
+            open={isOfferDetailOpen}
+            onOpenChange={setIsOfferDetailOpen}
+            offer={offerDetail}
+            schoolId={userData?.schoolId ?? ''}
+            offerLetterFields={offerLetterFields}
+            onUpdated={async (updated) => {
+              setOfferDetail(updated);
+              if (userData?.schoolId) {
+                const data = await fetchAdminUsers(userData.schoolId);
+                setAdmins(data);
+              }
+            }}
+          />
+        )}
       </div>
     </AdminLayout>
   );
