@@ -169,6 +169,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
           { icon: <Calendar className="w-[18px] h-[18px]" />, label: 'Employee Forms Due', path: `${schoolPrefix}/admin/employee-forms/due`, badge: employeeFormsDue },
           { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Review Employee Forms', path: `${schoolPrefix}/admin/employee-forms/review`, badge: employeeFormsReview },
         ] : []),
+        ...(schoolFeatures.offerLetterEnabled && hasPermission('manage_employees') ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letters', path: `${schoolPrefix}/admin/offer-letters` },
+          { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Offer Letter Review', path: `${schoolPrefix}/admin/offer-letters/review` },
+        ] : []),
       ],
     }] : []),
 

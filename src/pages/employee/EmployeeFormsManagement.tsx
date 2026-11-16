@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
-import { Card, CardContent } from '../../components/ui/card';
+import { CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown, Settings } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, LayoutGrid, List, Eye, CheckCircle, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, fetchSchoolMembers, assignFormToAdmin } from '../../services/api/employee';
-import { OfferLetterService, type OfferLetterField } from '../../services/api/offerLetter';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
@@ -101,63 +100,6 @@ export function EmployeeFormsManagement() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const schoolId = userData?.schoolId;
-  const offerLetterEnabled = userData?.schoolData?.features?.offerLetterEnabled ?? false;
-  const [offerFormId, setOfferFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
-  const [isSavingOfferFormId, setIsSavingOfferFormId] = useState(false);
-
-  const initialFields: OfferLetterField[] = ((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? [];
-  const [offerLetterFields, setOfferLetterFields] = useState<OfferLetterField[]>(initialFields);
-  const [isSavingFields, setIsSavingFields] = useState(false);
-  const [newField, setNewField] = useState<Partial<OfferLetterField>>({ type: 'text', required: false });
-
-  useEffect(() => {
-    setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
-    setOfferLetterFields(((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? []);
-  }, [userData?.schoolData?.offerLetterFilloutFormId, userData?.schoolData?.settings]);
-
-  const handleSaveOfferFormId = async () => {
-    if (!schoolId || !offerFormId.trim()) return;
-    setIsSavingOfferFormId(true);
-    try {
-      await OfferLetterService.updateOfferLetterConfig(schoolId, offerFormId.trim());
-      showToast('success', 'Offer letter form ID saved');
-    } catch (err: any) {
-      showToast('error', err.message || 'Failed to save offer letter form ID');
-    } finally {
-      setIsSavingOfferFormId(false);
-    }
-  };
-
-  const handleAddField = () => {
-    if (!newField.label?.trim() || !newField.filloutParam?.trim()) return;
-    const field: OfferLetterField = {
-      id: newField.filloutParam!.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(),
-      label: newField.label!.trim(),
-      type: newField.type ?? 'text',
-      filloutParam: newField.filloutParam!.trim(),
-      required: newField.required ?? false,
-    };
-    setOfferLetterFields(prev => [...prev, field]);
-    setNewField({ type: 'text', required: false });
-  };
-
-  const handleRemoveField = (filloutParam: string) => {
-    setOfferLetterFields(prev => prev.filter(f => f.filloutParam !== filloutParam));
-  };
-
-  const handleSaveFields = async () => {
-    if (!schoolId) return;
-    setIsSavingFields(true);
-    try {
-      await OfferLetterService.updateOfferLetterConfig(schoolId, undefined, offerLetterFields);
-      showToast('success', 'Custom fields saved');
-    } catch (err: any) {
-      showToast('error', err.message || 'Failed to save custom fields');
-    } finally {
-      setIsSavingFields(false);
-    }
-  };
-
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
     localStorage.setItem('empFormsViewMode', mode);
@@ -463,161 +405,6 @@ export function EmployeeFormsManagement() {
             <Plus className="h-4 w-4 mr-1.5" /> Add New Form
           </Button>
         </div>
-
-        {/* Offer Letter Form Configuration */}
-        {offerLetterEnabled && (
-          <div className="bg-white border border-slate-100 rounded-2xl shadow-xs p-5">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-7 h-7 bg-[#EFF5FB] rounded-lg flex items-center justify-center">
-                <Settings className="w-3.5 h-3.5 text-[#0F2D52]" />
-              </div>
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Offer Letter Form</h2>
-                <p className="text-xs text-slate-400">Fillout form used for all offer letters at this school</p>
-              </div>
-            </div>
-            {!userData?.schoolData?.offerLetterFilloutFormId && (
-              <div className="mb-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
-                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-                <p className="text-xs text-amber-700">No form configured — offer letters cannot be sent until this is set.</p>
-              </div>
-            )}
-            <div className="flex gap-2">
-              <Input
-                value={offerFormId}
-                onChange={e => setOfferFormId(e.target.value)}
-                placeholder="e.g. offer-letter-v2"
-                className="h-9 rounded-xl font-mono text-sm flex-1"
-              />
-              <Button
-                onClick={handleSaveOfferFormId}
-                disabled={isSavingOfferFormId || !offerFormId.trim()}
-                className="h-9 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4 shrink-0"
-              >
-                {isSavingOfferFormId ? 'Saving…' : 'Save'}
-              </Button>
-            </div>
-
-            {/* Custom Fields Schema Editor */}
-            <div className="mt-5 border-t border-slate-100 pt-4">
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-xs font-bold text-slate-900">Custom Fields</p>
-                  <p className="text-xs text-slate-400">School-specific fields added to every offer letter</p>
-                </div>
-                {offerLetterFields.length > 0 && (
-                  <Button
-                    onClick={handleSaveFields}
-                    disabled={isSavingFields}
-                    className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3 shrink-0"
-                  >
-                    {isSavingFields ? 'Saving…' : 'Save Fields'}
-                  </Button>
-                )}
-              </div>
-
-              {offerLetterFields.length > 0 && (
-                <div className="mb-3 rounded-xl border border-slate-100 overflow-hidden">
-                  <table className="w-full text-xs">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Label</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Type</th>
-                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Fillout Param</th>
-                        <th className="px-3 py-2 text-center font-semibold text-slate-600">Required</th>
-                        <th className="px-2 py-2" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {offerLetterFields.map(field => (
-                        <tr key={field.filloutParam} className="border-t border-slate-50">
-                          <td className="px-3 py-2 text-slate-800">{field.label}</td>
-                          <td className="px-3 py-2 text-slate-500 capitalize">{field.type}</td>
-                          <td className="px-3 py-2 font-mono text-slate-600">{field.filloutParam}</td>
-                          <td className="px-3 py-2 text-center">{field.required ? '✓' : '—'}</td>
-                          <td className="px-2 py-2">
-                            <button
-                              onClick={() => handleRemoveField(field.filloutParam)}
-                              className="text-slate-300 hover:text-red-400 transition-colors"
-                              title="Remove"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {/* Add Field Row */}
-              <div className="grid grid-cols-12 gap-2 items-end">
-                <div className="col-span-4">
-                  <label className="block text-xs text-slate-500 mb-1">Label</label>
-                  <Input
-                    value={newField.label ?? ''}
-                    onChange={e => setNewField(prev => ({ ...prev, label: e.target.value }))}
-                    placeholder="e.g. Base Hourly Wage"
-                    className="h-8 rounded-lg text-xs"
-                  />
-                </div>
-                <div className="col-span-2">
-                  <label className="block text-xs text-slate-500 mb-1">Type</label>
-                  <select
-                    value={newField.type ?? 'text'}
-                    onChange={e => setNewField(prev => ({ ...prev, type: e.target.value as OfferLetterField['type'] }))}
-                    className="w-full h-8 rounded-lg border border-slate-200 px-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2D52]/20"
-                  >
-                    <option value="text">Text</option>
-                    <option value="number">Number</option>
-                    <option value="date">Date</option>
-                  </select>
-                </div>
-                <div className="col-span-3">
-                  <label className="block text-xs text-slate-500 mb-1">Fillout Param</label>
-                  <Input
-                    value={newField.filloutParam ?? ''}
-                    onChange={e => setNewField(prev => ({ ...prev, filloutParam: e.target.value }))}
-                    placeholder="e.g. baseHourlyWage"
-                    className="h-8 rounded-lg font-mono text-xs"
-                  />
-                </div>
-                <div className="col-span-1 flex items-center justify-center pb-0.5">
-                  <label className="flex flex-col items-center gap-1 cursor-pointer">
-                    <span className="text-xs text-slate-500">Req.</span>
-                    <input
-                      type="checkbox"
-                      checked={newField.required ?? false}
-                      onChange={e => setNewField(prev => ({ ...prev, required: e.target.checked }))}
-                      className="accent-[#0F2D52]"
-                    />
-                  </label>
-                </div>
-                <div className="col-span-2">
-                  <Button
-                    onClick={handleAddField}
-                    disabled={!newField.label?.trim() || !newField.filloutParam?.trim()}
-                    className="w-full h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs"
-                  >
-                    + Add
-                  </Button>
-                </div>
-              </div>
-              {offerLetterFields.length > 0 && (
-                <div className="mt-3 flex justify-end">
-                  <Button
-                    onClick={handleSaveFields}
-                    disabled={isSavingFields}
-                    className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4"
-                  >
-                    {isSavingFields ? 'Saving…' : 'Save Fields'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">

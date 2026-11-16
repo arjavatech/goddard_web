@@ -78,6 +78,8 @@ import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { AttendanceReports } from './pages/employee/AttendanceReports';
 import { OfferLetterPage } from './pages/employee/OfferLetterPage';
 import { AdminMyForms } from './pages/admin/AdminMyForms';
+import { OfferLetterManagement } from './pages/admin/OfferLetterManagement';
+import { OfferLetterReview } from './pages/admin/OfferLetterReview';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
 
@@ -222,6 +224,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-documents/review" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review/:documentId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/:requestId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentRequestAssignments audience="employee" /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letters" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterManagement /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letters/review" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterReview /></PermissionRoute></FeatureRoute>} />
                   {/* Admin self-service: own forms and documents */}
                   <Route path="/:schoolSlug/admin/my-forms" element={<FeatureRoute feature="employeeManagementEnabled"><AdminMyForms /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />

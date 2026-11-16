@@ -20,6 +20,8 @@ import { ManualUploadModal } from '../../components/admin/ManualUploadModal';
 import { ApproveFormModal } from '../../components/admin/ApproveFormModal';
 import { UploadDocumentModal } from '../../components/admin/UploadDocumentModal';
 import { fetchDocumentAssignments, reviewDocument, documentFileUrl, documentUploadIntent, completeDocumentUpload, updateDocumentMetadata, changeDocumentStatus, type DocumentAssignment } from '../../services/api/documentRequests';
+import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
+import { CreateOfferLetterDialog } from '../../components/admin/CreateOfferLetterDialog';
 
 export function EmployeeDetails() {
   const { schoolSlug, employeeId } = useParams<{ schoolSlug: string; employeeId: string }>();
@@ -80,6 +82,18 @@ export function EmployeeDetails() {
 
   const isAdminOrSuperAdmin = userData?.role === 'Admin' || userData?.role === 'SuperAdmin' || userData?.role === 'Owner';
 
+  const offerLetterEnabled = userData?.schoolData?.features?.offerLetterEnabled ?? false;
+  const offerLetterFields = ((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? [];
+
+  const [offerLetter, setOfferLetter] = useState<OfferLetter | null>(null);
+  const [offerEditOpen, setOfferEditOpen] = useState(false);
+  const [isCreatingOffer, setIsCreatingOffer] = useState(false);
+  const [offerSendConfirmOpen, setOfferSendConfirmOpen] = useState(false);
+  const [isSendingOffer, setIsSendingOffer] = useState(false);
+  const [offerReviewDialog, setOfferReviewDialog] = useState<{ action: 'approve' | 'reject' } | null>(null);
+  const [offerRejectionReason, setOfferRejectionReason] = useState('');
+  const [isProcessingOfferReview, setIsProcessingOfferReview] = useState(false);
+
   // Fetch employee + form assignments + document assignments concurrently
   useEffect(() => {
     let isMounted = true;
@@ -89,10 +103,11 @@ export function EmployeeDetails() {
         if (refreshKey === 0) setIsLoadingDocuments(true);
         if (!schoolId || !employeeId) return;
 
-        const [empData, rawAssignments, docResult] = await Promise.all([
+        const [empData, rawAssignments, docResult, offerLetterData] = await Promise.all([
           EmployeeService.fetchEmployeeDetails(employeeId, schoolId),
           EmployeeService.fetchEmployeeFormAssignments(employeeId),
           fetchDocumentAssignments({ school_id: schoolId, audience: 'employee', limit: 1000 }),
+          offerLetterEnabled ? OfferLetterService.getOfferLetter(employeeId, schoolId).catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!isMounted) return;
@@ -115,6 +130,8 @@ export function EmployeeDetails() {
         // Filter documents by employee name
         const employeeName = `${empData.firstName} ${empData.lastName}`;
         setEmployeeDocs(docResult.items.filter(d => d.subject_name === employeeName));
+
+        setOfferLetter(offerLetterData);
       } catch (error) {
         showToast('error', 'Failed to load employee details');
       } finally {
@@ -859,10 +876,177 @@ export function EmployeeDetails() {
                     ))
                   )}
                 </div>
+
+                {/* ── Offer Letter ───────────────────────────────────── */}
+                {offerLetterEnabled && (
+                  <div className="mt-2 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">Offer Letter</h4>
+                      {offerLetter && (
+                        <span className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                          offerLetter.status === 'draft' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                          offerLetter.status === 'offer_sent' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          offerLetter.status === 'offer_accepted' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                          (offerLetter.status === 'approved' || offerLetter.status === 'active') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                          'bg-red-50 text-red-700 border-red-200'
+                        }`}>
+                          {offerLetter.status === 'draft' ? 'Draft' :
+                           offerLetter.status === 'offer_sent' ? 'Sent' :
+                           offerLetter.status === 'offer_accepted' ? 'Accepted — Review Needed' :
+                           (offerLetter.status === 'approved' || offerLetter.status === 'active') ? 'Approved' : 'Rejected'}
+                        </span>
+                      )}
+                    </div>
+                    {!offerLetter ? (
+                      <div className="flex items-center justify-between py-2">
+                        <p className="text-xs text-slate-400">No offer letter yet.</p>
+                        {isAdminOrSuperAdmin && (
+                          <Button size="sm" onClick={() => setIsCreatingOffer(true)}
+                            className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3">
+                            Create Offer Letter
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          <div><span className="text-slate-400">Role: </span><span className="text-slate-700 font-medium">{offerLetter.role}</span></div>
+                          {offerLetter.salary && (
+                            <div><span className="text-slate-400">Salary: </span><span className="text-slate-700 font-medium">{offerLetter.salaryCurrency ?? 'USD'} {offerLetter.salary.toLocaleString()}</span></div>
+                          )}
+                          {offerLetter.joiningDate && (
+                            <div><span className="text-slate-400">Joining: </span><span className="text-slate-700 font-medium">{offerLetter.joiningDate}</span></div>
+                          )}
+                          {offerLetter.sentAt && (
+                            <div><span className="text-slate-400">Sent: </span><span className="text-slate-700 font-medium">{new Date(offerLetter.sentAt).toLocaleDateString()}</span></div>
+                          )}
+                        </div>
+                        {isAdminOrSuperAdmin && (
+                          <div className="flex gap-2 mt-3 flex-wrap">
+                            {(offerLetter.status === 'draft' || offerLetter.status === 'offer_sent') && (
+                              <Button size="sm" variant="outline" onClick={() => setOfferEditOpen(true)}
+                                className="h-7 rounded-lg text-xs px-3">
+                                Edit
+                              </Button>
+                            )}
+                            {offerLetter.status === 'draft' && (
+                              <Button size="sm" onClick={() => setOfferSendConfirmOpen(true)}
+                                className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3">
+                                Send
+                              </Button>
+                            )}
+                            {offerLetter.status === 'offer_sent' && (
+                              <Button size="sm" variant="outline" onClick={async () => {
+                                try {
+                                  await OfferLetterService.resendOfferLetter(offerLetter.employeeId, schoolId);
+                                  showToast('success', 'Offer letter resent');
+                                } catch (err: any) { showToast('error', err.message || 'Failed to resend'); }
+                              }} className="h-7 rounded-lg text-xs px-3">
+                                Resend
+                              </Button>
+                            )}
+                            {offerLetter.status === 'offer_accepted' && (
+                              <>
+                                <Button size="sm" onClick={() => setOfferReviewDialog({ action: 'approve' })}
+                                  className="h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3">
+                                  Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => { setOfferReviewDialog({ action: 'reject' }); setOfferRejectionReason(''); }}
+                                  className="h-7 rounded-lg text-red-600 border-red-200 hover:bg-red-50 text-xs px-3">
+                                  Reject
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
+
+        {/* Offer Letter Dialogs */}
+        {offerLetterEnabled && (
+          <>
+            <CreateOfferLetterDialog
+              open={isCreatingOffer || offerEditOpen}
+              onOpenChange={v => { if (!v) { setIsCreatingOffer(false); setOfferEditOpen(false); } }}
+              employeeId={employeeId!}
+              schoolId={schoolId}
+              schoolFormId={userData?.schoolData?.offerLetterFilloutFormId}
+              offerLetterFields={offerLetterFields}
+              prefill={{ firstName: employee?.firstName, lastName: employee?.lastName, email: employee?.email }}
+              existingOffer={offerEditOpen ? offerLetter : null}
+              onSaved={saved => { setOfferLetter(saved); setIsCreatingOffer(false); setOfferEditOpen(false); }}
+            />
+
+            <Dialog open={offerSendConfirmOpen} onOpenChange={v => { if (!v) setOfferSendConfirmOpen(false); }}>
+              <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+                <DialogTitle className="text-base font-bold text-slate-900 mb-2">Send Offer Letter</DialogTitle>
+                <p className="text-xs text-slate-500 mb-4">Send the offer letter to <strong>{employee?.firstName} {employee?.lastName}</strong>?</p>
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => setOfferSendConfirmOpen(false)} disabled={isSendingOffer} className="rounded-xl text-xs h-8">Cancel</Button>
+                  <Button disabled={isSendingOffer} onClick={async () => {
+                    setIsSendingOffer(true);
+                    try {
+                      const sent = await OfferLetterService.sendOfferLetter(employeeId!, schoolId);
+                      setOfferLetter(sent);
+                      setOfferSendConfirmOpen(false);
+                      showToast('success', 'Offer letter sent');
+                    } catch (err: any) {
+                      showToast('error', err.message || 'Failed to send');
+                    } finally { setIsSendingOffer(false); }
+                  }} className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs h-8 px-4">
+                    {isSendingOffer ? 'Sending…' : 'Send'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={!!offerReviewDialog} onOpenChange={v => { if (!v) { setOfferReviewDialog(null); setOfferRejectionReason(''); } }}>
+              <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+                <DialogTitle className="text-base font-bold text-slate-900 mb-2">
+                  {offerReviewDialog?.action === 'approve' ? 'Approve Offer Letter' : 'Reject Offer Letter'}
+                </DialogTitle>
+                <p className="text-xs text-slate-500 mb-3">
+                  {offerReviewDialog?.action === 'approve'
+                    ? `Approving will activate ${employee?.firstName} ${employee?.lastName}'s account.`
+                    : 'Rejecting will notify the employee.'}
+                </p>
+                {offerReviewDialog?.action === 'reject' && (
+                  <textarea value={offerRejectionReason} onChange={e => setOfferRejectionReason(e.target.value)}
+                    placeholder="Optional rejection reason" rows={3}
+                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20 resize-none" />
+                )}
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={() => { setOfferReviewDialog(null); setOfferRejectionReason(''); }}
+                    disabled={isProcessingOfferReview} className="rounded-xl text-xs h-8">Cancel</Button>
+                  <Button disabled={isProcessingOfferReview} onClick={async () => {
+                    if (!offerReviewDialog) return;
+                    setIsProcessingOfferReview(true);
+                    try {
+                      await OfferLetterService.adminReviewOffer(employeeId!, schoolId, {
+                        approved: offerReviewDialog.action === 'approve',
+                        rejectionReason: offerRejectionReason.trim() || undefined,
+                      });
+                      showToast('success', offerReviewDialog.action === 'approve' ? 'Offer approved — employee activated' : 'Offer rejected');
+                      setOfferReviewDialog(null);
+                      setOfferRejectionReason('');
+                      setRefreshKey(k => k + 1);
+                    } catch (err: any) {
+                      showToast('error', err.message || 'Failed');
+                    } finally { setIsProcessingOfferReview(false); }
+                  }} className={`rounded-xl text-white text-xs h-8 px-4 ${offerReviewDialog?.action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                    {isProcessingOfferReview ? 'Processing…' : offerReviewDialog?.action === 'approve' ? 'Approve & Activate' : 'Reject'}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
 
         {/* Manual Upload Modal */}
         {selectedFormForUpload && (

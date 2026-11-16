@@ -13,6 +13,7 @@ export type OfferLetterStatus =
   | 'offer_sent'
   | 'offer_accepted'
   | 'offer_rejected'
+  | 'approved'
   | 'active'
   | 'rejected';
 
