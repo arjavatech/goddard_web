@@ -9,7 +9,15 @@ import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
 import { FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
-function StatusSection({ offer, onOpenForm }: { offer: OfferLetter; onOpenForm?: () => void }) {
+function StatusSection({
+  offer,
+  onOpenForm,
+  onDownload,
+}: {
+  offer: OfferLetter;
+  onOpenForm?: () => void;
+  onDownload?: () => void;
+}) {
   switch (offer.status) {
     case 'offer_sent':
       return (
@@ -78,11 +86,9 @@ function StatusSection({ offer, onOpenForm }: { offer: OfferLetter; onOpenForm?:
             </p>
           </div>
           {offer.filloutPdfLink && (
-            <a href={offer.filloutPdfLink} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" className="rounded-xl gap-2 mt-2">
-                <Download className="w-4 h-4" /> Download Offer Letter PDF
-              </Button>
-            </a>
+            <Button variant="outline" className="rounded-xl gap-2 mt-2" onClick={onDownload}>
+              <Download className="w-4 h-4" /> Download Offer Letter PDF
+            </Button>
           )}
         </div>
       );
@@ -109,7 +115,6 @@ export function OfferLetterPage() {
   const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
 
   const schoolId = userData?.schoolId ?? '';
 
@@ -130,6 +135,20 @@ export function OfferLetterPage() {
       .catch(err => setError(err.message || 'Failed to load offer letter'))
       .finally(() => setLoading(false));
   }, [schoolId]);
+
+  const handleDownload = async () => {
+    if (!offer?.filloutPdfLink) return;
+    const res = await fetch(offer.filloutPdfLink);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const el = document.createElement('a');
+    el.href = url;
+    el.download = `Offer Letter - ${offer.firstName} ${offer.lastName}.pdf`;
+    document.body.appendChild(el);
+    el.click();
+    el.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <EmployeeLayout>
@@ -180,7 +199,11 @@ export function OfferLetterPage() {
                     : 'Pending'}
                 </Badge>
               </div>
-              <StatusSection offer={offer} onOpenForm={() => setShowForm(true)} />
+              <StatusSection
+                offer={offer}
+                onOpenForm={() => window.open(offer.prefillUrl, '_blank')}
+                onDownload={handleDownload}
+              />
             </Card>
 
             {/* Offer details */}
@@ -196,18 +219,6 @@ export function OfferLetterPage() {
                   })}
                 </div>
               </Card>
-            )}
-
-            {/* Inline form iframe — shown only after employee clicks "Open Offer Letter" */}
-            {offer.status === 'offer_sent' && offer.prefillUrl && showForm && (
-              <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm" style={{ height: '80vh' }}>
-                <iframe
-                  src={offer.prefillUrl}
-                  title="Offer Letter"
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  allow="camera; microphone; geolocation"
-                />
-              </div>
             )}
 
             {/* Past Offers */}
