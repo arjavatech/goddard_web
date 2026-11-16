@@ -11,6 +11,7 @@ const disabledSchoolFeatures: SchoolFeatures = {
   conferenceEnabled: false,
   surveyEnabled: false,
   driveEnabled: false,
+  offerLetterEnabled: false,
 };
 
 interface UserContextValue {

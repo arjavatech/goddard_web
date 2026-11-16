@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, fetchSchoolMembers, assignFormToAdmin } from '../../services/api/employee';
+import { OfferLetterService } from '../../services/api/offerLetter';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
@@ -100,6 +101,26 @@ export function EmployeeFormsManagement() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const schoolId = userData?.schoolId;
+  const offerLetterEnabled = userData?.schoolData?.features?.offerLetterEnabled ?? false;
+  const [offerFormId, setOfferFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
+  const [isSavingOfferFormId, setIsSavingOfferFormId] = useState(false);
+
+  useEffect(() => {
+    setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
+  }, [userData?.schoolData?.offerLetterFilloutFormId]);
+
+  const handleSaveOfferFormId = async () => {
+    if (!schoolId || !offerFormId.trim()) return;
+    setIsSavingOfferFormId(true);
+    try {
+      await OfferLetterService.updateOfferLetterConfig(schoolId, offerFormId.trim());
+      showToast('success', 'Offer letter form ID saved');
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to save offer letter form ID');
+    } finally {
+      setIsSavingOfferFormId(false);
+    }
+  };
 
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
@@ -406,6 +427,42 @@ export function EmployeeFormsManagement() {
             <Plus className="h-4 w-4 mr-1.5" /> Add New Form
           </Button>
         </div>
+
+        {/* Offer Letter Form Configuration */}
+        {offerLetterEnabled && (
+          <div className="bg-white border border-slate-100 rounded-2xl shadow-xs p-5">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-7 h-7 bg-[#EFF5FB] rounded-lg flex items-center justify-center">
+                <Settings className="w-3.5 h-3.5 text-[#0F2D52]" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">Offer Letter Form</h2>
+                <p className="text-xs text-slate-400">Fillout form used for all offer letters at this school</p>
+              </div>
+            </div>
+            {!userData?.schoolData?.offerLetterFilloutFormId && (
+              <div className="mb-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                <p className="text-xs text-amber-700">No form configured — offer letters cannot be sent until this is set.</p>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Input
+                value={offerFormId}
+                onChange={e => setOfferFormId(e.target.value)}
+                placeholder="e.g. offer-letter-v2"
+                className="h-9 rounded-xl font-mono text-sm flex-1"
+              />
+              <Button
+                onClick={handleSaveOfferFormId}
+                disabled={isSavingOfferFormId || !offerFormId.trim()}
+                className="h-9 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4 shrink-0"
+              >
+                {isSavingOfferFormId ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          </div>
+        )}
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">

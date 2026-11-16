@@ -19,6 +19,7 @@ export type Employee = {
   salaryDate?: string;
   taptimeEmployeeId?: string;
   taptimePin?: string;
+  offerStatus?: string | null;
 };
 
 export type EmployeeFormTemplate = {
@@ -93,6 +94,7 @@ function mapEmployee(raw: any): Employee {
     salaryDate: raw.salary_date ?? undefined,
     taptimeEmployeeId: raw.taptime_employee_id ?? undefined,
     taptimePin: raw.taptime_pin ?? undefined,
+    offerStatus: raw.offer_status ?? null,
   };
 }
 
@@ -187,7 +189,7 @@ export const EmployeeService = {
     employeeType?: string;
     joinedOn?: string;
     schoolId: string;
-  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string }> {
+  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string; offerLetterRequired?: boolean }> {
     const data = await authedFetch(
       {
         method: 'POST',
@@ -212,6 +214,7 @@ export const EmployeeService = {
       inviteId: data.invite_id,
       emailSent: data.email_sent,
       message: data.message,
+      offerLetterRequired: data.offer_letter_required ?? false,
     };
   },
 

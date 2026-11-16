@@ -76,6 +76,7 @@ import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { AttendanceReports } from './pages/employee/AttendanceReports';
+import { OfferLetterPage } from './pages/employee/OfferLetterPage';
 import { AdminMyForms } from './pages/admin/AdminMyForms';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
@@ -161,6 +162,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/employee/surveys" element={<FeatureRoute feature="surveyEnabled"><EmployeeSurveys /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/employee/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterPage /></FeatureRoute>} />
                 </Route>
                 {/* Public survey respond — no auth required for anonymous surveys */}
                 <Route path="/:schoolSlug/surveys/:surveyId/respond" element={<SurveyRespond />} />

@@ -10,6 +10,7 @@ export type SchoolFeatures = {
   conferenceEnabled: boolean;
   surveyEnabled: boolean;
   driveEnabled: boolean;
+  offerLetterEnabled: boolean;
 };
 
 export type SchoolData = {
@@ -27,6 +28,7 @@ export type SchoolData = {
   };
   requestCategories?: SchoolRequestSettingOption[];
   location?: SchoolRequestSettingOption[];
+  offerLetterFilloutFormId?: string;
   features: SchoolFeatures;
 };
 
@@ -69,6 +71,8 @@ const schoolDataSchema = z.object({
   conference_enabled: z.boolean().optional(),
   survey_enabled: z.boolean().optional(),
   drive_enabled: z.boolean().optional(),
+  offer_letter_enabled: z.boolean().optional(),
+  offer_letter_fillout_form_id: z.string().nullable().optional(),
 }).passthrough();
 
 const userContextSchema = z.object({
@@ -134,7 +138,9 @@ export async function fetchUserContext(): Promise<UserContext> {
           conferenceEnabled: data.school_data.conference_enabled ?? false,
           surveyEnabled: data.school_data.survey_enabled ?? false,
           driveEnabled: data.school_data.drive_enabled ?? false,
+          offerLetterEnabled: data.school_data.offer_letter_enabled ?? false,
         },
+        offerLetterFilloutFormId: data.school_data.offer_letter_fillout_form_id ?? undefined,
       } : null,
       adminPermissions: data.admin_permissions ?? [],
     };
