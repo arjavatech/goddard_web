@@ -10,10 +10,11 @@ import { FileText, Download, CheckCircle2, XCircle, Send, ExternalLink, User, Br
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  offer: OfferLetter;
+  offer: OfferLetter | null;
   schoolId: string;
   offerLetterFields?: OfferLetterField[];
   onUpdated?: (offer: OfferLetter) => void;
+  isLoading?: boolean;
 }
 
 function statusLabel(status: OfferLetterStatus): string {
@@ -61,7 +62,7 @@ function InfoRow({ label, value }: { label: string; value?: string | number | nu
   );
 }
 
-export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, offerLetterFields, onUpdated }: Props) {
+export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, offerLetterFields, onUpdated, isLoading }: Props) {
   const { showToast } = useToast();
   const [isApproving, setIsApproving] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
@@ -69,15 +70,15 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
   const [rejectionReason, setRejectionReason] = useState('');
   const [isResending, setIsResending] = useState(false);
 
-  const canReview = offer.status === 'offer_accepted';
-  const canResend = !canReview && (offer.status === 'offer_sent' || offer.status === 'offer_accepted');
-  const hasDocuments = !!(offer.filloutPdfLink || offer.filloutEditLink);
-  const hasCustomFields = offer.customFields && Object.keys(offer.customFields).length > 0;
+  const canReview = offer?.status === 'offer_accepted';
+  const canResend = !canReview && (offer?.status === 'offer_sent' || offer?.status === 'offer_accepted');
+  const hasDocuments = !!(offer?.filloutPdfLink || offer?.filloutEditLink);
+  const hasCustomFields = offer?.customFields && Object.keys(offer.customFields).length > 0;
 
   const handleApprove = async () => {
     setIsApproving(true);
     try {
-      const updated = await OfferLetterService.adminReviewOffer(offer.employeeId, schoolId, { approved: true });
+      const updated = await OfferLetterService.adminReviewOffer(offer!.employeeId, schoolId, { approved: true });
       showToast('success', 'Employee activated successfully');
       onUpdated?.(updated);
       onOpenChange(false);
@@ -91,7 +92,7 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
   const handleReject = async () => {
     setIsRejecting(true);
     try {
-      const updated = await OfferLetterService.adminReviewOffer(offer.employeeId, schoolId, {
+      const updated = await OfferLetterService.adminReviewOffer(offer!.employeeId, schoolId, {
         approved: false,
         rejectionReason: rejectionReason.trim() || undefined,
       });
@@ -108,8 +109,8 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
   const handleResend = async () => {
     setIsResending(true);
     try {
-      const updated = await OfferLetterService.resendOfferLetter(offer.employeeId, schoolId);
-      showToast('success', `Offer letter resent to ${offer.email}`);
+      const updated = await OfferLetterService.resendOfferLetter(offer!.employeeId, schoolId);
+      showToast('success', `Offer letter resent to ${offer!.email}`);
       onUpdated?.(updated);
     } catch (err: any) {
       showToast('error', err.message || 'Failed to resend offer letter');
@@ -121,6 +122,28 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-xl border border-slate-100 bg-white p-0">
+
+        {(isLoading || !offer) ? (
+          <div className="p-6 space-y-4 animate-pulse">
+            <div className="bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] px-6 py-5 rounded-xl -mx-6 -mt-6 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-white/20 rounded-xl" />
+                <div className="space-y-2">
+                  <div className="h-4 w-32 bg-white/20 rounded" />
+                  <div className="h-3 w-48 bg-white/15 rounded" />
+                </div>
+              </div>
+            </div>
+            <div className="h-3 w-24 bg-slate-200 rounded" />
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-slate-100 rounded-xl" />)}
+            </div>
+            <div className="h-3 w-24 bg-slate-200 rounded mt-2" />
+            <div className="grid grid-cols-2 gap-3">
+              {[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-slate-100 rounded-xl" />)}
+            </div>
+          </div>
+        ) : (<>
 
         {/* Header */}
         <div className="bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] px-6 py-5 rounded-t-2xl">
@@ -284,6 +307,7 @@ export function OfferLetterDetailDialog({ open, onOpenChange, offer, schoolId, o
           </Button>
         </div>
 
+      </>)}
       </DialogContent>
     </Dialog>
   );

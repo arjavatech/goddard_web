@@ -65,6 +65,7 @@ export function AdminManagement() {
   const [editOfferCustomFields, setEditOfferCustomFields] = useState<Record<string, string>>({});
   const [isOfferDetailOpen, setIsOfferDetailOpen] = useState(false);
   const [offerDetail, setOfferDetail] = useState<OfferLetter | null>(null);
+  const [isOfferDetailLoading, setIsOfferDetailLoading] = useState(false);
 
   const isOfferLetterEnabled = userData?.schoolData?.features.offerLetterEnabled === true;
   const offerLetterFields: OfferLetterField[] = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
@@ -172,12 +173,17 @@ export function AdminManagement() {
 
   const handleViewOfferLetter = async (admin: AdminUser) => {
     if (!admin.employee_id || !userData?.schoolId) return;
+    setOfferDetail(null);
+    setIsOfferDetailLoading(true);
+    setIsOfferDetailOpen(true);
     try {
       const offer = await OfferLetterService.getOfferLetter(admin.employee_id, userData.schoolId);
       setOfferDetail(offer);
-      setIsOfferDetailOpen(true);
     } catch (err: any) {
+      setIsOfferDetailOpen(false);
       showToast('error', err.message || 'Failed to load offer letter');
+    } finally {
+      setIsOfferDetailLoading(false);
     }
   };
 
@@ -864,7 +870,8 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] rounded-2xl shadow-lg border border-slate-100 bg-white p-0 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-4">
               <DialogTitle className="text-lg font-bold text-slate-900">Invite New Admin</DialogTitle>
               <p className="text-xs text-slate-500 font-medium">Send an email invitation to register a new administrator account.</p>
@@ -981,7 +988,8 @@ export function AdminManagement() {
               </div>
             )}
 
-            <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
+            </div>
+            <DialogFooter className="px-6 pb-6 flex flex-col sm:flex-row gap-2 sm:gap-3 border-t border-slate-100 pt-4 flex-shrink-0">
               {inviteStep === 1 && (
                 <>
                   <Button
@@ -1057,7 +1065,8 @@ export function AdminManagement() {
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+          <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] rounded-2xl shadow-lg border border-slate-100 bg-white p-0 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6">
             <DialogHeader className="mb-4">
               <div className="w-10 h-10 rounded-xl bg-[#EFF5FB] text-[#0F2D52] flex items-center justify-center mb-3">
                 <Edit className="w-5 h-5" />
@@ -1168,7 +1177,8 @@ export function AdminManagement() {
               </div>
             )}
 
-            <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
+            </div>
+            <DialogFooter className="px-6 pb-6 flex flex-col sm:flex-row gap-2 sm:gap-3 border-t border-slate-100 pt-4 flex-shrink-0">
               {editStep === 1 && (
                 <>
                   <Button
@@ -1359,22 +1369,24 @@ export function AdminManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-        {offerDetail && (
-          <OfferLetterDetailDialog
-            open={isOfferDetailOpen}
-            onOpenChange={setIsOfferDetailOpen}
-            offer={offerDetail}
-            schoolId={userData?.schoolId ?? ''}
-            offerLetterFields={offerLetterFields}
-            onUpdated={async (updated) => {
-              setOfferDetail(updated);
-              if (userData?.schoolId) {
-                const data = await fetchAdminUsers(userData.schoolId);
-                setAdmins(data);
-              }
-            }}
-          />
-        )}
+        <OfferLetterDetailDialog
+          open={isOfferDetailOpen}
+          onOpenChange={(open) => {
+            setIsOfferDetailOpen(open);
+            if (!open) setOfferDetail(null);
+          }}
+          offer={offerDetail}
+          isLoading={isOfferDetailLoading}
+          schoolId={userData?.schoolId ?? ''}
+          offerLetterFields={offerLetterFields}
+          onUpdated={async (updated) => {
+            setOfferDetail(updated);
+            if (userData?.schoolId) {
+              const data = await fetchAdminUsers(userData.schoolId);
+              setAdmins(data);
+            }
+          }}
+        />
       </div>
     </AdminLayout>
   );
