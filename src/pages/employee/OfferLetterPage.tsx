@@ -9,7 +9,7 @@ import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
 import { FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
-function StatusSection({ offer }: { offer: OfferLetter }) {
+function StatusSection({ offer, onOpenForm }: { offer: OfferLetter; onOpenForm?: () => void }) {
   switch (offer.status) {
     case 'offer_sent':
       return (
@@ -20,9 +20,17 @@ function StatusSection({ offer }: { offer: OfferLetter }) {
           <div>
             <p className="text-base font-bold text-slate-900">Your Offer Letter is Ready</p>
             <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-              Review the details below and submit your response.
+              Review the details below, then open your offer letter to sign.
             </p>
           </div>
+          {offer.prefillUrl && (
+            <button
+              onClick={onOpenForm}
+              className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-sm font-semibold transition-colors"
+            >
+              <FileText className="w-4 h-4" /> Open Offer Letter
+            </button>
+          )}
         </div>
       );
 
@@ -101,6 +109,7 @@ export function OfferLetterPage() {
   const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showForm, setShowForm] = useState(false);
 
   const schoolId = userData?.schoolId ?? '';
 
@@ -150,18 +159,6 @@ export function OfferLetterPage() {
 
         {!loading && !error && offer && (
           <div className="space-y-4">
-            {/* Inline form iframe for offer_sent */}
-            {offer.status === 'offer_sent' && offer.prefillUrl && (
-              <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm" style={{ height: '80vh' }}>
-                <iframe
-                  src={offer.prefillUrl}
-                  title="Offer Letter"
-                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-                  allow="camera; microphone; geolocation"
-                />
-              </div>
-            )}
-
             {/* Status card */}
             <Card className="rounded-2xl border border-slate-100 shadow-sm p-6">
               <div className="flex items-center justify-between mb-4">
@@ -183,7 +180,7 @@ export function OfferLetterPage() {
                     : 'Pending'}
                 </Badge>
               </div>
-              <StatusSection offer={offer} />
+              <StatusSection offer={offer} onOpenForm={() => setShowForm(true)} />
             </Card>
 
             {/* Offer details */}
@@ -199,6 +196,18 @@ export function OfferLetterPage() {
                   })}
                 </div>
               </Card>
+            )}
+
+            {/* Inline form iframe — shown only after employee clicks "Open Offer Letter" */}
+            {offer.status === 'offer_sent' && offer.prefillUrl && showForm && (
+              <div className="rounded-2xl overflow-hidden border border-slate-100 shadow-sm" style={{ height: '80vh' }}>
+                <iframe
+                  src={offer.prefillUrl}
+                  title="Offer Letter"
+                  style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+                  allow="camera; microphone; geolocation"
+                />
+              </div>
             )}
 
             {/* Past Offers */}
