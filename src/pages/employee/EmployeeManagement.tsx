@@ -1083,6 +1083,7 @@ export function EmployeeManagement() {
             employeeId={offerLetterEmployee?.id ?? ''}
             schoolId={userData?.schoolId ?? ''}
             schoolFormId={userData?.schoolData?.offerLetterFilloutFormId}
+            offerLetterFields={(userData?.schoolData?.settings as any)?.offer_letter_fields}
             prefill={{
               firstName: offerLetterEmployee?.firstName,
               lastName: offerLetterEmployee?.lastName,

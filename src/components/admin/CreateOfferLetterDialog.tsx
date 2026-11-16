@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { AsyncButton } from '../ui/async-button';
 import { Input } from '../ui/input';
 import { useToast } from '../../contexts/ToastContext';
-import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
+import { OfferLetterService, type OfferLetter, type OfferLetterField } from '../../services/api/offerLetter';
 import { FileEdit, Send, AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   employeeId: string;
   schoolId: string;
   schoolFormId?: string;
+  offerLetterFields?: OfferLetterField[];
   prefill?: {
     firstName?: string;
     lastName?: string;
@@ -28,6 +29,7 @@ export function CreateOfferLetterDialog({
   employeeId,
   schoolId,
   schoolFormId,
+  offerLetterFields,
   prefill,
   existingOffer,
   onSaved,
@@ -43,6 +45,7 @@ export function CreateOfferLetterDialog({
   const [salaryCurrency, setSalaryCurrency] = useState('USD');
   const [joiningDate, setJoiningDate] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
+  const [customFields, setCustomFields] = useState<Record<string, string>>({});
 
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -61,6 +64,7 @@ export function CreateOfferLetterDialog({
       setSalaryCurrency(existingOffer.salaryCurrency ?? 'USD');
       setJoiningDate(existingOffer.joiningDate ?? '');
       setAdditionalNotes(existingOffer.additionalNotes ?? '');
+      setCustomFields(existingOffer.customFields ?? {});
     } else {
       setFirstName(prefill?.firstName ?? '');
       setLastName(prefill?.lastName ?? '');
@@ -71,12 +75,20 @@ export function CreateOfferLetterDialog({
       setSalaryCurrency('USD');
       setJoiningDate('');
       setAdditionalNotes('');
+      setCustomFields({});
     }
   }, [open, existingOffer, prefill]);
 
-  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && role.trim();
+  const requiredCustomFieldsFilled = (offerLetterFields ?? [])
+    .filter(f => f.required)
+    .every(f => !!customFields[f.filloutParam]?.trim());
+
+  const isFormValid = firstName.trim() && lastName.trim() && email.trim() && role.trim() && requiredCustomFieldsFilled;
 
   async function saveOrUpdate() {
+    const nonEmptyCustomFields = Object.fromEntries(
+      Object.entries(customFields).filter(([, v]) => v.trim() !== '')
+    );
     const req = {
       schoolId,
       firstName: firstName.trim(),
@@ -88,6 +100,7 @@ export function CreateOfferLetterDialog({
       salaryCurrency: salaryCurrency || undefined,
       joiningDate: joiningDate || undefined,
       additionalNotes: additionalNotes.trim() || undefined,
+      customFields: Object.keys(nonEmptyCustomFields).length > 0 ? nonEmptyCustomFields : undefined,
     };
 
     if (isEditing) {
@@ -224,6 +237,30 @@ export function CreateOfferLetterDialog({
               className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20 resize-none"
             />
           </div>
+
+          {offerLetterFields && offerLetterFields.length > 0 && (
+            <>
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-bold uppercase text-slate-500 mb-3">School-Specific Fields</p>
+                <div className="space-y-3">
+                  {offerLetterFields.map(field => (
+                    <div key={field.id}>
+                      <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
+                        {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                      </label>
+                      <Input
+                        type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                        value={customFields[field.filloutParam] ?? ''}
+                        onChange={e => setCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                        placeholder={field.type === 'number' ? '0.00' : field.label}
+                        className="h-10 rounded-xl"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         <DialogFooter className="px-6 pb-5 flex flex-col sm:flex-row gap-2">

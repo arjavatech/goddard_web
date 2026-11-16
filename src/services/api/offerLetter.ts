@@ -1,5 +1,13 @@
 import { authedFetch, z } from './common';
 
+export type OfferLetterField = {
+  id: string;
+  label: string;
+  type: 'text' | 'number' | 'date';
+  filloutParam: string;
+  required?: boolean;
+};
+
 export type OfferLetterStatus =
   | 'draft'
   | 'offer_sent'
@@ -21,6 +29,7 @@ export type OfferLetter = {
   salaryCurrency?: string;
   joiningDate?: string;
   additionalNotes?: string;
+  customFields?: Record<string, string>;
   filloutFormId?: string;
   prefillUrl?: string;
   filloutSubmissionId?: string;
@@ -47,6 +56,7 @@ export type CreateOfferLetterRequest = {
   salaryCurrency?: string;
   joiningDate?: string;
   additionalNotes?: string;
+  customFields?: Record<string, string>;
 };
 
 export type UpdateOfferLetterRequest = Partial<Omit<CreateOfferLetterRequest, 'schoolId'>>;
@@ -70,6 +80,7 @@ function mapOfferLetter(raw: any): OfferLetter {
     salaryCurrency: raw.salary_currency ?? undefined,
     joiningDate: raw.joining_date ?? undefined,
     additionalNotes: raw.additional_notes ?? undefined,
+    customFields: raw.custom_fields ?? undefined,
     filloutFormId: raw.fillout_form_id ?? undefined,
     prefillUrl: raw.prefill_url ?? undefined,
     filloutSubmissionId: raw.fillout_submission_id ?? undefined,
@@ -103,6 +114,7 @@ export const OfferLetterService = {
           salary_currency: req.salaryCurrency,
           joining_date: req.joiningDate,
           additional_notes: req.additionalNotes,
+          custom_fields: req.customFields && Object.keys(req.customFields).length > 0 ? req.customFields : undefined,
         },
       },
       z.any(),
@@ -124,6 +136,7 @@ export const OfferLetterService = {
           salary_currency: req.salaryCurrency,
           joining_date: req.joiningDate,
           additional_notes: req.additionalNotes,
+          custom_fields: req.customFields && Object.keys(req.customFields).length > 0 ? req.customFields : undefined,
         },
       },
       z.any(),
@@ -175,12 +188,15 @@ export const OfferLetterService = {
     return data.map(mapOfferLetter);
   },
 
-  async updateOfferLetterConfig(schoolId: string, filloutFormId: string): Promise<void> {
+  async updateOfferLetterConfig(schoolId: string, filloutFormId?: string, offerLetterFields?: OfferLetterField[]): Promise<void> {
     await authedFetch(
       {
         method: 'PATCH',
         url: `/schools/${schoolId}/offer-letter-config`,
-        body: { fillout_form_id: filloutFormId },
+        body: {
+          fillout_form_id: filloutFormId ?? null,
+          offer_letter_fields: offerLetterFields ?? null,
+        },
       },
       z.any(),
     );

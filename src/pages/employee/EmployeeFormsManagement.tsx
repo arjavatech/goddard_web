@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../../components/ui/badge';
 import { useToast } from '../../contexts/ToastContext';
 import { EmployeeService, fetchSchoolMembers, assignFormToAdmin } from '../../services/api/employee';
-import { OfferLetterService } from '../../services/api/offerLetter';
+import { OfferLetterService, type OfferLetterField } from '../../services/api/offerLetter';
 import { usePagination } from '../../hooks/usePagination';
 import { usePageSize } from '../../hooks/usePageSize';
 import { AddFormModal } from '../../components/admin/AddFormModal';
@@ -105,9 +105,15 @@ export function EmployeeFormsManagement() {
   const [offerFormId, setOfferFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
   const [isSavingOfferFormId, setIsSavingOfferFormId] = useState(false);
 
+  const initialFields: OfferLetterField[] = ((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? [];
+  const [offerLetterFields, setOfferLetterFields] = useState<OfferLetterField[]>(initialFields);
+  const [isSavingFields, setIsSavingFields] = useState(false);
+  const [newField, setNewField] = useState<Partial<OfferLetterField>>({ type: 'text', required: false });
+
   useEffect(() => {
     setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
-  }, [userData?.schoolData?.offerLetterFilloutFormId]);
+    setOfferLetterFields(((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? []);
+  }, [userData?.schoolData?.offerLetterFilloutFormId, userData?.schoolData?.settings]);
 
   const handleSaveOfferFormId = async () => {
     if (!schoolId || !offerFormId.trim()) return;
@@ -119,6 +125,36 @@ export function EmployeeFormsManagement() {
       showToast('error', err.message || 'Failed to save offer letter form ID');
     } finally {
       setIsSavingOfferFormId(false);
+    }
+  };
+
+  const handleAddField = () => {
+    if (!newField.label?.trim() || !newField.filloutParam?.trim()) return;
+    const field: OfferLetterField = {
+      id: newField.filloutParam!.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase(),
+      label: newField.label!.trim(),
+      type: newField.type ?? 'text',
+      filloutParam: newField.filloutParam!.trim(),
+      required: newField.required ?? false,
+    };
+    setOfferLetterFields(prev => [...prev, field]);
+    setNewField({ type: 'text', required: false });
+  };
+
+  const handleRemoveField = (filloutParam: string) => {
+    setOfferLetterFields(prev => prev.filter(f => f.filloutParam !== filloutParam));
+  };
+
+  const handleSaveFields = async () => {
+    if (!schoolId) return;
+    setIsSavingFields(true);
+    try {
+      await OfferLetterService.updateOfferLetterConfig(schoolId, undefined, offerLetterFields);
+      showToast('success', 'Custom fields saved');
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to save custom fields');
+    } finally {
+      setIsSavingFields(false);
     }
   };
 
@@ -460,6 +496,125 @@ export function EmployeeFormsManagement() {
               >
                 {isSavingOfferFormId ? 'Saving…' : 'Save'}
               </Button>
+            </div>
+
+            {/* Custom Fields Schema Editor */}
+            <div className="mt-5 border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <p className="text-xs font-bold text-slate-900">Custom Fields</p>
+                  <p className="text-xs text-slate-400">School-specific fields added to every offer letter</p>
+                </div>
+                {offerLetterFields.length > 0 && (
+                  <Button
+                    onClick={handleSaveFields}
+                    disabled={isSavingFields}
+                    className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3 shrink-0"
+                  >
+                    {isSavingFields ? 'Saving…' : 'Save Fields'}
+                  </Button>
+                )}
+              </div>
+
+              {offerLetterFields.length > 0 && (
+                <div className="mb-3 rounded-xl border border-slate-100 overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Label</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Type</th>
+                        <th className="px-3 py-2 text-left font-semibold text-slate-600">Fillout Param</th>
+                        <th className="px-3 py-2 text-center font-semibold text-slate-600">Required</th>
+                        <th className="px-2 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {offerLetterFields.map(field => (
+                        <tr key={field.filloutParam} className="border-t border-slate-50">
+                          <td className="px-3 py-2 text-slate-800">{field.label}</td>
+                          <td className="px-3 py-2 text-slate-500 capitalize">{field.type}</td>
+                          <td className="px-3 py-2 font-mono text-slate-600">{field.filloutParam}</td>
+                          <td className="px-3 py-2 text-center">{field.required ? '✓' : '—'}</td>
+                          <td className="px-2 py-2">
+                            <button
+                              onClick={() => handleRemoveField(field.filloutParam)}
+                              className="text-slate-300 hover:text-red-400 transition-colors"
+                              title="Remove"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Add Field Row */}
+              <div className="grid grid-cols-12 gap-2 items-end">
+                <div className="col-span-4">
+                  <label className="block text-xs text-slate-500 mb-1">Label</label>
+                  <Input
+                    value={newField.label ?? ''}
+                    onChange={e => setNewField(prev => ({ ...prev, label: e.target.value }))}
+                    placeholder="e.g. Base Hourly Wage"
+                    className="h-8 rounded-lg text-xs"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-xs text-slate-500 mb-1">Type</label>
+                  <select
+                    value={newField.type ?? 'text'}
+                    onChange={e => setNewField(prev => ({ ...prev, type: e.target.value as OfferLetterField['type'] }))}
+                    className="w-full h-8 rounded-lg border border-slate-200 px-2 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#0F2D52]/20"
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                  </select>
+                </div>
+                <div className="col-span-3">
+                  <label className="block text-xs text-slate-500 mb-1">Fillout Param</label>
+                  <Input
+                    value={newField.filloutParam ?? ''}
+                    onChange={e => setNewField(prev => ({ ...prev, filloutParam: e.target.value }))}
+                    placeholder="e.g. baseHourlyWage"
+                    className="h-8 rounded-lg font-mono text-xs"
+                  />
+                </div>
+                <div className="col-span-1 flex items-center justify-center pb-0.5">
+                  <label className="flex flex-col items-center gap-1 cursor-pointer">
+                    <span className="text-xs text-slate-500">Req.</span>
+                    <input
+                      type="checkbox"
+                      checked={newField.required ?? false}
+                      onChange={e => setNewField(prev => ({ ...prev, required: e.target.checked }))}
+                      className="accent-[#0F2D52]"
+                    />
+                  </label>
+                </div>
+                <div className="col-span-2">
+                  <Button
+                    onClick={handleAddField}
+                    disabled={!newField.label?.trim() || !newField.filloutParam?.trim()}
+                    className="w-full h-8 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs"
+                  >
+                    + Add
+                  </Button>
+                </div>
+              </div>
+              {offerLetterFields.length > 0 && (
+                <div className="mt-3 flex justify-end">
+                  <Button
+                    onClick={handleSaveFields}
+                    disabled={isSavingFields}
+                    className="h-8 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4"
+                  >
+                    {isSavingFields ? 'Saving…' : 'Save Fields'}
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
         )}
