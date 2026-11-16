@@ -59,9 +59,10 @@ export function OfferLetterManagement() {
   const [itemsPerPage, setItemsPerPage] = usePageSize('offerLetters', 10);
 
   // ── Config ────────────────────────────────────────────────────────────────
-  const [offerFormId, setOfferFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
   const [confirmedFormId, setConfirmedFormId] = useState(userData?.schoolData?.offerLetterFilloutFormId ?? '');
   const [isSavingFormId, setIsSavingFormId] = useState(false);
+  const [editFormIdOpen, setEditFormIdOpen] = useState(false);
+  const [editFormIdValue, setEditFormIdValue] = useState('');
   const initialFields: OfferLetterField[] = ((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? [];
   const [offerLetterFields, setOfferLetterFields] = useState<OfferLetterField[]>(initialFields);
   const [isSavingFields, setIsSavingFields] = useState(false);
@@ -73,7 +74,6 @@ export function OfferLetterManagement() {
   const [isClearingFormId, setIsClearingFormId] = useState(false);
 
   useEffect(() => {
-    setOfferFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
     setConfirmedFormId(userData?.schoolData?.offerLetterFilloutFormId ?? '');
     setOfferLetterFields(((userData?.schoolData?.settings as any)?.offer_letter_fields) ?? []);
   }, [userData?.schoolData?.offerLetterFilloutFormId, userData?.schoolData?.settings]);
@@ -102,11 +102,12 @@ export function OfferLetterManagement() {
   useEffect(() => { loadOffers(); }, [loadOffers]);
 
   const handleSaveFormId = async () => {
-    if (!schoolId || !offerFormId.trim()) return;
+    if (!schoolId || !editFormIdValue.trim()) return;
     setIsSavingFormId(true);
     try {
-      await OfferLetterService.updateOfferLetterConfig(schoolId, offerFormId.trim());
-      setConfirmedFormId(offerFormId.trim());
+      await OfferLetterService.updateOfferLetterConfig(schoolId, editFormIdValue.trim());
+      setConfirmedFormId(editFormIdValue.trim());
+      setEditFormIdOpen(false);
       showToast('success', 'Offer letter form ID saved');
     } catch (err: any) {
       showToast('error', err.message || 'Failed to save form ID');
@@ -138,7 +139,6 @@ export function OfferLetterManagement() {
     setIsClearingFormId(true);
     try {
       await OfferLetterService.updateOfferLetterConfig(schoolId, '');
-      setOfferFormId('');
       setConfirmedFormId('');
       setClearFormIdConfirm(false);
       showToast('success', 'Form ID removed');
@@ -284,32 +284,43 @@ export function OfferLetterManagement() {
 
           {/* Form ID */}
           <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Fillout Form ID</p>
-          {!confirmedFormId && (
-            <div className="mb-3 flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+          {!confirmedFormId ? (
+            <div className="mb-5 flex items-start gap-3 px-3 py-3 bg-amber-50 border border-amber-200 rounded-xl">
               <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-700">No form configured — offer letters cannot be sent until this is set.</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-amber-700">No form configured — offer letters cannot be sent until this is set.</p>
+              </div>
+              <Button
+                onClick={() => { setEditFormIdValue(''); setEditFormIdOpen(true); }}
+                className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3 shrink-0"
+              >
+                Set Form ID
+              </Button>
+            </div>
+          ) : (
+            <div className="mb-5 flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+              <span
+                className="font-mono text-xs text-slate-700 flex-1 truncate"
+                title={confirmedFormId}
+              >
+                {confirmedFormId}
+              </span>
+              <Button
+                variant="outline"
+                onClick={() => { setEditFormIdValue(confirmedFormId); setEditFormIdOpen(true); }}
+                className="h-7 rounded-lg text-xs px-3 shrink-0 gap-1.5"
+              >
+                <Edit className="w-3 h-3" /> Edit
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setClearFormIdConfirm(true)}
+                className="h-7 rounded-lg text-xs px-3 shrink-0 text-red-600 border-red-200 hover:bg-red-50 gap-1.5"
+              >
+                <Trash2 className="w-3 h-3" /> Delete
+              </Button>
             </div>
           )}
-          <div className="flex gap-2 mb-5">
-            <div className="relative flex-1">
-              <Input value={offerFormId} onChange={e => setOfferFormId(e.target.value)}
-                placeholder="e.g. offer-letter-v2"
-                className="h-9 rounded-xl font-mono text-sm w-full pr-8" />
-              {confirmedFormId && (
-                <button
-                  onClick={() => setClearFormIdConfirm(true)}
-                  title="Remove saved form ID"
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-red-400 transition-colors"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-            </div>
-            <Button onClick={handleSaveFormId} disabled={isSavingFormId || !offerFormId.trim()}
-              className="h-9 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-4 shrink-0">
-              {isSavingFormId ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
 
           {/* Custom Fields */}
           <div className="border-t border-slate-100 pt-4">
@@ -548,13 +559,45 @@ export function OfferLetterManagement() {
         </div>
       </div>
 
+      {/* Edit / Set Form ID dialog */}
+      <Dialog open={editFormIdOpen} onOpenChange={v => { if (!v) setEditFormIdOpen(false); }}>
+        <DialogContent className="w-[95vw] max-w-md rounded-2xl bg-white p-6">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-base font-bold text-slate-900">
+              {confirmedFormId ? 'Edit Fillout Form ID' : 'Set Fillout Form ID'}
+            </DialogTitle>
+            <p className="text-xs text-slate-500 mt-1">
+              Enter the Fillout form ID or full URL used for offer letters at this school.
+            </p>
+          </DialogHeader>
+          <div className="mb-4">
+            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Form ID / URL</label>
+            <Input
+              value={editFormIdValue}
+              onChange={e => setEditFormIdValue(e.target.value)}
+              placeholder="e.g. offer-letter-v2 or full Fillout URL"
+              className="h-10 rounded-xl font-mono text-sm"
+              autoFocus
+              onKeyDown={e => { if (e.key === 'Enter') handleSaveFormId(); }}
+            />
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setEditFormIdOpen(false)} disabled={isSavingFormId} className="rounded-xl">Cancel</Button>
+            <Button onClick={handleSaveFormId} disabled={isSavingFormId || !editFormIdValue.trim()}
+              className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white">
+              {isSavingFormId ? 'Saving…' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Clear form ID confirmation */}
       <Dialog open={clearFormIdConfirm} onOpenChange={v => { if (!v) setClearFormIdConfirm(false); }}>
         <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-base font-bold text-slate-900">Remove Fillout Form ID</DialogTitle>
             <p className="text-xs text-slate-500 mt-1">
-              This will clear the saved form ID <span className="font-mono font-semibold text-slate-700">{confirmedFormId}</span>. Offer letters cannot be sent until a new form ID is set.
+              This will remove the configured Fillout Form ID. Offer letters cannot be sent until a new one is set.
             </p>
           </DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
