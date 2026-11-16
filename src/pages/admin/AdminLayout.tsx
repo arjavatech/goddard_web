@@ -117,6 +117,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       return currentPath === '/admin/employee-forms';
     }
 
+    if (normalizedItemPath === '/admin/offer-letters') {
+      return currentPath === '/admin/offer-letters';
+    }
+
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
