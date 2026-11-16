@@ -11,6 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { PageLoader } from '../../components/ui/page-loader';
 import { useToast } from '../../contexts/ToastContext';
 import { fetchAdminUsers, inviteAdmin, updateAdmin, deleteAdmin, resendAdminInvite, updateAdminTapTimePin, type AdminUser } from '../../services/api/admin';
+import { type OfferLetterField } from '../../services/api/offerLetter';
 import { useUserContext } from '../../contexts/UserContext';
 import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
@@ -59,6 +60,11 @@ export function AdminManagement() {
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [inviteStep, setInviteStep] = useState(1);
   const [editStep, setEditStep] = useState(1);
+  const [inviteOfferCustomFields, setInviteOfferCustomFields] = useState<Record<string, string>>({});
+
+  const isOfferLetterEnabled = userData?.schoolData?.features.offerLetterEnabled === true;
+  const offerLetterFields: OfferLetterField[] = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
+  const totalInviteSteps = isOfferLetterEnabled && offerLetterFields.length > 0 ? 3 : 2;
 
   const PERMISSION_OPTIONS = [
     { key: 'manage_parents',     label: 'Parent Management',    featureKey: 'parentManagementEnabled',   description: 'Classrooms, students, forms & documents' },
@@ -141,6 +147,19 @@ export function AdminManagement() {
 
   const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
 
+  const getAdminAutoFill = (filloutParam: string): string | null => {
+    const p = filloutParam.toLowerCase().replace(/[^a-z]/g, '');
+    if (['name', 'fullname', 'employeename'].includes(p)) return `${adminFirstName} ${adminLastName}`.trim();
+    if (['firstname'].includes(p)) return adminFirstName.trim();
+    if (['lastname'].includes(p)) return adminLastName.trim();
+    if (['email'].includes(p)) return adminEmail.trim();
+    if (['phone', 'phonenumber'].includes(p)) return adminPhone.trim();
+    return null;
+  };
+  const step3Valid = offerLetterFields
+    .filter(f => f.required && getAdminAutoFill(f.filloutParam) === null)
+    .every(f => !!inviteOfferCustomFields[f.filloutParam]?.trim());
+
   const handleInviteAdmin = async () => {
     if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError) {
       showToast('error', 'Please fill in all required fields with valid information');
@@ -160,13 +179,27 @@ export function AdminManagement() {
     setIsInviting(true);
 
     try {
+      const mergedCustomFields = isOfferLetterEnabled && offerLetterFields.length > 0
+        ? {
+            ...Object.fromEntries(
+              offerLetterFields
+                .map(f => [f.filloutParam, getAdminAutoFill(f.filloutParam)])
+                .filter(([, v]) => v !== null) as [string, string][]
+            ),
+            ...Object.fromEntries(
+              Object.entries(inviteOfferCustomFields).filter(([, v]) => v.trim() !== '')
+            ),
+          }
+        : undefined;
+
       await inviteAdmin(
         adminEmail.trim(),
         adminFirstName.trim(),
         adminLastName.trim(),
         userData.schoolId,
         adminPhone.trim() || undefined,
-        invitePermissions
+        invitePermissions,
+        mergedCustomFields
       );
 
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
@@ -330,6 +363,7 @@ export function AdminManagement() {
     setEditPermissions([]);
     setInviteStep(1);
     setEditStep(1);
+    setInviteOfferCustomFields({});
   };
 
   if (isLoading && admins.length === 0) {
@@ -781,10 +815,13 @@ export function AdminManagement() {
             {/* Step indicator */}
             <div className="mb-5">
               <div className="flex gap-1.5 mb-1.5">
-                <div className="flex-1 h-1 rounded-full bg-[#0F2D52]" />
-                <div className={`flex-1 h-1 rounded-full ${inviteStep === 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                {Array.from({ length: totalInviteSteps }, (_, i) => (
+                  <div key={i} className={`flex-1 h-1 rounded-full ${inviteStep > i ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                ))}
               </div>
-              <p className="text-xs text-slate-500">Step {inviteStep} of 2 — {inviteStep === 1 ? 'Basic Info' : 'Permissions'}</p>
+              <p className="text-xs text-slate-500">
+                Step {inviteStep} of {totalInviteSteps} — {inviteStep === 1 ? 'Basic Info' : inviteStep === 2 ? 'Permissions' : 'Offer Letter'}
+              </p>
             </div>
 
             {inviteStep === 1 && (
@@ -862,8 +899,32 @@ export function AdminManagement() {
               </div>
             )}
 
+            {inviteStep === 3 && (
+              <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {offerLetterFields.filter(f => getAdminAutoFill(f.filloutParam) === null).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">All details carried over from Step 1.</p>
+                ) : (
+                  offerLetterFields
+                    .filter(f => getAdminAutoFill(f.filloutParam) === null)
+                    .map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={inviteOfferCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setInviteOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                        />
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">
-              {inviteStep === 1 ? (
+              {inviteStep === 1 && (
                 <>
                   <Button
                     variant="outline"
@@ -880,7 +941,8 @@ export function AdminManagement() {
                     Next: Permissions →
                   </Button>
                 </>
-              ) : (
+              )}
+              {inviteStep === 2 && (
                 <>
                   <Button
                     variant="outline"
@@ -889,9 +951,36 @@ export function AdminManagement() {
                   >
                     ← Back
                   </Button>
+                  {totalInviteSteps === 3 ? (
+                    <Button
+                      onClick={() => setInviteStep(3)}
+                      className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold"
+                    >
+                      Next: Offer Letter →
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={handleInviteAdmin}
+                      disabled={isInviting}
+                      className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
+                    >
+                      {isInviting ? 'Sending...' : 'Send Invite'}
+                    </Button>
+                  )}
+                </>
+              )}
+              {inviteStep === 3 && (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={() => setInviteStep(2)}
+                    className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-800 transition-all duration-200 font-medium"
+                  >
+                    ← Back
+                  </Button>
                   <Button
                     onClick={handleInviteAdmin}
-                    disabled={isInviting}
+                    disabled={isInviting || !step3Valid}
                     className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all duration-200 font-semibold disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
                     {isInviting ? 'Sending...' : 'Send Invite'}

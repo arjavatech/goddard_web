@@ -1106,7 +1106,8 @@ export async function inviteAdmin(
   lastName: string,
   schoolId: string,
   phoneNumber?: string,
-  permissions?: string[]
+  permissions?: string[],
+  customFields?: Record<string, string>
 ): Promise<void> {
   try {
     await authedFetch({
@@ -1118,7 +1119,8 @@ export async function inviteAdmin(
         first_name: firstName,
         last_name: lastName,
         phone_number: phoneNumber || null,
-        ...(permissions !== undefined && { permissions })
+        ...(permissions !== undefined && { permissions }),
+        ...(customFields && Object.keys(customFields).length > 0 && { custom_fields: customFields }),
       }
     }, z.object({}));
   } catch (error: any) {
