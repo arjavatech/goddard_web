@@ -3,10 +3,11 @@ import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Pagination } from '../../components/ui/pagination';
 import { usePagination } from '../../hooks/usePagination';
-import { RequestService, type Request, type RequestExpenseData } from '../../services/api/requests';
+import { RequestService, type Request, type RequestExpenseData, type ExpenseRecord } from '../../services/api/requests';
 import { fetchRequestSettings } from '../../services/api/settings';
 import { fetchClassrooms, fetchAdminUsers, type Classroom, type AdminUser } from '../../services/api/admin';
 import { EmployeeService, type Employee } from '../../services/api/employee';
@@ -19,7 +20,8 @@ import {
 import {
   DollarSign, ShoppingBag, Clock, Play, CheckCircle2,
   TrendingUp, RefreshCw, Layers, Users, School,
-  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter, ImageIcon
+  PieChart as PieIcon, ListCollapse, Plus, LayoutGrid, TableProperties, Search, X, Filter, ImageIcon,
+  Pencil, Trash2, MoreHorizontal, FileText
 } from 'lucide-react';
 import { MultiFileUpload } from '../../components/admin/MultiFileUpload';
 import { SuperAdminLayout } from './SuperAdminLayout';
@@ -91,6 +93,29 @@ const EMPTY_FORM: AddExpenseForm = {
   purchaseDate: new Date().toISOString().slice(0, 10), paymentNotes: ''
 };
 
+type EditExpenseForm = {
+  item: string;
+  quantity: string;
+  category: string;
+  scope: 'classroom' | 'teacher' | 'school';
+  classroomName: string;
+  teacherName: string;
+  location: string;
+  productLink: string;
+  notes: string;
+  amountSpent: string;
+  paymentMethod: string;
+  paymentNotes: string;
+  purchaseDate: string;
+};
+
+const EMPTY_EDIT_FORM: EditExpenseForm = {
+  item: '', quantity: '1', category: '', scope: 'school',
+  classroomName: '', teacherName: '', location: '', productLink: '',
+  notes: '', amountSpent: '', paymentMethod: 'Credit Card',
+  paymentNotes: '', purchaseDate: '',
+};
+
 export function SuperAdminExpenses() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
@@ -113,6 +138,14 @@ export function SuperAdminExpenses() {
   const [ledgerSortConfig, setLedgerSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
   const [ledgerScopeFilter, setLedgerScopeFilter] = useState<string>('all');
   const [ledgerCategoryFilter, setLedgerCategoryFilter] = useState<string>('all');
+  const [editingExpense, setEditingExpense] = useState<ExpenseRecord | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editExpenseStep, setEditExpenseStep] = useState<'details' | 'payment'>('details');
+  const [editForm, setEditForm] = useState<EditExpenseForm>(EMPTY_EDIT_FORM);
+  const [expenseToDelete, setExpenseToDelete] = useState<ExpenseRecord | null>(null);
+  const [editBillFiles, setEditBillFiles] = useState<File[]>([]);
+  const [deletedBillUrls, setDeletedBillUrls] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const activeFilterCount = (ledgerSortConfig ? 1 : 0) + (ledgerScopeFilter !== 'all' ? 1 : 0) + (ledgerCategoryFilter !== 'all' ? 1 : 0);
 
@@ -220,6 +253,80 @@ export function SuperAdminExpenses() {
       showToast('error', 'Failed to add expense.', 'Error');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenEdit = (expense: ExpenseRecord) => {
+    setEditingExpense(expense);
+    setEditForm({
+      item: expense.item,
+      quantity: String(expense.quantity),
+      category: expense.category || '',
+      scope: expense.scope,
+      classroomName: expense.classroomName || '',
+      teacherName: expense.teacherName || '',
+      location: expense.location || '',
+      productLink: expense.productLink || '',
+      notes: expense.notes || '',
+      amountSpent: String(expense.amountSpent),
+      paymentMethod: expense.paymentMethod,
+      paymentNotes: expense.paymentNotes || '',
+      purchaseDate: expense.purchaseDate,
+    });
+    setEditBillFiles([]);
+    setDeletedBillUrls([]);
+    setEditExpenseStep('details');
+    setIsEditModalOpen(true);
+  };
+
+  const runEditSave = async () => {
+    if (!editingExpense) return;
+    if (!editForm.item.trim() || !editForm.amountSpent) {
+      showToast('error', 'Item and amount are required.', 'Validation');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const remainingBillUrls = (editingExpense.billImageUrls ?? []).filter(u => !deletedBillUrls.includes(u));
+      await RequestService.updateExpense(editingExpense.id, {
+        item: editForm.item.trim(),
+        quantity: parseInt(editForm.quantity) || 1,
+        category: editForm.category || null,
+        scope: editForm.scope,
+        classroomName: editForm.scope === 'classroom' ? editForm.classroomName : null,
+        teacherName: editForm.scope === 'teacher' ? editForm.teacherName : null,
+        location: editForm.location || null,
+        productLink: editForm.productLink || null,
+        notes: editForm.notes || null,
+        amountSpent: parseFloat(editForm.amountSpent),
+        paymentMethod: editForm.paymentMethod,
+        purchaseDate: editForm.purchaseDate,
+        paymentNotes: editForm.paymentNotes || null,
+        billImageUrls: remainingBillUrls,
+      }, editBillFiles.length > 0 ? editBillFiles : undefined);
+      showToast('success', 'Expense updated successfully.', 'Expense Updated');
+      setIsEditModalOpen(false);
+      setEditingExpense(null);
+      await loadData();
+    } catch {
+      showToast('error', 'Could not update expense. Please try again.', 'Error');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteExpense = async () => {
+    if (!expenseToDelete) return;
+    setSubmitting(true);
+    try {
+      await RequestService.deleteExpense(expenseToDelete.id);
+      showToast('success', 'Expense deleted successfully.', 'Expense Deleted');
+      setExpenseToDelete(null);
+      await loadData();
+    } catch {
+      showToast('error', 'Could not delete expense. Please try again.', 'Delete Failed');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -565,12 +672,29 @@ export function SuperAdminExpenses() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                     {paginatedExpenses.map((expense) => (
                       <div key={expense.id} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 space-y-3">
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="font-semibold text-sm text-slate-800 line-clamp-2">{expense.item}</p>
                             <p className="mt-1 text-[10px] font-medium text-slate-400">{expense.category || 'Classroom Supplies'}</p>
                           </div>
-                          <span className="shrink-0 rounded-lg bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700">${expense.amountSpent.toFixed(2)}</span>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            <span className="rounded-lg bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700">${expense.amountSpent.toFixed(2)}</span>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild onClick={e => e.stopPropagation()}>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-lg text-slate-400 hover:text-slate-600 flex-shrink-0">
+                                  <MoreHorizontal className="w-4 h-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
+                                <DropdownMenuItem onClick={e => { e.stopPropagation(); handleOpenEdit(expense); }}>
+                                  <Pencil className="w-3.5 h-3.5 mr-2 text-slate-400" /> Edit Expense
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={e => { e.stopPropagation(); setExpenseToDelete(expense); }} className="text-red-600 focus:text-red-600 focus:bg-red-50">
+                                  <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Expense
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 text-[11px]">
                           <div><p className="text-slate-400">Requester</p><p className="font-medium text-slate-700 truncate">{expense.requesterName}</p></div>
@@ -591,7 +715,7 @@ export function SuperAdminExpenses() {
                   <table className="w-full text-xs text-left">
                     <thead>
                       <tr className="border-b border-slate-100 bg-slate-50/60">
-                        {['Item', 'Requester', 'Scope / Target', 'Payment', 'Date', 'Completed By', 'Amount'].map(h => (
+                        {['Item', 'Requester', 'Scope / Target', 'Payment', 'Date', 'Completed By', 'Amount', 'Actions'].map(h => (
                           <th key={h} className="px-5 py-3 text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap last:text-right">
                             {h}
                           </th>
@@ -619,6 +743,18 @@ export function SuperAdminExpenses() {
                           <td className="px-5 py-3.5 text-slate-500">{req.paidByName || <span className="text-slate-300">—</span>}</td>
                           <td className="px-5 py-3.5 text-right">
                             <span className="font-bold text-emerald-700 text-sm">${req.amountSpent?.toFixed(2)}</span>
+                          </td>
+                          <td className="px-3 py-3.5 text-right" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="outline" size="sm" aria-label="Edit expense" onClick={() => handleOpenEdit(req)}
+                                className="h-7 w-7 p-0 rounded-lg hover:border-[#0F2D52] hover:text-[#0F2D52]">
+                                <Pencil className="w-3 h-3" />
+                              </Button>
+                              <Button variant="outline" size="sm" aria-label="Delete expense" onClick={() => setExpenseToDelete(req)}
+                                className="h-7 w-7 p-0 rounded-lg text-red-500 border-red-200 hover:bg-red-50 hover:border-red-400">
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -833,6 +969,191 @@ export function SuperAdminExpenses() {
               </DialogFooter>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Expense Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={open => { setIsEditModalOpen(open); if (!open) { setEditingExpense(null); setDeletedBillUrls([]); setEditBillFiles([]); setEditExpenseStep('details'); } }}>
+        <DialogContent className="w-[95vw] max-w-lg rounded-2xl max-h-[90vh] bg-white p-0 flex flex-col overflow-hidden">
+          <div className="px-6 pt-6 pb-0 flex-shrink-0">
+            <DialogTitle className="text-base font-bold text-slate-900">Edit Expense</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-0.5">
+              Editing: <span className="font-semibold text-slate-700">{editingExpense?.item}</span>
+            </DialogDescription>
+            {/* Step indicator */}
+            <div className="flex items-center gap-2 mt-4">
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold border-2 flex-shrink-0 ${editExpenseStep === 'details' ? 'bg-[#0F2D52] border-[#0F2D52] text-white' : 'bg-white border-[#0F2D52] text-[#0F2D52]'}`}>1</div>
+              <span className={`text-[11px] font-bold ${editExpenseStep === 'details' ? 'text-[#0F2D52]' : 'text-slate-400'}`}>Item Details</span>
+              <div className={`flex-1 h-px mx-1 ${editExpenseStep === 'payment' ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+              <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-extrabold border-2 flex-shrink-0 ${editExpenseStep === 'payment' ? 'bg-[#0F2D52] border-[#0F2D52] text-white' : 'bg-white border-slate-200 text-slate-400'}`}>2</div>
+              <span className={`text-[11px] font-bold ${editExpenseStep === 'payment' ? 'text-[#0F2D52]' : 'text-slate-400'}`}>Payment & Bills</span>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {/* Step 1: Item Details */}
+            {editExpenseStep === 'details' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Item *</label>
+                  <input value={editForm.item} onChange={e => setEditForm(f => ({ ...f, item: e.target.value }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Quantity</label>
+                    <input type="number" min={1} value={editForm.quantity} onChange={e => setEditForm(f => ({ ...f, quantity: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Category</label>
+                    <select value={editForm.category} onChange={e => setEditForm(f => ({ ...f, category: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none">
+                      <option value="">Select category</option>
+                      {categories.map(c => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Scope</label>
+                  <div className="flex gap-2 mt-1">
+                    {SCOPES.map(s => (
+                      <button key={s} type="button" onClick={() => setEditForm(f => ({ ...f, scope: s, classroomName: '', teacherName: '' }))}
+                        className={`flex-1 py-1.5 rounded-lg text-xs font-semibold border transition-all ${editForm.scope === s ? 'bg-[#0F2D52] text-white border-[#0F2D52]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}>
+                        {s === 'classroom' ? 'Classroom' : s === 'teacher' ? 'Teacher' : 'School-wide'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                {editForm.scope === 'classroom' && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Classroom</label>
+                    <select value={editForm.classroomName} onChange={e => setEditForm(f => ({ ...f, classroomName: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none">
+                      <option value="">Select classroom...</option>
+                      {classrooms.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                )}
+                {editForm.scope === 'teacher' && (
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Teacher</label>
+                    <select value={editForm.teacherName} onChange={e => setEditForm(f => ({ ...f, teacherName: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none">
+                      <option value="">Select teacher / admin...</option>
+                      {employees.map(e => <option key={e.id} value={`${e.firstName} ${e.lastName}`}>{e.firstName} {e.lastName}</option>)}
+                    </select>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Location</label>
+                    <select value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none">
+                      <option value="">Select location</option>
+                      {locationOptions.map(loc => <option key={loc}>{loc}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Product Link</label>
+                    <input value={editForm.productLink} onChange={e => setEditForm(f => ({ ...f, productLink: e.target.value }))} placeholder="https://..."
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Notes</label>
+                  <input value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                </div>
+              </div>
+            )}
+
+            {/* Step 2: Payment & Bills */}
+            {editExpenseStep === 'payment' && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Amount Spent ($) *</label>
+                    <input type="number" min={0} step={0.01} value={editForm.amountSpent} onChange={e => setEditForm(f => ({ ...f, amountSpent: e.target.value }))} placeholder="0.00"
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Purchase Date</label>
+                    <input type="date" value={editForm.purchaseDate} onChange={e => setEditForm(f => ({ ...f, purchaseDate: e.target.value }))}
+                      className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Payment Method</label>
+                  <select value={editForm.paymentMethod} onChange={e => setEditForm(f => ({ ...f, paymentMethod: e.target.value }))}
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-700 focus:outline-none">
+                    {PAYMENT_METHODS.map(p => <option key={p}>{p}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Payment Notes</label>
+                  <input value={editForm.paymentNotes} onChange={e => setEditForm(f => ({ ...f, paymentNotes: e.target.value }))} placeholder="Receipt info, PO number, etc."
+                    className="mt-1 w-full h-9 rounded-lg border border-slate-200 px-3 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20" />
+                </div>
+                <div className="space-y-2 border-t border-slate-100 pt-3">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Bill / Receipt Documents</label>
+                  {(editingExpense?.billImageUrls ?? []).filter(u => !deletedBillUrls.includes(u)).map((url, i) => {
+                    const filename = url.split('/').pop()?.split('?')[0] || `Image ${i + 1}`;
+                    const isPdf = filename.toLowerCase().endsWith('.pdf');
+                    return (
+                      <div key={url} className="flex items-center gap-2 p-2 rounded-lg bg-slate-50 border border-slate-100">
+                        {isPdf ? <FileText className="w-7 h-7 text-red-400 flex-shrink-0" /> : <img src={url} alt={filename} className="w-7 h-7 rounded object-cover flex-shrink-0" />}
+                        <a href={url} target="_blank" rel="noopener noreferrer" className="flex-1 text-xs text-slate-600 truncate hover:text-blue-600">{filename}</a>
+                        <button type="button" onClick={() => setDeletedBillUrls(prev => [...prev, url])} className="text-slate-400 hover:text-red-500 flex-shrink-0 p-0.5">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <MultiFileUpload files={editBillFiles} onChange={setEditBillFiles} maxFiles={5} maxSizeMB={5} accept="image/*,.pdf" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="px-6 py-4 border-t border-slate-50 flex-shrink-0 bg-white rounded-b-2xl gap-2 justify-end">
+            {editExpenseStep === 'payment' ? (
+              <Button type="button" variant="outline" onClick={() => setEditExpenseStep('details')}
+                className="rounded-xl h-10 text-xs font-semibold px-6">← Back</Button>
+            ) : (
+              <Button type="button" variant="outline" onClick={() => { setIsEditModalOpen(false); setEditingExpense(null); setEditExpenseStep('details'); setDeletedBillUrls([]); setEditBillFiles([]); }}
+                className="rounded-xl h-10 text-xs font-semibold px-6">Cancel</Button>
+            )}
+            {editExpenseStep === 'details' ? (
+              <Button type="button" onClick={() => setEditExpenseStep('payment')}
+                className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+                Next →
+              </Button>
+            ) : (
+              <Button type="button" onClick={runEditSave} disabled={submitting}
+                className="rounded-xl h-10 px-6 bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] text-white text-xs font-bold hover:from-[#091629] hover:to-[#0F2D52]">
+                {submitting ? 'Saving…' : 'Save Changes'}
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Expense Confirm */}
+      <Dialog open={!!expenseToDelete} onOpenChange={open => { if (!open) setExpenseToDelete(null); }}>
+        <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-slate-900">Delete Expense</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Are you sure you want to delete <span className="font-semibold text-slate-700">"{expenseToDelete?.item}"</span>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setExpenseToDelete(null)} className="rounded-xl text-xs font-semibold">Cancel</Button>
+            <Button onClick={handleDeleteExpense} disabled={submitting} className="rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold">
+              {submitting ? 'Deleting…' : 'Delete'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </AdminLayout>
