@@ -108,7 +108,7 @@ export function OfferLetterManagement() {
       await OfferLetterService.updateOfferLetterConfig(schoolId, editFormIdValue.trim());
       setConfirmedFormId(editFormIdValue.trim());
       setEditFormIdOpen(false);
-      showToast('success', 'Offer letter form ID saved');
+      showToast('success', 'Offer letter form URL saved');
     } catch (err: any) {
       showToast('error', err.message || 'Failed to save form ID');
     } finally {
@@ -278,12 +278,12 @@ export function OfferLetterManagement() {
             </div>
             <div>
               <h2 className="text-sm font-bold text-slate-900">Offer Letter Settings</h2>
-              <p className="text-xs text-slate-400">Configure the Fillout form and custom fields for this school</p>
+              <p className="text-xs text-slate-400">Configure the Fillout form URL and custom fields for this school</p>
             </div>
           </div>
 
           {/* Form ID */}
-          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Fillout Form ID</p>
+          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Fillout Form URL</p>
           {!confirmedFormId ? (
             <div className="mb-5 flex items-start gap-3 px-3 py-3 bg-amber-50 border border-amber-200 rounded-xl">
               <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
@@ -294,7 +294,7 @@ export function OfferLetterManagement() {
                 onClick={() => { setEditFormIdValue(''); setEditFormIdOpen(true); }}
                 className="h-7 rounded-lg bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs px-3 shrink-0"
               >
-                Set Form ID
+                Set Form URL
               </Button>
             </div>
           ) : (
@@ -559,23 +559,23 @@ export function OfferLetterManagement() {
         </div>
       </div>
 
-      {/* Edit / Set Form ID dialog */}
+      {/* Edit / Set Form URL dialog */}
       <Dialog open={editFormIdOpen} onOpenChange={v => { if (!v) setEditFormIdOpen(false); }}>
         <DialogContent className="w-[95vw] max-w-md rounded-2xl bg-white p-6">
           <DialogHeader className="mb-4">
             <DialogTitle className="text-base font-bold text-slate-900">
-              {confirmedFormId ? 'Edit Fillout Form ID' : 'Set Fillout Form ID'}
+              {confirmedFormId ? 'Edit Fillout Form URL' : 'Set Fillout Form URL'}
             </DialogTitle>
             <p className="text-xs text-slate-500 mt-1">
-              Enter the Fillout form ID or full URL used for offer letters at this school.
+              Enter the full Fillout form URL used for offer letters at this school.
             </p>
           </DialogHeader>
           <div className="mb-4">
-            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Form ID / URL</label>
+            <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Form URL</label>
             <Input
               value={editFormIdValue}
               onChange={e => setEditFormIdValue(e.target.value)}
-              placeholder="e.g. offer-letter-v2 or full Fillout URL"
+              placeholder="https://template-1.form-builder-atj.pages.dev/..."
               className="h-10 rounded-xl font-mono text-sm"
               autoFocus
               onKeyDown={e => { if (e.key === 'Enter') handleSaveFormId(); }}
@@ -595,9 +595,9 @@ export function OfferLetterManagement() {
       <Dialog open={clearFormIdConfirm} onOpenChange={v => { if (!v) setClearFormIdConfirm(false); }}>
         <DialogContent className="w-[95vw] max-w-sm rounded-2xl bg-white p-6">
           <DialogHeader className="mb-4">
-            <DialogTitle className="text-base font-bold text-slate-900">Remove Fillout Form ID</DialogTitle>
+            <DialogTitle className="text-base font-bold text-slate-900">Remove Fillout Form URL</DialogTitle>
             <p className="text-xs text-slate-500 mt-1">
-              This will remove the configured Fillout Form ID. Offer letters cannot be sent until a new one is set.
+              This will remove the configured Fillout Form URL. Offer letters cannot be sent until a new URL is set.
             </p>
           </DialogHeader>
           <DialogFooter className="flex flex-col sm:flex-row gap-2">
