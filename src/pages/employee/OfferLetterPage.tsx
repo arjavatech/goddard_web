@@ -205,7 +205,7 @@ export function OfferLetterPage() {
               <StatusSection
                 offer={offer}
                 onOpenForm={() => navigate(`/${schoolSlug}/employee/offer-letter/view`, {
-                  state: { prefillUrl: offer.prefillUrl },
+                  state: { prefillUrl: offer.prefillUrl, status: offer.status },
                 })}
                 onDownload={handleDownload}
               />
