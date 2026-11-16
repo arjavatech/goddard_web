@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { AdminLayout } from '../admin/AdminLayout';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { Card, CardContent } from '../../components/ui/card';
@@ -54,6 +55,8 @@ export function AdminManagement() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const { showToast } = useToast();
   const { userData, schoolFeatures } = useUserContext();
+  const navigate = useNavigate();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
   const canManageAdministratorPins = isTapTimeEnabled && (userData?.role?.toLowerCase() === 'superadmin' || userData?.role?.toLowerCase() === 'owner');
 
@@ -594,7 +597,8 @@ export function AdminManagement() {
               cards={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
                 return (
-                  <Card key={admin.id} className="p-5 border border-slate-100 rounded-2xl bg-white shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between">
+                  <Card key={admin.id} className="p-5 border border-slate-100 rounded-2xl bg-white shadow-xs hover:shadow-md transition-all duration-300 hover:-translate-y-1 flex flex-col justify-between cursor-pointer"
+                    onClick={() => navigate(`/${schoolSlug}/admin/admin-management/${admin.id}`, { state: { admin } })}>
                     <div>
                       <div className="flex items-start justify-between mb-3 gap-2">
                         <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -613,7 +617,7 @@ export function AdminManagement() {
                         </div>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-650 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -724,7 +728,7 @@ export function AdminManagement() {
               rows={paginatedAdmins.map((admin) => {
                 const initials = `${admin.first_name?.[0] || ''}${admin.last_name?.[0] || ''}`.toUpperCase();
                 return (
-                  <tr key={admin.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150">
+                  <tr key={admin.id} className="border-b border-slate-50 hover:bg-[#F8FAFC] transition-colors duration-150 cursor-pointer" onClick={() => navigate(`/${schoolSlug}/admin/admin-management/${admin.id}`, { state: { admin } })}>
                     <td className="py-4 px-4">
                       <div className="flex items-center gap-3">
                         <AvatarInitials initials={initials} className="bg-[#0151a0] text-white font-semibold" />
@@ -809,7 +813,7 @@ export function AdminManagement() {
                     <td className="py-4 px-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>

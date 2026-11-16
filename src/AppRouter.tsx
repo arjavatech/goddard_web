@@ -43,6 +43,7 @@ import { UserManagement } from './pages/superadmin/UserManagement';
 import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
+import { AdminDetailPage } from './pages/superadmin/AdminDetailPage';
 import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSVUploadPage';
@@ -237,6 +238,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="admin" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
+                  <Route path="/:schoolSlug/admin/admin-management/:adminId" element={<AdminDetailPage />} />
                   <Route path="/:schoolSlug/admin/owner-management" element={<SuperAdminOnly><OwnerManagement /></SuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />
