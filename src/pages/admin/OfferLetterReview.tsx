@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import { Link, useParams } from 'react-router-dom';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { DataTable } from '../../components/ui/data-table';
 import { AvatarInitials } from '../../components/ui/avatar-initials';
 import { StatCard } from '../../components/ui/stat-card';
@@ -9,16 +9,12 @@ import { useToast } from '../../contexts/ToastContext';
 import { useUserContext } from '../../contexts/UserContext';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
 import { usePageSize } from '../../hooks/usePageSize';
-import { CheckCircle, XCircle, Search, X, ClipboardList } from 'lucide-react';
-
-interface ReviewDialogState {
-  offer: OfferLetter;
-  action: 'approve' | 'reject';
-}
+import { Eye, Search, X, ClipboardList } from 'lucide-react';
 
 export function OfferLetterReview() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
+  const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const schoolId = userData?.schoolId ?? '';
   const offerLetterEnabled = userData?.schoolData?.features?.offerLetterEnabled ?? false;
 
@@ -27,10 +23,6 @@ export function OfferLetterReview() {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = usePageSize('offerLetterReview', 10);
-
-  const [reviewDialog, setReviewDialog] = useState<ReviewDialogState | null>(null);
-  const [rejectionReason, setRejectionReason] = useState('');
-  const [isReviewing, setIsReviewing] = useState(false);
 
   const loadOffers = useCallback(async () => {
     if (!schoolId) return;
@@ -46,30 +38,6 @@ export function OfferLetterReview() {
   }, [schoolId, showToast]);
 
   useEffect(() => { loadOffers(); }, [loadOffers]);
-
-  const handleReview = async () => {
-    if (!reviewDialog) return;
-    setIsReviewing(true);
-    try {
-      await OfferLetterService.adminReviewOffer(reviewDialog.offer.employeeId, schoolId, {
-        approved: reviewDialog.action === 'approve',
-        rejectionReason: rejectionReason.trim() || undefined,
-      });
-      showToast(
-        'success',
-        reviewDialog.action === 'approve'
-          ? 'Offer approved — employee account activated'
-          : 'Offer rejected'
-      );
-      setReviewDialog(null);
-      setRejectionReason('');
-      loadOffers();
-    } catch (err: any) {
-      showToast('error', err.message || 'Failed to process review');
-    } finally {
-      setIsReviewing(false);
-    }
-  };
 
   const filtered = offers.filter(o => {
     if (!searchTerm) return true;
@@ -186,21 +154,14 @@ export function OfferLetterReview() {
                     <p className="text-xs text-slate-500">{acceptedDate}</p>
                   </td>
                   <td className="py-4 px-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        onClick={() => { setReviewDialog({ offer, action: 'approve' }); setRejectionReason(''); }}
-                        className="h-7 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 gap-1.5"
-                      >
-                        <CheckCircle className="w-3.5 h-3.5" /> Approve
+                    <Link
+                      to={`/${schoolSlug}/admin/offer-letters/review/${offer.id}`}
+                      state={{ offer, returnPath: `/${schoolSlug}/admin/offer-letters/review` }}
+                    >
+                      <Button size="sm" className="h-7 rounded-lg bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white text-xs px-3 gap-1.5 hover:opacity-90 border-0">
+                        <Eye className="w-3.5 h-3.5" /> Review
                       </Button>
-                      <Button
-                        onClick={() => { setReviewDialog({ offer, action: 'reject' }); setRejectionReason(''); }}
-                        variant="outline"
-                        className="h-7 rounded-lg border-red-200 text-red-600 hover:bg-red-50 text-xs px-3 gap-1.5"
-                      >
-                        <XCircle className="w-3.5 h-3.5" /> Reject
-                      </Button>
-                    </div>
+                    </Link>
                   </td>
                 </tr>
               );
@@ -209,59 +170,6 @@ export function OfferLetterReview() {
         </div>
       </div>
 
-      {/* Approve / Reject confirmation dialog */}
-      <Dialog
-        open={!!reviewDialog}
-        onOpenChange={v => { if (!v) { setReviewDialog(null); setRejectionReason(''); } }}
-      >
-        <DialogContent className="w-[95vw] max-w-md rounded-2xl bg-white p-6">
-          <DialogHeader className="mb-4">
-            <DialogTitle className="text-lg font-bold text-slate-900">
-              {reviewDialog?.action === 'approve' ? 'Approve Offer Letter' : 'Reject Offer Letter'}
-            </DialogTitle>
-            <p className="text-xs text-slate-500 mt-1">
-              {reviewDialog?.action === 'approve'
-                ? `Approving will activate ${reviewDialog.offer.firstName} ${reviewDialog.offer.lastName}'s employee account.`
-                : `This will reject ${reviewDialog?.offer.firstName} ${reviewDialog?.offer.lastName}'s signed offer.`}
-            </p>
-          </DialogHeader>
-
-          {reviewDialog?.action === 'reject' && (
-            <div className="mb-4">
-              <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Rejection Reason</label>
-              <textarea
-                value={rejectionReason}
-                onChange={e => setRejectionReason(e.target.value)}
-                placeholder="Optional — reason shown to the employee"
-                rows={3}
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/20 resize-none"
-              />
-            </div>
-          )}
-
-          <DialogFooter className="flex flex-col sm:flex-row gap-2">
-            <Button
-              variant="outline"
-              onClick={() => { setReviewDialog(null); setRejectionReason(''); }}
-              disabled={isReviewing}
-              className="rounded-xl"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleReview}
-              disabled={isReviewing}
-              className={`rounded-xl text-white ${reviewDialog?.action === 'approve' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'}`}
-            >
-              {isReviewing
-                ? 'Processing…'
-                : reviewDialog?.action === 'approve'
-                  ? 'Approve & Activate'
-                  : 'Reject'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 }

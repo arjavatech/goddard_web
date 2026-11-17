@@ -82,6 +82,7 @@ import { OfferLetterFormView } from './pages/employee/OfferLetterFormView';
 import { AdminMyForms } from './pages/admin/AdminMyForms';
 import { OfferLetterManagement } from './pages/admin/OfferLetterManagement';
 import { OfferLetterReview } from './pages/admin/OfferLetterReview';
+import { OfferLetterReviewDetail } from './pages/admin/OfferLetterReviewDetail';
 import { AdminOfferLetterPage } from './pages/admin/AdminOfferLetterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
@@ -230,6 +231,7 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-documents/:requestId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentRequestAssignments audience="employee" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/offer-letters" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterManagement /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/offer-letters/review" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterReview /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letters/review/:offerId" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterReviewDetail /></PermissionRoute></FeatureRoute>} />
                   {/* Admin own offer letter (first-login gate) */}
                   <Route path="/:schoolSlug/admin/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><AdminOfferLetterPage /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/offer-letter/view" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterFormView /></FeatureRoute>} />
