@@ -311,7 +311,7 @@ export function EmployeeManagement() {
     setEmpFirstName(emp.firstName);
     setEmpLastName(emp.lastName);
     setEmpEmail(emp.email);
-    setEmpPhone(emp.phone);
+    setEmpPhone(emp.phone || '');
     setEmpPhoneCountry(emp.phoneCountry || 'US');
     setEmpAddress(emp.address);
     setEmpType(emp.employeeType);
