@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { EmployeeLayout } from './EmployeeLayout';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
 import { useUserContext } from '../../contexts/UserContext';
@@ -354,8 +353,8 @@ export function EmployeeRequests() {
   };
 
   return (
-    <EmployeeLayout>
-      <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+    <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* Header Section */}
         <div className="mb-8 mt-8">
@@ -531,9 +530,19 @@ export function EmployeeRequests() {
 
         {/* Requests List */}
         {loading ? (
-          <div className="py-16 text-center text-muted-foreground flex flex-col items-center justify-center min-h-[300px]">
-            <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] h-8 w-8 mb-3"></div>
-            <p className="text-slate-500 text-xs sm:text-sm font-semibold">Loading requests...</p>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-slate-200 shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-200 rounded w-1/3" />
+                    <div className="h-3 bg-slate-200 rounded w-1/2" />
+                  </div>
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                </div>
+              </div>
+            ))}
           </div>
         ) : filteredRequests.length === 0 ? (
           <div className="rounded-2xl border border-slate-100 bg-white p-12 text-center shadow-sm">
@@ -1091,6 +1100,6 @@ export function EmployeeRequests() {
         </DialogContent>
       </Dialog>
       <BillImagePreviewModal url={previewBillUrl} onClose={() => setPreviewBillUrl(null)} />
-    </EmployeeLayout>
+    </>
   );
 }

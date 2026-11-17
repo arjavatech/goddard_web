@@ -16,6 +16,7 @@ function statusLabel(status: string): string {
     case 'offer_accepted': return 'Awaiting Approval';
     case 'approved':
     case 'active': return 'Active';
+    case 'offer_rejected':
     case 'rejected': return 'Rejected';
     case 'viewed': return 'Viewed';
     case 'offer_sent': return 'Offer Sent';
@@ -29,6 +30,7 @@ function statusVariant(status: string): 'warning' | 'success' | 'destructive' | 
     case 'offer_accepted': return 'warning';
     case 'approved':
     case 'active': return 'success';
+    case 'offer_rejected':
     case 'rejected': return 'destructive';
     case 'viewed':
     case 'offer_sent': return 'info';
@@ -234,19 +236,23 @@ export function OfferLetterReviewDetail() {
         >
           Back
         </Button>
-        <Button
-          variant="outline"
-          onClick={() => { setRejectionReason(''); setRejectModalOpen(true); }}
-          className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 gap-2 h-10 px-5"
-        >
-          <XCircle className="h-4 w-4" /> Reject
-        </Button>
-        <Button
-          onClick={() => setApproveModalOpen(true)}
-          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 px-5"
-        >
-          <CheckCircle className="h-4 w-4" /> Approve &amp; Activate
-        </Button>
+        {offer.status !== 'approved' && offer.status !== 'active' && (
+          <>
+            <Button
+              variant="outline"
+              onClick={() => { setRejectionReason(''); setRejectModalOpen(true); }}
+              className="rounded-xl border-red-200 text-red-600 hover:bg-red-50 gap-2 h-10 px-5"
+            >
+              <XCircle className="h-4 w-4" /> Reject
+            </Button>
+            <Button
+              onClick={() => setApproveModalOpen(true)}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 px-5"
+            >
+              <CheckCircle className="h-4 w-4" /> Approve &amp; Activate
+            </Button>
+          </>
+        )}
       </div>
 
       {/* Approve confirmation modal */}

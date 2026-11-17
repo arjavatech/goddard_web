@@ -1,10 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EmployeeLayout } from './EmployeeLayout';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
@@ -243,8 +241,7 @@ export function OfferLetterPage() {
   };
 
   return (
-    <EmployeeLayout>
-      <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-9 h-9 rounded-xl bg-[#0F2D52] flex items-center justify-center flex-shrink-0">
             <FileText className="w-5 h-5 text-white" />
@@ -256,8 +253,31 @@ export function OfferLetterPage() {
         </div>
 
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loading size="md" message="Loading offer letter…" />
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-3 bg-slate-200 rounded w-16" />
+                <div className="h-5 bg-slate-200 rounded-full w-24" />
+              </div>
+              <div className="flex items-center gap-4 py-2">
+                <div className="w-14 h-14 rounded-full bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 animate-pulse">
+              <div className="h-3 bg-slate-200 rounded w-24 mb-3" />
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-slate-50 rounded-xl px-3 py-2.5">
+                    <div className="h-2 bg-slate-200 rounded w-16 mb-1" />
+                    <div className="h-4 bg-slate-200 rounded w-24" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -374,6 +394,5 @@ export function OfferLetterPage() {
           </div>
         )}
       </div>
-    </EmployeeLayout>
   );
 }

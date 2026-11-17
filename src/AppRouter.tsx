@@ -98,6 +98,12 @@ import { WeeklyReport } from './pages/admin/WeeklyReport';
 import { EmployeeWeeklyReport } from './pages/employee/EmployeeWeeklyReport';
 import { TapTimeIntegration } from './pages/admin/TapTimeIntegration';
 
+import { EmployeeLayout } from './pages/employee/EmployeeLayout';
+
+function EmployeeLayoutRoute() {
+  return <EmployeeLayout><Outlet /></EmployeeLayout>;
+}
+
 function ScrollToTop() {
   const { pathname } = useLocation();
 
@@ -161,14 +167,19 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/dashboard/surveys" element={<FeatureRoute feature="surveyEnabled"><ParentSurveys /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/conferences" element={<FeatureRoute feature="conferenceEnabled"><ParentConferences /></FeatureRoute>} />
                   <Route path="/:schoolSlug/dashboard/conferences/:id" element={<FeatureRoute feature="conferenceEnabled"><ParentConferenceDetail /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/dashboard" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDashboard /></FeatureRoute>} />
+                  {/* Employee pages — shared sidebar layout */}
+                  <Route element={<EmployeeLayoutRoute />}>
+                    <Route path="/:schoolSlug/employee/dashboard" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeDashboard /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/surveys" element={<FeatureRoute feature="surveyEnabled"><EmployeeSurveys /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterPage /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="employee" noLayout /></FeatureRoute>} />
+                    <Route path="/:schoolSlug/employee/profile" element={<ProfilePage noLayout />} />
+                  </Route>
+                  {/* Full-screen views — own layout */}
                   <Route path="/:schoolSlug/employee/form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/requests" element={<FeatureRoute feature="expenseManagementEnabled"><EmployeeRequests /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="employee" /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/surveys" element={<FeatureRoute feature="surveyEnabled"><EmployeeSurveys /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
-                  <Route path="/:schoolSlug/employee/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterPage /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/offer-letter/view" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterFormView /></FeatureRoute>} />
                 </Route>
                 {/* Public survey respond — no auth required for anonymous surveys */}

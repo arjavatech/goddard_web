@@ -20,7 +20,7 @@ const assignmentStatus = (item: DocumentAssignment): Status => item.derived_stat
 const date = (value?: string) => value ? new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric', ...(value.includes('T') ? { hour: 'numeric', minute: '2-digit' } : {}) }).format(new Date(value)) : 'No due date';
 const fileSize = (value?: number) => !value ? '' : value >= 1024 * 1024 ? `${(value / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(value / 1024))} KB`;
 
-export function MyDocuments({ audience }: { audience: Audience }) {
+export function MyDocuments({ audience, noLayout }: { audience: Audience; noLayout?: boolean }) {
   const { userData } = useUserContext();
   const [searchParams, setSearchParams] = useSearchParams();
   const [items, setItems] = useState<DocumentAssignment[]>([]);
@@ -100,6 +100,7 @@ export function MyDocuments({ audience }: { audience: Audience }) {
         {isParent && selectedChildId && 
           <p className="-mt-2 text-sm text-slate-500">
             Showing document requirements for <span className="font-semibold text-slate-700">{selectedChildId}</span>.</p>}<section className="grid grid-cols-2 gap-4 sm:grid-cols-4"><Summary label="Upload required" value={summary.required} /><Summary label="Submitted" value={summary.submitted} /><Summary label="Approved" value={summary.approved} /><Summary label="Re-upload needed" value={summary.rejected} /></section>{loading ? <div className="py-16 text-center text-sm text-slate-500">Loading documents…</div> : !visibleItems.length ? <div className="rounded-2xl border border-slate-100 bg-white py-16 text-center text-sm text-slate-500">No document requests are currently assigned.</div> : <section className="grid auto-rows-fr items-stretch gap-5 sm:grid-cols-2">{visibleItems.map(item => <DocumentCard key={item.id} item={item} isUploading={isUploading} onView={() => void openDetails(item)} onUpload={() => startUpload(item)} />)}</section>}<input ref={input} type="file" accept="application/pdf,image/jpeg,image/png" className="hidden" onChange={event => { void upload(event.target.files?.[0]); event.currentTarget.value = ''; }} />{uploadError && <div className="fixed top-14 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-rose-600 px-4 py-3 text-sm font-medium text-white shadow-lg"><XCircle className="mr-2 inline h-4 w-4" />{uploadError}</div>}{uploadSuccess && <div className="fixed top-24 left-1/2 z-50 -translate-x-1/2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white shadow-lg flex items-center"><CheckCircle2 className="mr-2 h-4 w-4" />{uploadSuccess}</div>}{isUploading && <div className="fixed top-1/2 left-1/2 z-50 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-slate-800 px-6 py-4 text-sm font-medium text-white shadow-2xl flex items-center"><RefreshCw className="mr-3 h-5 w-5 animate-spin" />Uploading...</div>}<DocumentDetails item={selected} history={history} onClose={() => setSelected(null)} onUpload={() => { if (selected) { setSelected(null); startUpload(selected); } }} /></div>;
+  if (noLayout) return <>{content}</>;
   const Wrapper = isParent ? ParentLayout : isAdmin ? AdminLayout : EmployeeLayout;
   return <Wrapper>{content}</Wrapper>;
 }

@@ -380,7 +380,7 @@ function InfoRow({ icon, label, value, className = '' }: { icon: React.ReactNode
   );
 }
 
-export function ProfilePage() {
+export function ProfilePage({ noLayout }: { noLayout?: boolean } = {}) {
   const { userData } = useUserContext();
   const role = userData?.role?.toLowerCase() ?? '';
   const isAdmin = role === 'admin' || role === 'superadmin' || role === 'owner';
@@ -397,13 +397,8 @@ export function ProfilePage() {
   }
 
   if (isEmployee) {
-    return (
-      <EmployeeLayout>
-        <div className="max-w-4xl mx-auto w-full">
-          <ProfileContent />
-        </div>
-      </EmployeeLayout>
-    );
+    const inner = <div className="max-w-4xl mx-auto w-full"><ProfileContent /></div>;
+    return noLayout ? inner : <EmployeeLayout>{inner}</EmployeeLayout>;
   }
 
   return (

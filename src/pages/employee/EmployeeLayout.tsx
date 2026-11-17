@@ -88,7 +88,6 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/employee/dashboard') return currentPath === '/employee/dashboard';
     if (normalizedItemPath === '/employee/requests') return currentPath === '/employee/requests';
-    if (normalizedItemPath === '/profile') return currentPath === '/profile';
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
@@ -111,7 +110,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       : []),
     ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending }] : []),
     ...(hasOfferStatus ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letter', path: `${schoolPrefix}/employee/offer-letter` }] : []),
-    { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
+    { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/employee/profile` },
   ];
 
   const navGroups = [
