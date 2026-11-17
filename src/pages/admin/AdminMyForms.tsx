@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Calendar, CheckCircle, Clock, RefreshCw } from 'lucide-react';
+import { FileText, Calendar, CheckCircle, Clock, RefreshCw, Download, Printer } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -22,6 +22,7 @@ export function AdminMyForms() {
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<EnrichedAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAction, setLoadingAction] = useState<{ formId: string; action: 'download' | 'print' } | null>(null);
 
   useEffect(() => {
     if ((location.state as { formCompleted?: boolean } | null)?.formCompleted) {
@@ -47,6 +48,40 @@ export function AdminMyForms() {
 
   const total = assignments.length;
   const completed = assignments.filter(a => ['Approved', 'Submitted'].includes(a.normalizedStatus)).length;
+
+  const handleDownloadForm = async (a: EnrichedAssignment) => {
+    if (!a.recentPdfLink) return;
+    setLoadingAction({ formId: a.id!, action: 'download' });
+    try {
+      const res = await fetch(a.recentPdfLink);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const el = document.createElement('a');
+      el.href = url; el.download = `${a.approvedFormName || a.formTitle}.pdf`;
+      document.body.appendChild(el); el.click(); el.remove();
+      URL.revokeObjectURL(url);
+    } catch { showToast('error', 'Download failed'); }
+    finally { setLoadingAction(null); }
+  };
+
+  const handlePrintForm = async (a: EnrichedAssignment) => {
+    if (!a.recentPdfLink) return;
+    setLoadingAction({ formId: a.id!, action: 'print' });
+    try {
+      const res = await fetch(a.recentPdfLink);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const w = window.open(url, '_blank');
+      if (w) {
+        w.onload = () => { setTimeout(() => { w.print(); w.onafterprint = () => { w.close(); URL.revokeObjectURL(url); }; }, 1000); };
+        setTimeout(() => { setLoadingAction(null); URL.revokeObjectURL(url); }, 3000);
+        showToast('success', 'Print dialog opening...');
+      } else { throw new Error('Popup blocked'); }
+    } catch (err: any) {
+      showToast('error', err?.message === 'Popup blocked' ? 'Allow popups to print' : 'Print failed');
+      setLoadingAction(null);
+    }
+  };
 
   const open = (a: EnrichedAssignment) => {
     navigate(`/${schoolSubdomain}/admin/my-form/${a.id}`, {
@@ -103,15 +138,36 @@ export function AdminMyForms() {
                     </div>
                     <StatusBadge status={a.normalizedStatus} />
                   </div>
-                  <Button
-                    size="sm"
-                    className="mt-auto rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:text-white [&_svg]:text-white"
-                    onClick={() => open(a)}
-                    disabled={a.normalizedStatus === 'Approved'}
-                  >
-                    <FileText className="mr-2 h-4 w-4" />
-                    {a.normalizedStatus === 'Approved' ? 'Approved' : a.normalizedStatus === 'Submitted' ? 'View / Edit' : 'Fill Form'}
-                  </Button>
+                  {a.normalizedStatus === 'Approved' ? (
+                    <div className="mt-auto flex gap-2">
+                      {a.recentPdfLink && (
+                        <>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-[#0F2D52] border-slate-200 hover:bg-slate-50"
+                            onClick={() => handleDownloadForm(a)} disabled={!!loadingAction} title="Download PDF">
+                            {loadingAction?.formId === a.id && loadingAction.action === 'download'
+                              ? <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
+                              : <Download className="h-4 w-4" />}
+                          </Button>
+                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-slate-600 border-slate-200 hover:bg-slate-50"
+                            onClick={() => handlePrintForm(a)} disabled={!!loadingAction} title="Print PDF">
+                            {loadingAction?.formId === a.id && loadingAction.action === 'print'
+                              ? <span className="animate-spin h-3.5 w-3.5 border-2 border-slate-400 border-t-transparent rounded-full" />
+                              : <Printer className="h-4 w-4" />}
+                          </Button>
+                        </>
+                      )}
+                      <Button size="sm" className="flex-1 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white [&_svg]:text-white" disabled>
+                        <FileText className="mr-2 h-4 w-4" />
+                        Approved
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button size="sm" className="mt-auto rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:text-white [&_svg]:text-white"
+                      onClick={() => open(a)}>
+                      <FileText className="mr-2 h-4 w-4" />
+                      {a.normalizedStatus === 'Submitted' ? 'View / Edit' : 'Fill Form'}
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             ))}
