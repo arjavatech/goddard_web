@@ -419,6 +419,8 @@ export function EmployeeManagement() {
         pending_offer: { label: 'Pending Offer', variant: 'warning' },
         draft: { label: 'Offer Draft', variant: 'secondary' },
         offer_sent: { label: 'Offer Sent', variant: 'info' },
+        viewed: { label: 'Viewed', variant: 'info' },
+        employee_signed: { label: 'Awaiting Approval', variant: 'warning' },
         offer_accepted: { label: 'Awaiting Approval', variant: 'warning' },
         offer_rejected: { label: 'Offer Rejected', variant: 'destructive' },
         active: { label: 'Active', variant: 'success' },

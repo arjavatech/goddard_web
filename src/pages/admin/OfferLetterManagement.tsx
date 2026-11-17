@@ -20,11 +20,13 @@ import {
 function statusLabel(s: string) {
   switch (s) {
     case 'draft': return 'Draft';
-    case 'offer_sent': return 'Sent';
-    case 'offer_accepted': return 'Accepted — Review Needed';
+    case 'offer_sent': return 'Offer Sent';
+    case 'viewed': return 'Viewed';
+    case 'employee_signed': return 'Awaiting Approval';
+    case 'offer_accepted': return 'Awaiting Approval';
     case 'offer_rejected': return 'Rejected';
-    case 'approved': return 'Approved';
-    case 'active': return 'Approved';
+    case 'approved': return 'Active';
+    case 'active': return 'Active';
     case 'rejected': return 'Rejected';
     default: return s;
   }
@@ -33,8 +35,8 @@ function statusLabel(s: string) {
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === 'draft' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-    status === 'offer_sent' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-    status === 'offer_accepted' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+    (status === 'offer_sent' || status === 'viewed') ? 'bg-amber-50 text-amber-700 border-amber-200' :
+    (status === 'offer_accepted' || status === 'employee_signed') ? 'bg-blue-50 text-blue-700 border-blue-200' :
     (status === 'approved' || status === 'active') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
     'bg-red-50 text-red-700 border-red-200';
   return (
