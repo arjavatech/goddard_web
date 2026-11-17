@@ -416,7 +416,7 @@ export function EmployeeManagement() {
   function renderStatusBadge(emp: Employee) {
     if (emp.offerStatus) {
       const map: Record<string, { label: string; variant: 'secondary' | 'info' | 'warning' | 'destructive' | 'success' }> = {
-        pending_offer: { label: 'Pending Offer', variant: 'warning' },
+        pending_offer: { label: 'Offer Sent', variant: 'info' },
         draft: { label: 'Offer Draft', variant: 'secondary' },
         offer_sent: { label: 'Offer Sent', variant: 'info' },
         viewed: { label: 'Viewed', variant: 'info' },
@@ -624,7 +624,7 @@ export function EmployeeManagement() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     {isOfferLetterEnabled && <>
-                      <option value="pending_offer">Pending Offer</option>
+                      <option value="pending_offer">Offer Sent</option>
                       <option value="offer_sent">Offer Sent</option>
                       <option value="offer_accepted">Awaiting Approval</option>
                       <option value="offer_rejected">Offer Rejected</option>

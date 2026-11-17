@@ -50,7 +50,10 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const hasElevatedAccess = isSuperAdmin || isOwner;
   const hasPermission = (perm: string) => hasElevatedAccess || adminPermissions.includes(perm);
 
-  const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'offer_accepted'];
+  const OFFER_PENDING_STATUSES = [
+    'pending_offer', 'draft', 'offer_sent', 'viewed',
+    'employee_signed', 'offer_accepted', 'offer_rejected',
+  ];
   const isAdminOfferPending = schoolFeatures?.offerLetterEnabled === true
     && !!userData?.offerStatus
     && OFFER_PENDING_STATUSES.includes(userData.offerStatus);
@@ -231,7 +234,8 @@ export function AdminLayout({ children }: AdminLayoutProps) {
     // ── My Space (personal items for non-elevated admins) ──────────────────
     ...(!hasElevatedAccess && (
       schoolFeatures.employeeManagementEnabled ||
-      (schoolFeatures.surveyEnabled && hasPermission('manage_surveys'))
+      (schoolFeatures.surveyEnabled && hasPermission('manage_surveys')) ||
+      (schoolFeatures.offerLetterEnabled && !!userData?.employeeId)
     ) ? [{
       label: 'My Space',
       items: [
@@ -241,6 +245,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
         ] : []),
         ...(schoolFeatures.surveyEnabled && hasPermission('manage_surveys') ? [
           { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'My Surveys', path: `${schoolPrefix}/admin/my-surveys`, badge: surveysPending },
+        ] : []),
+        ...(schoolFeatures.offerLetterEnabled && !!userData?.employeeId ? [
+          { icon: <FileText className="w-[18px] h-[18px]" />, label: 'My Offer Letter', path: `${schoolPrefix}/admin/offer-letter` },
         ] : []),
       ],
     }] : []),

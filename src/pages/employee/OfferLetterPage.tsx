@@ -13,11 +13,15 @@ function StatusSection({
   onOpenForm,
   onDownload,
   onPrint,
+  isDownloading,
+  isPrinting,
 }: {
   offer: OfferLetter;
   onOpenForm?: () => void;
   onDownload?: () => void;
   onPrint?: () => void;
+  isDownloading?: boolean;
+  isPrinting?: boolean;
 }) {
   switch (offer.status) {
     case 'offer_sent':
@@ -142,15 +146,21 @@ function StatusSection({
             <div className="flex items-center gap-2 shrink-0">
               <button
                 onClick={onDownload}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs font-semibold transition-colors"
+                disabled={isDownloading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] disabled:opacity-60 text-white text-xs font-semibold transition-colors"
               >
-                <Download className="w-3.5 h-3.5" /> Download
+                {isDownloading
+                  ? <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Downloading…</>
+                  : <><Download className="w-3.5 h-3.5" /> Download</>}
               </button>
               <button
                 onClick={onPrint}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors"
+                disabled={isPrinting}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-700 text-xs font-semibold transition-colors"
               >
-                <Printer className="w-3.5 h-3.5" /> Print
+                {isPrinting
+                  ? <><span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> Preparing…</>
+                  : <><Printer className="w-3.5 h-3.5" /> Print</>}
               </button>
             </div>
           )}
@@ -180,6 +190,8 @@ export function OfferLetterPage() {
   const [pastOffers, setPastOffers] = useState<OfferLetter[]>([]);
   const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollCountRef = useRef(0);
 
@@ -228,16 +240,46 @@ export function OfferLetterPage() {
 
   const handleDownload = async () => {
     if (!offer?.filloutPdfLink) return;
-    const res = await fetch(offer.filloutPdfLink);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const el = document.createElement('a');
-    el.href = url;
-    el.download = `Offer Letter - ${offer.firstName} ${offer.lastName}.pdf`;
-    document.body.appendChild(el);
-    el.click();
-    el.remove();
-    URL.revokeObjectURL(url);
+    setIsDownloading(true);
+    try {
+      const res = await fetch(offer.filloutPdfLink);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const el = document.createElement('a');
+      el.href = url;
+      el.download = `Offer Letter - ${offer.firstName} ${offer.lastName}.pdf`;
+      document.body.appendChild(el);
+      el.click();
+      el.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!offer?.filloutPdfLink) return;
+    setIsPrinting(true);
+    try {
+      const res = await fetch(offer.filloutPdfLink);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:0;left:-9999px;width:800px;height:600px;border:0;';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        setIsPrinting(false);
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(blobUrl);
+        }, 60000);
+      };
+    } catch {
+      setIsPrinting(false);
+    }
   };
 
   return (
@@ -299,15 +341,15 @@ export function OfferLetterPage() {
                     offer.status === 'active' || offer.status === 'approved' ? 'success'
                       : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'warning'
                       : offer.status === 'offer_rejected' ? 'destructive'
-                      : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'info'
+                      : offer.status === 'offer_sent' || offer.status === 'viewed' || offer.status === 'pending_offer' ? 'info'
                       : 'secondary'
                   }
                   className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                 >
                   {offer.status === 'active' || offer.status === 'approved' ? 'Active'
-                    : offer.status === 'employee_signed' ? 'Awaiting School Approval'
-                    : offer.status === 'offer_accepted' ? 'Awaiting Approval'
+                    : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'Awaiting Admin Approval'
                     : offer.status === 'offer_rejected' ? 'Rejected'
+                    : offer.status === 'pending_offer' ? 'Offer Sent'
                     : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'Action Required'
                     : 'Pending'}
                 </Badge>
@@ -324,7 +366,9 @@ export function OfferLetterPage() {
                   },
                 })}
                 onDownload={handleDownload}
-                onPrint={() => offer.filloutPdfLink && window.open(offer.filloutPdfLink, '_blank')}
+                onPrint={handlePrint}
+                isDownloading={isDownloading}
+                isPrinting={isPrinting}
               />
             </Card>
 

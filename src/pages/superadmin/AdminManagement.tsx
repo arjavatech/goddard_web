@@ -672,9 +672,32 @@ export function AdminManagement() {
                             {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
                           </span>
                         </div>
-                        <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                          {admin.is_verified ? 'Approved' : 'Pending'}
-                        </Badge>
+                        {isOfferLetterEnabled && admin.offer_status ? (
+                          <Badge
+                            variant={
+                              (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'success' :
+                              (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'warning' :
+                              (admin.offer_status === 'offer_sent' || admin.offer_status === 'viewed' || admin.offer_status === 'pending_offer') ? 'info' :
+                              (admin.offer_status === 'offer_rejected' || admin.offer_status === 'rejected') ? 'destructive' :
+                              'secondary'
+                            }
+                            className="text-[10px] font-bold rounded-full px-2 py-0.5"
+                          >
+                            {admin.offer_status === 'pending_offer' ? 'Offer Sent' :
+                             admin.offer_status === 'draft' ? 'Draft' :
+                             admin.offer_status === 'offer_sent' ? 'Offer Sent' :
+                             admin.offer_status === 'viewed' ? 'Viewed' :
+                             (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'Awaiting Approval' :
+                             admin.offer_status === 'offer_rejected' ? 'Offer Rejected' :
+                             (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'Active' :
+                             admin.offer_status === 'rejected' ? 'Rejected' :
+                             admin.offer_status}
+                          </Badge>
+                        ) : (
+                          <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
+                            {admin.is_verified ? 'Approved' : 'Pending'}
+                          </Badge>
+                        )}
                       </div>
                       {isTapTimeEnabled && admin.taptime_employee_id && <div className="mt-3 flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-500">TapTime PIN</span>
@@ -790,20 +813,23 @@ export function AdminManagement() {
                       {isOfferLetterEnabled && admin.offer_status ? (
                         <Badge
                           variant={
-                            admin.offer_status === 'active' ? 'success' :
-                            admin.offer_status === 'offer_accepted' ? 'warning' :
-                            admin.offer_status === 'offer_sent' ? 'info' :
+                            (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'success' :
+                            (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'warning' :
+                            (admin.offer_status === 'offer_sent' || admin.offer_status === 'viewed' || admin.offer_status === 'pending_offer') ? 'info' :
                             (admin.offer_status === 'offer_rejected' || admin.offer_status === 'rejected') ? 'destructive' :
                             'secondary'
                           }
                           className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                         >
-                          {admin.offer_status === 'draft' ? 'Draft' :
+                          {admin.offer_status === 'pending_offer' ? 'Offer Sent' :
+                           admin.offer_status === 'draft' ? 'Draft' :
                            admin.offer_status === 'offer_sent' ? 'Offer Sent' :
-                           admin.offer_status === 'offer_accepted' ? 'Awaiting Approval' :
-                           admin.offer_status === 'offer_rejected' ? 'Rejected by Employee' :
-                           admin.offer_status === 'active' ? 'Active' :
-                           admin.offer_status === 'rejected' ? 'Rejected' : admin.offer_status}
+                           admin.offer_status === 'viewed' ? 'Viewed' :
+                           (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'Awaiting Approval' :
+                           admin.offer_status === 'offer_rejected' ? 'Offer Rejected' :
+                           (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'Active' :
+                           admin.offer_status === 'rejected' ? 'Rejected' :
+                           admin.offer_status}
                         </Badge>
                       ) : (
                         <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">

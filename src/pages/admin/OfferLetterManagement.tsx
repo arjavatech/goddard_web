@@ -19,11 +19,12 @@ import {
 
 function statusLabel(s: string) {
   switch (s) {
+    case 'pending_offer': return 'Offer Sent';
     case 'draft': return 'Draft';
     case 'offer_sent': return 'Offer Sent';
     case 'viewed': return 'Viewed';
-    case 'employee_signed': return 'Awaiting Approval';
-    case 'offer_accepted': return 'Awaiting Approval';
+    case 'employee_signed': return 'Awaiting Admin Approval';
+    case 'offer_accepted': return 'Awaiting Admin Approval';
     case 'offer_rejected': return 'Rejected';
     case 'approved': return 'Active';
     case 'active': return 'Active';
@@ -35,7 +36,7 @@ function statusLabel(s: string) {
 function StatusBadge({ status }: { status: string }) {
   const cls =
     status === 'draft' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-    (status === 'offer_sent' || status === 'viewed') ? 'bg-amber-50 text-amber-700 border-amber-200' :
+    (status === 'pending_offer' || status === 'offer_sent' || status === 'viewed') ? 'bg-amber-50 text-amber-700 border-amber-200' :
     (status === 'offer_accepted' || status === 'employee_signed') ? 'bg-blue-50 text-blue-700 border-blue-200' :
     (status === 'approved' || status === 'active') ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
     'bg-red-50 text-red-700 border-red-200';
@@ -259,7 +260,7 @@ export function OfferLetterManagement() {
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const totalOffers = offers.length;
-  const sentPending = offers.filter(o => o.status === 'offer_sent').length;
+  const sentPending = offers.filter(o => o.status === 'offer_sent' || o.status === 'pending_offer').length;
   const awaitingReview = offers.filter(o => o.status === 'offer_accepted').length;
 
   if (!offerLetterEnabled) {
@@ -476,7 +477,8 @@ export function OfferLetterManagement() {
                   className="w-full pl-3 pr-8 h-10 rounded-xl border border-slate-200 bg-white text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 appearance-none cursor-pointer font-medium">
                   <option value="all">All Statuses</option>
                   <option value="draft">Draft</option>
-                  <option value="offer_sent">Sent</option>
+                  <option value="pending_offer">Offer Sent</option>
+                  <option value="offer_sent">Sent (Opened)</option>
                   <option value="offer_accepted">Accepted — Review Needed</option>
                   <option value="offer_rejected">Rejected</option>
                   <option value="approved">Approved</option>
