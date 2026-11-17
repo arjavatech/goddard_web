@@ -844,16 +844,16 @@ export function EmployeeManagement() {
               <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name *</label>
                     <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name *</label>
                     <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email *</label>
                   <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
                   {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                 </div>
@@ -874,7 +874,7 @@ export function EmployeeManagement() {
                   <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On *</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>
@@ -958,11 +958,11 @@ export function EmployeeManagement() {
                   <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name *</label>
                         <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name *</label>
                         <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                     </div>
@@ -971,13 +971,13 @@ export function EmployeeManagement() {
                       <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone *</label>
                       <PhoneInput
                         value={empPhone}
                         country={empPhoneCountry}
                         onCountryChange={(val) => setEmpPhoneCountry(val)}
                         onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
-                        onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                        onBlur={() => { if (!empPhone.trim()) setPhoneError('Phone number is required'); else if (!validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
                         error={!!phoneError}
                       />
                       {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
@@ -996,7 +996,7 @@ export function EmployeeManagement() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On *</label>
                         <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                     </div>
