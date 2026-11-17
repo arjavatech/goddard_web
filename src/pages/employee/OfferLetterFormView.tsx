@@ -6,6 +6,7 @@ import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
+import { OfferLetterService } from '../../services/api/offerLetter';
 
 export function OfferLetterFormView() {
   const location = useLocation();
@@ -23,6 +24,14 @@ export function OfferLetterFormView() {
   useEffect(() => {
     if (!prefillUrl) navigate(back, { replace: true });
   }, [prefillUrl, back, navigate]);
+
+  useEffect(() => {
+    if (status !== 'offer_sent') return;
+    const employeeId = userData?.employeeId;
+    const schoolId = userData?.schoolId;
+    if (!employeeId || !schoolId) return;
+    OfferLetterService.markViewed(employeeId, schoolId).catch(() => {});
+  }, []);
 
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -58,15 +67,16 @@ export function OfferLetterFormView() {
   const employeeName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ');
 
   const statusLabel =
-    status === 'offer_sent' ? 'Action Required'
+    status === 'offer_sent' || status === 'viewed' ? 'Action Required'
+    : status === 'employee_signed' ? 'Awaiting Approval'
     : status === 'offer_accepted' ? 'Submitted'
     : status === 'offer_rejected' ? 'Rejected'
     : status === 'active' ? 'Approved'
     : 'Pending';
 
   const statusColor =
-    status === 'offer_sent' ? 'bg-blue-500/20 text-blue-200'
-    : status === 'offer_accepted' ? 'bg-amber-400/20 text-amber-200'
+    status === 'offer_sent' || status === 'viewed' ? 'bg-blue-500/20 text-blue-200'
+    : status === 'employee_signed' || status === 'offer_accepted' ? 'bg-amber-400/20 text-amber-200'
     : status === 'offer_rejected' ? 'bg-red-400/20 text-red-200'
     : status === 'active' ? 'bg-emerald-400/20 text-emerald-200'
     : 'bg-white/15 text-white/60';
