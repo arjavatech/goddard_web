@@ -320,7 +320,10 @@ export const RequestService = {
 
   async updateRequest(requestId: string, request: Partial<Pick<Request,
     'item' | 'quantity' | 'category' | 'location' | 'scope' | 'classroomId' | 'classroomName' |
-    'teacherId' | 'teacherName' | 'productLink' | 'productImage' | 'notes'>>, imageFile?: File): Promise<Request> {
+    'teacherId' | 'teacherName' | 'productLink' | 'productImage' | 'notes'>> & {
+    deleteProductImage?: boolean;
+    billImageUrls?: string[];
+  }, imageFile?: File): Promise<Request> {
     let imageBase64: string | undefined;
     if (imageFile) {
       imageBase64 = await new Promise<string>((resolve, reject) => {
@@ -341,6 +344,8 @@ export const RequestService = {
           imageBase64,
           imageName: imageFile?.name,
           imageContentType: imageFile?.type,
+          deleteProductImage: request.deleteProductImage,
+          billImageUrls: request.billImageUrls,
         },
       },
       z.any(),
@@ -426,6 +431,59 @@ export const RequestService = {
   async deleteRequest(requestId: string): Promise<void> {
     await authedFetch(
       { method: 'DELETE', url: `/requests/${requestId}` },
+      z.any()
+    );
+  },
+
+  /** PATCH /expenses/:id */
+  async updateExpense(expenseId: string, expense: {
+    item?: string;
+    quantity?: number;
+    category?: string | null;
+    scope?: string;
+    classroomName?: string | null;
+    teacherName?: string | null;
+    location?: string | null;
+    productLink?: string | null;
+    notes?: string | null;
+    amountSpent?: number;
+    paymentMethod?: string;
+    purchaseDate?: string;
+    paymentNotes?: string | null;
+    billImageUrls?: string[];
+  }, billFiles?: File[]): Promise<ExpenseRecord> {
+    const billImages = await Promise.all((billFiles ?? []).map(toBillPayload));
+    const data = await authedFetch(
+      {
+        method: 'PATCH',
+        url: `/expenses/${expenseId}`,
+        body: {
+          item: expense.item,
+          quantity: expense.quantity != null ? Number(expense.quantity) : undefined,
+          category: expense.category,
+          scope: expense.scope,
+          classroomName: expense.classroomName,
+          teacherName: expense.teacherName,
+          location: expense.location,
+          productLink: expense.productLink,
+          notes: expense.notes,
+          amountSpent: expense.amountSpent,
+          paymentMethod: expense.paymentMethod,
+          purchaseDate: expense.purchaseDate,
+          paymentNotes: expense.paymentNotes,
+          billImageUrls: expense.billImageUrls,
+          billImages: billImages.length > 0 ? billImages : undefined,
+        },
+      },
+      z.any(),
+    );
+    return mapExpenseRecord(data);
+  },
+
+  /** DELETE /expenses/:id */
+  async deleteExpense(expenseId: string): Promise<void> {
+    await authedFetch(
+      { method: 'DELETE', url: `/expenses/${expenseId}` },
       z.any()
     );
   },

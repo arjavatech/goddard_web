@@ -1,22 +1,19 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useUserContext } from '../../contexts/UserContext';
-import { AdminRequests } from '../../pages/admin/AdminRequests';
 import { SuperAdminRequests } from '../../pages/superadmin/SuperAdminRequests';
 import { SuperAdminExpenses } from '../../pages/superadmin/SuperAdminExpenses';
 
 /**
  * Role-aware wrapper for `/requests`.
- * - Admins get the Admin request board (create school/teacher/classroom requests, validate employee requests).
- * - Super Admins get the full validation + payment-processing queue.
+ * - Admins, Super Admins, and Owners get the full request board (create, validate, and process requests).
  * - Any other role is bounced back to the dashboard.
  */
 export function RequestsRouter() {
   const { userData, schoolSubdomain } = useUserContext();
   const role = userData?.role?.toLowerCase();
 
-  if (role === 'admin') return <AdminRequests />;
-  if (role === 'superadmin' || role === 'owner') return <SuperAdminRequests />;
+  if (role === 'admin' || role === 'superadmin' || role === 'owner') return <SuperAdminRequests />;
 
   return <Navigate to={`/${schoolSubdomain || 'goddard'}/dashboard`} replace />;
 }

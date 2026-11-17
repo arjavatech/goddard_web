@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { AdminLayout } from '../admin/AdminLayout';
 import { motion } from 'framer-motion';
-import { Card, CardContent } from '../../components/ui/card';
+import { CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, X, LayoutGrid, List, Eye, CheckCircle, Clock, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown, Settings } from 'lucide-react';
+import { Plus, Search, Edit, Link as LinkIcon, MoreHorizontal, FileText, UserPlus, School, LayoutGrid, List, Eye, CheckCircle, AlertCircle, Download, Printer, ChevronsUpDown, Check, ArrowUp, ArrowDown } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../../components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from '../../components/ui/dialog';
@@ -100,7 +100,6 @@ export function EmployeeFormsManagement() {
   const { showToast } = useToast();
   const { userData } = useUserContext();
   const schoolId = userData?.schoolId;
-
   const handleViewModeChange = (mode: 'card' | 'table') => {
     setViewMode(mode);
     localStorage.setItem('empFormsViewMode', mode);

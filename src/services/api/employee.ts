@@ -19,6 +19,8 @@ export type Employee = {
   salaryDate?: string;
   taptimeEmployeeId?: string;
   taptimePin?: string;
+  offerStatus?: string | null;
+  offerLetterCustomFields?: Record<string, any>;
 };
 
 export type EmployeeFormTemplate = {
@@ -93,6 +95,8 @@ function mapEmployee(raw: any): Employee {
     salaryDate: raw.salary_date ?? undefined,
     taptimeEmployeeId: raw.taptime_employee_id ?? undefined,
     taptimePin: raw.taptime_pin ?? undefined,
+    offerStatus: raw.offer_status ?? null,
+    offerLetterCustomFields: raw.offer_letter_custom_fields ?? undefined,
   };
 }
 
@@ -187,7 +191,8 @@ export const EmployeeService = {
     employeeType?: string;
     joinedOn?: string;
     schoolId: string;
-  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string }> {
+    customFields?: Record<string, string>;
+  }): Promise<{ employeeId: string; userId: string; inviteId: string; emailSent: boolean; message: string; offerLetterRequired?: boolean; offerLetterSent?: boolean }> {
     const data = await authedFetch(
       {
         method: 'POST',
@@ -202,6 +207,8 @@ export const EmployeeService = {
           address: employeeData.address,
           employee_type: employeeData.employeeType,
           joined_on: employeeData.joinedOn,
+          custom_fields: employeeData.customFields && Object.keys(employeeData.customFields).length > 0
+            ? employeeData.customFields : undefined,
         },
       },
       z.any(),
@@ -212,6 +219,8 @@ export const EmployeeService = {
       inviteId: data.invite_id,
       emailSent: data.email_sent,
       message: data.message,
+      offerLetterRequired: data.offer_letter_required ?? false,
+      offerLetterSent: data.offer_letter_sent ?? undefined,
     };
   },
 
@@ -360,6 +369,14 @@ export const EmployeeService = {
   async fetchEmployeeFormAssignments(employeeId: string): Promise<EmployeeFormAssignment[]> {
     const data = await authedFetch(
       { method: 'GET', url: `/employee-form-assignments?employee_id=${employeeId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapAssignment);
+  },
+
+  async fetchFormAssignmentsByUserId(userId: string): Promise<EmployeeFormAssignment[]> {
+    const data = await authedFetch(
+      { method: 'GET', url: `/employee-form-assignments?user_id=${userId}` },
       z.array(z.any()),
     );
     return data.map(mapAssignment);

@@ -218,10 +218,10 @@ export function OwnerManagement() {
           <div>
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-950 tracking-tight">Owner Management</h1>
             <p className="text-xs sm:text-sm text-slate-400 font-semibold mt-0.5">
-              {(isSuperAdmin || isOwner) ? 'Manage school owners with full administrative access' : 'View school owners and administrative contacts'}
+              {isSuperAdmin ? 'Manage school owners with full administrative access' : 'View school owners and administrative contacts'}
             </p>
           </div>
-          {(isSuperAdmin || isOwner) && (
+          {isSuperAdmin && (
             <Button
               className="bg-[#0F2D52] hover:bg-[#1c477c] text-white rounded-xl shadow-sm transition-all duration-200 font-semibold px-4 h-10 flex items-center gap-2"
               size="sm"
@@ -386,7 +386,7 @@ export function OwnerManagement() {
                             {owner.phone_number && <p className="text-xs text-slate-400 mt-0.5">{owner.phone_number}</p>}
                           </div>
                         </div>
-                        {(isSuperAdmin || isOwner) && renderActionMenu(owner)}
+                        {isSuperAdmin && renderActionMenu(owner)}
                       </div>
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
                         <span className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#EFF5FB] text-[#0F2D52] border border-blue-200/50">
@@ -419,7 +419,7 @@ export function OwnerManagement() {
                 { header: 'Email', className: 'w-1/4' },
                 { header: 'Phone Number', className: 'w-1/5' },
                 { header: 'Status', className: 'w-auto' },
-                { header: 'Actions', className: 'w-auto' },
+                ...(isSuperAdmin ? [{ header: 'Actions', className: 'w-auto' }] : []),
               ]}
               rows={paginated.map(owner => {
                 const initials = `${owner.first_name?.[0] || ''}${owner.last_name?.[0] || ''}`.toUpperCase();
@@ -442,9 +442,11 @@ export function OwnerManagement() {
                         {owner.is_verified ? 'Approved' : 'Pending'}
                       </Badge>
                     </td>
-                    <td className="py-4 px-4">
-                      {(isSuperAdmin || isOwner) ? renderActionMenu(owner) : <span className="text-xs text-slate-400">—</span>}
-                    </td>
+                    {isSuperAdmin && (
+                      <td className="py-4 px-4">
+                        {renderActionMenu(owner)}
+                      </td>
+                    )}
                   </tr>
                 );
               })}

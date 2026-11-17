@@ -16,8 +16,11 @@ import { StatCard } from '../../components/ui/stat-card';
 import { DataTable } from '../../components/ui/data-table';
 import { PhoneInput, validatePhoneNumber } from '../../components/ui/phone-input';
 import { MobileCardList } from '../../components/ui/mobile-card-list';
-import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle, RefreshCw, KeyRound } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, MoreHorizontal, Users, UserCheck, Clock, Filter, X, LayoutGrid, List, Upload, Download, AlertCircle, CheckCircle, RefreshCw, KeyRound, FileText, Send } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { CreateOfferLetterDialog } from '../../components/admin/CreateOfferLetterDialog';
+import { OfferLetterDetailDialog } from '../../components/admin/OfferLetterDetailDialog';
+import { OfferLetterService, type OfferLetter, type OfferLetterField } from '../../services/api/offerLetter';
 
 export function EmployeeManagement() {
   const navigate = useNavigate();
@@ -37,6 +40,16 @@ export function EmployeeManagement() {
   const [tapTimePin, setTapTimePin] = useState('');
   const [isUpdatingTapTimePin, setIsUpdatingTapTimePin] = useState(false);
 
+  // Offer letter state
+  const [offerLetterEmployee, setOfferLetterEmployee] = useState<Employee | null>(null);
+  const [isCreateOfferOpen, setIsCreateOfferOpen] = useState(false);
+  const [offerDetailEmployee, setOfferDetailEmployee] = useState<Employee | null>(null);
+  const [offerDetail, setOfferDetail] = useState<OfferLetter | null>(null);
+  const [isOfferDetailOpen, setIsOfferDetailOpen] = useState(false);
+  const [inviteStep, setInviteStep] = useState(1);
+  const [editStep, setEditStep] = useState(1);
+  const [editOfferCustomFields, setEditOfferCustomFields] = useState<Record<string, string>>({});
+
   // Form fields
   const [empFirstName, setEmpFirstName] = useState('');
   const [empLastName, setEmpLastName] = useState('');
@@ -46,6 +59,7 @@ export function EmployeeManagement() {
   const [empAddress, setEmpAddress] = useState('');
   const [empType, setEmpType] = useState('Full Time');
   const [empJoinedOn, setEmpJoinedOn] = useState('');
+  const [offerCustomFields, setOfferCustomFields] = useState<Record<string, string>>({});
 
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -158,6 +172,8 @@ export function EmployeeManagement() {
   const { showToast } = useToast();
   const { userData, schoolSubdomain } = useUserContext();
   const isTapTimeEnabled = userData?.schoolData?.features.taptimeEnabled === true;
+  const isOfferLetterEnabled = userData?.schoolData?.features.offerLetterEnabled === true;
+  const offerLetterFields: OfferLetterField[] = (userData?.schoolData?.settings as any)?.offer_letter_fields ?? [];
 
   const [employees, setEmployees] = useState<Employee[]>([]);
 
@@ -175,8 +191,9 @@ export function EmployeeManagement() {
     const matchesSearch = `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       emp.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === 'all' ||
-      (statusFilter === 'active' && emp.status === 'active') ||
-      (statusFilter === 'inactive' && emp.status === 'inactive');
+      (statusFilter === 'active' && emp.status === 'active' && !emp.offerStatus) ||
+      (statusFilter === 'inactive' && emp.status === 'inactive' && !emp.offerStatus) ||
+      (emp.offerStatus && statusFilter === emp.offerStatus);
     return matchesSearch && matchesStatus;
   });
 
@@ -218,14 +235,40 @@ export function EmployeeManagement() {
     }
   };
 
-  const isFormValid = empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn;
+  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn);
+
+  const normalize = (s: string) => s.toLowerCase().replace(/[_\-\s]/g, '');
+  const getAutoFill = (filloutParam: string): string | null => {
+    const p = normalize(filloutParam);
+    if (['name', 'fullname', 'employeename'].includes(p)) return `${empFirstName} ${empLastName}`.trim();
+    if (['firstname'].includes(p)) return empFirstName.trim();
+    if (['lastname'].includes(p)) return empLastName.trim();
+    if (['email'].includes(p)) return empEmail.trim();
+    if (['phone', 'phonenumber'].includes(p)) return empPhone.trim();
+    if (['joiningdate', 'joindate', 'startdate', 'date'].includes(p)) return empJoinedOn;
+    return null;
+  };
+
+  const step2Valid = offerLetterFields
+    .filter(f => f.required && getAutoFill(f.filloutParam) === null)
+    .every(f => !!offerCustomFields[f.filloutParam]?.trim());
 
   const handleInviteEmployee = async () => {
     if (!isFormValid || !userData?.schoolId) return;
 
     setIsInviting(true);
     try {
-      await EmployeeService.inviteEmployee({
+      const manualFields = Object.fromEntries(
+        Object.entries(offerCustomFields).filter(([, v]) => v.trim() !== '')
+      );
+      const autoFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null) as [string, string][]
+      );
+      const mergedCustomFields = { ...autoFields, ...manualFields };
+
+      const result = await EmployeeService.inviteEmployee({
         firstName: empFirstName.trim(),
         lastName: empLastName.trim(),
         email: empEmail.trim(),
@@ -235,14 +278,23 @@ export function EmployeeManagement() {
         employeeType: empType,
         joinedOn: empJoinedOn,
         schoolId: userData.schoolId,
+        customFields: Object.keys(mergedCustomFields).length > 0 ? mergedCustomFields : undefined,
       });
 
-      showToast('success', 'Employee invited successfully');
       setIsAddDialogOpen(false);
-      resetForm();
+      const refreshedData = await EmployeeService.fetchEmployees(userData.schoolId);
+      setEmployees(refreshedData);
 
-      const data = await EmployeeService.fetchEmployees(userData.schoolId);
-      setEmployees(data);
+      if (result.offerLetterRequired) {
+        if (result.offerLetterSent) {
+          showToast('success', 'Employee added and offer letter sent.');
+        } else {
+          showToast('success', 'Employee added. Set a Form URL to send the offer letter.');
+        }
+      } else {
+        showToast('success', 'Employee invited successfully');
+      }
+      resetForm();
     } catch (err: any) {
       if (err.message.includes('already exists')) {
         setEmailError('Email already exists');
@@ -266,6 +318,14 @@ export function EmployeeManagement() {
     setEmpJoinedOn(emp.joinedOn);
     setEmailError('');
     setPhoneError('');
+    setEditOfferCustomFields(
+      emp.offerLetterCustomFields
+        ? Object.fromEntries(
+            Object.entries(emp.offerLetterCustomFields).map(([k, v]) => [k, String(v ?? '')])
+          )
+        : {}
+    );
+    setEditStep(1);
     setIsEditDialogOpen(true);
   };
 
@@ -280,6 +340,12 @@ export function EmployeeManagement() {
         employeeType: empType,
         joinedOn: empJoinedOn,
       });
+
+      if (selectedEmployee.offerStatus && Object.keys(editOfferCustomFields).length > 0) {
+        await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
+          customFields: editOfferCustomFields,
+        });
+      }
 
       setEmployees(employees.map(e => {
         if (e.id === selectedEmployee.id) {
@@ -330,6 +396,44 @@ export function EmployeeManagement() {
     setTapTimePin(emp.taptimePin || '');
   };
 
+  const handleViewOfferLetter = async (emp: Employee) => {
+    if (!userData?.schoolId) return;
+    try {
+      const offer = await OfferLetterService.getOfferLetter(emp.id, userData.schoolId);
+      setOfferDetailEmployee(emp);
+      setOfferDetail(offer);
+      setIsOfferDetailOpen(true);
+    } catch (err: any) {
+      showToast('error', err.message || 'Failed to load offer letter');
+    }
+  };
+
+  const handleCreateOfferLetter = (emp: Employee) => {
+    setOfferLetterEmployee(emp);
+    setIsCreateOfferOpen(true);
+  };
+
+  function renderStatusBadge(emp: Employee) {
+    if (emp.offerStatus) {
+      const map: Record<string, { label: string; variant: 'secondary' | 'info' | 'warning' | 'destructive' | 'success' }> = {
+        pending_offer: { label: 'Pending Offer', variant: 'warning' },
+        draft: { label: 'Offer Draft', variant: 'secondary' },
+        offer_sent: { label: 'Offer Sent', variant: 'info' },
+        offer_accepted: { label: 'Awaiting Approval', variant: 'warning' },
+        offer_rejected: { label: 'Offer Rejected', variant: 'destructive' },
+        active: { label: 'Active', variant: 'success' },
+        rejected: { label: 'Rejected', variant: 'destructive' },
+      };
+      const cfg = map[emp.offerStatus] ?? { label: emp.offerStatus, variant: 'secondary' as const };
+      return <Badge variant={cfg.variant} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">{cfg.label}</Badge>;
+    }
+    return (
+      <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
+        {emp.status === 'active' ? 'Active' : 'Inactive'}
+      </Badge>
+    );
+  }
+
   const handleUpdateTapTimePin = async () => {
     if (!pinEmployee || !userData?.schoolId || isUpdatingTapTimePin) return;
     if (!/^\d{4}$/.test(tapTimePin)) {
@@ -376,6 +480,10 @@ export function EmployeeManagement() {
     setEmpJoinedOn('');
     setEmailError('');
     setPhoneError('');
+    setOfferCustomFields({});
+    setInviteStep(1);
+    setEditStep(1);
+    setEditOfferCustomFields({});
   };
 
   if (isLoading && employees.length === 0) {
@@ -513,6 +621,12 @@ export function EmployeeManagement() {
                     <option value="all">All Statuses</option>
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                    {isOfferLetterEnabled && <>
+                      <option value="pending_offer">Pending Offer</option>
+                      <option value="offer_sent">Offer Sent</option>
+                      <option value="offer_accepted">Awaiting Approval</option>
+                      <option value="offer_rejected">Offer Rejected</option>
+                    </>}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-400">
                     <Filter className="h-3.5 w-3.5" />
@@ -571,6 +685,21 @@ export function EmployeeManagement() {
                             <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={() => handleResendInvite(emp)}>
                               <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                             </DropdownMenuItem>
+                            {isOfferLetterEnabled && emp.offerStatus && emp.offerStatus !== 'pending_offer' && (
+                              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleViewOfferLetter(emp)}>
+                                <FileText className="w-4 h-4 mr-2" /> View Offer Letter
+                              </DropdownMenuItem>
+                            )}
+                            {isOfferLetterEnabled && emp.offerStatus === 'pending_offer' && (
+                              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleCreateOfferLetter(emp)}>
+                                <Send className="w-4 h-4 mr-2" /> Create Offer Letter
+                              </DropdownMenuItem>
+                            )}
+                            {isOfferLetterEnabled && emp.status === 'active' && !emp.offerStatus && (
+                              <DropdownMenuItem className="cursor-pointer text-xs" onClick={() => handleCreateOfferLetter(emp)}>
+                                <FileText className="w-4 h-4 mr-2" /> Add Offer Letter
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem className="cursor-pointer text-xs text-red-600 focus:text-red-650" onClick={() => handleDeleteEmployee(emp)}>
                               <Trash2 className="w-4 h-4 mr-2" /> Deactivate
                             </DropdownMenuItem>
@@ -579,9 +708,7 @@ export function EmployeeManagement() {
                       </div>
                       <div className="flex items-center justify-between border-t border-slate-100 pt-3 mt-1">
                         <span className="text-[10px] bg-slate-50 px-2 py-0.5 rounded-full font-bold text-slate-600 border border-slate-200/50">{emp.employeeType}</span>
-                        <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                          {emp.status === 'active' ? 'Active' : 'Inactive'}
-                        </Badge>
+                        {renderStatusBadge(emp)}
                       </div>
                       {isTapTimeEnabled && emp.taptimeEmployeeId && (
                         <div className="mt-3 flex items-center justify-between text-xs">
@@ -638,9 +765,7 @@ export function EmployeeManagement() {
                       </td>
                     )}
                     <td className="py-4 px-4">
-                      <Badge variant={emp.status === 'active' ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
-                        {emp.status === 'active' ? 'Active' : 'Inactive'}
-                      </Badge>
+                      {renderStatusBadge(emp)}
                     </td>
                     <td className="py-4 px-4">
                       <DropdownMenu>
@@ -664,6 +789,21 @@ export function EmployeeManagement() {
                           <DropdownMenuItem className="cursor-pointer text-xs" disabled={emp.isVerified || resendingEmployeeId === emp.id || emp.status !== 'active'} onClick={(e) => { e.stopPropagation(); handleResendInvite(emp); }}>
                             <RefreshCw className={`w-4 h-4 mr-2 ${resendingEmployeeId === emp.id ? 'animate-spin' : ''}`} /> {resendingEmployeeId === emp.id ? 'Sending...' : 'Resend Invitation'}
                           </DropdownMenuItem>
+                          {isOfferLetterEnabled && emp.offerStatus && emp.offerStatus !== 'pending_offer' && (
+                            <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleViewOfferLetter(emp); }}>
+                              <FileText className="w-4 h-4 mr-2" /> View Offer Letter
+                            </DropdownMenuItem>
+                          )}
+                          {isOfferLetterEnabled && emp.offerStatus === 'pending_offer' && (
+                            <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleCreateOfferLetter(emp); }}>
+                              <Send className="w-4 h-4 mr-2" /> Create Offer Letter
+                            </DropdownMenuItem>
+                          )}
+                          {isOfferLetterEnabled && emp.status === 'active' && !emp.offerStatus && (
+                            <DropdownMenuItem className="cursor-pointer text-xs" onClick={(e) => { e.stopPropagation(); handleCreateOfferLetter(emp); }}>
+                              <FileText className="w-4 h-4 mr-2" /> Add Offer Letter
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem className="cursor-pointer text-xs text-red-600" onClick={(e) => { e.stopPropagation(); handleDeleteEmployee(emp); }}>
                             <Trash2 className="w-4 h-4 mr-2" /> Deactivate
                           </DropdownMenuItem>
@@ -679,76 +819,106 @@ export function EmployeeManagement() {
 
         {/* Invite Dialog */}
         <Dialog open={isAddDialogOpen} onOpenChange={(open) => {
-          if (!open) {
-            setIsAddDialogOpen(false);
-            resetForm();
-          }
+          if (!open) { setIsAddDialogOpen(false); resetForm(); }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-lg font-bold text-slate-900">Invite New Employee</DialogTitle>
+          <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+            <DialogHeader className="mb-3">
+              <DialogTitle className="text-lg font-bold text-slate-900">
+                {isOfferLetterEnabled ? (inviteStep === 1 ? 'Employee Details' : 'Offer Letter') : 'Invite New Employee'}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
-                  <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
+
+            {isOfferLetterEnabled && (
+              <div className="mb-4">
+                <div className="flex gap-1.5 mb-1.5">
+                  <div className={`h-1 flex-1 rounded-full transition-colors ${inviteStep >= 1 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                  <div className={`h-1 flex-1 rounded-full transition-colors ${inviteStep >= 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                </div>
+                <p className="text-[11px] text-slate-400 font-medium">
+                  Step {inviteStep} of 2 — {inviteStep === 1 ? 'Employee Details' : 'Offer Letter'}
+                </p>
+              </div>
+            )}
+
+            {inviteStep === 1 && (
+              <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                    <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                    <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
+                  </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
-                  <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
+                  <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
+                  {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
-                <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
-                {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
-                <PhoneInput
-                  value={empPhone}
-                  country={empPhoneCountry}
-                  onCountryChange={(val) => {
-                    setEmpPhoneCountry(val);
-                  }}
-                  onChange={(val) => {
-                    setEmpPhone(val);
-                    if (phoneError) setPhoneError('');
-                  }}
-                  onBlur={() => {
-                    if (empPhone && !validatePhoneNumber(empPhone)) {
-                      setPhoneError('Please enter a valid phone number');
-                    }
-                  }}
-                  error={!!phoneError}
-                />
-                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
-                <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
-              </div>
-              <div className="grid grid-cols-1 gap-3">
-                {/* <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Type</label>
-                  <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
-                    <option value="Full Time">Full Time</option>
-                    <option value="Part Time">Part Time</option>
-                    <option value="Contractor">Contractor</option>
-                  </select>
-                </div> */}
+                <div>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                  <PhoneInput
+                    value={empPhone}
+                    country={empPhoneCountry}
+                    onCountryChange={(val) => setEmpPhoneCountry(val)}
+                    onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
+                    onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                    error={!!phoneError}
+                  />
+                  {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
+                  <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
+                </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>
-            </div>
+            )}
+
+            {inviteStep === 2 && (
+              <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                {offerLetterFields.filter(f => getAutoFill(f.filloutParam) === null).length === 0 ? (
+                  <p className="text-sm text-slate-400 text-center py-8">All details carried over from Step 1.</p>
+                ) : (
+                  offerLetterFields
+                    .filter(f => getAutoFill(f.filloutParam) === null)
+                    .map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={offerCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          placeholder={field.type === 'number' ? '0.00' : field.label}
+                          className="w-full h-10 rounded-xl"
+                        />
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+
             <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleInviteEmployee} disabled={isInviting || !isFormValid} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
-                {isInviting ? 'Sending...' : 'Send Invite'}
-              </Button>
+              <Button variant="outline" onClick={() => { setIsAddDialogOpen(false); resetForm(); }}>Cancel</Button>
+              {isOfferLetterEnabled && inviteStep === 2 && (
+                <Button variant="outline" onClick={() => setInviteStep(1)}>← Back</Button>
+              )}
+              {isOfferLetterEnabled && inviteStep === 1 ? (
+                <Button onClick={() => setInviteStep(2)} disabled={!isFormValid} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
+                  Next →
+                </Button>
+              ) : (
+                <Button onClick={handleInviteEmployee} disabled={isInviting || !isFormValid || (isOfferLetterEnabled && !step2Valid)} className="bg-[#0F2D52] hover:bg-[#1c477c] text-white">
+                  {isInviting ? 'Adding…' : isOfferLetterEnabled ? 'Add Employee' : 'Send Invite'}
+                </Button>
+              )}
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -758,75 +928,122 @@ export function EmployeeManagement() {
           if (!open) {
             setIsEditDialogOpen(false);
             setSelectedEmployee(null);
+            setEditStep(1);
             resetForm();
           }
         }}>
-          <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
-            <DialogHeader className="mb-4">
-              <DialogTitle className="text-lg font-bold text-slate-900">Edit Employee</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">First Name</label>
-                  <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Last Name</label>
-                  <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Email (Cannot edit)</label>
-                <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Phone</label>
-                <PhoneInput
-                  value={empPhone}
-                  country={empPhoneCountry}
-                  onCountryChange={(val) => {
-                    setEmpPhoneCountry(val);
-                  }}
-                  onChange={(val) => {
-                    setEmpPhone(val);
-                    if (phoneError) setPhoneError('');
-                  }}
-                  onBlur={() => {
-                    if (empPhone && !validatePhoneNumber(empPhone)) {
-                      setPhoneError('Please enter a valid phone number');
-                    }
-                  }}
-                  error={!!phoneError}
-                />
-                {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Address</label>
-                <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} className="w-full h-10 rounded-xl" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Type</label>
-                  <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
-                    <option value="Full Time">Full Time</option>
-                    <option value="Part Time">Part Time</option>
-                    <option value="Contractor">Contractor</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1.5">Joined On</label>
-                  <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
-                </div>
-              </div>
-            </div>
-            <DialogFooter className="mt-6">
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
-                {isUpdating ? 'Updating...' : 'Update'}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
+          {(() => {
+            const showEditSteps = isOfferLetterEnabled && !!selectedEmployee?.offerStatus && offerLetterFields.length > 0;
+            return (
+              <DialogContent className="w-[95vw] max-w-md rounded-2xl shadow-lg border border-slate-100 bg-white p-6">
+                <DialogHeader className="mb-3">
+                  <DialogTitle className="text-lg font-bold text-slate-900">
+                    {showEditSteps ? (editStep === 1 ? 'Employee Details' : 'Offer Letter') : 'Edit Employee'}
+                  </DialogTitle>
+                </DialogHeader>
+
+                {showEditSteps && (
+                  <div className="mb-4">
+                    <div className="flex gap-1.5 mb-1.5">
+                      <div className={`h-1 flex-1 rounded-full transition-colors ${editStep >= 1 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                      <div className={`h-1 flex-1 rounded-full transition-colors ${editStep >= 2 ? 'bg-[#0F2D52]' : 'bg-slate-200'}`} />
+                    </div>
+                    <p className="text-[11px] text-slate-400 font-medium">
+                      Step {editStep} of 2 — {editStep === 1 ? 'Employee Details' : 'Offer Letter'}
+                    </p>
+                  </div>
+                )}
+
+                {(!showEditSteps || editStep === 1) && (
+                  <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                        <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                        <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Email (Cannot edit)</label>
+                      <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                      <PhoneInput
+                        value={empPhone}
+                        country={empPhoneCountry}
+                        onCountryChange={(val) => setEmpPhoneCountry(val)}
+                        onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
+                        onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                        error={!!phoneError}
+                      />
+                      {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Address</label>
+                      <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} className="w-full h-10 rounded-xl" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Type</label>
+                        <select value={empType} onChange={(e) => setEmpType(e.target.value)} className="w-full h-10 rounded-xl border border-slate-200 px-3 text-sm">
+                          <option value="Full Time">Full Time</option>
+                          <option value="Part Time">Part Time</option>
+                          <option value="Contractor">Contractor</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                        <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {showEditSteps && editStep === 2 && (
+                  <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
+                    {offerLetterFields.map(field => (
+                      <div key={field.id}>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
+                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                        </label>
+                        <Input
+                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          value={editOfferCustomFields[field.filloutParam] ?? ''}
+                          onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                          placeholder={field.type === 'number' ? '0.00' : field.label}
+                          className="h-10 rounded-xl"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <DialogFooter className="mt-6">
+                  <Button variant="outline" onClick={() => { setIsEditDialogOpen(false); resetForm(); }}>Cancel</Button>
+                  {showEditSteps && editStep === 2 && (
+                    <Button variant="outline" onClick={() => setEditStep(1)}>← Back</Button>
+                  )}
+                  {showEditSteps && editStep === 1 ? (
+                    <Button
+                      onClick={() => setEditStep(2)}
+                      disabled={!isFormValid}
+                      className="bg-[#0F2D52] hover:bg-[#1c477c] text-white"
+                    >
+                      Next →
+                    </Button>
+                  ) : (
+                    <Button onClick={handleUpdateEmployee} disabled={isUpdating || !isFormValid} className="bg-[#0F2D52] text-white">
+                      {isUpdating ? 'Updating...' : 'Save Changes'}
+                    </Button>
+                  )}
+                </DialogFooter>
+              </DialogContent>
+            );
+          })()}
         </Dialog>
 
         {isTapTimeEnabled && <Dialog open={!!pinEmployee} onOpenChange={(open) => {
@@ -984,6 +1201,47 @@ export function EmployeeManagement() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+      {/* Offer Letter dialogs */}
+      {isOfferLetterEnabled && (
+        <>
+          <CreateOfferLetterDialog
+            open={isCreateOfferOpen}
+            onOpenChange={(open) => { setIsCreateOfferOpen(open); if (!open) { setOfferLetterEmployee(null); resetForm(); } }}
+            employeeId={offerLetterEmployee?.id ?? ''}
+            schoolId={userData?.schoolId ?? ''}
+            schoolFormId={userData?.schoolData?.offerLetterFilloutFormId}
+            offerLetterFields={(userData?.schoolData?.settings as any)?.offer_letter_fields}
+            prefill={{
+              firstName: offerLetterEmployee?.firstName,
+              lastName: offerLetterEmployee?.lastName,
+              email: offerLetterEmployee?.email,
+            }}
+            onSaved={async () => {
+              if (userData?.schoolId) {
+                const data = await EmployeeService.fetchEmployees(userData.schoolId);
+                setEmployees(data);
+              }
+            }}
+          />
+          {offerDetail && offerDetailEmployee && (
+            <OfferLetterDetailDialog
+              open={isOfferDetailOpen}
+              onOpenChange={setIsOfferDetailOpen}
+              offer={offerDetail}
+              schoolId={userData?.schoolId ?? ''}
+              offerLetterFields={(userData?.schoolData?.settings as any)?.offer_letter_fields}
+              onUpdated={async (updated) => {
+                setOfferDetail(updated);
+                if (userData?.schoolId) {
+                  const data = await EmployeeService.fetchEmployees(userData.schoolId);
+                  setEmployees(data);
+                }
+              }}
+            />
+          )}
+        </>
+      )}
 
       </div>
     </AdminLayout>

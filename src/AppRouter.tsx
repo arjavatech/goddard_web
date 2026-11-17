@@ -43,6 +43,7 @@ import { UserManagement } from './pages/superadmin/UserManagement';
 import { SubscriptionManagement } from './pages/superadmin/SubscriptionManagement';
 // Admin Management
 import { AdminManagement } from './pages/superadmin/AdminManagement';
+import { AdminDetailPage } from './pages/superadmin/AdminDetailPage';
 import { SuperAdminManagement } from './pages/superadmin/SuperAdminManagement';
 import { ClientManagement } from './pages/superadmin/ClientManagement';
 import { CSVUploadPage as SuperAdminCSVUploadPage } from './pages/superadmin/CSVUploadPage';
@@ -76,7 +77,12 @@ import { EmployeeDashboard } from './pages/employee/EmployeeDashboard';
 import { EmployeeFormView } from './pages/employee/EmployeeFormView';
 import { EmployeeRequests } from './pages/employee/EmployeeRequests';
 import { AttendanceReports } from './pages/employee/AttendanceReports';
+import { OfferLetterPage } from './pages/employee/OfferLetterPage';
+import { OfferLetterFormView } from './pages/employee/OfferLetterFormView';
 import { AdminMyForms } from './pages/admin/AdminMyForms';
+import { OfferLetterManagement } from './pages/admin/OfferLetterManagement';
+import { OfferLetterReview } from './pages/admin/OfferLetterReview';
+import { AdminOfferLetterPage } from './pages/admin/AdminOfferLetterPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { MyDocuments } from './pages/MyDocuments';
 
@@ -161,6 +167,8 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/employee/surveys" element={<FeatureRoute feature="surveyEnabled"><EmployeeSurveys /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/attendance" element={<FeatureRoute feature="taptimeEnabled"><AttendanceReports /></FeatureRoute>} />
                   <Route path="/:schoolSlug/employee/weekly-report" element={<FeatureRoute feature="taptimeEnabled"><EmployeeWeeklyReport /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/employee/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterPage /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/employee/offer-letter/view" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterFormView /></FeatureRoute>} />
                 </Route>
                 {/* Public survey respond — no auth required for anonymous surveys */}
                 <Route path="/:schoolSlug/surveys/:surveyId/respond" element={<SurveyRespond />} />
@@ -220,11 +228,17 @@ export function AppRouter() {
                   <Route path="/:schoolSlug/admin/employee-documents/review" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/review/:documentId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentWorkspace audience="employee" mode="review" /></PermissionRoute></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/employee-documents/:requestId" element={<FeatureRoute feature="employeeManagementEnabled"><PermissionRoute permission="manage_employees"><DocumentRequestAssignments audience="employee" /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letters" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterManagement /></PermissionRoute></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letters/review" element={<FeatureRoute feature="offerLetterEnabled"><PermissionRoute permission="manage_employees"><OfferLetterReview /></PermissionRoute></FeatureRoute>} />
+                  {/* Admin own offer letter (first-login gate) */}
+                  <Route path="/:schoolSlug/admin/offer-letter" element={<FeatureRoute feature="offerLetterEnabled"><AdminOfferLetterPage /></FeatureRoute>} />
+                  <Route path="/:schoolSlug/admin/offer-letter/view" element={<FeatureRoute feature="offerLetterEnabled"><OfferLetterFormView /></FeatureRoute>} />
                   {/* Admin self-service: own forms and documents */}
                   <Route path="/:schoolSlug/admin/my-forms" element={<FeatureRoute feature="employeeManagementEnabled"><AdminMyForms /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-form/:formId" element={<FeatureRoute feature="employeeManagementEnabled"><EmployeeFormView /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/my-documents" element={<FeatureRoute feature="employeeManagementEnabled"><MyDocuments audience="admin" /></FeatureRoute>} />
                   <Route path="/:schoolSlug/admin/admin-management" element={<AdminManagement />} />
+                  <Route path="/:schoolSlug/admin/admin-management/:adminId" element={<AdminDetailPage />} />
                   <Route path="/:schoolSlug/admin/owner-management" element={<SuperAdminOnly><OwnerManagement /></SuperAdminOnly>} />
                   <Route path="/:schoolSlug/admin/super-admin-management" element={<SuperAdminManagement />} />
                   <Route path="/:schoolSlug/admin/users" element={<UserManagement />} />

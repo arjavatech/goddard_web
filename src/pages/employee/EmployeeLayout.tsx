@@ -1,6 +1,6 @@
 import React, { ReactNode, useState, useEffect, useRef } from 'react';
 import {
-  BarChart2, FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, User, Clock, ClipboardList
+  BarChart2, FileText, Home, LogOut, Menu, X, ShoppingBag, UserCog, Clock, ClipboardList
 } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../services/auth/useAuth';
@@ -14,15 +14,21 @@ import { NotificationBell } from '../../components/notifications/NotificationBel
 import { Loading } from '../../components/ui/loading';
 import { cn } from '../../lib/utils';
 import { Footer } from '../../components/layout/Footer';
+import { EmployeeService } from '../../services/api/employee';
 
 interface EmployeeLayoutProps { children: ReactNode; }
+
+const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'offer_accepted'];
+const OFFER_TERMINAL_STATUSES = ['offer_rejected', 'rejected'];
 
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const activeNavRef = useRef<HTMLAnchorElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  
+  const [employeeOfferStatus, setEmployeeOfferStatus] = useState<string | null | undefined>(undefined);
+  const [isEmployeeActive, setIsEmployeeActive] = useState<boolean | undefined>(undefined);
+
   const location = useLocation();
   const navigate = useNavigate();
   const { signOut } = useAuth();
@@ -53,7 +59,31 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     activeNavRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!isReady || !userData?.schoolId) return;
+    EmployeeService.fetchCurrentEmployee(userData.schoolId)
+      .then(emp => {
+        setEmployeeOfferStatus(emp.offerStatus ?? null);
+        setIsEmployeeActive(emp.status === 'active');
+      })
+      .catch(() => {
+        setEmployeeOfferStatus(null);
+        setIsEmployeeActive(true);
+      });
+  }, [isReady, userData?.schoolId]);
+
   const currentPath = location.pathname.replace(/^\/[^/]+(?=\/employee|\/profile)/, '');
+
+  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+
+  const isOfferPending = employeeOfferStatus != null && OFFER_PENDING_STATUSES.includes(employeeOfferStatus) && isEmployeeActive !== true;
+
+  useEffect(() => {
+    if (employeeOfferStatus === undefined) return;
+    if (!isOfferPending) return;
+    if (currentPath === '/employee/offer-letter') return;
+    navigate(`${schoolPrefix}/employee/offer-letter`, { replace: true });
+  }, [employeeOfferStatus, isOfferPending, currentPath, schoolPrefix, navigate]);
 
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/employee/dashboard') return currentPath === '/employee/dashboard';
@@ -62,34 +92,71 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
-  const schoolPrefix = `/${schoolSubdomain || 'goddard'}`;
+  // Already-active employees are never portal-restricted, even if they have a draft retroactive offer letter
+  const hasOfferStatus = employeeOfferStatus != null;
+
+  const offerOnlyItems: Array<{ icon: React.ReactNode; label: string; path: string; badge?: number }> = [
+    { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letter', path: `${schoolPrefix}/employee/offer-letter` },
+  ];
+
+  const fullItems = [
+    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
+    ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending }] : []),
+    ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` }] : []),
+    ...(schoolFeatures.taptimeEnabled
+      ? [
+        { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` },
+        { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/employee/weekly-report` },
+      ]
+      : []),
+    ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending }] : []),
+    ...(hasOfferStatus ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letter', path: `${schoolPrefix}/employee/offer-letter` }] : []),
+    { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
+  ];
 
   const navGroups = [
     {
       label: 'Workspace',
-      items: [
-        { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
-        ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending }] : []),
-        ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` }] : []),
-        ...(schoolFeatures.taptimeEnabled
-          ? [
-            { icon: <Clock className="w-[18px] h-[18px]" />, label: 'Attendance', path: `${schoolPrefix}/employee/attendance` },
-            { icon: <BarChart2 className="w-[18px] h-[18px]" />, label: 'Weekly Report', path: `${schoolPrefix}/employee/weekly-report` },
-          ]
-          : []),
-        ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending }] : []),
-        { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
-      ],
+      items: isOfferPending ? offerOnlyItems : fullItems,
     }
   ];
 
   const initials = userData?.firstName && userData?.lastName
     ? `${userData.firstName[0]}${userData.lastName[0]}`.toUpperCase() : 'EMP';
 
-  if (!isReady) {
+  if (!isReady || employeeOfferStatus === undefined) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
         <Loading size="md" message="Loading portal…" />
+      </div>
+    );
+  }
+
+  // Inactive guard: account deactivated (no offer flow) or terminal offer rejection
+  const isDeactivated =
+    isEmployeeActive === false &&
+    (employeeOfferStatus == null || OFFER_TERMINAL_STATUSES.includes(employeeOfferStatus ?? ''));
+
+  if (isDeactivated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mx-auto">
+            <span className="text-3xl">🔒</span>
+          </div>
+          <h2 className="text-lg font-bold text-slate-900">Account Deactivated</h2>
+          <p className="text-sm text-slate-500">
+            {employeeOfferStatus != null
+              ? 'This offer has been declined or rejected. Please contact your school administrator.'
+              : 'Your account has been deactivated. Please contact your school administrator.'}
+          </p>
+          <button
+            onClick={() => { signOut(); navigate('/'); }}
+            className="text-xs text-slate-400 hover:text-slate-600 underline"
+          >
+            Sign out
+          </button>
+        </div>
       </div>
     );
   }
