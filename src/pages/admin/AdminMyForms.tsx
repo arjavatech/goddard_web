@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { FileText, Calendar, CheckCircle, Clock, RefreshCw, Download, Printer } from 'lucide-react';
+import { FileText, Eye, CheckCircle, Clock, RefreshCw, Download, Printer } from 'lucide-react';
 import { AdminLayout } from './AdminLayout';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
@@ -124,52 +124,71 @@ export function AdminMyForms() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2">
             {assignments.map(a => (
-              <Card key={a.id} className="rounded-2xl border-slate-100 shadow-xs">
-                <CardContent className="flex flex-col gap-3 p-5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h2 className="font-bold text-slate-900 leading-tight">{a.formTitle}</h2>
-                      {a.dueDate && (
-                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                          <Calendar className="h-3.5 w-3.5" />
-                          Due {a.dueDate}
-                        </p>
-                      )}
-                    </div>
-                    <StatusBadge status={a.normalizedStatus} />
+              <div key={a.id}
+                className="rounded-2xl border border-slate-100 bg-white flex flex-col hover:border-slate-200 hover:-translate-y-[2px] hover:shadow-md transition-all duration-200 cursor-pointer"
+                onClick={() => { if (a.normalizedStatus !== 'Approved') open(a); }}>
+                {/* Body */}
+                <div className="p-4 flex items-start gap-3 flex-1">
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] flex items-center justify-center flex-shrink-0">
+                    <FileText className="h-4 w-4 text-white" />
                   </div>
-                  {a.normalizedStatus === 'Approved' ? (
-                    <div className="mt-auto flex gap-2">
-                      {a.recentPdfLink && (
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">{a.formTitle}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-2 items-center">
+                      <StatusBadge status={a.normalizedStatus} />
+                      {a.normalizedStatus === 'Approved' && a.approvedOn && (() => {
+                        try {
+                          const d = new Date(a.approvedOn);
+                          if (!isNaN(d.getTime())) return (
+                            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                              Approved {d.toLocaleDateString()}
+                            </span>
+                          );
+                        } catch {}
+                        return null;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                {/* Divider */}
+                <div className="mx-4 border-t border-slate-50" />
+                {/* Footer */}
+                <div className="px-4 py-3 flex items-center justify-between gap-2">
+                  <p className="text-[11px] text-slate-400 font-medium truncate">
+                    Assigned: {a.assignedOn ? new Date(a.assignedOn).toLocaleDateString() : '—'}
+                  </p>
+                  <div className="flex gap-1 flex-shrink-0">
+                    {a.normalizedStatus === 'Approved' ? (
+                      a.recentPdfLink && (
                         <>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-[#0F2D52] border-slate-200 hover:bg-slate-50"
-                            onClick={() => handleDownloadForm(a)} disabled={!!loadingAction} title="Download PDF">
+                          <Button variant="outline" size="icon"
+                            className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                            onClick={(e) => { e.stopPropagation(); handleDownloadForm(a); }}
+                            disabled={!!loadingAction} title="Download PDF">
                             {loadingAction?.formId === a.id && loadingAction.action === 'download'
                               ? <span className="animate-spin h-3.5 w-3.5 border-2 border-[#0F2D52] border-t-transparent rounded-full" />
-                              : <Download className="h-4 w-4" />}
+                              : <Download className="h-3.5 w-3.5" />}
                           </Button>
-                          <Button variant="outline" size="icon" className="h-9 w-9 rounded-xl text-slate-600 border-slate-200 hover:bg-slate-50"
-                            onClick={() => handlePrintForm(a)} disabled={!!loadingAction} title="Print PDF">
+                          <Button variant="outline" size="icon"
+                            className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                            onClick={(e) => { e.stopPropagation(); handlePrintForm(a); }}
+                            disabled={!!loadingAction} title="Print PDF">
                             {loadingAction?.formId === a.id && loadingAction.action === 'print'
                               ? <span className="animate-spin h-3.5 w-3.5 border-2 border-slate-400 border-t-transparent rounded-full" />
-                              : <Printer className="h-4 w-4" />}
+                              : <Printer className="h-3.5 w-3.5" />}
                           </Button>
                         </>
-                      )}
-                      <Button size="sm" className="flex-1 rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white [&_svg]:text-white" disabled>
-                        <FileText className="mr-2 h-4 w-4" />
-                        Approved
+                      )
+                    ) : (
+                      <Button variant="outline" size="icon"
+                        className="h-7 w-7 rounded-lg text-[#0F2D52] border-[#0F2D52]/30 hover:bg-[#0F2D52] hover:border-[#0F2D52] hover:text-white transition-all duration-200"
+                        onClick={(e) => { e.stopPropagation(); open(a); }} title="Fill Form">
+                        <Eye className="h-3.5 w-3.5" />
                       </Button>
-                    </div>
-                  ) : (
-                    <Button size="sm" className="mt-auto rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#1E4B83] text-white hover:text-white [&_svg]:text-white"
-                      onClick={() => open(a)}>
-                      <FileText className="mr-2 h-4 w-4" />
-                      {a.normalizedStatus === 'Submitted' ? 'View / Edit' : 'Fill Form'}
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </div>
         )}
