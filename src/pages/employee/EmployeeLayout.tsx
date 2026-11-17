@@ -18,8 +18,8 @@ import { EmployeeService } from '../../services/api/employee';
 
 interface EmployeeLayoutProps { children: ReactNode; }
 
-const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'viewed', 'employee_signed', 'offer_accepted'];
-const OFFER_TERMINAL_STATUSES = ['offer_rejected', 'rejected'];
+const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'viewed', 'employee_signed', 'offer_accepted', 'offer_rejected'];
+const OFFER_TERMINAL_STATUSES = ['rejected'];
 
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const activeNavRef = useRef<HTMLAnchorElement>(null);

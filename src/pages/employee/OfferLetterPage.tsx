@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { EmployeeLayout } from './EmployeeLayout';
 import { Card } from '../../components/ui/card';
@@ -8,16 +8,18 @@ import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
-import { FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Printer, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 function StatusSection({
   offer,
   onOpenForm,
   onDownload,
+  onPrint,
 }: {
   offer: OfferLetter;
   onOpenForm?: () => void;
   onDownload?: () => void;
+  onPrint?: () => void;
 }) {
   switch (offer.status) {
     case 'offer_sent':
@@ -96,38 +98,63 @@ function StatusSection({
         </div>
       );
 
-    case 'offer_rejected':
+    case 'offer_rejected': {
+      const rejectionReason = offer.adminRejectionReason ?? offer.employeeRejectionReason;
       return (
-        <div className="text-center space-y-3 py-4">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-slate-900">Offer Not Accepted</p>
-            {offer.employeeRejectionReason && (
-              <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">{offer.employeeRejectionReason}</p>
+        <div className="space-y-4 py-2">
+          {rejectionReason && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-4">
+              <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-red-700">Rejection Reason</p>
+                <p className="text-sm text-red-600 mt-0.5">{rejectionReason}</p>
+              </div>
+            </div>
+          )}
+          <div className="text-center space-y-2">
+            <p className="text-base font-bold text-slate-900">Your Offer Letter Was Rejected</p>
+            <p className="text-sm text-slate-500">Please re-fill your offer letter to resubmit for approval.</p>
+            {(offer.filloutEditLink ?? offer.prefillUrl) && (
+              <button
+                onClick={onOpenForm}
+                className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-sm font-semibold transition-colors"
+              >
+                <FileText className="w-4 h-4" /> Re-fill Offer Letter
+              </button>
             )}
-            <p className="text-sm text-slate-400 mt-2">Please contact your school administrator.</p>
           </div>
         </div>
       );
+    }
 
+    case 'approved':
     case 'active':
       return (
-        <div className="text-center space-y-3 py-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        <div className="flex items-center gap-4 py-2">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
-          <div>
-            <p className="text-base font-bold text-slate-900">Offer Letter Confirmed</p>
-            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-              Your offer letter has been accepted and your account is active.
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-900">Offer Letter Approved</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Your offer letter has been approved. Download or print your copy.
             </p>
           </div>
           {offer.filloutPdfLink && (
-            <Button variant="outline" className="rounded-xl gap-2 mt-2" onClick={onDownload}>
-              <Download className="w-4 h-4" /> Download Offer Letter PDF
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onDownload}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-xs font-semibold transition-colors"
+              >
+                <Download className="w-3.5 h-3.5" /> Download
+              </button>
+              <button
+                onClick={onPrint}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print
+              </button>
+            </div>
           )}
         </div>
       );
@@ -156,6 +183,7 @@ export function OfferLetterPage() {
   const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pollCountRef = useRef(0);
 
   const schoolId = userData?.schoolId ?? '';
 
@@ -176,6 +204,29 @@ export function OfferLetterPage() {
       .catch(err => setError(err.message || 'Failed to load offer letter'))
       .finally(() => setLoading(false));
   }, [schoolId]);
+
+  // Poll for status update when waiting for Fillout webhook after re-fill
+  useEffect(() => {
+    if (!schoolId || offer?.status !== 'offer_rejected') return;
+    pollCountRef.current = 0;
+
+    const interval = setInterval(async () => {
+      pollCountRef.current += 1;
+      if (pollCountRef.current > 10) { clearInterval(interval); return; }
+      try {
+        const employee = await EmployeeService.fetchCurrentEmployee(schoolId);
+        const history = await OfferLetterService.getOfferLetterHistory(employee.id, schoolId);
+        const current = history.find(o => o.isCurrent) ?? history[0] ?? null;
+        if (current && current.status !== 'offer_rejected') {
+          setOffer(current);
+          setPastOffers(history.filter(o => !o.isCurrent));
+          clearInterval(interval);
+        }
+      } catch {}
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [schoolId, offer?.status]);
 
   const handleDownload = async () => {
     if (!offer?.filloutPdfLink) return;
@@ -225,7 +276,7 @@ export function OfferLetterPage() {
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Status</span>
                 <Badge
                   variant={
-                    offer.status === 'active' ? 'success'
+                    offer.status === 'active' || offer.status === 'approved' ? 'success'
                       : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'warning'
                       : offer.status === 'offer_rejected' ? 'destructive'
                       : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'info'
@@ -233,7 +284,7 @@ export function OfferLetterPage() {
                   }
                   className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                 >
-                  {offer.status === 'active' ? 'Active'
+                  {offer.status === 'active' || offer.status === 'approved' ? 'Active'
                     : offer.status === 'employee_signed' ? 'Awaiting School Approval'
                     : offer.status === 'offer_accepted' ? 'Awaiting Approval'
                     : offer.status === 'offer_rejected' ? 'Rejected'
@@ -244,9 +295,16 @@ export function OfferLetterPage() {
               <StatusSection
                 offer={offer}
                 onOpenForm={() => navigate(`/${schoolSlug}/employee/offer-letter/view`, {
-                  state: { prefillUrl: offer.prefillUrl, status: offer.status },
+                  state: {
+                    prefillUrl: offer.status === 'offer_rejected'
+                      ? (offer.filloutEditLink ?? offer.prefillUrl)
+                      : offer.prefillUrl,
+                    status: offer.status,
+                    rejectionReason: offer.adminRejectionReason ?? offer.employeeRejectionReason,
+                  },
                 })}
                 onDownload={handleDownload}
+                onPrint={() => offer.filloutPdfLink && window.open(offer.filloutPdfLink, '_blank')}
               />
             </Card>
 
