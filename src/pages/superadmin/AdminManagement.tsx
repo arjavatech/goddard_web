@@ -621,15 +621,15 @@ export function AdminManagement() {
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewAdmin(admin)}>
+                          <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50" onClick={(e) => e.stopPropagation()}>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAdmin(admin); }}>
                               <Eye className="w-4 h-4 mr-2 text-slate-400" /> View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); handleEditAdmin(admin); }}>
                               <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
                             </DropdownMenuItem>
                             {canManageAdministratorPins && admin.taptime_employee_id && (
-                              <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => openTapTimePinDialog(admin)}>
+                              <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); openTapTimePinDialog(admin); }}>
                                 <KeyRound className="w-4 h-4 mr-2 text-slate-400" /> Update TapTime PIN
                               </DropdownMenuItem>
                             )}
@@ -638,6 +638,7 @@ export function AdminManagement() {
                                 className="cursor-pointer font-medium text-xs text-slate-700"
                                 disabled={resendingAdminId === admin.id}
                                 onClick={(e) => {
+                                  e.stopPropagation();
                                   e.preventDefault();
                                   handleResendInvite(admin);
                                 }}
@@ -653,7 +654,7 @@ export function AdminManagement() {
                                 )}
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-650 focus:text-red-650 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-650 focus:text-red-650 focus:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteAdmin(admin); }}>
                               <Trash2 className="w-4 h-4 mr-2" /> Delete Admin
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -817,15 +818,15 @@ export function AdminManagement() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl">
-                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewAdmin(admin)}>
+                        <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl" onClick={(e) => e.stopPropagation()}>
+                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); handleViewAdmin(admin); }}>
                             <Eye className="w-4 h-4 mr-2 text-slate-400" /> View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleEditAdmin(admin)}>
+                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); handleEditAdmin(admin); }}>
                             <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit Admin
                           </DropdownMenuItem>
                           {canManageAdministratorPins && admin.taptime_employee_id && (
-                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => openTapTimePinDialog(admin)}>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); openTapTimePinDialog(admin); }}>
                               <KeyRound className="w-4 h-4 mr-2 text-slate-400" /> Update TapTime PIN
                             </DropdownMenuItem>
                           )}
@@ -834,6 +835,7 @@ export function AdminManagement() {
                               className="cursor-pointer font-medium text-xs text-slate-700"
                               disabled={resendingAdminId === admin.id}
                               onClick={(e) => {
+                                e.stopPropagation();
                                 e.preventDefault();
                                 handleResendInvite(admin);
                               }}
@@ -850,11 +852,11 @@ export function AdminManagement() {
                             </DropdownMenuItem>
                           )}
                           {isOfferLetterEnabled && !!admin.offer_status && (
-                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={() => handleViewOfferLetter(admin)}>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700" onClick={(e) => { e.stopPropagation(); handleViewOfferLetter(admin); }}>
                               <FileText className="w-4 h-4 mr-2 text-slate-400" /> View Offer Letter
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-650 focus:bg-red-50" onClick={() => handleDeleteAdmin(admin)}>
+                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-red-600 focus:text-red-650 focus:bg-red-50" onClick={(e) => { e.stopPropagation(); handleDeleteAdmin(admin); }}>
                             <Trash2 className="w-4 h-4 mr-2" /> Delete Admin
                           </DropdownMenuItem>
                         </DropdownMenuContent>

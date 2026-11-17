@@ -374,6 +374,14 @@ export const EmployeeService = {
     return data.map(mapAssignment);
   },
 
+  async fetchFormAssignmentsByUserId(userId: string): Promise<EmployeeFormAssignment[]> {
+    const data = await authedFetch(
+      { method: 'GET', url: `/employee-form-assignments?user_id=${userId}` },
+      z.array(z.any()),
+    );
+    return data.map(mapAssignment);
+  },
+
   async fetchSchoolFormAssignments(schoolId: string): Promise<EmployeeFormAssignment[]> {
     const data = await authedFetch(
       { method: 'GET', url: `/employee-form-assignments?school_id=${schoolId}` },

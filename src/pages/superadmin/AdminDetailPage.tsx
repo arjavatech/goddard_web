@@ -107,14 +107,10 @@ export function AdminDetailPage() {
       .finally(() => setIsLoadingAdmin(false));
   }, [adminId, schoolId, stateAdmin]);
 
-  // Fetch forms + docs + offer letter once admin (and employee_id) is known
+  // Fetch forms + docs + offer letter once admin is known
   useEffect(() => {
     if (!admin || !schoolId) return;
     const employeeId = admin.employee_id;
-    if (!employeeId) {
-      setIsLoading(false);
-      return;
-    }
 
     let isMounted = true;
     (async () => {
@@ -123,9 +119,11 @@ export function AdminDetailPage() {
         if (refreshKey === 0) setIsLoadingDocuments(true);
 
         const [rawAssignments, docResult, offerLetterData] = await Promise.all([
-          EmployeeService.fetchEmployeeFormAssignments(employeeId),
+          employeeId
+            ? EmployeeService.fetchEmployeeFormAssignments(employeeId)
+            : EmployeeService.fetchFormAssignmentsByUserId(admin.id),
           fetchDocumentAssignments({ school_id: schoolId, audience: 'employee', limit: 1000 }),
-          offerLetterEnabled ? OfferLetterService.getOfferLetter(employeeId, schoolId).catch(() => null) : Promise.resolve(null),
+          offerLetterEnabled && employeeId ? OfferLetterService.getOfferLetter(employeeId, schoolId).catch(() => null) : Promise.resolve(null),
         ]);
 
         if (!isMounted) return;
@@ -395,7 +393,6 @@ export function AdminDetailPage() {
   }
 
   const adminName = `${admin.first_name} ${admin.last_name}`;
-  const hasEmployeeRecord = !!admin.employee_id;
 
   return (
     <AdminLayout>
@@ -498,15 +495,7 @@ export function AdminDetailPage() {
 
           {/* Right Column */}
           <div className="lg:col-span-2 space-y-6">
-            {!hasEmployeeRecord ? (
-              <Card className="glass-card border border-slate-100 rounded-2xl shadow-sm bg-white">
-                <CardContent className="py-12 text-center">
-                  <FileText className="w-10 h-10 text-slate-200 mx-auto mb-3" />
-                  <p className="text-sm font-semibold text-slate-500">No employee record linked to this admin.</p>
-                  <p className="text-xs text-slate-400 mt-1">Forms, documents, and offer letters are only available for admins invited with offer letter enabled.</p>
-                </CardContent>
-              </Card>
-            ) : isLoading ? (
+            {isLoading ? (
               <Card className="glass-card border border-slate-100 rounded-2xl shadow-sm bg-white">
                 <CardContent className="py-12 text-center">
                   <div className="animate-spin rounded-full border-b-2 border-[#0F2D52] mx-auto mb-3 h-8 w-8"></div>
