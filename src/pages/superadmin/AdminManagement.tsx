@@ -898,7 +898,7 @@ export function AdminManagement() {
             {inviteStep === 1 && (
               <div className="grid grid-cols-2 gap-4 py-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name *</label>
                   <Input
                     value={adminFirstName}
                     onChange={(e) => setAdminFirstName(e.target.value)}
@@ -908,7 +908,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name *</label>
                   <Input
                     value={adminLastName}
                     onChange={(e) => setAdminLastName(e.target.value)}
@@ -918,7 +918,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address *</label>
                   <Input
                     type="email"
                     value={adminEmail}
@@ -1096,7 +1096,7 @@ export function AdminManagement() {
             {editStep === 1 && (
               <div className="grid grid-cols-2 gap-4 py-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name *</label>
                   <Input
                     value={adminFirstName}
                     onChange={(e) => setAdminFirstName(e.target.value)}
@@ -1105,7 +1105,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name *</label>
                   <Input
                     value={adminLastName}
                     onChange={(e) => setAdminLastName(e.target.value)}
@@ -1123,7 +1123,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
                   <Input
                     type="tel"
                     value={adminPhone}

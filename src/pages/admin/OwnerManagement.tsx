@@ -518,7 +518,7 @@ export function OwnerManagement() {
               <Input value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Last name" className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white" />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
               <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter phone number" className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white" />
             </div>
           </div>
