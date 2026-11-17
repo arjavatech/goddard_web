@@ -37,7 +37,7 @@ export function OfferLetterReview() {
     setIsLoading(true);
     try {
       const all = await OfferLetterService.listOfferLetters(schoolId);
-      setOffers(all.filter(o => o.status === 'offer_accepted'));
+      setOffers(all.filter(o => o.status === 'employee_signed' || o.status === 'offer_accepted'));
     } catch {
       showToast('error', 'Failed to load pending offer letters');
     } finally {
