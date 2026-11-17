@@ -235,7 +235,7 @@ export function EmployeeManagement() {
     }
   };
 
-  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn);
+  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && empPhone.trim() && validatePhoneNumber(empPhone) && empJoinedOn);
 
   const normalize = (s: string) => s.toLowerCase().replace(/[_\-\s]/g, '');
   const getAutoFill = (filloutParam: string): string | null => {
@@ -858,13 +858,13 @@ export function EmployeeManagement() {
                   {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone *</label>
                   <PhoneInput
                     value={empPhone}
                     country={empPhoneCountry}
                     onCountryChange={(val) => setEmpPhoneCountry(val)}
                     onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
-                    onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                    onBlur={() => { if (!empPhone.trim()) setPhoneError('Phone number is required'); else if (!validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
                     error={!!phoneError}
                   />
                   {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}

@@ -43,6 +43,44 @@ function StatusSection({
         </div>
       );
 
+    case 'viewed':
+      return (
+        <div className="text-center space-y-3 py-4">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
+            <Clock className="w-8 h-8 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-slate-900">Complete Your Offer Letter</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
+              You've opened the offer letter. Please complete and sign it to proceed.
+            </p>
+          </div>
+          {offer.prefillUrl && (
+            <button
+              onClick={onOpenForm}
+              className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-sm font-semibold transition-colors"
+            >
+              <FileText className="w-4 h-4" /> Open Offer Letter
+            </button>
+          )}
+        </div>
+      );
+
+    case 'employee_signed':
+      return (
+        <div className="text-center space-y-3 py-4">
+          <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-slate-900">Offer Letter Signed</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
+              You've signed your offer letter. Waiting for school approval.
+            </p>
+          </div>
+        </div>
+      );
+
     case 'offer_accepted':
       return (
         <div className="text-center space-y-3 py-4">
@@ -188,17 +226,18 @@ export function OfferLetterPage() {
                 <Badge
                   variant={
                     offer.status === 'active' ? 'success'
-                      : offer.status === 'offer_accepted' ? 'warning'
+                      : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'warning'
                       : offer.status === 'offer_rejected' ? 'destructive'
-                      : offer.status === 'offer_sent' ? 'info'
+                      : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'info'
                       : 'secondary'
                   }
                   className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                 >
                   {offer.status === 'active' ? 'Active'
+                    : offer.status === 'employee_signed' ? 'Awaiting School Approval'
                     : offer.status === 'offer_accepted' ? 'Awaiting Approval'
                     : offer.status === 'offer_rejected' ? 'Rejected'
-                    : offer.status === 'offer_sent' ? 'Action Required'
+                    : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'Action Required'
                     : 'Pending'}
                 </Badge>
               </div>

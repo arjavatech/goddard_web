@@ -153,7 +153,7 @@ export function AdminManagement() {
     }
   };
 
-  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
+  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError && adminPhone.trim();
 
   const getAdminAutoFill = (filloutParam: string): string | null => {
     const p = filloutParam.toLowerCase().replace(/[^a-z]/g, '');
@@ -934,7 +934,7 @@ export function AdminManagement() {
                   {emailError && <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>}
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
                   <Input
                     type="tel"
                     value={adminPhone}

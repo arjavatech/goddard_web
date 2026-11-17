@@ -145,7 +145,7 @@ export function SuperAdminManagement() {
   };
 
   const isFormValid =
-    adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
+    adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError && adminPhone.trim();
 
   const resetForm = () => {
     setAdminFirstName('');
@@ -157,7 +157,7 @@ export function SuperAdminManagement() {
 
   // ── Handlers ───────────────────────────────────────────────────────────────
   const handleInviteAdmin = async () => {
-    if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || emailError) {
+    if (!adminFirstName.trim() || !adminLastName.trim() || !adminEmail.trim() || !adminPhone.trim() || emailError) {
       showToast('error', 'Please fill in all required fields with valid information');
       return;
     }
@@ -168,7 +168,7 @@ export function SuperAdminManagement() {
 
     setIsInviting(true);
     try {
-      await inviteSuperAdmin(adminEmail.trim(), adminFirstName.trim(), adminLastName.trim());
+      await inviteSuperAdmin(adminEmail.trim(), adminFirstName.trim(), adminLastName.trim(), adminPhone.trim());
       showToast('success', 'Invitation sent to ' + adminEmail.trim());
       setIsAddDialogOpen(false);
       resetForm();
@@ -653,6 +653,16 @@ export function SuperAdminManagement() {
                     }`}
                 />
                 {emailError && <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number *</label>
+                <Input
+                  type="tel"
+                  value={adminPhone}
+                  onChange={(e) => setAdminPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
+                />
               </div>
             </div>
             <DialogFooter className="mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3">

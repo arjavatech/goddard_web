@@ -86,13 +86,13 @@ export function OwnerManagement() {
   const openDelete = (owner: OwnerUser) => { setSelectedOwner(owner); setIsDeleteOpen(true); };
 
   const handleInvite = async () => {
-    if (!firstName.trim() || !lastName.trim() || !email.trim()) return;
+    if (!firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) { setEmailError('Please enter a valid email address.'); return; }
     setEmailError('');
     setIsSaving(true);
     try {
-      await inviteOwner(email.trim(), firstName.trim(), lastName.trim(), schoolId, phone.trim() || undefined);
+      await inviteOwner(email.trim(), firstName.trim(), lastName.trim(), schoolId, phone.trim());
       showToast('success', 'Owner invited successfully. An invitation email has been sent.');
       setIsInviteOpen(false);
       loadOwners();
@@ -483,7 +483,7 @@ export function OwnerManagement() {
               {emailError && <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>}
             </div>
             <div className="col-span-2">
-              <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+              <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
               <Input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="Enter phone number" className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white" />
             </div>
           </div>
@@ -491,7 +491,7 @@ export function OwnerManagement() {
             <Button variant="outline" onClick={() => setIsInviteOpen(false)} disabled={isSaving} className="w-full sm:w-auto h-10 text-sm rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-all font-medium">
               Cancel
             </Button>
-            <Button onClick={handleInvite} disabled={isSaving || !firstName.trim() || !lastName.trim() || !email.trim()} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white transition-all font-semibold disabled:opacity-50">
+            <Button onClick={handleInvite} disabled={isSaving || !firstName.trim() || !lastName.trim() || !email.trim() || !phone.trim()} className="w-full sm:w-auto h-10 text-sm rounded-xl bg-[#0F2D52] hover:bg-[#1c447c] text-white transition-all font-semibold disabled:opacity-50">
               {isSaving ? 'Sending…' : 'Send Invitation'}
             </Button>
           </DialogFooter>
