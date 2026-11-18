@@ -346,19 +346,26 @@ export function AdminManagement() {
         editPermissions
       );
 
-      if (selectedAdmin.employee_id && isOfferLetterEnabled && Object.keys(editOfferCustomFields).length > 0) {
+      const willResendAdmin = !!(selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status && selectedAdmin.offer_status !== 'draft');
+      if (selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status) {
         await OfferLetterService.updateOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '', {
-          customFields: editOfferCustomFields,
+          firstName: adminFirstName.trim(),
+          lastName: adminLastName.trim(),
+          phone: adminPhone.trim() || undefined,
+          customFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : undefined,
         });
+        if (willResendAdmin) {
+          await OfferLetterService.resendOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '');
+        }
       }
 
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
           : admin
       ));
 
-      showToast('success', 'Admin updated successfully');
+      showToast('success', willResendAdmin ? 'Admin updated — offer letter resent to employee' : 'Admin updated successfully');
       setIsEditDialogOpen(false);
       setSelectedAdmin(null);
       resetForm();

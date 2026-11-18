@@ -341,6 +341,7 @@ export function EmployeeManagement() {
         joinedOn: empJoinedOn,
       });
 
+      const willResend = !!selectedEmployee.offerStatus && selectedEmployee.offerStatus !== 'draft';
       if (selectedEmployee.offerStatus) {
         await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
           firstName: empFirstName.trim(),
@@ -348,22 +349,28 @@ export function EmployeeManagement() {
           phone: empPhone.trim(),
           customFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : undefined,
         });
+        if (willResend) {
+          await OfferLetterService.resendOfferLetter(selectedEmployee.id, userData?.schoolId ?? '');
+        }
       }
 
       setEmployees(employees.map(e => {
         if (e.id === selectedEmployee.id) {
           return {
             ...e,
+            firstName: empFirstName.trim(),
+            lastName: empLastName.trim(),
             phone: empPhone.trim(),
             phoneCountry: empPhoneCountry,
             address: empAddress.trim(),
             employeeType: empType,
             joinedOn: empJoinedOn,
+            ...(willResend ? { offerStatus: 'offer_sent' } : {}),
           };
         }
         return e;
       }));
-      showToast('success', 'Employee updated successfully');
+      showToast('success', willResend ? 'Employee updated — offer letter resent to employee' : 'Employee updated successfully');
       setIsEditDialogOpen(false);
       setSelectedEmployee(null);
       resetForm();
