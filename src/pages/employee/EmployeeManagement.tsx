@@ -339,6 +339,8 @@ export function EmployeeManagement() {
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
+        firstName: empFirstName.trim(),
+        lastName: empLastName.trim(),
       });
 
       const autoOfferFields = Object.fromEntries(

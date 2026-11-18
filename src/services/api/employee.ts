@@ -227,7 +227,7 @@ export const EmployeeService = {
   async updateEmployee(
     id: string,
     schoolId: string,
-    updates: { phone?: string; phoneCountry?: string; address?: string; employeeType?: string; joinedOn?: string },
+    updates: { phone?: string; phoneCountry?: string; address?: string; employeeType?: string; joinedOn?: string; firstName?: string; lastName?: string },
   ): Promise<Employee> {
     const data = await authedFetch(
       {
@@ -239,6 +239,8 @@ export const EmployeeService = {
           address: updates.address,
           employee_type: updates.employeeType,
           joined_on: updates.joinedOn,
+          first_name: updates.firstName,
+          last_name: updates.lastName,
         },
       },
       z.any(),
