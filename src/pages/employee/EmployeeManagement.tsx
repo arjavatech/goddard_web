@@ -341,9 +341,12 @@ export function EmployeeManagement() {
         joinedOn: empJoinedOn,
       });
 
-      if (selectedEmployee.offerStatus && Object.keys(editOfferCustomFields).length > 0) {
+      if (selectedEmployee.offerStatus) {
         await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
-          customFields: editOfferCustomFields,
+          firstName: empFirstName.trim(),
+          lastName: empLastName.trim(),
+          phone: empPhone.trim(),
+          customFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : undefined,
         });
       }
 
@@ -1007,20 +1010,26 @@ export function EmployeeManagement() {
 
                 {showEditSteps && editStep === 2 && (
                   <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
-                    {offerLetterFields.map(field => (
-                      <div key={field.id}>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
-                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </label>
-                        <Input
-                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
-                          value={editOfferCustomFields[field.filloutParam] ?? ''}
-                          onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
-                          placeholder={field.type === 'number' ? '0.00' : field.label}
-                          className="h-10 rounded-xl"
-                        />
-                      </div>
-                    ))}
+                    {(() => {
+                      const manualFields = offerLetterFields.filter(f => getAutoFill(f.filloutParam) === null);
+                      if (manualFields.length === 0) {
+                        return <p className="text-sm text-slate-500 py-4 text-center">All details carried over from Step 1.</p>;
+                      }
+                      return manualFields.map(field => (
+                        <div key={field.id}>
+                          <label className="block text-xs font-bold uppercase text-black mb-1.5">
+                            {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                          </label>
+                          <Input
+                            type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                            value={editOfferCustomFields[field.filloutParam] ?? ''}
+                            onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                            placeholder={field.type === 'number' ? '0.00' : field.label}
+                            className="h-10 rounded-xl"
+                          />
+                        </div>
+                      ));
+                    })()}
                   </div>
                 )}
 
