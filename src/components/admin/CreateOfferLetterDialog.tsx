@@ -126,7 +126,7 @@ export function CreateOfferLetterDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto no-scrollbar rounded-2xl shadow-lg border border-slate-100 bg-white p-0">
+      <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] flex flex-col rounded-2xl shadow-lg border border-slate-100 bg-white p-0 overflow-hidden">
         <div className="bg-gradient-to-r from-[#0F2D52] to-[#1E4B83] px-6 py-4 rounded-t-2xl flex items-center gap-3">
           <div className="w-8 h-8 bg-white/15 rounded-lg flex items-center justify-center">
             <FileEdit className="w-4 h-4 text-white" />
@@ -138,7 +138,7 @@ export function CreateOfferLetterDialog({
           </DialogHeader>
         </div>
 
-        <div className="px-6 py-5 space-y-4">
+        <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
           {/* Offer form info */}
           {schoolFormId ? (
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
