@@ -538,19 +538,17 @@ export function OfferLetterManagement() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-white rounded-xl border border-slate-100 shadow-xl z-50">
-                        {(offer.status === 'draft' || offer.status === 'offer_sent' || offer.status === 'approved' || offer.status === 'active') && (
-                          <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700"
-                            onClick={() => setEditOffer(offer)}>
-                            <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit
-                          </DropdownMenuItem>
-                        )}
+                        <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700"
+                          onClick={() => setEditOffer(offer)}>
+                          <Edit className="w-4 h-4 mr-2 text-slate-400" /> Edit
+                        </DropdownMenuItem>
                         {offer.status === 'draft' && (
                           <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700"
                             onClick={() => setSendingOffer(offer)}>
                             <Send className="w-4 h-4 mr-2 text-slate-400" /> Send Offer Letter
                           </DropdownMenuItem>
                         )}
-                        {offer.status === 'offer_sent' && (
+                        {(offer.status === 'offer_sent' || offer.status === 'viewed' || offer.status === 'offer_rejected') && (
                           <DropdownMenuItem className="cursor-pointer font-medium text-xs text-slate-700"
                             onClick={() => handleResend(offer)}>
                             <RefreshCw className="w-4 h-4 mr-2 text-slate-400" /> Resend
