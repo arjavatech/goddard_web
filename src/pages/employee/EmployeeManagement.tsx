@@ -365,6 +365,7 @@ export function EmployeeManagement() {
             address: empAddress.trim(),
             employeeType: empType,
             joinedOn: empJoinedOn,
+            offerLetterCustomFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : e.offerLetterCustomFields,
             ...(willResend ? { offerStatus: 'offer_sent' } : {}),
           };
         }

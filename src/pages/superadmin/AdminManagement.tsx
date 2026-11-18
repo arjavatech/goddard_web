@@ -361,7 +361,7 @@ export function AdminManagement() {
 
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, offer_letter_custom_fields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : admin.offer_letter_custom_fields, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
           : admin
       ));
 
