@@ -7,6 +7,8 @@ import { useToast } from '../../contexts/ToastContext';
 import { OfferLetterService, type OfferLetter, type OfferLetterField } from '../../services/api/offerLetter';
 import { FileEdit, Send, AlertTriangle, ChevronRight, ChevronLeft } from 'lucide-react';
 
+const normalize = (s: string) => s.toLowerCase().replace(/[_\-\s]/g, '');
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -41,6 +43,7 @@ export function CreateOfferLetterDialog({
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [customFields, setCustomFields] = useState<Record<string, string>>({});
+  const [joinedOn, setJoinedOn] = useState('');
 
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -51,33 +54,57 @@ export function CreateOfferLetterDialog({
   const isApprovedEdit = isEditing && (
     ['approved', 'active', 'employee_signed', 'offer_accepted'].includes(existingOffer?.status ?? '')
   );
-  const hasCustomFields = (offerLetterFields ?? []).length > 0;
+  const getAutoFill = (filloutParam: string): string | null => {
+    const p = normalize(filloutParam);
+    if (['name', 'fullname', 'employeename'].includes(p)) return `${firstName} ${lastName}`.trim();
+    if (['firstname'].includes(p)) return firstName.trim();
+    if (['lastname'].includes(p)) return lastName.trim();
+    if (['email'].includes(p)) return email.trim();
+    if (['phone', 'phonenumber'].includes(p)) return phone.trim();
+    if (['joiningdate', 'joindate', 'startdate', 'date'].includes(p)) return joinedOn;
+    return null;
+  };
+  const manualFields = (offerLetterFields ?? []).filter(f => getAutoFill(f.filloutParam) === null);
+  const hasCustomFields = manualFields.length > 0;
+  const hasRequiredDateField = (offerLetterFields ?? []).some(f =>
+    f.required && ['joiningdate', 'joindate', 'startdate', 'date'].includes(normalize(f.filloutParam))
+  );
+  const hasDateField = (offerLetterFields ?? []).some(f =>
+    ['joiningdate', 'joindate', 'startdate', 'date'].includes(normalize(f.filloutParam))
+  );
 
   useEffect(() => {
     if (!open) {
       setStep(1);
       return;
     }
+    const dateFieldParam = (offerLetterFields ?? []).find(f => {
+      const p = f.filloutParam.toLowerCase().replace(/[_\-\s]/g, '');
+      return ['joiningdate', 'joindate', 'startdate', 'date'].includes(p);
+    })?.filloutParam;
     if (existingOffer) {
       setFirstName(existingOffer.firstName);
       setLastName(existingOffer.lastName);
       setEmail(existingOffer.email);
       setPhone(existingOffer.phone ?? '');
       setCustomFields(existingOffer.customFields ?? {});
+      setJoinedOn(dateFieldParam ? String(existingOffer.customFields?.[dateFieldParam] ?? '') : '');
     } else {
       setFirstName(prefill?.firstName ?? '');
       setLastName(prefill?.lastName ?? '');
       setEmail(prefill?.email ?? '');
       setPhone('');
       setCustomFields({});
+      setJoinedOn('');
     }
   }, [open, existingOffer, prefill]);
 
   const basicFieldsValid = firstName.trim() && lastName.trim() && email.trim();
 
-  const requiredCustomFieldsFilled = (offerLetterFields ?? [])
+  const requiredCustomFieldsFilled = manualFields
     .filter(f => f.required)
-    .every(f => !!customFields[f.filloutParam]?.trim());
+    .every(f => !!customFields[f.filloutParam]?.trim())
+    && (!hasRequiredDateField || !!joinedOn.trim());
 
   const isFormValid = !!basicFieldsValid && requiredCustomFieldsFilled;
 
@@ -85,13 +112,19 @@ export function CreateOfferLetterDialog({
     const nonEmptyCustomFields = Object.fromEntries(
       Object.entries(customFields).filter(([, v]) => v.trim() !== '')
     );
+    const autoFields = Object.fromEntries(
+      (offerLetterFields ?? [])
+        .map(f => [f.filloutParam, getAutoFill(f.filloutParam)])
+        .filter(([, v]) => v !== null && (v as string).trim() !== '') as [string, string][]
+    );
+    const mergedCustomFields = { ...nonEmptyCustomFields, ...autoFields };
     const req = {
       schoolId,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
       email: email.trim(),
       phone: phone.trim() || undefined,
-      customFields: Object.keys(nonEmptyCustomFields).length > 0 ? nonEmptyCustomFields : undefined,
+      customFields: Object.keys(mergedCustomFields).length > 0 ? mergedCustomFields : undefined,
     };
     if (isEditing) {
       return OfferLetterService.updateOfferLetter(employeeId, schoolId, req);
@@ -192,6 +225,15 @@ export function CreateOfferLetterDialog({
               <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">Phone</label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" className="h-10 rounded-xl" />
             </div>
+
+            {hasDateField && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
+                  Joined On{hasRequiredDateField && <span className="text-red-500 ml-0.5">*</span>}
+                </label>
+                <Input type="date" value={joinedOn} onChange={e => setJoinedOn(e.target.value)} className="h-10 rounded-xl" />
+              </div>
+            )}
           </div>
         )}
 
@@ -208,10 +250,10 @@ export function CreateOfferLetterDialog({
               </div>
             )}
 
-            {hasCustomFields && (
+            {hasCustomFields ? (
               <div className="space-y-3">
                 <p className="text-xs font-bold uppercase text-slate-500">School-Specific Fields</p>
-                {offerLetterFields!.map(field => (
+                {manualFields.map(field => (
                   <div key={field.id}>
                     <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
                       {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
@@ -227,6 +269,8 @@ export function CreateOfferLetterDialog({
                   </div>
                 ))}
               </div>
+            ) : (
+              <p className="text-sm text-slate-500 py-2 text-center">All details carried over from Step 1.</p>
             )}
 
             {/* Offer form info */}
@@ -284,11 +328,20 @@ export function CreateOfferLetterDialog({
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" className="h-10 rounded-xl" />
             </div>
 
+            {hasDateField && (
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
+                  Joined On{hasRequiredDateField && <span className="text-red-500 ml-0.5">*</span>}
+                </label>
+                <Input type="date" value={joinedOn} onChange={e => setJoinedOn(e.target.value)} className="h-10 rounded-xl" />
+              </div>
+            )}
+
             {hasCustomFields && (
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-xs font-bold uppercase text-slate-500 mb-3">School-Specific Fields</p>
                 <div className="space-y-3">
-                  {offerLetterFields!.map(field => (
+                  {manualFields.map(field => (
                     <div key={field.id}>
                       <label className="block text-xs font-bold uppercase text-slate-700 mb-1.5">
                         {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}

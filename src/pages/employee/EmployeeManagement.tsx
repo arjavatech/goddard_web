@@ -341,13 +341,20 @@ export function EmployeeManagement() {
         joinedOn: empJoinedOn,
       });
 
+      const autoOfferFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null && (v as string).trim() !== '') as [string, string][]
+      );
+      const mergedOfferCustomFields = { ...editOfferCustomFields, ...autoOfferFields };
+
       const willResend = !!selectedEmployee.offerStatus && selectedEmployee.offerStatus !== 'draft';
       if (selectedEmployee.offerStatus) {
         await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
           firstName: empFirstName.trim(),
           lastName: empLastName.trim(),
           phone: empPhone.trim(),
-          customFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : undefined,
+          customFields: mergedOfferCustomFields,
         });
         if (willResend) {
           await OfferLetterService.resendOfferLetter(selectedEmployee.id, userData?.schoolId ?? '');
@@ -365,7 +372,7 @@ export function EmployeeManagement() {
             address: empAddress.trim(),
             employeeType: empType,
             joinedOn: empJoinedOn,
-            offerLetterCustomFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : e.offerLetterCustomFields,
+            offerLetterCustomFields: mergedOfferCustomFields,
             ...(willResend ? { offerStatus: 'offer_sent' } : {}),
           };
         }

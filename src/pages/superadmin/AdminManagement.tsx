@@ -346,13 +346,20 @@ export function AdminManagement() {
         editPermissions
       );
 
+      const autoOfferFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAdminAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null && (v as string).trim() !== '') as [string, string][]
+      );
+      const mergedOfferCustomFields = { ...editOfferCustomFields, ...autoOfferFields };
+
       const willResendAdmin = !!(selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status && selectedAdmin.offer_status !== 'draft');
       if (selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status) {
         await OfferLetterService.updateOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '', {
           firstName: adminFirstName.trim(),
           lastName: adminLastName.trim(),
           phone: adminPhone.trim() || undefined,
-          customFields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : undefined,
+          customFields: mergedOfferCustomFields,
         });
         if (willResendAdmin) {
           await OfferLetterService.resendOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '');
@@ -361,7 +368,7 @@ export function AdminManagement() {
 
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, offer_letter_custom_fields: Object.keys(editOfferCustomFields).length > 0 ? editOfferCustomFields : admin.offer_letter_custom_fields, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, offer_letter_custom_fields: mergedOfferCustomFields, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
           : admin
       ));
 
