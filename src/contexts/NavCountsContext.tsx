@@ -20,6 +20,7 @@ type NavCountsContextValue = {
   docsPending: number;
   surveysPending: number;
   conferencesAvailable: number;
+  offerLettersReview: number;
   formsNeedingRevision: number;
   refreshCounts: () => void;
   setFormsNeedingRevision: (count: number) => void;
@@ -37,6 +38,7 @@ const ZERO_ADMIN: AdminNavCounts = {
   employee_docs_due: 0,
   employee_docs_review: 0,
   surveys_pending: 0,
+  offer_letters_review: null,
 };
 
 const ZERO_MY: MyNavCounts = { forms_pending: 0, docs_pending: 0, surveys_pending: 0, conferences_available: 0 };
@@ -96,6 +98,7 @@ export function NavCountsProvider({ children }: { children: React.ReactNode }) {
     docsPending: myCounts.docs_pending,
     surveysPending: isAdmin ? adminCounts.surveys_pending : myCounts.surveys_pending,
     conferencesAvailable: !isAdmin && schoolFeatures.conferenceEnabled ? myCounts.conferences_available : 0,
+    offerLettersReview: adminCounts.offer_letters_review ?? 0,
     formsNeedingRevision: overrideFormsNeedingRevision,
     refreshCounts: refresh,
     setFormsNeedingRevision: setOverrideFormsNeedingRevision,

@@ -44,7 +44,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
   const { userData, schoolName, schoolSubdomain, schoolPhone, schoolEmail, schoolAddress, schoolWebsiteUrl, isReady, schoolFeatures, adminPermissions } = useUserContext();
-  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending } = useNavCounts();
+  const { studentFormsDue, studentFormsReview, employeeFormsDue, employeeFormsReview, studentDocsDue, studentDocsReview, employeeDocsDue, employeeDocsReview, surveysPending, offerLettersReview } = useNavCounts();
   const isSuperAdmin = userData?.role?.toLowerCase() === 'superadmin';
   const isOwner = userData?.role?.toLowerCase() === 'owner';
   const hasElevatedAccess = isSuperAdmin || isOwner;
@@ -201,7 +201,7 @@ export function AdminLayout({ children }: AdminLayoutProps) {
       label: 'Offer Letters',
       items: [
         { icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letters', path: `${schoolPrefix}/admin/offer-letters` },
-        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Offer Letter Review', path: `${schoolPrefix}/admin/offer-letters/review` },
+        { icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Offer Letter Review', path: `${schoolPrefix}/admin/offer-letters/review`, badge: offerLettersReview || undefined },
       ],
     }] : []),
 
