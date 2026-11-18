@@ -218,6 +218,7 @@ export function CreateOfferLetterDialog({
                     </label>
                     <Input
                       type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                      min={field.type === 'number' ? 0 : undefined}
                       value={customFields[field.filloutParam] ?? ''}
                       onChange={e => setCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
                       placeholder={field.type === 'number' ? '0.00' : field.label}

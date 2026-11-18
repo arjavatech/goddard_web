@@ -964,7 +964,7 @@ export function AdminManagement() {
                   <Input
                     type="tel"
                     value={adminPhone}
-                    onChange={(e) => setAdminPhone(e.target.value)}
+                    onChange={(e) => setAdminPhone(e.target.value.replace(/[^0-9\s()+\-]/g, ''))}
                     placeholder="Enter phone number"
                     className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
                   />
@@ -1010,6 +1010,7 @@ export function AdminManagement() {
                         </label>
                         <Input
                           type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          min={field.type === 'number' ? 0 : undefined}
                           value={inviteOfferCustomFields[field.filloutParam] ?? ''}
                           onChange={e => setInviteOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
                           className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
@@ -1153,7 +1154,7 @@ export function AdminManagement() {
                   <Input
                     type="tel"
                     value={adminPhone}
-                    onChange={(e) => setAdminPhone(e.target.value)}
+                    onChange={(e) => setAdminPhone(e.target.value.replace(/[^0-9\s()+\-]/g, ''))}
                     placeholder="Enter phone number"
                     className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
                   />
@@ -1199,6 +1200,7 @@ export function AdminManagement() {
                         </label>
                         <Input
                           type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          min={field.type === 'number' ? 0 : undefined}
                           value={editOfferCustomFields[field.filloutParam] ?? ''}
                           onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
                           className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
