@@ -44,11 +44,18 @@ export function CreateOfferLetterDialog({
 
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isSending, setIsSending] = useState(false);
+  const [confirmResend, setConfirmResend] = useState(false);
 
   const isEditing = !!existingOffer;
+  const isApprovedEdit = isEditing && (
+    existingOffer?.status === 'approved' || existingOffer?.status === 'active'
+  );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setConfirmResend(false);
+      return;
+    }
     if (existingOffer) {
       setFirstName(existingOffer.firstName);
       setLastName(existingOffer.lastName);
@@ -113,9 +120,14 @@ export function CreateOfferLetterDialog({
     setIsSending(true);
     try {
       const draft = await saveOrUpdate();
-      const sent = await OfferLetterService.sendOfferLetter(draft.employeeId, schoolId);
-      showToast('success', `Offer letter sent to ${sent.email}`);
-      onSaved?.(sent);
+      if (isApprovedEdit) {
+        await OfferLetterService.resendOfferLetter(draft.employeeId, schoolId);
+        showToast('success', 'Offer letter updated — employee has been notified to re-sign');
+      } else {
+        const sent = await OfferLetterService.sendOfferLetter(draft.employeeId, schoolId);
+        showToast('success', `Offer letter sent to ${sent.email}`);
+      }
+      onSaved?.(draft);
       onOpenChange(false);
     } catch (err: any) {
       showToast('error', err.message || 'Failed to send offer letter');
@@ -139,6 +151,16 @@ export function CreateOfferLetterDialog({
         </div>
 
         <div className="px-6 py-5 space-y-4 overflow-y-auto flex-1 min-h-0">
+          {/* Warning for approved/active offers */}
+          {isApprovedEdit && (
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-700">
+                This offer is already approved. Saving will reset the offer and require the employee to re-sign with the updated details.
+              </p>
+            </div>
+          )}
+
           {/* Offer form info */}
           {schoolFormId ? (
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl">
@@ -201,26 +223,50 @@ export function CreateOfferLetterDialog({
           )}
         </div>
 
-        <DialogFooter className="px-6 pb-5 flex flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSavingDraft || isSending} className="rounded-xl">
-            Cancel
-          </Button>
-          <Button variant="outline" onClick={handleSaveDraft} disabled={!isFormValid || isSavingDraft || isSending} className="rounded-xl">
-            {isSavingDraft ? 'Saving…' : (isEditing ? 'Save Changes' : 'Save Draft')}
-          </Button>
-          <AsyncButton
-            onClick={handleSendOffer}
-            disabled={!isFormValid || !schoolFormId || isSending || isSavingDraft}
-            className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white gap-2"
-          >
-            <Send className="w-4 h-4" /> {isEditing ? 'Save & Resend Email' : 'Send Offer Letter'}
-          </AsyncButton>
-          {isEditing && (
-            <p className="w-full text-center text-xs text-slate-500 mt-1">
-              "Save Changes" updates fields only. "Save &amp; Resend Email" also sends a new email to the employee.
-            </p>
-          )}
-        </DialogFooter>
+        {isApprovedEdit && confirmResend ? (
+          <div className="px-6 pb-5 pt-4 border-t border-slate-100">
+            <div className="flex items-start gap-2 px-3 py-2.5 bg-red-50 border border-red-200 rounded-xl mb-4">
+              <AlertTriangle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-red-700">
+                This will reset the approved offer. The employee will receive a new email and must re-sign with the updated details.
+              </p>
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button variant="outline" onClick={() => setConfirmResend(false)} disabled={isSending} className="rounded-xl">
+                Go Back
+              </Button>
+              <AsyncButton
+                onClick={handleSendOffer}
+                disabled={isSending}
+                className="rounded-xl bg-red-600 hover:bg-red-700 text-white gap-2"
+              >
+                <Send className="w-4 h-4" />
+                Confirm &amp; Re-send
+              </AsyncButton>
+            </div>
+          </div>
+        ) : (
+          <DialogFooter className="px-6 pb-5 pt-4 border-t border-slate-100 flex flex-row items-center justify-between gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSavingDraft || isSending} className="rounded-xl">
+              Cancel
+            </Button>
+            <div className="flex gap-2">
+              {!isApprovedEdit && (
+                <Button variant="outline" onClick={handleSaveDraft} disabled={!isFormValid || isSavingDraft || isSending} className="rounded-xl">
+                  {isSavingDraft ? 'Saving…' : (isEditing ? 'Save Changes' : 'Save Draft')}
+                </Button>
+              )}
+              <AsyncButton
+                onClick={isApprovedEdit ? () => setConfirmResend(true) : handleSendOffer}
+                disabled={!isFormValid || !schoolFormId || isSending || isSavingDraft}
+                className="rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {isApprovedEdit ? 'Save & Re-send for Signing' : isEditing ? 'Save & Resend Email' : 'Send Offer Letter'}
+              </AsyncButton>
+            </div>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );
