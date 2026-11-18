@@ -99,7 +99,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   ];
 
   const fullItems = [
-    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
+    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsPending },
     ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending }] : []),
     ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` }] : []),
     ...(schoolFeatures.taptimeEnabled

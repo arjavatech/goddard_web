@@ -51,6 +51,17 @@ export function getNotificationMeta(type: string): NotificationMeta {
   return NOTIFICATION_META[type] ?? FALLBACK;
 }
 
+/** Notification types that are school-system events, not personal to the recipient.
+ *  These are hidden from the notification panel and unread badge count. */
+export const SYSTEM_NOTIFICATION_TYPES = new Set([
+  'admin_added',
+  'admin_deactivated',
+  'classroom_added',
+  'classroom_deleted',
+  'form_template_added',
+  'form_template_deleted',
+]);
+
 /** Time-group key used to render the "Today" / "Yesterday" / "Earlier" section headers. */
 export type TimeGroup = 'Today' | 'Yesterday' | 'Earlier';
 
