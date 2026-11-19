@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { EmployeeLayout } from './EmployeeLayout';
 import { Card, CardContent } from '../../components/ui/card';
 import { FileText, Clock, CheckCircle, User, Download, Printer, Eye, LayoutGrid, List, HelpCircle, Phone, MapPin } from 'lucide-react';
 import { EmployeeService, type EmployeeFormAssignment } from '../../services/api/employee';
@@ -149,8 +148,8 @@ export function EmployeeDashboard() {
     : 'Demo Employee';
 
   return (
-    <EmployeeLayout>
-      <div className="w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
+    <>
+    <div className="w-full px-2 sm:px-3 lg:px-4 py-0 pb-8">
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
@@ -514,6 +513,6 @@ export function EmployeeDashboard() {
           <EmployeeGuideContent />
         </DialogContent>
       </Dialog>
-    </EmployeeLayout>
+    </>
   );
 }

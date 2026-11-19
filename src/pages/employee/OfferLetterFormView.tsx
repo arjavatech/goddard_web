@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { FileText, Home, LayoutList, X } from 'lucide-react';
+import { FileText, Home, LayoutList, X, AlertCircle } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Header } from '../../components/layout/Header';
 import { useUserContext } from '../../contexts/UserContext';
 import { useIframeScrollLock } from '../../hooks/useIframeScrollLock';
 import { useEmbeddedFormResize } from '../../hooks/useEmbeddedFormResize';
+import { OfferLetterService } from '../../services/api/offerLetter';
 
 export function OfferLetterFormView() {
   const location = useLocation();
@@ -13,9 +14,10 @@ export function OfferLetterFormView() {
   const { schoolSlug } = useParams<{ schoolSlug: string }>();
   const { userData } = useUserContext();
 
-  const { prefillUrl, status } = (location.state ?? {}) as {
+  const { prefillUrl, status, rejectionReason } = (location.state ?? {}) as {
     prefillUrl?: string;
     status?: string;
+    rejectionReason?: string;
   };
 
   const back = `/${schoolSlug}/employee/offer-letter`;
@@ -23,6 +25,14 @@ export function OfferLetterFormView() {
   useEffect(() => {
     if (!prefillUrl) navigate(back, { replace: true });
   }, [prefillUrl, back, navigate]);
+
+  useEffect(() => {
+    if (status !== 'offer_sent') return;
+    const employeeId = userData?.employeeId;
+    const schoolId = userData?.schoolId;
+    if (!employeeId || !schoolId) return;
+    OfferLetterService.markViewed(employeeId, schoolId).catch(() => {});
+  }, []);
 
   const [isFrameLoading, setIsFrameLoading] = useState(true);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -58,16 +68,17 @@ export function OfferLetterFormView() {
   const employeeName = [userData?.firstName, userData?.lastName].filter(Boolean).join(' ');
 
   const statusLabel =
-    status === 'offer_sent' ? 'Action Required'
+    status === 'offer_sent' || status === 'viewed' ? 'Action Required'
+    : status === 'employee_signed' ? 'Awaiting Approval'
     : status === 'offer_accepted' ? 'Submitted'
-    : status === 'offer_rejected' ? 'Rejected'
+    : status === 'offer_rejected' ? 'Action Required'
     : status === 'active' ? 'Approved'
     : 'Pending';
 
   const statusColor =
-    status === 'offer_sent' ? 'bg-blue-500/20 text-blue-200'
-    : status === 'offer_accepted' ? 'bg-amber-400/20 text-amber-200'
-    : status === 'offer_rejected' ? 'bg-red-400/20 text-red-200'
+    status === 'offer_sent' || status === 'viewed' ? 'bg-blue-500/20 text-blue-200'
+    : status === 'employee_signed' || status === 'offer_accepted' ? 'bg-amber-400/20 text-amber-200'
+    : status === 'offer_rejected' ? 'bg-blue-500/20 text-blue-200'
     : status === 'active' ? 'bg-emerald-400/20 text-emerald-200'
     : 'bg-white/15 text-white/60';
 
@@ -190,6 +201,17 @@ export function OfferLetterFormView() {
               </div>
             </div>
           </div>
+
+          {/* Rejection reason banner */}
+          {status === 'offer_rejected' && rejectionReason && (
+            <div className="mx-4 mt-4 flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3 shrink-0">
+              <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-red-700 uppercase tracking-wide mb-0.5">Rejection Reason</p>
+                <p className="text-sm text-red-600">{rejectionReason}</p>
+              </div>
+            </div>
+          )}
 
           {/* Iframe */}
           <div ref={iframeContainerRef} className="w-full bg-[#F7F9FC] relative mt-6">

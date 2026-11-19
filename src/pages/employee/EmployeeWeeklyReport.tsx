@@ -2,7 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, Loader2, Printer, Zap, List, Grid3x3 } from 'lucide-react';
-import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService } from '../../services/api/tapTime';
 import { Button } from '../../components/ui/button';
 import { Pagination } from '../../components/ui/pagination';
@@ -321,19 +320,16 @@ export function EmployeeWeeklyReport() {
 
   if (!current && !loading) {
     return (
-      <EmployeeLayout>
-        <main className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4 sm:p-6">
-          <div className="flex items-center justify-center min-h-[60vh]">
-            <p className="text-slate-500">No weekly report data available</p>
-          </div>
-        </main>
-      </EmployeeLayout>
+      <main className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4 sm:p-6">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-slate-500">No weekly report data available</p>
+        </div>
+      </main>
     );
   }
 
   return (
-    <EmployeeLayout>
-      <main className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4 sm:p-6">
+    <main className="flex-1 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen p-4 sm:p-6">
         {(loading || downloadingPeriod !== null) && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl p-6 flex flex-col items-center gap-3">
@@ -665,6 +661,5 @@ export function EmployeeWeeklyReport() {
           )}
         </div>
       </main>
-    </EmployeeLayout>
   );
 }

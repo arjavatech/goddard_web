@@ -153,7 +153,7 @@ export function AdminManagement() {
     }
   };
 
-  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError;
+  const isFormValid = adminFirstName.trim() && adminLastName.trim() && adminEmail.trim() && !emailError && adminPhone.trim();
 
   const getAdminAutoFill = (filloutParam: string): string | null => {
     const p = filloutParam.toLowerCase().replace(/[^a-z]/g, '');
@@ -346,19 +346,33 @@ export function AdminManagement() {
         editPermissions
       );
 
-      if (selectedAdmin.employee_id && isOfferLetterEnabled && Object.keys(editOfferCustomFields).length > 0) {
+      const autoOfferFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAdminAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null && (v as string).trim() !== '') as [string, string][]
+      );
+      const mergedOfferCustomFields = { ...editOfferCustomFields, ...autoOfferFields };
+
+      const willResendAdmin = !!(selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status && selectedAdmin.offer_status !== 'draft');
+      if (selectedAdmin.employee_id && isOfferLetterEnabled && selectedAdmin.offer_status) {
         await OfferLetterService.updateOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '', {
-          customFields: editOfferCustomFields,
+          firstName: adminFirstName.trim(),
+          lastName: adminLastName.trim(),
+          phone: adminPhone.trim() || undefined,
+          customFields: mergedOfferCustomFields,
         });
+        if (willResendAdmin) {
+          await OfferLetterService.resendOfferLetter(selectedAdmin.employee_id, userData?.schoolId ?? '');
+        }
       }
 
       setAdmins(admins.map(admin =>
         admin.id === selectedAdmin.id
-          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions }
+          ? { ...admin, first_name: adminFirstName.trim(), last_name: adminLastName.trim(), phone_number: adminPhone.trim() || null, permissions: editPermissions, offer_letter_custom_fields: mergedOfferCustomFields, ...(willResendAdmin ? { offer_status: 'offer_sent' } : {}) }
           : admin
       ));
 
-      showToast('success', 'Admin updated successfully');
+      showToast('success', willResendAdmin ? 'Admin updated — offer letter resent to employee' : 'Admin updated successfully');
       setIsEditDialogOpen(false);
       setSelectedAdmin(null);
       resetForm();
@@ -672,9 +686,32 @@ export function AdminManagement() {
                             {admin.role.charAt(0).toUpperCase() + admin.role.slice(1)}
                           </span>
                         </div>
-                        <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
-                          {admin.is_verified ? 'Approved' : 'Pending'}
-                        </Badge>
+                        {isOfferLetterEnabled && admin.offer_status ? (
+                          <Badge
+                            variant={
+                              (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'success' :
+                              (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'warning' :
+                              (admin.offer_status === 'offer_sent' || admin.offer_status === 'viewed' || admin.offer_status === 'pending_offer') ? 'info' :
+                              (admin.offer_status === 'offer_rejected' || admin.offer_status === 'rejected') ? 'destructive' :
+                              'secondary'
+                            }
+                            className="text-[10px] font-bold rounded-full px-2 py-0.5"
+                          >
+                            {admin.offer_status === 'pending_offer' ? 'Offer Sent' :
+                             admin.offer_status === 'draft' ? 'Draft' :
+                             admin.offer_status === 'offer_sent' ? 'Offer Sent' :
+                             admin.offer_status === 'viewed' ? 'Viewed' :
+                             (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'Awaiting Approval' :
+                             admin.offer_status === 'offer_rejected' ? 'Offer Rejected' :
+                             (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'Active' :
+                             admin.offer_status === 'rejected' ? 'Rejected' :
+                             admin.offer_status}
+                          </Badge>
+                        ) : (
+                          <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2 py-0.5">
+                            {admin.is_verified ? 'Approved' : 'Pending'}
+                          </Badge>
+                        )}
                       </div>
                       {isTapTimeEnabled && admin.taptime_employee_id && <div className="mt-3 flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-500">TapTime PIN</span>
@@ -790,20 +827,23 @@ export function AdminManagement() {
                       {isOfferLetterEnabled && admin.offer_status ? (
                         <Badge
                           variant={
-                            admin.offer_status === 'active' ? 'success' :
-                            admin.offer_status === 'offer_accepted' ? 'warning' :
-                            admin.offer_status === 'offer_sent' ? 'info' :
+                            (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'success' :
+                            (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'warning' :
+                            (admin.offer_status === 'offer_sent' || admin.offer_status === 'viewed' || admin.offer_status === 'pending_offer') ? 'info' :
                             (admin.offer_status === 'offer_rejected' || admin.offer_status === 'rejected') ? 'destructive' :
                             'secondary'
                           }
                           className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                         >
-                          {admin.offer_status === 'draft' ? 'Draft' :
+                          {admin.offer_status === 'pending_offer' ? 'Offer Sent' :
+                           admin.offer_status === 'draft' ? 'Draft' :
                            admin.offer_status === 'offer_sent' ? 'Offer Sent' :
-                           admin.offer_status === 'offer_accepted' ? 'Awaiting Approval' :
-                           admin.offer_status === 'offer_rejected' ? 'Rejected by Employee' :
-                           admin.offer_status === 'active' ? 'Active' :
-                           admin.offer_status === 'rejected' ? 'Rejected' : admin.offer_status}
+                           admin.offer_status === 'viewed' ? 'Viewed' :
+                           (admin.offer_status === 'employee_signed' || admin.offer_status === 'offer_accepted') ? 'Awaiting Approval' :
+                           admin.offer_status === 'offer_rejected' ? 'Offer Rejected' :
+                           (admin.offer_status === 'approved' || admin.offer_status === 'active') ? 'Active' :
+                           admin.offer_status === 'rejected' ? 'Rejected' :
+                           admin.offer_status}
                         </Badge>
                       ) : (
                         <Badge variant={admin.is_verified ? 'success' : 'secondary'} className="text-[10px] font-bold rounded-full px-2.5 py-0.5">
@@ -898,7 +938,7 @@ export function AdminManagement() {
             {inviteStep === 1 && (
               <div className="grid grid-cols-2 gap-4 py-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name *</label>
                   <Input
                     value={adminFirstName}
                     onChange={(e) => setAdminFirstName(e.target.value)}
@@ -908,7 +948,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name *</label>
                   <Input
                     value={adminLastName}
                     onChange={(e) => setAdminLastName(e.target.value)}
@@ -918,7 +958,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Email Address *</label>
                   <Input
                     type="email"
                     value={adminEmail}
@@ -934,11 +974,11 @@ export function AdminManagement() {
                   {emailError && <p className="text-red-500 text-xs mt-1 font-semibold">{emailError}</p>}
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number (Optional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
                   <Input
                     type="tel"
                     value={adminPhone}
-                    onChange={(e) => setAdminPhone(e.target.value)}
+                    onChange={(e) => setAdminPhone(e.target.value.replace(/[^0-9\s()+\-]/g, ''))}
                     placeholder="Enter phone number"
                     className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
                   />
@@ -984,6 +1024,7 @@ export function AdminManagement() {
                         </label>
                         <Input
                           type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          min={field.type === 'number' ? 0 : undefined}
                           value={inviteOfferCustomFields[field.filloutParam] ?? ''}
                           onChange={e => setInviteOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
                           className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
@@ -1096,7 +1137,7 @@ export function AdminManagement() {
             {editStep === 1 && (
               <div className="grid grid-cols-2 gap-4 py-2">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">First Name *</label>
                   <Input
                     value={adminFirstName}
                     onChange={(e) => setAdminFirstName(e.target.value)}
@@ -1105,7 +1146,7 @@ export function AdminManagement() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Last Name</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Last Name *</label>
                   <Input
                     value={adminLastName}
                     onChange={(e) => setAdminLastName(e.target.value)}
@@ -1123,11 +1164,11 @@ export function AdminManagement() {
                   />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">Phone Number (Optional)</label>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-black mb-1.5">Phone Number *</label>
                   <Input
                     type="tel"
                     value={adminPhone}
-                    onChange={(e) => setAdminPhone(e.target.value)}
+                    onChange={(e) => setAdminPhone(e.target.value.replace(/[^0-9\s()+\-]/g, ''))}
                     placeholder="Enter phone number"
                     className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"
                   />
@@ -1173,6 +1214,7 @@ export function AdminManagement() {
                         </label>
                         <Input
                           type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                          min={field.type === 'number' ? 0 : undefined}
                           value={editOfferCustomFields[field.filloutParam] ?? ''}
                           onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
                           className="w-full h-10 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/15 focus:border-[#0F2D52] transition-all bg-white"

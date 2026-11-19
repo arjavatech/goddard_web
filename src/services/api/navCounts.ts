@@ -10,6 +10,7 @@ const AdminNavCountsSchema = z.object({
   employee_docs_due: z.number(),
   employee_docs_review: z.number(),
   surveys_pending: z.number(),
+  offer_letters_review: z.number().nullable(),
 });
 
 export type AdminNavCounts = z.infer<typeof AdminNavCountsSchema>;

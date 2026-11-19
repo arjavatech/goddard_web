@@ -11,6 +11,8 @@ export type OfferLetterField = {
 export type OfferLetterStatus =
   | 'draft'
   | 'offer_sent'
+  | 'viewed'
+  | 'employee_signed'
   | 'offer_accepted'
   | 'offer_rejected'
   | 'approved'
@@ -141,6 +143,14 @@ export const OfferLetterService = {
   async resendOfferLetter(employeeId: string, schoolId: string): Promise<OfferLetter> {
     const data = await authedFetch(
       { method: 'POST', url: `/employees/${employeeId}/offer-letter/resend?school_id=${schoolId}` },
+      z.any(),
+    );
+    return mapOfferLetter(data);
+  },
+
+  async markViewed(employeeId: string, schoolId: string): Promise<OfferLetter> {
+    const data = await authedFetch(
+      { method: 'POST', url: `/employees/${employeeId}/offer-letter/view?school_id=${schoolId}` },
       z.any(),
     );
     return mapOfferLetter(data);

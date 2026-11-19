@@ -18,8 +18,8 @@ import { EmployeeService } from '../../services/api/employee';
 
 interface EmployeeLayoutProps { children: ReactNode; }
 
-const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'offer_accepted'];
-const OFFER_TERMINAL_STATUSES = ['offer_rejected', 'rejected'];
+const OFFER_PENDING_STATUSES = ['pending_offer', 'draft', 'offer_sent', 'viewed', 'employee_signed', 'offer_accepted', 'offer_rejected'];
+const OFFER_TERMINAL_STATUSES = ['rejected'];
 
 export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const activeNavRef = useRef<HTMLAnchorElement>(null);
@@ -88,7 +88,6 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   const isNavItemActive = (normalizedItemPath: string) => {
     if (normalizedItemPath === '/employee/dashboard') return currentPath === '/employee/dashboard';
     if (normalizedItemPath === '/employee/requests') return currentPath === '/employee/requests';
-    if (normalizedItemPath === '/profile') return currentPath === '/profile';
     return currentPath === normalizedItemPath || currentPath.startsWith(normalizedItemPath + '/');
   };
 
@@ -100,7 +99,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
   ];
 
   const fullItems = [
-    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsNeedingRevision },
+    { icon: <Home className="w-[18px] h-[18px]" />, label: 'Dashboard', path: `${schoolPrefix}/employee/dashboard`, badge: formsPending },
     ...(schoolFeatures.surveyEnabled ? [{ icon: <ClipboardList className="w-[18px] h-[18px]" />, label: 'Surveys', path: `${schoolPrefix}/employee/surveys`, badge: surveysPending }] : []),
     ...(schoolFeatures.expenseManagementEnabled ? [{ icon: <ShoppingBag className="w-[18px] h-[18px]" />, label: 'Requests', path: `${schoolPrefix}/employee/requests` }] : []),
     ...(schoolFeatures.taptimeEnabled
@@ -111,7 +110,7 @@ export function EmployeeLayout({ children }: EmployeeLayoutProps) {
       : []),
     ...(schoolFeatures.employeeManagementEnabled ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Documents', path: `${schoolPrefix}/employee/documents`, badge: docsPending }] : []),
     ...(hasOfferStatus ? [{ icon: <FileText className="w-[18px] h-[18px]" />, label: 'Offer Letter', path: `${schoolPrefix}/employee/offer-letter` }] : []),
-    { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/profile` },
+    { icon: <UserCog className="w-[18px] h-[18px]" />, label: 'Profile', path: `${schoolPrefix}/employee/profile` },
   ];
 
   const navGroups = [

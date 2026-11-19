@@ -21,8 +21,11 @@ function statusLabel(status: OfferLetterStatus): string {
   switch (status) {
     case 'draft': return 'Draft';
     case 'offer_sent': return 'Offer Sent';
+    case 'viewed': return 'Viewed';
+    case 'employee_signed': return 'Awaiting Approval';
     case 'offer_accepted': return 'Awaiting Approval';
     case 'offer_rejected': return 'Rejected by Employee';
+    case 'approved': return 'Active';
     case 'active': return 'Active';
     case 'rejected': return 'Rejected by Admin';
     default: return status;
@@ -33,8 +36,11 @@ function statusVariant(status: OfferLetterStatus): 'secondary' | 'default' | 'in
   switch (status) {
     case 'draft': return 'secondary';
     case 'offer_sent': return 'info';
+    case 'viewed': return 'info';
+    case 'employee_signed': return 'warning';
     case 'offer_accepted': return 'warning';
     case 'offer_rejected': return 'destructive';
+    case 'approved': return 'success';
     case 'active': return 'success';
     case 'rejected': return 'destructive';
     default: return 'secondary';

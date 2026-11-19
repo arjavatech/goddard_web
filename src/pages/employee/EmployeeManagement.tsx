@@ -235,7 +235,7 @@ export function EmployeeManagement() {
     }
   };
 
-  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && (!empPhone || validatePhoneNumber(empPhone)) && empJoinedOn);
+  const isFormValid = !!(empFirstName.trim() && empLastName.trim() && empEmail.trim() && !emailError && empPhone.trim() && validatePhoneNumber(empPhone) && empJoinedOn);
 
   const normalize = (s: string) => s.toLowerCase().replace(/[_\-\s]/g, '');
   const getAutoFill = (filloutParam: string): string | null => {
@@ -311,7 +311,7 @@ export function EmployeeManagement() {
     setEmpFirstName(emp.firstName);
     setEmpLastName(emp.lastName);
     setEmpEmail(emp.email);
-    setEmpPhone(emp.phone);
+    setEmpPhone(emp.phone || '');
     setEmpPhoneCountry(emp.phoneCountry || 'US');
     setEmpAddress(emp.address);
     setEmpType(emp.employeeType);
@@ -339,28 +339,48 @@ export function EmployeeManagement() {
         address: empAddress.trim(),
         employeeType: empType,
         joinedOn: empJoinedOn,
+        firstName: empFirstName.trim(),
+        lastName: empLastName.trim(),
       });
 
-      if (selectedEmployee.offerStatus && Object.keys(editOfferCustomFields).length > 0) {
+      const autoOfferFields = Object.fromEntries(
+        offerLetterFields
+          .map(f => [f.filloutParam, getAutoFill(f.filloutParam)])
+          .filter(([, v]) => v !== null && (v as string).trim() !== '') as [string, string][]
+      );
+      const mergedOfferCustomFields = { ...editOfferCustomFields, ...autoOfferFields };
+
+      const willResend = !!selectedEmployee.offerStatus && selectedEmployee.offerStatus !== 'draft';
+      if (selectedEmployee.offerStatus) {
         await OfferLetterService.updateOfferLetter(selectedEmployee.id, userData?.schoolId ?? '', {
-          customFields: editOfferCustomFields,
+          firstName: empFirstName.trim(),
+          lastName: empLastName.trim(),
+          phone: empPhone.trim(),
+          customFields: mergedOfferCustomFields,
         });
+        if (willResend) {
+          await OfferLetterService.resendOfferLetter(selectedEmployee.id, userData?.schoolId ?? '');
+        }
       }
 
       setEmployees(employees.map(e => {
         if (e.id === selectedEmployee.id) {
           return {
             ...e,
+            firstName: empFirstName.trim(),
+            lastName: empLastName.trim(),
             phone: empPhone.trim(),
             phoneCountry: empPhoneCountry,
             address: empAddress.trim(),
             employeeType: empType,
             joinedOn: empJoinedOn,
+            offerLetterCustomFields: mergedOfferCustomFields,
+            ...(willResend ? { offerStatus: 'offer_sent' } : {}),
           };
         }
         return e;
       }));
-      showToast('success', 'Employee updated successfully');
+      showToast('success', willResend ? 'Employee updated — offer letter resent to employee' : 'Employee updated successfully');
       setIsEditDialogOpen(false);
       setSelectedEmployee(null);
       resetForm();
@@ -416,9 +436,11 @@ export function EmployeeManagement() {
   function renderStatusBadge(emp: Employee) {
     if (emp.offerStatus) {
       const map: Record<string, { label: string; variant: 'secondary' | 'info' | 'warning' | 'destructive' | 'success' }> = {
-        pending_offer: { label: 'Pending Offer', variant: 'warning' },
+        pending_offer: { label: 'Offer Sent', variant: 'info' },
         draft: { label: 'Offer Draft', variant: 'secondary' },
         offer_sent: { label: 'Offer Sent', variant: 'info' },
+        viewed: { label: 'Viewed', variant: 'info' },
+        employee_signed: { label: 'Awaiting Approval', variant: 'warning' },
         offer_accepted: { label: 'Awaiting Approval', variant: 'warning' },
         offer_rejected: { label: 'Offer Rejected', variant: 'destructive' },
         active: { label: 'Active', variant: 'success' },
@@ -622,7 +644,7 @@ export function EmployeeManagement() {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                     {isOfferLetterEnabled && <>
-                      <option value="pending_offer">Pending Offer</option>
+                      <option value="pending_offer">Offer Sent</option>
                       <option value="offer_sent">Offer Sent</option>
                       <option value="offer_accepted">Awaiting Approval</option>
                       <option value="offer_rejected">Offer Rejected</option>
@@ -844,27 +866,27 @@ export function EmployeeManagement() {
               <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name *</label>
                     <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} placeholder="First" className="w-full h-10 rounded-xl" />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                    <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name *</label>
                     <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} placeholder="Last" className="w-full h-10 rounded-xl" />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Email *</label>
                   <Input type="email" value={empEmail} onChange={handleEmailChange} placeholder="Email" className={`w-full h-10 rounded-xl ${emailError ? 'border-red-400' : ''}`} />
                   {emailError && <p className="text-red-500 text-xs mt-1">{emailError}</p>}
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone *</label>
                   <PhoneInput
                     value={empPhone}
                     country={empPhoneCountry}
                     onCountryChange={(val) => setEmpPhoneCountry(val)}
                     onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
-                    onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                    onBlur={() => { if (!empPhone.trim()) setPhoneError('Phone number is required'); else if (!validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
                     error={!!phoneError}
                   />
                   {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
@@ -874,7 +896,7 @@ export function EmployeeManagement() {
                   <Input value={empAddress} onChange={(e) => setEmpAddress(e.target.value)} placeholder="Address" className="w-full h-10 rounded-xl" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                  <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On *</label>
                   <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                 </div>
               </div>
@@ -958,11 +980,11 @@ export function EmployeeManagement() {
                   <div className="space-y-4 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">First Name *</label>
                         <Input value={empFirstName} onChange={(e) => setEmpFirstName(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Last Name *</label>
                         <Input value={empLastName} onChange={(e) => setEmpLastName(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                     </div>
@@ -971,13 +993,13 @@ export function EmployeeManagement() {
                       <Input value={empEmail} disabled className="w-full h-10 rounded-xl bg-slate-50" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone</label>
+                      <label className="block text-xs font-bold uppercase text-black mb-1.5">Phone *</label>
                       <PhoneInput
                         value={empPhone}
                         country={empPhoneCountry}
                         onCountryChange={(val) => setEmpPhoneCountry(val)}
                         onChange={(val) => { setEmpPhone(val); if (phoneError) setPhoneError(''); }}
-                        onBlur={() => { if (empPhone && !validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
+                        onBlur={() => { if (!empPhone.trim()) setPhoneError('Phone number is required'); else if (!validatePhoneNumber(empPhone)) setPhoneError('Please enter a valid phone number'); }}
                         error={!!phoneError}
                       />
                       {phoneError && <p className="text-xs text-red-600 mt-1">{phoneError}</p>}
@@ -996,7 +1018,7 @@ export function EmployeeManagement() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On</label>
+                        <label className="block text-xs font-bold uppercase text-black mb-1.5">Joined On *</label>
                         <Input type="date" value={empJoinedOn} onChange={(e) => setEmpJoinedOn(e.target.value)} className="w-full h-10 rounded-xl" />
                       </div>
                     </div>
@@ -1005,20 +1027,26 @@ export function EmployeeManagement() {
 
                 {showEditSteps && editStep === 2 && (
                   <div className="space-y-3 py-2 max-h-[60vh] overflow-y-auto no-scrollbar">
-                    {offerLetterFields.map(field => (
-                      <div key={field.id}>
-                        <label className="block text-xs font-bold uppercase text-black mb-1.5">
-                          {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
-                        </label>
-                        <Input
-                          type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
-                          value={editOfferCustomFields[field.filloutParam] ?? ''}
-                          onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
-                          placeholder={field.type === 'number' ? '0.00' : field.label}
-                          className="h-10 rounded-xl"
-                        />
-                      </div>
-                    ))}
+                    {(() => {
+                      const manualFields = offerLetterFields.filter(f => getAutoFill(f.filloutParam) === null);
+                      if (manualFields.length === 0) {
+                        return <p className="text-sm text-slate-500 py-4 text-center">All details carried over from Step 1.</p>;
+                      }
+                      return manualFields.map(field => (
+                        <div key={field.id}>
+                          <label className="block text-xs font-bold uppercase text-black mb-1.5">
+                            {field.label}{field.required && <span className="text-red-500 ml-0.5">*</span>}
+                          </label>
+                          <Input
+                            type={field.type === 'date' ? 'date' : field.type === 'number' ? 'number' : 'text'}
+                            value={editOfferCustomFields[field.filloutParam] ?? ''}
+                            onChange={e => setEditOfferCustomFields(prev => ({ ...prev, [field.filloutParam]: e.target.value }))}
+                            placeholder={field.type === 'number' ? '0.00' : field.label}
+                            className="h-10 rounded-xl"
+                          />
+                        </div>
+                      ));
+                    })()}
                   </div>
                 )}
 

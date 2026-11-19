@@ -11,6 +11,7 @@ import {
 import { requestFcmToken, onForegroundMessage } from '../services/firebase';
 import { useUserContext } from './UserContext';
 import { useToast } from './ToastContext';
+import { SYSTEM_NOTIFICATION_TYPES } from '../components/notifications/notificationMeta';
 
 const PAGE_SIZE = 100;
 
@@ -241,11 +242,21 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     return undefined;
   }, [loggedIn]);
 
+  const visibleItems = useMemo(
+    () => allItems.filter(item => !SYSTEM_NOTIFICATION_TYPES.has(item.notification_type)),
+    [allItems]
+  );
+
   const items = useMemo(() => {
-    if (filter === 'all') return allItems;
-    if (filter === 'unread') return allItems.filter(item => !item.is_read);
-    return allItems.filter(item => item.is_read);
-  }, [allItems, filter]);
+    if (filter === 'all') return visibleItems;
+    if (filter === 'unread') return visibleItems.filter(item => !item.is_read);
+    return visibleItems.filter(item => item.is_read);
+  }, [visibleItems, filter]);
+
+  const displayUnreadCount = useMemo(
+    () => visibleItems.filter(item => !item.is_read).length,
+    [visibleItems]
+  );
 
   const markRead = useCallback(async (id: string) => {
     let wasUnread = false;
@@ -290,7 +301,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     () => ({
       allItems,
       items,
-      unreadCount,
+      unreadCount: displayUnreadCount,
       total,
       loading,
       initialLoading,
@@ -305,7 +316,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       pushError,
       enablePush,
     }),
-    [allItems, items, unreadCount, total, loading, initialLoading, error, filter, refetch, markRead, markAllRead, pushPermission, pushRegistration, pushError, enablePush]
+    [allItems, items, displayUnreadCount, total, loading, initialLoading, error, filter, refetch, markRead, markAllRead, pushPermission, pushRegistration, pushError, enablePush]
   );
 
   return <NotificationsContext.Provider value={value}>{children}</NotificationsContext.Provider>;

@@ -1,23 +1,27 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { EmployeeLayout } from './EmployeeLayout';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Loading } from '../../components/ui/loading';
 import { useUserContext } from '../../contexts/UserContext';
 import { EmployeeService } from '../../services/api/employee';
 import { OfferLetterService, type OfferLetter } from '../../services/api/offerLetter';
-import { FileText, Download, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { FileText, Download, Printer, Clock, CheckCircle2, XCircle, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 
 function StatusSection({
   offer,
   onOpenForm,
   onDownload,
+  onPrint,
+  isDownloading,
+  isPrinting,
 }: {
   offer: OfferLetter;
   onOpenForm?: () => void;
   onDownload?: () => void;
+  onPrint?: () => void;
+  isDownloading?: boolean;
+  isPrinting?: boolean;
 }) {
   switch (offer.status) {
     case 'offer_sent':
@@ -43,6 +47,44 @@ function StatusSection({
         </div>
       );
 
+    case 'viewed':
+      return (
+        <div className="text-center space-y-3 py-4">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mx-auto">
+            <Clock className="w-8 h-8 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-slate-900">Complete Your Offer Letter</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
+              You've opened the offer letter. Please complete and sign it to proceed.
+            </p>
+          </div>
+          {offer.prefillUrl && (
+            <button
+              onClick={onOpenForm}
+              className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-sm font-semibold transition-colors"
+            >
+              <FileText className="w-4 h-4" /> Open Offer Letter
+            </button>
+          )}
+        </div>
+      );
+
+    case 'employee_signed':
+      return (
+        <div className="text-center space-y-3 py-4">
+          <div className="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto">
+            <CheckCircle2 className="w-8 h-8 text-amber-500" />
+          </div>
+          <div>
+            <p className="text-base font-bold text-slate-900">Offer Letter Signed</p>
+            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
+              You've signed your offer letter. Waiting for school approval.
+            </p>
+          </div>
+        </div>
+      );
+
     case 'offer_accepted':
       return (
         <div className="text-center space-y-3 py-4">
@@ -58,38 +100,69 @@ function StatusSection({
         </div>
       );
 
-    case 'offer_rejected':
+    case 'offer_rejected': {
+      const rejectionReason = offer.adminRejectionReason ?? offer.employeeRejectionReason;
       return (
-        <div className="text-center space-y-3 py-4">
-          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mx-auto">
-            <XCircle className="w-8 h-8 text-red-500" />
-          </div>
-          <div>
-            <p className="text-base font-bold text-slate-900">Offer Not Accepted</p>
-            {offer.employeeRejectionReason && (
-              <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">{offer.employeeRejectionReason}</p>
+        <div className="space-y-4 py-2">
+          {rejectionReason && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-4">
+              <XCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-red-700">Rejection Reason</p>
+                <p className="text-sm text-red-600 mt-0.5">{rejectionReason}</p>
+              </div>
+            </div>
+          )}
+          <div className="text-center space-y-2">
+            <p className="text-base font-bold text-slate-900">Your Offer Letter Was Rejected</p>
+            <p className="text-sm text-slate-500">Please re-fill your offer letter to resubmit for approval.</p>
+            {(offer.filloutEditLink ?? offer.prefillUrl) && (
+              <button
+                onClick={onOpenForm}
+                className="inline-flex items-center gap-2 mt-2 px-5 py-2.5 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] text-white text-sm font-semibold transition-colors"
+              >
+                <FileText className="w-4 h-4" /> Re-fill Offer Letter
+              </button>
             )}
-            <p className="text-sm text-slate-400 mt-2">Please contact your school administrator.</p>
           </div>
         </div>
       );
+    }
 
+    case 'approved':
     case 'active':
       return (
-        <div className="text-center space-y-3 py-4">
-          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center mx-auto">
-            <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+        <div className="flex items-center gap-4 py-2">
+          <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-emerald-500" />
           </div>
-          <div>
-            <p className="text-base font-bold text-slate-900">Offer Letter Confirmed</p>
-            <p className="text-sm text-slate-500 mt-1 max-w-xs mx-auto">
-              Your offer letter has been accepted and your account is active.
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-slate-900">Offer Letter Approved</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Your offer letter has been approved. Download or print your copy.
             </p>
           </div>
           {offer.filloutPdfLink && (
-            <Button variant="outline" className="rounded-xl gap-2 mt-2" onClick={onDownload}>
-              <Download className="w-4 h-4" /> Download Offer Letter PDF
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={onDownload}
+                disabled={isDownloading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0F2D52] hover:bg-[#1c477c] disabled:opacity-60 text-white text-xs font-semibold transition-colors"
+              >
+                {isDownloading
+                  ? <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> Downloading…</>
+                  : <><Download className="w-3.5 h-3.5" /> Download</>}
+              </button>
+              <button
+                onClick={onPrint}
+                disabled={isPrinting}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-60 text-slate-700 text-xs font-semibold transition-colors"
+              >
+                {isPrinting
+                  ? <><span className="w-3.5 h-3.5 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" /> Preparing…</>
+                  : <><Printer className="w-3.5 h-3.5" /> Print</>}
+              </button>
+            </div>
           )}
         </div>
       );
@@ -117,7 +190,10 @@ export function OfferLetterPage() {
   const [pastOffers, setPastOffers] = useState<OfferLetter[]>([]);
   const [showPastOffers, setShowPastOffers] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pollCountRef = useRef(0);
 
   const schoolId = userData?.schoolId ?? '';
 
@@ -139,23 +215,75 @@ export function OfferLetterPage() {
       .finally(() => setLoading(false));
   }, [schoolId]);
 
+  // Poll for status update when waiting for Fillout webhook after re-fill
+  useEffect(() => {
+    if (!schoolId || offer?.status !== 'offer_rejected') return;
+    pollCountRef.current = 0;
+
+    const interval = setInterval(async () => {
+      pollCountRef.current += 1;
+      if (pollCountRef.current > 10) { clearInterval(interval); return; }
+      try {
+        const employee = await EmployeeService.fetchCurrentEmployee(schoolId);
+        const history = await OfferLetterService.getOfferLetterHistory(employee.id, schoolId);
+        const current = history.find(o => o.isCurrent) ?? history[0] ?? null;
+        if (current && current.status !== 'offer_rejected') {
+          setOffer(current);
+          setPastOffers(history.filter(o => !o.isCurrent));
+          clearInterval(interval);
+        }
+      } catch {}
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [schoolId, offer?.status]);
+
   const handleDownload = async () => {
     if (!offer?.filloutPdfLink) return;
-    const res = await fetch(offer.filloutPdfLink);
-    const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
-    const el = document.createElement('a');
-    el.href = url;
-    el.download = `Offer Letter - ${offer.firstName} ${offer.lastName}.pdf`;
-    document.body.appendChild(el);
-    el.click();
-    el.remove();
-    URL.revokeObjectURL(url);
+    setIsDownloading(true);
+    try {
+      const res = await fetch(offer.filloutPdfLink);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const el = document.createElement('a');
+      el.href = url;
+      el.download = `Offer Letter - ${offer.firstName} ${offer.lastName}.pdf`;
+      document.body.appendChild(el);
+      el.click();
+      el.remove();
+      URL.revokeObjectURL(url);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handlePrint = async () => {
+    if (!offer?.filloutPdfLink) return;
+    setIsPrinting(true);
+    try {
+      const res = await fetch(offer.filloutPdfLink);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const iframe = document.createElement('iframe');
+      iframe.style.cssText = 'position:fixed;top:0;left:-9999px;width:800px;height:600px;border:0;';
+      iframe.src = blobUrl;
+      document.body.appendChild(iframe);
+      iframe.onload = () => {
+        setIsPrinting(false);
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          URL.revokeObjectURL(blobUrl);
+        }, 60000);
+      };
+    } catch {
+      setIsPrinting(false);
+    }
   };
 
   return (
-    <EmployeeLayout>
-      <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-9 h-9 rounded-xl bg-[#0F2D52] flex items-center justify-center flex-shrink-0">
             <FileText className="w-5 h-5 text-white" />
@@ -167,8 +295,31 @@ export function OfferLetterPage() {
         </div>
 
         {loading && (
-          <div className="flex justify-center py-16">
-            <Loading size="md" message="Loading offer letter…" />
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-4">
+                <div className="h-3 bg-slate-200 rounded w-16" />
+                <div className="h-5 bg-slate-200 rounded-full w-24" />
+              </div>
+              <div className="flex items-center gap-4 py-2">
+                <div className="w-14 h-14 rounded-full bg-slate-200 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-4 bg-slate-200 rounded w-1/3" />
+                  <div className="h-3 bg-slate-200 rounded w-1/2" />
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 animate-pulse">
+              <div className="h-3 bg-slate-200 rounded w-24 mb-3" />
+              <div className="grid grid-cols-2 gap-2">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className="bg-slate-50 rounded-xl px-3 py-2.5">
+                    <div className="h-2 bg-slate-200 rounded w-16 mb-1" />
+                    <div className="h-4 bg-slate-200 rounded w-24" />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -187,27 +338,37 @@ export function OfferLetterPage() {
                 <span className="text-xs font-bold uppercase tracking-wide text-slate-500">Status</span>
                 <Badge
                   variant={
-                    offer.status === 'active' ? 'success'
-                      : offer.status === 'offer_accepted' ? 'warning'
+                    offer.status === 'active' || offer.status === 'approved' ? 'success'
+                      : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'warning'
                       : offer.status === 'offer_rejected' ? 'destructive'
-                      : offer.status === 'offer_sent' ? 'info'
+                      : offer.status === 'offer_sent' || offer.status === 'viewed' || offer.status === 'pending_offer' ? 'info'
                       : 'secondary'
                   }
                   className="text-[10px] font-bold rounded-full px-2.5 py-0.5"
                 >
-                  {offer.status === 'active' ? 'Active'
-                    : offer.status === 'offer_accepted' ? 'Awaiting Approval'
+                  {offer.status === 'active' || offer.status === 'approved' ? 'Active'
+                    : offer.status === 'employee_signed' || offer.status === 'offer_accepted' ? 'Awaiting Admin Approval'
                     : offer.status === 'offer_rejected' ? 'Rejected'
-                    : offer.status === 'offer_sent' ? 'Action Required'
+                    : offer.status === 'pending_offer' ? 'Offer Sent'
+                    : offer.status === 'offer_sent' || offer.status === 'viewed' ? 'Action Required'
                     : 'Pending'}
                 </Badge>
               </div>
               <StatusSection
                 offer={offer}
                 onOpenForm={() => navigate(`/${schoolSlug}/employee/offer-letter/view`, {
-                  state: { prefillUrl: offer.prefillUrl, status: offer.status },
+                  state: {
+                    prefillUrl: offer.status === 'offer_rejected'
+                      ? (offer.filloutEditLink ?? offer.prefillUrl)
+                      : offer.prefillUrl,
+                    status: offer.status,
+                    rejectionReason: offer.adminRejectionReason ?? offer.employeeRejectionReason,
+                  },
                 })}
                 onDownload={handleDownload}
+                onPrint={handlePrint}
+                isDownloading={isDownloading}
+                isPrinting={isPrinting}
               />
             </Card>
 
@@ -277,6 +438,5 @@ export function OfferLetterPage() {
           </div>
         )}
       </div>
-    </EmployeeLayout>
   );
 }

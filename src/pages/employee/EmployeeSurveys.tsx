@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   ClipboardList, CheckCircle, Clock, ChevronRight, Calendar, Search, Filter, X
 } from 'lucide-react';
-import { EmployeeLayout } from './EmployeeLayout';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
@@ -87,8 +86,7 @@ export function EmployeeSurveys() {
   const hasFilter = audienceFilter !== 'all';
 
   return (
-    <EmployeeLayout>
-      <div className="container mx-auto px-2 sm:px-4 py-0 pb-12 space-y-4">
+    <div className="container mx-auto px-2 sm:px-4 py-0 pb-12 space-y-4">
 
         {/* Header */}
         <div className="flex items-center gap-3 mt-16 sm:mt-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-100 shadow-xs">
@@ -331,7 +329,6 @@ export function EmployeeSurveys() {
             )}
           </div>
         )}
-      </div>
-    </EmployeeLayout>
+    </div>
   );
 }

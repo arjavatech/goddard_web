@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { BarChart3, CalendarDays, ChevronDown, Clock, DollarSign, Download, Grid3x3, List, Printer, X } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { EmployeeLayout } from './EmployeeLayout';
 import { TapTimeService, type AttendanceReport } from '../../services/api/tapTime';
 import { Loading } from '../../components/ui/loading';
 import { Button } from '../../components/ui/button';
@@ -218,8 +217,7 @@ export function AttendanceReports() {
   })), [items]);
 
   return (
-    <EmployeeLayout>
-      <main className="min-h-full bg-[#f6f9fd] px-4 py-6 sm:px-6 lg:px-8">
+    <main className="min-h-full bg-[#f6f9fd] px-4 py-6 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <header>
             <h1 className="text-2xl font-bold text-[#0F2D52]">My Attendance</h1>
@@ -554,7 +552,6 @@ export function AttendanceReports() {
           </section>
         </div>
       </main>
-    </EmployeeLayout>
   );
 }
 
