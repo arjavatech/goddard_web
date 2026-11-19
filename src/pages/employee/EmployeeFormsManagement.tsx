@@ -89,6 +89,7 @@ export function EmployeeFormsManagement() {
   const [employeeSearchOpen, setEmployeeSearchOpen] = useState(false);
   const [employeeSearchQuery, setEmployeeSearchQuery] = useState('');
   const [adminUsers, setAdminUsers] = useState<{ id: string; firstName: string; lastName: string; email: string }[]>([]);
+  const [assignedUserIds, setAssignedUserIds] = useState<Set<string>>(new Set());
 
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'card' | 'table'>(() => (localStorage.getItem('empFormsViewMode') as 'card' | 'table') || 'table');
@@ -211,10 +212,28 @@ export function EmployeeFormsManagement() {
     setIsEditDialogOpen(true);
   };
 
-  const openAssignDialog = (form: Form) => {
+  const openAssignDialog = async (form: Form) => {
     setSelectedFormForAssign(form);
     setSelectedEmployeeId('');
+    setAssignedUserIds(new Set());
     setIsAssignDialogOpen(true);
+    if (schoolId) {
+      try {
+        const allAssignments = await EmployeeService.fetchSchoolFormAssignments(schoolId);
+        const ids = new Set<string>();
+        allAssignments
+          .filter(a => a.formId === form.id)
+          .forEach(a => {
+            // employees: m.id === employees.id === a.employeeId
+            if (a.employeeId) ids.add(a.employeeId);
+            // admins: admin.id === users.id === a.userId
+            if (a.userId) ids.add(a.userId);
+          });
+        setAssignedUserIds(ids);
+      } catch {
+        // non-fatal — dialog still works without already-assigned state
+      }
+    }
   };
 
   const handleAssignToEmployee = async () => {
@@ -700,33 +719,44 @@ export function EmployeeFormsManagement() {
                         return <>
                           {filteredEmps.length > 0 && <>
                             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Employees</div>
-                            {filteredEmps.map(m => (
-                              <button key={m.id} type="button"
-                                onClick={() => { setSelectedEmployeeId(m.id); setSelectedRecipientIsAdmin(false); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
-                              >
-                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === m.id && !selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-slate-900 truncate">{m.firstName} {m.lastName}</div>
-                                </div>
-                              </button>
-                            ))}
+                            {filteredEmps.map(m => {
+                              const isAssigned = assignedUserIds.has(m.id);
+                              return (
+                                <button key={m.id} type="button"
+                                  disabled={isAssigned}
+                                  onClick={() => { if (!isAssigned) { setSelectedEmployeeId(m.id); setSelectedRecipientIsAdmin(false); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); } }}
+                                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-100'}`}
+                                >
+                                  <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === m.id && !selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-slate-900 truncate">{m.firstName} {m.lastName}</div>
+                                  </div>
+                                  {isAssigned && <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">Assigned</span>}
+                                </button>
+                              );
+                            })}
                           </>}
                           {filteredAdmins.length > 0 && <>
                             <div className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50">Admins</div>
-                            {filteredAdmins.map(admin => (
-                              <button key={admin.id} type="button"
-                                onClick={() => { setSelectedEmployeeId(admin.id); setSelectedRecipientIsAdmin(true); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); }}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left hover:bg-slate-100 transition-colors"
-                              >
-                                <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === admin.id && selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
-                                <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-slate-900 truncate">{admin.firstName} {admin.lastName}</div>
-                                  <div className="text-xs text-blue-600 truncate">{admin.email}</div>
-                                </div>
-                                <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Admin</span>
-                              </button>
-                            ))}
+                            {filteredAdmins.map(admin => {
+                              const isAssigned = assignedUserIds.has(admin.id);
+                              return (
+                                <button key={admin.id} type="button"
+                                  disabled={isAssigned}
+                                  onClick={() => { if (!isAssigned) { setSelectedEmployeeId(admin.id); setSelectedRecipientIsAdmin(true); setEmployeeSearchOpen(false); setEmployeeSearchQuery(''); } }}
+                                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-sm text-left transition-colors ${isAssigned ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-100'}`}
+                                >
+                                  <Check className={`h-4 w-4 flex-shrink-0 text-[#0F2D52] ${selectedEmployeeId === admin.id && selectedRecipientIsAdmin ? 'opacity-100' : 'opacity-0'}`} />
+                                  <div className="flex-1 min-w-0">
+                                    <div className="font-medium text-slate-900 truncate">{admin.firstName} {admin.lastName}</div>
+                                    <div className="text-xs text-blue-600 truncate">{admin.email}</div>
+                                  </div>
+                                  {isAssigned
+                                    ? <span className="shrink-0 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-bold text-green-700">Assigned</span>
+                                    : <span className="shrink-0 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold text-blue-700">Admin</span>}
+                                </button>
+                              );
+                            })}
                           </>}
                         </>;
                       })()}
